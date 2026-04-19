@@ -250,7 +250,7 @@ function InvoicesListPage() {
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => setDeletingId(inv.id)} variant="destructive">
+                          <DropdownMenuItem onClick={() => setDeletingId(inv.id)} className="text-destructive focus:text-destructive">
                             <Trash2 className="h-4 w-4" /> Smazat
                           </DropdownMenuItem>
                         </DropdownMenuContent>
