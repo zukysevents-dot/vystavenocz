@@ -31,8 +31,8 @@ const faqs = [
     a: "Ano — ISDOC, XML, CSV i PDF. Vaše účetní si data jednoduše stáhne nebo jí udělíte přístup do dashboardu (zdarma, bez dalšího uživatelského poplatku).",
   },
   {
-    q: "Jak funguje 30denní zkušební doba?",
-    a: "Bez platební karty. Zaregistrujete se, 30 dní používáte plnou verzi včetně AI a QR plateb. Po skončení můžete tarif aktivovat, nebo účet jen archivovat — data nikam nezmizí.",
+    q: "Jak funguje 14denní zkušební doba?",
+    a: "Bez platební karty. Zaregistrujete se jen pomocí e-mailu a IČO, 14 dní používáte plnou verzi včetně AI asistenta a QR plateb. Po skončení můžete tarif aktivovat, nebo účet jen archivovat — data nikam nezmizí.",
   },
   {
     q: "Mohu kdykoliv zrušit?",

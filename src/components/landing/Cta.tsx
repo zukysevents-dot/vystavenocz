@@ -16,12 +16,14 @@ export function Cta() {
               fakturu hned po registraci.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Button variant="coral" size="xl" className="group">
-                Vyzkoušet zdarma
-                <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
+              <Button variant="coral" size="xl" className="group" asChild>
+                <a href="/registrace">
+                  Vyzkoušet 14 dní zdarma
+                  <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
+                </a>
               </Button>
-              <Button variant="outline" size="xl">
-                Domluvit ukázku
+              <Button variant="outline" size="xl" asChild>
+                <a href="/prihlaseni">Přihlásit se</a>
               </Button>
             </div>
           </div>

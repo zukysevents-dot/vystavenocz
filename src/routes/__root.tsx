@@ -33,7 +33,7 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "Moderní česká fakturace pro OSVČ a firmy. Faktury s IČO, DIČ, DPH, QR platbou a AI asistentem. Od 100 Kč měsíčně.",
+          "Moderní česká fakturace pro OSVČ a firmy. Faktury s IČO, DIČ, DPH 21 %, QR platbou a AI asistentem v češtině. 14 dní zdarma bez karty.",
       },
       { name: "author", content: "Fakturio.cz" },
       { property: "og:title", content: "Fakturio.cz — Fakturace s AI a QR platbami" },
