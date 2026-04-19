@@ -14,16 +14,324 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      clients: {
+        Row: {
+          city: string | null
+          country: string
+          created_at: string
+          default_payment_days: number
+          dic: string | null
+          email: string | null
+          ico: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          street: string | null
+          updated_at: string
+          user_id: string
+          zip: string | null
+        }
+        Insert: {
+          city?: string | null
+          country?: string
+          created_at?: string
+          default_payment_days?: number
+          dic?: string | null
+          email?: string | null
+          ico?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          street?: string | null
+          updated_at?: string
+          user_id: string
+          zip?: string | null
+        }
+        Update: {
+          city?: string | null
+          country?: string
+          created_at?: string
+          default_payment_days?: number
+          dic?: string | null
+          email?: string | null
+          ico?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          street?: string | null
+          updated_at?: string
+          user_id?: string
+          zip?: string | null
+        }
+        Relationships: []
+      }
+      invoice_items: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          invoice_id: string
+          line_subtotal: number
+          line_total: number
+          line_vat: number
+          position: number
+          quantity: number
+          unit: string
+          unit_price: number
+          vat_rate: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          invoice_id: string
+          line_subtotal?: number
+          line_total?: number
+          line_vat?: number
+          position?: number
+          quantity?: number
+          unit?: string
+          unit_price?: number
+          vat_rate?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          invoice_id?: string
+          line_subtotal?: number
+          line_total?: number
+          line_vat?: number
+          position?: number
+          quantity?: number
+          unit?: string
+          unit_price?: number
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          client_id: string | null
+          client_snapshot: Json
+          constant_symbol: string | null
+          created_at: string
+          currency: string
+          due_date: string
+          exchange_rate: number
+          id: string
+          internal_notes: string | null
+          invoice_number: string
+          issue_date: string
+          notes: string | null
+          paid_at: string | null
+          payment_method: string
+          rounding: number
+          specific_symbol: string | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          subtotal: number
+          supplier_snapshot: Json
+          taxable_date: string
+          total: number
+          updated_at: string
+          user_id: string
+          variable_symbol: string | null
+          vat_total: number
+        }
+        Insert: {
+          client_id?: string | null
+          client_snapshot?: Json
+          constant_symbol?: string | null
+          created_at?: string
+          currency?: string
+          due_date?: string
+          exchange_rate?: number
+          id?: string
+          internal_notes?: string | null
+          invoice_number: string
+          issue_date?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: string
+          rounding?: number
+          specific_symbol?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subtotal?: number
+          supplier_snapshot?: Json
+          taxable_date?: string
+          total?: number
+          updated_at?: string
+          user_id: string
+          variable_symbol?: string | null
+          vat_total?: number
+        }
+        Update: {
+          client_id?: string | null
+          client_snapshot?: Json
+          constant_symbol?: string | null
+          created_at?: string
+          currency?: string
+          due_date?: string
+          exchange_rate?: number
+          id?: string
+          internal_notes?: string | null
+          invoice_number?: string
+          issue_date?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: string
+          rounding?: number
+          specific_symbol?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subtotal?: number
+          supplier_snapshot?: Json
+          taxable_date?: string
+          total?: number
+          updated_at?: string
+          user_id?: string
+          variable_symbol?: string | null
+          vat_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          bank_account: string | null
+          city: string | null
+          company_name: string | null
+          country: string
+          created_at: string
+          dic: string | null
+          email: string
+          full_name: string | null
+          iban: string | null
+          ico: string | null
+          id: string
+          invoice_color: string | null
+          invoice_number_format: string | null
+          invoice_number_prefix: string | null
+          logo_url: string | null
+          next_invoice_seq: number
+          street: string | null
+          subscription_active: boolean
+          subscription_until: string | null
+          swift: string | null
+          trial_ends_at: string
+          updated_at: string
+          vat_mode: Database["public"]["Enums"]["vat_mode"]
+          zip: string | null
+        }
+        Insert: {
+          bank_account?: string | null
+          city?: string | null
+          company_name?: string | null
+          country?: string
+          created_at?: string
+          dic?: string | null
+          email: string
+          full_name?: string | null
+          iban?: string | null
+          ico?: string | null
+          id: string
+          invoice_color?: string | null
+          invoice_number_format?: string | null
+          invoice_number_prefix?: string | null
+          logo_url?: string | null
+          next_invoice_seq?: number
+          street?: string | null
+          subscription_active?: boolean
+          subscription_until?: string | null
+          swift?: string | null
+          trial_ends_at?: string
+          updated_at?: string
+          vat_mode?: Database["public"]["Enums"]["vat_mode"]
+          zip?: string | null
+        }
+        Update: {
+          bank_account?: string | null
+          city?: string | null
+          company_name?: string | null
+          country?: string
+          created_at?: string
+          dic?: string | null
+          email?: string
+          full_name?: string | null
+          iban?: string | null
+          ico?: string | null
+          id?: string
+          invoice_color?: string | null
+          invoice_number_format?: string | null
+          invoice_number_prefix?: string | null
+          logo_url?: string | null
+          next_invoice_seq?: number
+          street?: string | null
+          subscription_active?: boolean
+          subscription_until?: string | null
+          swift?: string | null
+          trial_ends_at?: string
+          updated_at?: string
+          vat_mode?: Database["public"]["Enums"]["vat_mode"]
+          zip?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
+      invoice_status: "draft" | "issued" | "paid" | "overdue" | "cancelled"
+      vat_mode: "payer" | "identified" | "non_payer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +458,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+      invoice_status: ["draft", "issued", "paid", "overdue", "cancelled"],
+      vat_mode: ["payer", "identified", "non_payer"],
+    },
   },
 } as const
