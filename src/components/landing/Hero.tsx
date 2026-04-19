@@ -24,12 +24,14 @@ export function Hero() {
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button size="lg" variant="coral" className="group">
-              Vyzkoušet 30 dní zdarma
-              <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
+            <Button size="lg" variant="coral" className="group" asChild>
+              <a href="/registrace">
+                Vyzkoušet 14 dní zdarma
+                <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
+              </a>
             </Button>
-            <Button size="lg" variant="outline">
-              Podívat se na ukázku
+            <Button size="lg" variant="outline" asChild>
+              <a href="/prihlaseni">Mám již účet</a>
             </Button>
           </div>
 

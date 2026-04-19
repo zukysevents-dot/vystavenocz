@@ -33,11 +33,11 @@ export function Navbar() {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
-          <Button variant="ghost" size="sm">
-            Přihlásit se
+          <Button variant="ghost" size="sm" asChild>
+            <a href="/prihlaseni">Přihlásit se</a>
           </Button>
-          <Button variant="coral" size="sm">
-            Vyzkoušet zdarma
+          <Button variant="coral" size="sm" asChild>
+            <a href="/registrace">Vyzkoušet zdarma</a>
           </Button>
         </div>
 
@@ -65,11 +65,11 @@ export function Navbar() {
               </Link>
             ))}
             <div className="mt-2 flex flex-col gap-2 border-t border-border pt-3">
-              <Button variant="ghost" size="sm">
-                Přihlásit se
+              <Button variant="ghost" size="sm" asChild>
+                <a href="/prihlaseni">Přihlásit se</a>
               </Button>
-              <Button variant="coral" size="sm">
-                Vyzkoušet zdarma
+              <Button variant="coral" size="sm" asChild>
+                <a href="/registrace">Vyzkoušet zdarma</a>
               </Button>
             </div>
           </nav>

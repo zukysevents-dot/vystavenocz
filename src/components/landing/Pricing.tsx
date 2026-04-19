@@ -94,8 +94,8 @@ export function Pricing() {
                   : "Účtováno měsíčně. Přechod na roční tarif kdykoliv."}
               </p>
 
-              <Button variant="coral" size="lg" className="mt-6 w-full">
-                Vyzkoušet 30 dní zdarma
+              <Button variant="coral" size="lg" className="mt-6 w-full" asChild>
+                <a href="/registrace">Vyzkoušet 14 dní zdarma</a>
               </Button>
               <p className="mt-2 text-center text-xs text-muted-foreground">
                 Bez platební karty. Zrušení jedním kliknutím.
