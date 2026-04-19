@@ -1,1 +1,4 @@
 project_id = "zyzlmzfbuucpjdkhrfhg"
+
+[functions.ares-lookup]
+verify_jwt = false

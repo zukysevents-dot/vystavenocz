@@ -9,15 +9,45 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ZapomenuteHesloRouteImport } from './routes/zapomenute-heslo'
 import { Route as SrovnaniRouteImport } from './routes/srovnani'
+import { Route as ResetHeslaRouteImport } from './routes/reset-hesla'
+import { Route as RegistraceRouteImport } from './routes/registrace'
+import { Route as PrihlaseniRouteImport } from './routes/prihlaseni'
 import { Route as FunkceRouteImport } from './routes/funkce'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as CenikRouteImport } from './routes/cenik'
+import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppAppIndexRouteImport } from './routes/_app.app.index'
+import { Route as AppAppOnboardingRouteImport } from './routes/_app.app.onboarding'
+import { Route as AppAppNastaveniRouteImport } from './routes/_app.app.nastaveni'
+import { Route as AppAppKlientiRouteImport } from './routes/_app.app.klienti'
+import { Route as AppAppFakturyRouteImport } from './routes/_app.app.faktury'
 
+const ZapomenuteHesloRoute = ZapomenuteHesloRouteImport.update({
+  id: '/zapomenute-heslo',
+  path: '/zapomenute-heslo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SrovnaniRoute = SrovnaniRouteImport.update({
   id: '/srovnani',
   path: '/srovnani',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetHeslaRoute = ResetHeslaRouteImport.update({
+  id: '/reset-hesla',
+  path: '/reset-hesla',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegistraceRoute = RegistraceRouteImport.update({
+  id: '/registrace',
+  path: '/registrace',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrihlaseniRoute = PrihlaseniRouteImport.update({
+  id: '/prihlaseni',
+  path: '/prihlaseni',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FunkceRoute = FunkceRouteImport.update({
@@ -35,10 +65,39 @@ const CenikRoute = CenikRouteImport.update({
   path: '/cenik',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppAppIndexRoute = AppAppIndexRouteImport.update({
+  id: '/app/',
+  path: '/app/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAppOnboardingRoute = AppAppOnboardingRouteImport.update({
+  id: '/app/onboarding',
+  path: '/app/onboarding',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAppNastaveniRoute = AppAppNastaveniRouteImport.update({
+  id: '/app/nastaveni',
+  path: '/app/nastaveni',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAppKlientiRoute = AppAppKlientiRouteImport.update({
+  id: '/app/klienti',
+  path: '/app/klienti',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAppFakturyRoute = AppAppFakturyRouteImport.update({
+  id: '/app/faktury',
+  path: '/app/faktury',
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -46,46 +105,151 @@ export interface FileRoutesByFullPath {
   '/cenik': typeof CenikRoute
   '/faq': typeof FaqRoute
   '/funkce': typeof FunkceRoute
+  '/prihlaseni': typeof PrihlaseniRoute
+  '/registrace': typeof RegistraceRoute
+  '/reset-hesla': typeof ResetHeslaRoute
   '/srovnani': typeof SrovnaniRoute
+  '/zapomenute-heslo': typeof ZapomenuteHesloRoute
+  '/app/faktury': typeof AppAppFakturyRoute
+  '/app/klienti': typeof AppAppKlientiRoute
+  '/app/nastaveni': typeof AppAppNastaveniRoute
+  '/app/onboarding': typeof AppAppOnboardingRoute
+  '/app/': typeof AppAppIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cenik': typeof CenikRoute
   '/faq': typeof FaqRoute
   '/funkce': typeof FunkceRoute
+  '/prihlaseni': typeof PrihlaseniRoute
+  '/registrace': typeof RegistraceRoute
+  '/reset-hesla': typeof ResetHeslaRoute
   '/srovnani': typeof SrovnaniRoute
+  '/zapomenute-heslo': typeof ZapomenuteHesloRoute
+  '/app/faktury': typeof AppAppFakturyRoute
+  '/app/klienti': typeof AppAppKlientiRoute
+  '/app/nastaveni': typeof AppAppNastaveniRoute
+  '/app/onboarding': typeof AppAppOnboardingRoute
+  '/app': typeof AppAppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
   '/cenik': typeof CenikRoute
   '/faq': typeof FaqRoute
   '/funkce': typeof FunkceRoute
+  '/prihlaseni': typeof PrihlaseniRoute
+  '/registrace': typeof RegistraceRoute
+  '/reset-hesla': typeof ResetHeslaRoute
   '/srovnani': typeof SrovnaniRoute
+  '/zapomenute-heslo': typeof ZapomenuteHesloRoute
+  '/_app/app/faktury': typeof AppAppFakturyRoute
+  '/_app/app/klienti': typeof AppAppKlientiRoute
+  '/_app/app/nastaveni': typeof AppAppNastaveniRoute
+  '/_app/app/onboarding': typeof AppAppOnboardingRoute
+  '/_app/app/': typeof AppAppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/cenik' | '/faq' | '/funkce' | '/srovnani'
+  fullPaths:
+    | '/'
+    | '/cenik'
+    | '/faq'
+    | '/funkce'
+    | '/prihlaseni'
+    | '/registrace'
+    | '/reset-hesla'
+    | '/srovnani'
+    | '/zapomenute-heslo'
+    | '/app/faktury'
+    | '/app/klienti'
+    | '/app/nastaveni'
+    | '/app/onboarding'
+    | '/app/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cenik' | '/faq' | '/funkce' | '/srovnani'
-  id: '__root__' | '/' | '/cenik' | '/faq' | '/funkce' | '/srovnani'
+  to:
+    | '/'
+    | '/cenik'
+    | '/faq'
+    | '/funkce'
+    | '/prihlaseni'
+    | '/registrace'
+    | '/reset-hesla'
+    | '/srovnani'
+    | '/zapomenute-heslo'
+    | '/app/faktury'
+    | '/app/klienti'
+    | '/app/nastaveni'
+    | '/app/onboarding'
+    | '/app'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/cenik'
+    | '/faq'
+    | '/funkce'
+    | '/prihlaseni'
+    | '/registrace'
+    | '/reset-hesla'
+    | '/srovnani'
+    | '/zapomenute-heslo'
+    | '/_app/app/faktury'
+    | '/_app/app/klienti'
+    | '/_app/app/nastaveni'
+    | '/_app/app/onboarding'
+    | '/_app/app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
   CenikRoute: typeof CenikRoute
   FaqRoute: typeof FaqRoute
   FunkceRoute: typeof FunkceRoute
+  PrihlaseniRoute: typeof PrihlaseniRoute
+  RegistraceRoute: typeof RegistraceRoute
+  ResetHeslaRoute: typeof ResetHeslaRoute
   SrovnaniRoute: typeof SrovnaniRoute
+  ZapomenuteHesloRoute: typeof ZapomenuteHesloRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/zapomenute-heslo': {
+      id: '/zapomenute-heslo'
+      path: '/zapomenute-heslo'
+      fullPath: '/zapomenute-heslo'
+      preLoaderRoute: typeof ZapomenuteHesloRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/srovnani': {
       id: '/srovnani'
       path: '/srovnani'
       fullPath: '/srovnani'
       preLoaderRoute: typeof SrovnaniRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-hesla': {
+      id: '/reset-hesla'
+      path: '/reset-hesla'
+      fullPath: '/reset-hesla'
+      preLoaderRoute: typeof ResetHeslaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/registrace': {
+      id: '/registrace'
+      path: '/registrace'
+      fullPath: '/registrace'
+      preLoaderRoute: typeof RegistraceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/prihlaseni': {
+      id: '/prihlaseni'
+      path: '/prihlaseni'
+      fullPath: '/prihlaseni'
+      preLoaderRoute: typeof PrihlaseniRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/funkce': {
@@ -109,6 +273,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CenikRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -116,15 +287,73 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/app/': {
+      id: '/_app/app/'
+      path: '/app'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AppAppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/app/onboarding': {
+      id: '/_app/app/onboarding'
+      path: '/app/onboarding'
+      fullPath: '/app/onboarding'
+      preLoaderRoute: typeof AppAppOnboardingRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/app/nastaveni': {
+      id: '/_app/app/nastaveni'
+      path: '/app/nastaveni'
+      fullPath: '/app/nastaveni'
+      preLoaderRoute: typeof AppAppNastaveniRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/app/klienti': {
+      id: '/_app/app/klienti'
+      path: '/app/klienti'
+      fullPath: '/app/klienti'
+      preLoaderRoute: typeof AppAppKlientiRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/app/faktury': {
+      id: '/_app/app/faktury'
+      path: '/app/faktury'
+      fullPath: '/app/faktury'
+      preLoaderRoute: typeof AppAppFakturyRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
+interface AppRouteChildren {
+  AppAppFakturyRoute: typeof AppAppFakturyRoute
+  AppAppKlientiRoute: typeof AppAppKlientiRoute
+  AppAppNastaveniRoute: typeof AppAppNastaveniRoute
+  AppAppOnboardingRoute: typeof AppAppOnboardingRoute
+  AppAppIndexRoute: typeof AppAppIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAppFakturyRoute: AppAppFakturyRoute,
+  AppAppKlientiRoute: AppAppKlientiRoute,
+  AppAppNastaveniRoute: AppAppNastaveniRoute,
+  AppAppOnboardingRoute: AppAppOnboardingRoute,
+  AppAppIndexRoute: AppAppIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
   CenikRoute: CenikRoute,
   FaqRoute: FaqRoute,
   FunkceRoute: FunkceRoute,
+  PrihlaseniRoute: PrihlaseniRoute,
+  RegistraceRoute: RegistraceRoute,
+  ResetHeslaRoute: ResetHeslaRoute,
   SrovnaniRoute: SrovnaniRoute,
+  ZapomenuteHesloRoute: ZapomenuteHesloRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
