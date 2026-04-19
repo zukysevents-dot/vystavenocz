@@ -66,8 +66,8 @@ function DashboardPage() {
           </h1>
           <p className="mt-1 text-muted-foreground">Přehled vaší fakturace</p>
         </div>
-        <Button variant="coral" size="lg" disabled>
-          <Plus className="h-4 w-4" /> Nová faktura
+        <Button variant="coral" size="lg" asChild>
+          <Link to="/app/faktury/editor"><Plus className="h-4 w-4" /> Nová faktura</Link>
         </Button>
       </div>
 
@@ -91,13 +91,16 @@ function DashboardPage() {
 
       <div className="mt-8 rounded-2xl border border-border bg-card p-8 text-center">
         <FileText className="mx-auto h-10 w-10 text-muted-foreground" />
-        <h2 className="mt-3 text-lg font-semibold">Editor faktur a AI asistent přijdou v další vlně</h2>
+        <h2 className="mt-3 text-lg font-semibold">Začněte fakturovat</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Aktuálně dokončujeme tvorbu faktur, PDF s QR platbou a chat asistenta.
+          Vystavte fakturu s živým náhledem, QR platbou a stáhněte si PDF.
         </p>
         <div className="mt-4 flex justify-center gap-2">
+          <Button variant="coral" asChild>
+            <Link to="/app/faktury/editor"><Plus className="h-4 w-4" /> Nová faktura</Link>
+          </Button>
           <Button variant="outline" asChild>
-            <Link to="/app/nastaveni">Nastavení firmy</Link>
+            <Link to="/app/faktury">Všechny faktury</Link>
           </Button>
         </div>
       </div>

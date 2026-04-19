@@ -1,0 +1,573 @@
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { z } from "zod";
+import { ArrowLeft, Plus, Trash2, Save, Download, Loader2, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
+
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { InvoiceDocument } from "@/components/app/InvoiceDocument";
+import { downloadInvoicePdf } from "@/lib/invoice-pdf";
+import {
+  buildInvoiceNumber,
+  calcTotals,
+  formatCZK,
+  variableSymbolFromInvoiceNumber,
+  type ClientSnapshot,
+  type InvoiceItemDraft,
+  type SupplierSnapshot,
+  type VatRate,
+} from "@/lib/invoice";
+
+const searchSchema = z.object({
+  id: z.string().optional(),
+  clientId: z.string().optional(),
+});
+
+export const Route = createFileRoute("/_app/app/faktury/editor")({
+  head: () => ({ meta: [{ title: "Editor faktury — Fakturio" }] }),
+  validateSearch: searchSchema,
+  component: InvoiceEditorPage,
+});
+
+type ClientRow = {
+  id: string;
+  name: string;
+  ico: string | null;
+  dic: string | null;
+  street: string | null;
+  city: string | null;
+  zip: string | null;
+  country: string;
+  email: string | null;
+  default_payment_days: number;
+};
+
+type ProfileRow = {
+  company_name: string | null;
+  full_name: string | null;
+  ico: string | null;
+  dic: string | null;
+  vat_mode: "payer" | "identified" | "non_payer";
+  street: string | null;
+  city: string | null;
+  zip: string | null;
+  country: string;
+  bank_account: string | null;
+  iban: string | null;
+  swift: string | null;
+  email: string;
+  logo_url: string | null;
+  invoice_color: string | null;
+  invoice_number_prefix: string | null;
+  invoice_number_format: string | null;
+  next_invoice_seq: number;
+};
+
+const newItem = (): InvoiceItemDraft => ({
+  id: crypto.randomUUID(),
+  description: "",
+  quantity: 1,
+  unit: "ks",
+  unit_price: 0,
+  vat_rate: 21,
+});
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+function addDaysISO(days: number) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function InvoiceEditorPage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const search = useSearch({ from: "/_app/app/faktury/editor" });
+  const editingId = search.id;
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
+
+  const [profile, setProfile] = useState<ProfileRow | null>(null);
+  const [clients, setClients] = useState<ClientRow[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
+
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [issueDate, setIssueDate] = useState(todayISO());
+  const [taxableDate, setTaxableDate] = useState(todayISO());
+  const [dueDate, setDueDate] = useState(addDaysISO(14));
+  const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
+  const [variableSymbol, setVariableSymbol] = useState("");
+  const [notes, setNotes] = useState("");
+  const [items, setItems] = useState<InvoiceItemDraft[]>([newItem()]);
+
+  const previewRef = useRef<HTMLDivElement>(null);
+
+  // Load profile, clients, and (optionally) existing invoice
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      setLoading(true);
+      const [profRes, clientsRes] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", user.id).single(),
+        supabase.from("clients").select("*").eq("user_id", user.id).order("name"),
+      ]);
+      if (profRes.data) setProfile(profRes.data as ProfileRow);
+      if (clientsRes.data) setClients(clientsRes.data as ClientRow[]);
+
+      if (editingId) {
+        const { data: inv } = await supabase
+          .from("invoices")
+          .select("*, invoice_items(*)")
+          .eq("id", editingId)
+          .single();
+        if (inv) {
+          setInvoiceNumber(inv.invoice_number);
+          setIssueDate(inv.issue_date);
+          setTaxableDate(inv.taxable_date);
+          setDueDate(inv.due_date);
+          setPaymentMethod(inv.payment_method);
+          setVariableSymbol(inv.variable_symbol || "");
+          setNotes(inv.notes || "");
+          setSelectedClientId(inv.client_id || "");
+          const loadedItems = (inv.invoice_items as Array<{
+            id: string;
+            description: string;
+            quantity: number;
+            unit: string;
+            unit_price: number;
+            vat_rate: number;
+          }>)
+            .sort((a, b) => (a as unknown as { position: number }).position - (b as unknown as { position: number }).position)
+            .map((it) => ({
+              id: it.id,
+              description: it.description,
+              quantity: Number(it.quantity),
+              unit: it.unit,
+              unit_price: Number(it.unit_price),
+              vat_rate: Number(it.vat_rate) as VatRate,
+            }));
+          setItems(loadedItems.length > 0 ? loadedItems : [newItem()]);
+        }
+      } else {
+        // pre-fill invoice number
+        if (profRes.data) {
+          const num = buildInvoiceNumber(
+            profRes.data.invoice_number_prefix || "FA",
+            profRes.data.invoice_number_format || "{prefix}-{year}-{seq}",
+            profRes.data.next_invoice_seq || 1,
+          );
+          setInvoiceNumber(num);
+        }
+        // pre-select client from query
+        if (search.clientId) setSelectedClientId(search.clientId);
+      }
+
+      setLoading(false);
+    })();
+  }, [user, editingId, search.clientId]);
+
+  // Adjust due date when client changes
+  useEffect(() => {
+    if (!selectedClientId) return;
+    const c = clients.find((x) => x.id === selectedClientId);
+    if (c && !editingId) {
+      setDueDate(addDaysISO(c.default_payment_days));
+    }
+  }, [selectedClientId, clients, editingId]);
+
+  const selectedClient = useMemo(
+    () => clients.find((c) => c.id === selectedClientId),
+    [clients, selectedClientId],
+  );
+
+  const supplierSnapshot: SupplierSnapshot = useMemo(() => {
+    if (!profile) {
+      return {
+        company_name: null, ico: null, dic: null, street: null, city: null, zip: null,
+      };
+    }
+    return {
+      company_name: profile.company_name,
+      full_name: profile.full_name,
+      ico: profile.ico,
+      dic: profile.dic,
+      vat_mode: profile.vat_mode,
+      street: profile.street,
+      city: profile.city,
+      zip: profile.zip,
+      country: profile.country,
+      bank_account: profile.bank_account,
+      iban: profile.iban,
+      swift: profile.swift,
+      email: profile.email,
+      logo_url: profile.logo_url,
+      invoice_color: profile.invoice_color,
+    };
+  }, [profile]);
+
+  const clientSnapshot: ClientSnapshot = useMemo(() => {
+    if (!selectedClient) {
+      return { name: "— Vyberte odběratele —" };
+    }
+    return {
+      name: selectedClient.name,
+      ico: selectedClient.ico,
+      dic: selectedClient.dic,
+      street: selectedClient.street,
+      city: selectedClient.city,
+      zip: selectedClient.zip,
+      country: selectedClient.country,
+      email: selectedClient.email,
+    };
+  }, [selectedClient]);
+
+  const totals = useMemo(
+    () => calcTotals(items, profile?.vat_mode === "payer"),
+    [items, profile?.vat_mode],
+  );
+
+  const updateItem = (id: string, patch: Partial<InvoiceItemDraft>) => {
+    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
+  };
+  const removeItem = (id: string) => setItems((prev) => prev.filter((it) => it.id !== id));
+  const addItem = () => setItems((prev) => [...prev, newItem()]);
+
+  const save = async (status: "draft" | "issued") => {
+    if (!user || !profile) return;
+    if (!selectedClient) {
+      toast.error("Vyberte odběratele.");
+      return;
+    }
+    if (items.some((it) => !it.description.trim())) {
+      toast.error("Vyplňte popis u všech položek.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const vs = variableSymbol || variableSymbolFromInvoiceNumber(invoiceNumber);
+      const payload = {
+        user_id: user.id,
+        client_id: selectedClient.id,
+        invoice_number: invoiceNumber,
+        status,
+        supplier_snapshot: JSON.parse(JSON.stringify(supplierSnapshot)),
+        client_snapshot: JSON.parse(JSON.stringify(clientSnapshot)),
+        issue_date: issueDate,
+        due_date: dueDate,
+        taxable_date: taxableDate,
+        currency: "CZK",
+        subtotal: totals.subtotal,
+        vat_total: totals.vat_total,
+        total: totals.total,
+        variable_symbol: vs,
+        payment_method: paymentMethod,
+        notes: notes || null,
+      };
+
+      let invoiceId = editingId;
+
+      if (editingId) {
+        const { error } = await supabase.from("invoices").update(payload).eq("id", editingId);
+        if (error) throw error;
+        // wipe items & reinsert
+        await supabase.from("invoice_items").delete().eq("invoice_id", editingId);
+      } else {
+        const { data: ins, error } = await supabase
+          .from("invoices")
+          .insert(payload)
+          .select("id")
+          .single();
+        if (error) throw error;
+        invoiceId = ins.id;
+        // bump invoice sequence
+        await supabase
+          .from("profiles")
+          .update({ next_invoice_seq: (profile.next_invoice_seq || 1) + 1 })
+          .eq("id", user.id);
+      }
+
+      const itemRows = items.map((it, idx) => {
+        const subtotal = Math.round((it.quantity * it.unit_price + Number.EPSILON) * 100) / 100;
+        const vat = profile.vat_mode === "payer"
+          ? Math.round((subtotal * it.vat_rate / 100 + Number.EPSILON) * 100) / 100
+          : 0;
+        return {
+          invoice_id: invoiceId!,
+          position: idx,
+          description: it.description,
+          quantity: it.quantity,
+          unit: it.unit,
+          unit_price: it.unit_price,
+          vat_rate: it.vat_rate,
+          line_subtotal: subtotal,
+          line_vat: vat,
+          line_total: Math.round((subtotal + vat + Number.EPSILON) * 100) / 100,
+        };
+      });
+      const { error: itemsErr } = await supabase.from("invoice_items").insert(itemRows);
+      if (itemsErr) throw itemsErr;
+
+      toast.success(status === "draft" ? "Uloženo jako koncept." : "Faktura vystavena.");
+      navigate({ to: "/app/faktury" });
+    } catch (e) {
+      console.error(e);
+      toast.error("Nepodařilo se uložit fakturu: " + (e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    setDownloadingPdf(true);
+    try {
+      // ensure preview is visible
+      setShowPreview(true);
+      await new Promise((r) => setTimeout(r, 150));
+      await downloadInvoicePdf("invoice-document", `${invoiceNumber || "faktura"}.pdf`);
+      toast.success("PDF staženo.");
+    } catch (e) {
+      console.error(e);
+      toast.error("Nepodařilo se vygenerovat PDF.");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!profile?.company_name && !profile?.full_name) {
+    return (
+      <div className="mx-auto max-w-2xl p-8 text-center">
+        <h1 className="text-2xl font-bold">Nejprve vyplňte údaje firmy</h1>
+        <p className="mt-2 text-muted-foreground">Bez firemních údajů nemůžete vystavovat faktury.</p>
+        <Button asChild className="mt-4" variant="coral">
+          <Link to="/app/nastaveni">Jít do nastavení</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  if (clients.length === 0) {
+    return (
+      <div className="mx-auto max-w-2xl p-8 text-center">
+        <h1 className="text-2xl font-bold">Nejprve přidejte klienta</h1>
+        <p className="mt-2 text-muted-foreground">Pro vystavení faktury potřebujete alespoň jednoho odběratele.</p>
+        <Button asChild className="mt-4" variant="coral">
+          <Link to="/app/klienti">Přidat klienta</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen flex-col">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between border-b border-border bg-card px-6 py-3">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/app/faktury"><ArrowLeft className="h-4 w-4" /> Zpět</Link>
+          </Button>
+          <div>
+            <div className="text-sm font-semibold">
+              {editingId ? "Úprava faktury" : "Nová faktura"} — {invoiceNumber}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {selectedClient?.name || "vyberte odběratele"} · {formatCZK(totals.total)}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setShowPreview((v) => !v)}>
+            {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {showPreview ? "Skrýt náhled" : "Náhled"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={downloadingPdf}>
+            {downloadingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => save("draft")} disabled={saving}>
+            <Save className="h-4 w-4" /> Koncept
+          </Button>
+          <Button variant="coral" size="sm" onClick={() => save("issued")} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Vystavit
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Form */}
+        <div className="w-full overflow-auto border-r border-border bg-background p-6 lg:w-1/2">
+          <section className="space-y-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Základ</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Číslo faktury">
+                <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
+              </Field>
+              <Field label="Odběratel">
+                <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+                  <SelectTrigger><SelectValue placeholder="Vyberte klienta" /></SelectTrigger>
+                  <SelectContent>
+                    {clients.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Datum vystavení">
+                <Input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
+              </Field>
+              <Field label="Datum splatnosti">
+                <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+              </Field>
+              <Field label={profile?.vat_mode === "payer" ? "DUZP" : "Datum plnění"}>
+                <Input type="date" value={taxableDate} onChange={(e) => setTaxableDate(e.target.value)} />
+              </Field>
+              <Field label="Variabilní symbol">
+                <Input value={variableSymbol} onChange={(e) => setVariableSymbol(e.target.value)} placeholder="auto z čísla faktury" />
+              </Field>
+              <Field label="Způsob úhrady">
+                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bank_transfer">Bankovní převod</SelectItem>
+                    <SelectItem value="cash">Hotově</SelectItem>
+                    <SelectItem value="card">Kartou</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+          </section>
+
+          <section className="mt-8 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Položky</h2>
+              <Button size="sm" variant="outline" onClick={addItem}>
+                <Plus className="h-4 w-4" /> Přidat položku
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {items.map((it, idx) => (
+                <div key={it.id} className="rounded-lg border border-border bg-card p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-muted-foreground">#{idx + 1}</span>
+                    <Button variant="ghost" size="icon" onClick={() => removeItem(it.id)} disabled={items.length === 1}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                  <Input
+                    placeholder="Popis položky"
+                    value={it.description}
+                    onChange={(e) => updateItem(it.id, { description: e.target.value })}
+                    className="mt-2"
+                  />
+                  <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <Field label="Množství">
+                      <Input type="number" step="0.01" value={it.quantity}
+                        onChange={(e) => updateItem(it.id, { quantity: Number(e.target.value) || 0 })} />
+                    </Field>
+                    <Field label="MJ">
+                      <Input value={it.unit} onChange={(e) => updateItem(it.id, { unit: e.target.value })} />
+                    </Field>
+                    <Field label="Cena/MJ">
+                      <Input type="number" step="0.01" value={it.unit_price}
+                        onChange={(e) => updateItem(it.id, { unit_price: Number(e.target.value) || 0 })} />
+                    </Field>
+                    {profile?.vat_mode === "payer" && (
+                      <Field label="DPH %">
+                        <Select value={String(it.vat_rate)} onValueChange={(v) => updateItem(it.id, { vat_rate: Number(v) as VatRate })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">0 %</SelectItem>
+                            <SelectItem value="12">12 %</SelectItem>
+                            <SelectItem value="21">21 %</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="mt-8 space-y-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Poznámka</h2>
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Děkujeme za spolupráci…" rows={3} />
+          </section>
+
+          <div className="mt-8 rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Celkem k úhradě</span>
+              <span className="text-2xl font-bold text-primary">{formatCZK(totals.total)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Live preview */}
+        {showPreview && (
+          <div className="hidden flex-1 overflow-auto bg-muted/30 p-6 lg:block" ref={previewRef}>
+            <div className="origin-top scale-[0.78]">
+              <InvoiceDocument
+                supplier={supplierSnapshot}
+                client={clientSnapshot}
+                items={items}
+                invoiceNumber={invoiceNumber}
+                issueDate={issueDate}
+                dueDate={dueDate}
+                taxableDate={taxableDate}
+                variableSymbol={variableSymbol}
+                notes={notes}
+                paymentMethod={paymentMethod}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Hidden render of full-size invoice for PDF capture (when preview hidden on mobile) */}
+      {!showPreview && (
+        <div style={{ position: "fixed", left: "-10000px", top: 0 }} aria-hidden>
+          <InvoiceDocument
+            supplier={supplierSnapshot}
+            client={clientSnapshot}
+            items={items}
+            invoiceNumber={invoiceNumber}
+            issueDate={issueDate}
+            dueDate={dueDate}
+            taxableDate={taxableDate}
+            variableSymbol={variableSymbol}
+            notes={notes}
+            paymentMethod={paymentMethod}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      {children}
+    </div>
+  );
+}

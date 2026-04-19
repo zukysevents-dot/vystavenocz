@@ -23,7 +23,8 @@ import { Route as AppAppIndexRouteImport } from './routes/_app.app.index'
 import { Route as AppAppOnboardingRouteImport } from './routes/_app.app.onboarding'
 import { Route as AppAppNastaveniRouteImport } from './routes/_app.app.nastaveni'
 import { Route as AppAppKlientiRouteImport } from './routes/_app.app.klienti'
-import { Route as AppAppFakturyRouteImport } from './routes/_app.app.faktury'
+import { Route as AppAppFakturyIndexRouteImport } from './routes/_app.app.faktury.index'
+import { Route as AppAppFakturyEditorRouteImport } from './routes/_app.app.faktury.editor'
 
 const ZapomenuteHesloRoute = ZapomenuteHesloRouteImport.update({
   id: '/zapomenute-heslo',
@@ -94,9 +95,14 @@ const AppAppKlientiRoute = AppAppKlientiRouteImport.update({
   path: '/app/klienti',
   getParentRoute: () => AppRoute,
 } as any)
-const AppAppFakturyRoute = AppAppFakturyRouteImport.update({
-  id: '/app/faktury',
-  path: '/app/faktury',
+const AppAppFakturyIndexRoute = AppAppFakturyIndexRouteImport.update({
+  id: '/app/faktury/',
+  path: '/app/faktury/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAppFakturyEditorRoute = AppAppFakturyEditorRouteImport.update({
+  id: '/app/faktury/editor',
+  path: '/app/faktury/editor',
   getParentRoute: () => AppRoute,
 } as any)
 
@@ -110,11 +116,12 @@ export interface FileRoutesByFullPath {
   '/reset-hesla': typeof ResetHeslaRoute
   '/srovnani': typeof SrovnaniRoute
   '/zapomenute-heslo': typeof ZapomenuteHesloRoute
-  '/app/faktury': typeof AppAppFakturyRoute
   '/app/klienti': typeof AppAppKlientiRoute
   '/app/nastaveni': typeof AppAppNastaveniRoute
   '/app/onboarding': typeof AppAppOnboardingRoute
   '/app/': typeof AppAppIndexRoute
+  '/app/faktury/editor': typeof AppAppFakturyEditorRoute
+  '/app/faktury/': typeof AppAppFakturyIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -126,11 +133,12 @@ export interface FileRoutesByTo {
   '/reset-hesla': typeof ResetHeslaRoute
   '/srovnani': typeof SrovnaniRoute
   '/zapomenute-heslo': typeof ZapomenuteHesloRoute
-  '/app/faktury': typeof AppAppFakturyRoute
   '/app/klienti': typeof AppAppKlientiRoute
   '/app/nastaveni': typeof AppAppNastaveniRoute
   '/app/onboarding': typeof AppAppOnboardingRoute
   '/app': typeof AppAppIndexRoute
+  '/app/faktury/editor': typeof AppAppFakturyEditorRoute
+  '/app/faktury': typeof AppAppFakturyIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -144,11 +152,12 @@ export interface FileRoutesById {
   '/reset-hesla': typeof ResetHeslaRoute
   '/srovnani': typeof SrovnaniRoute
   '/zapomenute-heslo': typeof ZapomenuteHesloRoute
-  '/_app/app/faktury': typeof AppAppFakturyRoute
   '/_app/app/klienti': typeof AppAppKlientiRoute
   '/_app/app/nastaveni': typeof AppAppNastaveniRoute
   '/_app/app/onboarding': typeof AppAppOnboardingRoute
   '/_app/app/': typeof AppAppIndexRoute
+  '/_app/app/faktury/editor': typeof AppAppFakturyEditorRoute
+  '/_app/app/faktury/': typeof AppAppFakturyIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -162,11 +171,12 @@ export interface FileRouteTypes {
     | '/reset-hesla'
     | '/srovnani'
     | '/zapomenute-heslo'
-    | '/app/faktury'
     | '/app/klienti'
     | '/app/nastaveni'
     | '/app/onboarding'
     | '/app/'
+    | '/app/faktury/editor'
+    | '/app/faktury/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -178,11 +188,12 @@ export interface FileRouteTypes {
     | '/reset-hesla'
     | '/srovnani'
     | '/zapomenute-heslo'
-    | '/app/faktury'
     | '/app/klienti'
     | '/app/nastaveni'
     | '/app/onboarding'
     | '/app'
+    | '/app/faktury/editor'
+    | '/app/faktury'
   id:
     | '__root__'
     | '/'
@@ -195,11 +206,12 @@ export interface FileRouteTypes {
     | '/reset-hesla'
     | '/srovnani'
     | '/zapomenute-heslo'
-    | '/_app/app/faktury'
     | '/_app/app/klienti'
     | '/_app/app/nastaveni'
     | '/_app/app/onboarding'
     | '/_app/app/'
+    | '/_app/app/faktury/editor'
+    | '/_app/app/faktury/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -315,30 +327,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAppKlientiRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/app/faktury': {
-      id: '/_app/app/faktury'
+    '/_app/app/faktury/': {
+      id: '/_app/app/faktury/'
       path: '/app/faktury'
-      fullPath: '/app/faktury'
-      preLoaderRoute: typeof AppAppFakturyRouteImport
+      fullPath: '/app/faktury/'
+      preLoaderRoute: typeof AppAppFakturyIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/app/faktury/editor': {
+      id: '/_app/app/faktury/editor'
+      path: '/app/faktury/editor'
+      fullPath: '/app/faktury/editor'
+      preLoaderRoute: typeof AppAppFakturyEditorRouteImport
       parentRoute: typeof AppRoute
     }
   }
 }
 
 interface AppRouteChildren {
-  AppAppFakturyRoute: typeof AppAppFakturyRoute
   AppAppKlientiRoute: typeof AppAppKlientiRoute
   AppAppNastaveniRoute: typeof AppAppNastaveniRoute
   AppAppOnboardingRoute: typeof AppAppOnboardingRoute
   AppAppIndexRoute: typeof AppAppIndexRoute
+  AppAppFakturyEditorRoute: typeof AppAppFakturyEditorRoute
+  AppAppFakturyIndexRoute: typeof AppAppFakturyIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppAppFakturyRoute: AppAppFakturyRoute,
   AppAppKlientiRoute: AppAppKlientiRoute,
   AppAppNastaveniRoute: AppAppNastaveniRoute,
   AppAppOnboardingRoute: AppAppOnboardingRoute,
   AppAppIndexRoute: AppAppIndexRoute,
+  AppAppFakturyEditorRoute: AppAppFakturyEditorRoute,
+  AppAppFakturyIndexRoute: AppAppFakturyIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
