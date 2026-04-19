@@ -4,12 +4,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/landing/Logo";
 import { Button } from "@/components/ui/button";
 
-const nav = [
+const nav: { to: "/app" | "/app/faktury" | "/app/klienti" | "/app/nastaveni"; label: string; icon: typeof LayoutDashboard; exact?: boolean }[] = [
   { to: "/app", label: "Přehled", icon: LayoutDashboard, exact: true },
   { to: "/app/faktury", label: "Faktury", icon: FileText },
   { to: "/app/klienti", label: "Klienti", icon: Users },
   { to: "/app/nastaveni", label: "Nastavení", icon: Settings },
-] as const;
+];
 
 export function AppSidebar() {
   const { user, signOut } = useAuth();
