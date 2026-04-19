@@ -9,15 +9,39 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ZapomenuteHesloRouteImport } from './routes/zapomenute-heslo'
 import { Route as SrovnaniRouteImport } from './routes/srovnani'
+import { Route as ResetHeslaRouteImport } from './routes/reset-hesla'
+import { Route as RegistraceRouteImport } from './routes/registrace'
+import { Route as PrihlaseniRouteImport } from './routes/prihlaseni'
 import { Route as FunkceRouteImport } from './routes/funkce'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as CenikRouteImport } from './routes/cenik'
 import { Route as IndexRouteImport } from './routes/index'
 
+const ZapomenuteHesloRoute = ZapomenuteHesloRouteImport.update({
+  id: '/zapomenute-heslo',
+  path: '/zapomenute-heslo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SrovnaniRoute = SrovnaniRouteImport.update({
   id: '/srovnani',
   path: '/srovnani',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetHeslaRoute = ResetHeslaRouteImport.update({
+  id: '/reset-hesla',
+  path: '/reset-hesla',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegistraceRoute = RegistraceRouteImport.update({
+  id: '/registrace',
+  path: '/registrace',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrihlaseniRoute = PrihlaseniRouteImport.update({
+  id: '/prihlaseni',
+  path: '/prihlaseni',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FunkceRoute = FunkceRouteImport.update({
@@ -46,14 +70,22 @@ export interface FileRoutesByFullPath {
   '/cenik': typeof CenikRoute
   '/faq': typeof FaqRoute
   '/funkce': typeof FunkceRoute
+  '/prihlaseni': typeof PrihlaseniRoute
+  '/registrace': typeof RegistraceRoute
+  '/reset-hesla': typeof ResetHeslaRoute
   '/srovnani': typeof SrovnaniRoute
+  '/zapomenute-heslo': typeof ZapomenuteHesloRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cenik': typeof CenikRoute
   '/faq': typeof FaqRoute
   '/funkce': typeof FunkceRoute
+  '/prihlaseni': typeof PrihlaseniRoute
+  '/registrace': typeof RegistraceRoute
+  '/reset-hesla': typeof ResetHeslaRoute
   '/srovnani': typeof SrovnaniRoute
+  '/zapomenute-heslo': typeof ZapomenuteHesloRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -61,14 +93,46 @@ export interface FileRoutesById {
   '/cenik': typeof CenikRoute
   '/faq': typeof FaqRoute
   '/funkce': typeof FunkceRoute
+  '/prihlaseni': typeof PrihlaseniRoute
+  '/registrace': typeof RegistraceRoute
+  '/reset-hesla': typeof ResetHeslaRoute
   '/srovnani': typeof SrovnaniRoute
+  '/zapomenute-heslo': typeof ZapomenuteHesloRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/cenik' | '/faq' | '/funkce' | '/srovnani'
+  fullPaths:
+    | '/'
+    | '/cenik'
+    | '/faq'
+    | '/funkce'
+    | '/prihlaseni'
+    | '/registrace'
+    | '/reset-hesla'
+    | '/srovnani'
+    | '/zapomenute-heslo'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cenik' | '/faq' | '/funkce' | '/srovnani'
-  id: '__root__' | '/' | '/cenik' | '/faq' | '/funkce' | '/srovnani'
+  to:
+    | '/'
+    | '/cenik'
+    | '/faq'
+    | '/funkce'
+    | '/prihlaseni'
+    | '/registrace'
+    | '/reset-hesla'
+    | '/srovnani'
+    | '/zapomenute-heslo'
+  id:
+    | '__root__'
+    | '/'
+    | '/cenik'
+    | '/faq'
+    | '/funkce'
+    | '/prihlaseni'
+    | '/registrace'
+    | '/reset-hesla'
+    | '/srovnani'
+    | '/zapomenute-heslo'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -76,16 +140,48 @@ export interface RootRouteChildren {
   CenikRoute: typeof CenikRoute
   FaqRoute: typeof FaqRoute
   FunkceRoute: typeof FunkceRoute
+  PrihlaseniRoute: typeof PrihlaseniRoute
+  RegistraceRoute: typeof RegistraceRoute
+  ResetHeslaRoute: typeof ResetHeslaRoute
   SrovnaniRoute: typeof SrovnaniRoute
+  ZapomenuteHesloRoute: typeof ZapomenuteHesloRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/zapomenute-heslo': {
+      id: '/zapomenute-heslo'
+      path: '/zapomenute-heslo'
+      fullPath: '/zapomenute-heslo'
+      preLoaderRoute: typeof ZapomenuteHesloRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/srovnani': {
       id: '/srovnani'
       path: '/srovnani'
       fullPath: '/srovnani'
       preLoaderRoute: typeof SrovnaniRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-hesla': {
+      id: '/reset-hesla'
+      path: '/reset-hesla'
+      fullPath: '/reset-hesla'
+      preLoaderRoute: typeof ResetHeslaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/registrace': {
+      id: '/registrace'
+      path: '/registrace'
+      fullPath: '/registrace'
+      preLoaderRoute: typeof RegistraceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/prihlaseni': {
+      id: '/prihlaseni'
+      path: '/prihlaseni'
+      fullPath: '/prihlaseni'
+      preLoaderRoute: typeof PrihlaseniRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/funkce': {
@@ -124,8 +220,21 @@ const rootRouteChildren: RootRouteChildren = {
   CenikRoute: CenikRoute,
   FaqRoute: FaqRoute,
   FunkceRoute: FunkceRoute,
+  PrihlaseniRoute: PrihlaseniRoute,
+  RegistraceRoute: RegistraceRoute,
+  ResetHeslaRoute: ResetHeslaRoute,
   SrovnaniRoute: SrovnaniRoute,
+  ZapomenuteHesloRoute: ZapomenuteHesloRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
