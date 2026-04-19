@@ -1,30 +1,33 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Navbar } from "@/components/landing/Navbar";
+import { PageShell } from "@/components/landing/PageShell";
 import { Hero } from "@/components/landing/Hero";
-import { Features } from "@/components/landing/Features";
-import { Comparison } from "@/components/landing/Comparison";
-import { Pricing } from "@/components/landing/Pricing";
-import { Faq } from "@/components/landing/Faq";
 import { Cta } from "@/components/landing/Cta";
-import { Footer } from "@/components/landing/Footer";
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Fakturio.cz — Fakturace, která vám ušetří hodiny týdně" },
+      {
+        name: "description",
+        content:
+          "Moderní česká fakturace pro OSVČ a firmy. Faktury s IČO, DIČ, DPH 21 %, QR platbou a AI asistentem v češtině. Od 100 Kč měsíčně.",
+      },
+      { property: "og:title", content: "Fakturio.cz — Fakturace s AI a QR platbami" },
+      {
+        property: "og:description",
+        content:
+          "Vystavujte faktury česky během 30 sekund. AI asistent, QR platby, automatické DPH, krásný design.",
+      },
+    ],
+  }),
   component: Index,
 });
 
 function Index() {
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <Navbar />
-      <main>
-        <Hero />
-        <Features />
-        <Comparison />
-        <Pricing />
-        <Faq />
-        <Cta />
-      </main>
-      <Footer />
-    </div>
+    <PageShell>
+      <Hero />
+      <Cta />
+    </PageShell>
   );
 }

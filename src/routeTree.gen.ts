@@ -9,8 +9,32 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SrovnaniRouteImport } from './routes/srovnani'
+import { Route as FunkceRouteImport } from './routes/funkce'
+import { Route as FaqRouteImport } from './routes/faq'
+import { Route as CenikRouteImport } from './routes/cenik'
 import { Route as IndexRouteImport } from './routes/index'
 
+const SrovnaniRoute = SrovnaniRouteImport.update({
+  id: '/srovnani',
+  path: '/srovnani',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FunkceRoute = FunkceRouteImport.update({
+  id: '/funkce',
+  path: '/funkce',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaqRoute = FaqRouteImport.update({
+  id: '/faq',
+  path: '/faq',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CenikRoute = CenikRouteImport.update({
+  id: '/cenik',
+  path: '/cenik',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +43,72 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cenik': typeof CenikRoute
+  '/faq': typeof FaqRoute
+  '/funkce': typeof FunkceRoute
+  '/srovnani': typeof SrovnaniRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cenik': typeof CenikRoute
+  '/faq': typeof FaqRoute
+  '/funkce': typeof FunkceRoute
+  '/srovnani': typeof SrovnaniRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cenik': typeof CenikRoute
+  '/faq': typeof FaqRoute
+  '/funkce': typeof FunkceRoute
+  '/srovnani': typeof SrovnaniRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/cenik' | '/faq' | '/funkce' | '/srovnani'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/cenik' | '/faq' | '/funkce' | '/srovnani'
+  id: '__root__' | '/' | '/cenik' | '/faq' | '/funkce' | '/srovnani'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CenikRoute: typeof CenikRoute
+  FaqRoute: typeof FaqRoute
+  FunkceRoute: typeof FunkceRoute
+  SrovnaniRoute: typeof SrovnaniRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/srovnani': {
+      id: '/srovnani'
+      path: '/srovnani'
+      fullPath: '/srovnani'
+      preLoaderRoute: typeof SrovnaniRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/funkce': {
+      id: '/funkce'
+      path: '/funkce'
+      fullPath: '/funkce'
+      preLoaderRoute: typeof FunkceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faq': {
+      id: '/faq'
+      path: '/faq'
+      fullPath: '/faq'
+      preLoaderRoute: typeof FaqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cenik': {
+      id: '/cenik'
+      path: '/cenik'
+      fullPath: '/cenik'
+      preLoaderRoute: typeof CenikRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,16 +121,11 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CenikRoute: CenikRoute,
+  FaqRoute: FaqRoute,
+  FunkceRoute: FunkceRoute,
+  SrovnaniRoute: SrovnaniRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

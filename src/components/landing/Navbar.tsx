@@ -2,13 +2,14 @@ import { Logo } from "./Logo";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 
 const links = [
-  { href: "#funkce", label: "Funkce" },
-  { href: "#srovnani", label: "Srovnání" },
-  { href: "#cenik", label: "Ceník" },
-  { href: "#faq", label: "FAQ" },
-];
+  { to: "/funkce", label: "Funkce" },
+  { to: "/srovnani", label: "Srovnání" },
+  { to: "/cenik", label: "Ceník" },
+  { to: "/faq", label: "FAQ" },
+] as const;
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
@@ -20,13 +21,14 @@ export function Navbar() {
 
         <nav className="hidden items-center gap-8 md:flex">
           {links.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
+            <Link
+              key={l.to}
+              to={l.to}
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              activeProps={{ className: "text-foreground" }}
             >
               {l.label}
-            </a>
+            </Link>
           ))}
         </nav>
 
@@ -52,14 +54,15 @@ export function Navbar() {
         <div className="border-t border-border bg-background md:hidden">
           <nav className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-3">
             {links.map((l) => (
-              <a
-                key={l.href}
-                href={l.href}
+              <Link
+                key={l.to}
+                to={l.to}
                 onClick={() => setOpen(false)}
                 className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+                activeProps={{ className: "bg-muted text-foreground" }}
               >
                 {l.label}
-              </a>
+              </Link>
             ))}
             <div className="mt-2 flex flex-col gap-2 border-t border-border pt-3">
               <Button variant="ghost" size="sm">
