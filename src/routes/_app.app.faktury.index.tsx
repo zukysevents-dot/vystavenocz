@@ -253,7 +253,11 @@ function InvoicesListPage() {
               {filtered.map((inv) => {
                 const st = statusLabels[inv.status];
                 return (
-                  <tr key={inv.id} className="border-b border-border last:border-0 hover:bg-muted/30">
+                  <tr
+                    key={inv.id}
+                    className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/30"
+                    onClick={() => navigate({ to: "/app/faktury/editor", search: { id: inv.id } })}
+                  >
                     <td className="px-4 py-3 font-medium">{inv.invoice_number}</td>
                     <td className="px-4 py-3 text-muted-foreground">{inv.client_snapshot?.name || "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">{formatDate(inv.issue_date)}</td>
@@ -262,7 +266,7 @@ function InvoicesListPage() {
                     <td className="px-4 py-3 text-center">
                       <Badge variant={st.variant}>{st.label}</Badge>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon">
