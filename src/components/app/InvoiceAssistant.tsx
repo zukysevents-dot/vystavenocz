@@ -444,6 +444,13 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
                 : "bg-muted text-foreground",
             )}
           >
+            {m.image_thumb && (
+              <img
+                src={m.image_thumb}
+                alt="Příloha"
+                className="mb-2 max-h-40 rounded-lg border border-border/50 object-contain"
+              />
+            )}
             <div className="prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_code]:rounded [&_code]:bg-background/50 [&_code]:px-1">
               <ReactMarkdown>{m.content || "…"}</ReactMarkdown>
             </div>
