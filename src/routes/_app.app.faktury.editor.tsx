@@ -350,28 +350,32 @@ function InvoiceEditorPage() {
       if (!silent) toast.error("Vyplňte číslo faktury.");
       return null;
     }
-    if (!selectedClient) {
-      if (!silent) toast.error("Vyberte odběratele.");
-      return null;
-    }
-    if (items.some((it) => !it.description.trim())) {
-      if (!silent) toast.error("Vyplňte popis u všech položek.");
-      return null;
-    }
-    if (items.some((it) => !Number.isFinite(it.quantity) || !Number.isFinite(it.unit_price))) {
-      if (!silent) toast.error("Množství a cena musí být čísla.");
-      return null;
-    }
-    if (new Date(dueDate) < new Date(issueDate)) {
-      if (!silent) toast.error("Datum splatnosti nemůže být před datem vystavení.");
-      return null;
+    // Ostrá validace platí jen pro vystavení faktury. Koncept lze uložit
+    // i s neúplnými údaji — ať uživatel nepřijde o rozdělanou práci.
+    if (status === "issued") {
+      if (!selectedClient) {
+        if (!silent) toast.error("Vyberte odběratele.");
+        return null;
+      }
+      if (items.some((it) => !it.description.trim())) {
+        if (!silent) toast.error("Vyplňte popis u všech položek.");
+        return null;
+      }
+      if (items.some((it) => !Number.isFinite(it.quantity) || !Number.isFinite(it.unit_price))) {
+        if (!silent) toast.error("Množství a cena musí být čísla.");
+        return null;
+      }
+      if (new Date(dueDate) < new Date(issueDate)) {
+        if (!silent) toast.error("Datum splatnosti nemůže být před datem vystavení.");
+        return null;
+      }
     }
     setSaving(true);
     try {
       const vs = variableSymbol || variableSymbolFromInvoiceNumber(invoiceNumber);
       const payload = {
         user_id: user.id,
-        client_id: selectedClient.id,
+        client_id: selectedClient?.id ?? null,
         invoice_number: invoiceNumber,
         status,
         supplier_snapshot: JSON.parse(JSON.stringify(supplierSnapshot)),
