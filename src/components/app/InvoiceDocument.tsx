@@ -29,6 +29,8 @@ export type InvoiceDocumentProps = {
   notes?: string;
   paymentMethod?: string;
   currency?: string;
+  /** Stornovaná faktura — vykreslí přes celou stránku výrazný vodoznak. */
+  cancelled?: boolean;
 };
 
 export function InvoiceDocument(props: InvoiceDocumentProps) {
@@ -44,6 +46,7 @@ export function InvoiceDocument(props: InvoiceDocumentProps) {
     notes,
     paymentMethod = "bank_transfer",
     currency = "CZK",
+    cancelled = false,
   } = props;
 
   const vatPayer = supplier.vat_mode === "payer";
