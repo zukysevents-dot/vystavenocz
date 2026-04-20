@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import {
   Sparkles, Send, X, Loader2, Wand2, Trash2,
-  FileText, MessageCircle, PlusCircle,
+  FileText, MessageCircle, PlusCircle, Paperclip, Image as ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,7 +53,7 @@ export type InvoicePatch = {
 
 export type ApplyPatchFn = (patch: InvoicePatch) => void;
 
-type ChatMsg = { role: "user" | "assistant"; content: string };
+type ChatMsg = { role: "user" | "assistant"; content: string; image_thumb?: string };
 
 type Mode = "invoice" | "general";
 
@@ -114,6 +114,8 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
   const [messages, setMessages] = useState<ChatMsg[]>(() => loadHistory(activeStorageKey));
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -152,6 +154,7 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
   const newConversation = () => {
     abortRef.current?.abort();
     setMessages([]);
+    setPendingImage(null);
     if (activeStorageKey && typeof window !== "undefined") {
       localStorage.removeItem(STORAGE_PREFIX + activeStorageKey);
     }
@@ -163,13 +166,70 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
     [mode],
   );
 
-  const send = async (text: string) => {
+  // Načte obrázek, downscale na max 1600px (zachovává poměr) a vrátí jako data URL JPEG.
+  const compressImage = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("Soubor se nepodařilo načíst"));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error("Obrázek se nepodařilo dekódovat"));
+        img.onload = () => {
+          const MAX = 1600;
+          let { width, height } = img;
+          if (width > MAX || height > MAX) {
+            const scale = Math.min(MAX / width, MAX / height);
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return reject(new Error("Canvas nedostupný"));
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", 0.85));
+        };
+        img.src = String(reader.result);
+      };
+      reader.readAsDataURL(file);
+    });
+
+  const handlePickFile = async (file: File | undefined | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vyber obrázek (JPG, PNG, WEBP).");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Obrázek je příliš velký (max 10 MB).");
+      return;
+    }
+    try {
+      const dataUrl = await compressImage(file);
+      setPendingImage(dataUrl);
+      if (mode === "general") setMode("invoice");
+    } catch (e) {
+      console.error(e);
+      toast.error("Nepodařilo se zpracovat obrázek.");
+    }
+  };
+
+  const send = async (text: string, imageDataUrl?: string | null) => {
     const trimmed = text.trim();
-    if (!trimmed || isStreaming) return;
-    const userMsg: ChatMsg = { role: "user", content: trimmed };
+    const image = imageDataUrl ?? pendingImage;
+    // Povolíme odeslat samotný obrázek bez textu (asistent dostane výchozí pokyn)
+    if (!trimmed && !image) return;
+    if (isStreaming) return;
+    const userMsg: ChatMsg = {
+      role: "user",
+      content: trimmed || (image ? "📎 Přiložen obrázek — rozpoznej položky." : ""),
+      image_thumb: image ?? undefined,
+    };
     const next = [...messages, userMsg];
     setMessages(next);
     setInput("");
+    setPendingImage(null);
     setIsStreaming(true);
 
     let assistantSoFar = "";
@@ -201,6 +261,7 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
           messages: next.map((m) => ({ role: m.role, content: m.content })),
           invoice_context: mode === "invoice" ? context : null,
           mode,
+          image_data_url: image ?? undefined,
         }),
       });
 
@@ -356,7 +417,7 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
                 {mode === "invoice"
-                  ? "Pomůžu ti vyplnit fakturu. Řekni, co fakturuješ — položky vygeneruju a vložím přímo do formuláře."
+                  ? "Pomůžu ti vyplnit fakturu. Napiš, co fakturuješ — nebo přilož foto účtenky/objednávky 📎 a já z něj rozpoznám položky."
                   : "Zeptej se mě na cokoli kolem fakturace v ČR — DPH, IBAN, QR platba, DUZP, lhůty…"}
               </p>
             </div>
@@ -383,6 +444,13 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
                 : "bg-muted text-foreground",
             )}
           >
+            {m.image_thumb && (
+              <img
+                src={m.image_thumb}
+                alt="Příloha"
+                className="mb-2 max-h-40 rounded-lg border border-border/50 object-contain"
+              />
+            )}
             <div className="prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_code]:rounded [&_code]:bg-background/50 [&_code]:px-1">
               <ReactMarkdown>{m.content || "…"}</ReactMarkdown>
             </div>
@@ -402,7 +470,54 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
         }}
         className="border-t border-border p-3"
       >
+        {pendingImage && (
+          <div className="mb-2 flex items-center gap-2 rounded-lg border border-border bg-muted/40 p-2">
+            <img
+              src={pendingImage}
+              alt="Náhled"
+              className="h-12 w-12 rounded object-cover"
+            />
+            <div className="flex-1 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1 font-medium text-foreground">
+                <ImageIcon className="h-3.5 w-3.5" /> Příloha připravena
+              </div>
+              <div>AI rozpozná položky z obrázku.</div>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setPendingImage(null)}
+              title="Odebrat přílohu"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            handlePickFile(e.target.files?.[0]);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+          }}
+        />
         <div className="flex items-end gap-2">
+          {mode === "invoice" && (
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isStreaming}
+              title="Přidat foto účtenky / objednávky"
+              className="shrink-0"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+          )}
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -412,11 +527,16 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
                 send(input);
               }
             }}
-            placeholder="Napiš mi, co potřebuješ…"
+            placeholder={pendingImage ? "Volitelně doplň pokyn k obrázku…" : "Napiš mi, co potřebuješ…"}
             className="min-h-[44px] resize-none"
             disabled={isStreaming}
           />
-          <Button type="submit" size="icon" variant="coral" disabled={isStreaming || !input.trim()}>
+          <Button
+            type="submit"
+            size="icon"
+            variant="coral"
+            disabled={isStreaming || (!input.trim() && !pendingImage)}
+          >
             {isStreaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>

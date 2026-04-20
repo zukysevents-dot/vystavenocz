@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, invoice_context, mode } = await req.json();
+    const { messages, invoice_context, mode, image_data_url } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY není nakonfigurován");
 
@@ -114,6 +114,35 @@ Deno.serve(async (req) => {
     const contextBlock = !isGeneral
       ? `\n\nAKTUÁLNÍ STAV FAKTURY:\n${JSON.stringify(invoice_context, null, 2)}`
       : "";
+
+    // Pokud uživatel přiložil obrázek (foto účtenky/objednávky), připojíme ho k poslední user
+    // zprávě jako multimodal content. Gemini Vision rozpozná text a navrhne položky přes tool.
+    let preparedMessages = messages;
+    if (image_data_url && Array.isArray(messages) && messages.length > 0 && !isGeneral) {
+      const lastIdx = messages.length - 1;
+      const last = messages[lastIdx];
+      if (last?.role === "user") {
+        const userText = typeof last.content === "string"
+          ? last.content
+          : "Rozpoznej položky z přiloženého obrázku a navrhni je k přidání na fakturu.";
+        const visionInstruction =
+          "Na obrázku je foto účtenky, objednávky nebo dokumentu. " +
+          "Rozpoznej z něj jednotlivé položky (popis, množství, jednotku, jednotkovou cenu bez DPH, sazbu DPH) " +
+          "a NAVRHNI je k přidání na fakturu pomocí toolu `apply_invoice_changes` " +
+          "(replace_items=false – připoj k existujícím). Pokud na obrázku nejsou jasné položky, " +
+          "stručně popiš co vidíš a zeptej se uživatele.\n\nPoznámka uživatele: " + userText;
+        preparedMessages = [
+          ...messages.slice(0, lastIdx),
+          {
+            role: "user",
+            content: [
+              { type: "text", text: visionInstruction },
+              { type: "image_url", image_url: { url: image_data_url } },
+            ],
+          },
+        ];
+      }
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -125,7 +154,7 @@ Deno.serve(async (req) => {
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt + contextBlock },
-          ...messages,
+          ...preparedMessages,
         ],
         // V obecném režimu žádné tooly — asistent jen radí
         ...(isGeneral ? {} : { tools }),
