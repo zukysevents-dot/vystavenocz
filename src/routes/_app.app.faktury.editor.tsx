@@ -353,18 +353,22 @@ function InvoiceEditorPage() {
       });
       // Insert nových položek NEJDŘÍV; až po úspěšném insertu smažeme staré.
       // Tím zabráníme tomu, že selhaný insert nechá fakturu úplně bez položek.
-      const { data: insertedItems, error: itemsErr } = await supabase
-        .from("invoice_items")
-        .insert(itemRows)
-        .select("id");
+      let oldIds: string[] = [];
+      if (editingId) {
+        const { data: existing } = await supabase
+          .from("invoice_items")
+          .select("id")
+          .eq("invoice_id", editingId);
+        oldIds = (existing ?? []).map((r) => r.id);
+      }
+      const { error: itemsErr } = await supabase.from("invoice_items").insert(itemRows);
       if (itemsErr) throw itemsErr;
-      if (editingId && insertedItems) {
-        const newIds = insertedItems.map((r) => r.id);
-        await supabase
+      if (editingId && oldIds.length > 0) {
+        const { error: delErr } = await supabase
           .from("invoice_items")
           .delete()
-          .eq("invoice_id", editingId)
-          .not("id", "in", `(${newIds.map((id) => `"${id}"`).join(",")})`);
+          .in("id", oldIds);
+        if (delErr) console.warn("Smazání starých položek selhalo:", delErr);
       }
 
       if (redirect) {
