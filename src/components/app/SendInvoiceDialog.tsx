@@ -104,7 +104,22 @@ export function SendInvoiceDialog({ open, onOpenChange, context, onSent }: Props
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      toast.success("E-mail odeslán.");
+      // Bug #2: update statusu draft → issued provedeme na klientovi,
+      // aby update proběhl pod RLS autentizovaného uživatele.
+      const { error: statusErr } = await supabase
+        .from("invoices")
+        .update({ status: "issued" })
+        .eq("id", context.invoiceId)
+        .eq("status", "draft");
+      if (statusErr) {
+        console.warn("Aktualizace stavu faktury selhala:", statusErr);
+      }
+
+      // Bug #3: explicitní success toast s delším trváním, ať je vidět.
+      toast.success("E-mail odeslán", {
+        description: `Faktura ${context.invoiceNumber} byla odeslána na ${to.trim()}.`,
+        duration: 6000,
+      });
       onOpenChange(false);
       onSent?.();
     } catch (e) {
