@@ -352,6 +352,19 @@ function InvoicesListPage() {
                               <Send className="h-4 w-4" /> Vystavit
                             </DropdownMenuItem>
                           )}
+                          {inv.document_type === "invoice" &&
+                            (inv.status === "issued" || inv.status === "paid" || inv.status === "overdue") && (
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  navigate({
+                                    to: "/app/faktury/editor",
+                                    search: { creditFor: inv.id },
+                                  })
+                                }
+                              >
+                                <FileMinus className="h-4 w-4" /> Vytvořit dobropis
+                              </DropdownMenuItem>
+                            )}
                           <DropdownMenuSeparator />
                           {inv.status === "draft" ? (
                             <DropdownMenuItem
