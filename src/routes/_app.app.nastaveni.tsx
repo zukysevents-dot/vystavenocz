@@ -39,6 +39,9 @@ type Form = {
   invoice_number_prefix: string;
   invoice_color: string;
   logo_url: string | null;
+  next_invoice_seq: number;
+  credit_note_prefix: string;
+  next_credit_note_seq: number;
 };
 
 const defaults: Form = {
@@ -57,6 +60,9 @@ const defaults: Form = {
   invoice_number_prefix: "FA",
   invoice_color: "#0fbfb6",
   logo_url: null,
+  next_invoice_seq: 1,
+  credit_note_prefix: "OD",
+  next_credit_note_seq: 1,
 };
 
 function SettingsPage() {
@@ -91,6 +97,9 @@ function SettingsPage() {
           invoice_number_prefix: data.invoice_number_prefix ?? "FA",
           invoice_color: data.invoice_color ?? "#0fbfb6",
           logo_url: data.logo_url ?? null,
+          next_invoice_seq: data.next_invoice_seq ?? 1,
+          credit_note_prefix: data.credit_note_prefix ?? "OD",
+          next_credit_note_seq: data.next_credit_note_seq ?? 1,
         });
       }
       setLoading(false);
@@ -299,16 +308,73 @@ function SettingsPage() {
                 />
               </div>
             </div>
+          </div>
+        </Section>
+
+        <Section title="Číslování faktur">
+          <div className="grid gap-4 sm:grid-cols-2">
             <Field
-              label="Prefix čísla faktury"
+              label="Prefix"
               id="invoice_number_prefix"
               value={form.invoice_number_prefix}
               onChange={(v) => setForm({ ...form, invoice_number_prefix: v })}
               placeholder="FA"
             />
+            <div className="space-y-2">
+              <Label htmlFor="next_invoice_seq">Další číslo</Label>
+              <Input
+                id="next_invoice_seq"
+                type="number"
+                min={1}
+                value={form.next_invoice_seq}
+                onChange={(e) =>
+                  setForm({ ...form, next_invoice_seq: Math.max(1, Number(e.target.value) || 1) })
+                }
+              />
+            </div>
           </div>
           <p className="text-xs text-muted-foreground">
-            Čísla faktur budou ve formátu <span className="font-mono">{form.invoice_number_prefix || "FA"}-{new Date().getFullYear()}-001</span>.
+            Další faktura bude mít číslo{" "}
+            <span className="font-mono">
+              {form.invoice_number_prefix || "FA"}-{new Date().getFullYear()}-
+              {String(form.next_invoice_seq).padStart(3, "0")}
+            </span>
+            .
+          </p>
+        </Section>
+
+        <Section title="Číslování dobropisů">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              label="Prefix"
+              id="credit_note_prefix"
+              value={form.credit_note_prefix}
+              onChange={(v) => setForm({ ...form, credit_note_prefix: v })}
+              placeholder="OD"
+            />
+            <div className="space-y-2">
+              <Label htmlFor="next_credit_note_seq">Další číslo</Label>
+              <Input
+                id="next_credit_note_seq"
+                type="number"
+                min={1}
+                value={form.next_credit_note_seq}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    next_credit_note_seq: Math.max(1, Number(e.target.value) || 1),
+                  })
+                }
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Další dobropis (opravný daňový doklad) bude mít číslo{" "}
+            <span className="font-mono">
+              {form.credit_note_prefix || "OD"}-{new Date().getFullYear()}-
+              {String(form.next_credit_note_seq).padStart(3, "0")}
+            </span>
+            . Dobropisy mají vlastní číselnou řadu, aby je účetní snadno odlišila od běžných faktur.
           </p>
         </Section>
 
