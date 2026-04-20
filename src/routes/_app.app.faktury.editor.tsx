@@ -134,6 +134,12 @@ function InvoiceEditorPage() {
   const [dirty, setDirty] = useState(false);
   const skipBlockerRef = useRef(false);
 
+  // Autosave: track loaded invoice status (only drafts/new are autosaved),
+  // and show "Saved …" indicator in the header.
+  const [loadedStatus, setLoadedStatus] = useState<"draft" | "issued" | "paid" | "overdue" | "cancelled" | null>(null);
+  const [lastAutosaveAt, setLastAutosaveAt] = useState<Date | null>(null);
+  const autosavingRef = useRef(false);
+
   // Load profile, clients, and (optionally) existing invoice
   useEffect(() => {
     if (!user) return;
@@ -161,6 +167,7 @@ function InvoiceEditorPage() {
           setVariableSymbol(inv.variable_symbol || "");
           setNotes(inv.notes || "");
           setSelectedClientId(inv.client_id || "");
+          setLoadedStatus(inv.status as typeof loadedStatus);
           const loadedItems = (inv.invoice_items as Array<{
             id: string;
             description: string;
@@ -250,6 +257,26 @@ function InvoiceEditorPage() {
     enableBeforeUnload: false, // we own beforeunload above
   });
 
+  // Autosave: každých 30 s tiše uložit draft, pokud je formulář dirty.
+  // Spouštíme jen pro nové faktury a koncepty (vystavené/zaplacené/stornované
+  // nikdy nepřepisujeme automaticky). Validace v save() ošetří chybějící data
+  // (silent: true → žádné toasty).
+  useEffect(() => {
+    if (loading) return;
+    const canAutosave = loadedStatus === null || loadedStatus === "draft";
+    if (!canAutosave) return;
+
+    const interval = setInterval(() => {
+      if (!dirty || saving || autosavingRef.current) return;
+      autosavingRef.current = true;
+      void save("draft", { redirect: false, silent: true }).finally(() => {
+        autosavingRef.current = false;
+      });
+    }, 30_000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, loadedStatus, dirty, saving]);
+
   const selectedClient = useMemo(
     () => clients.find((c) => c.id === selectedClientId),
     [clients, selectedClientId],
@@ -309,9 +336,10 @@ function InvoiceEditorPage() {
 
   const save = async (
     status: "draft" | "issued",
-    opts: { redirect?: boolean } = {},
+    opts: { redirect?: boolean; silent?: boolean } = {},
   ): Promise<string | null> => {
     const redirect = opts.redirect !== false;
+    const silent = opts.silent === true;
     if (!user || !profile) return null;
     if (status === "issued" && !hasAccess) {
       setPaywallOpen(true);
@@ -319,23 +347,23 @@ function InvoiceEditorPage() {
     }
     // Validace
     if (!invoiceNumber.trim()) {
-      toast.error("Vyplňte číslo faktury.");
+      if (!silent) toast.error("Vyplňte číslo faktury.");
       return null;
     }
     if (!selectedClient) {
-      toast.error("Vyberte odběratele.");
+      if (!silent) toast.error("Vyberte odběratele.");
       return null;
     }
     if (items.some((it) => !it.description.trim())) {
-      toast.error("Vyplňte popis u všech položek.");
+      if (!silent) toast.error("Vyplňte popis u všech položek.");
       return null;
     }
     if (items.some((it) => !Number.isFinite(it.quantity) || !Number.isFinite(it.unit_price))) {
-      toast.error("Množství a cena musí být čísla.");
+      if (!silent) toast.error("Množství a cena musí být čísla.");
       return null;
     }
     if (new Date(dueDate) < new Date(issueDate)) {
-      toast.error("Datum splatnosti nemůže být před datem vystavení.");
+      if (!silent) toast.error("Datum splatnosti nemůže být před datem vystavení.");
       return null;
     }
     setSaving(true);
@@ -380,6 +408,19 @@ function InvoiceEditorPage() {
           .update({ next_invoice_seq: nextSeq })
           .eq("id", user.id);
         setProfile({ ...profile, next_invoice_seq: nextSeq });
+        // Po prvním uložení si "převezmeme" id do URL (?id=...), aby další
+        // (auto)save proběhl jako UPDATE a nevytvořil duplicitní fakturu.
+        if (!redirect && invoiceId) {
+          skipBlockerRef.current = true;
+          navigate({
+            to: "/app/faktury/editor",
+            search: { id: invoiceId },
+            replace: true,
+          });
+          // Reset skipBlocker on next tick — replace navigation will have completed.
+          setTimeout(() => { skipBlockerRef.current = false; }, 0);
+        }
+        setLoadedStatus(status);
       }
 
       const itemRows = items.map((it, idx) => {
@@ -425,15 +466,19 @@ function InvoiceEditorPage() {
         skipBlockerRef.current = true;
         setDirty(false);
         navigate({ to: "/app/faktury" });
+      } else {
+        // Tichý save (autosave) — jen označit jako čisté a zaznamenat čas.
+        setDirty(false);
+        if (silent) setLastAutosaveAt(new Date());
       }
       return invoiceId ?? null;
     } catch (e) {
       console.error(e);
       const msg = (e as Error).message || "";
       if (msg.includes("invoices_user_number_unique") || msg.toLowerCase().includes("duplicate")) {
-        toast.error(`Faktura s číslem ${invoiceNumber} už existuje. Změňte číslo faktury.`);
+        if (!silent) toast.error(`Faktura s číslem ${invoiceNumber} už existuje. Změňte číslo faktury.`);
       } else {
-        toast.error("Nepodařilo se uložit fakturu: " + msg);
+        if (!silent) toast.error("Nepodařilo se uložit fakturu: " + msg);
       }
       return null;
     } finally {
@@ -533,6 +578,17 @@ function InvoiceEditorPage() {
             </div>
             <div className="text-xs text-muted-foreground">
               {selectedClient?.name || "vyberte odběratele"} · {formatCZK(totals.total)}
+              {(loadedStatus === null || loadedStatus === "draft") && (
+                <span className="ml-2 text-[11px]">
+                  {dirty ? (
+                    <span className="text-coral">• neuložené změny</span>
+                  ) : lastAutosaveAt ? (
+                    <span className="text-primary">
+                      • automaticky uloženo {lastAutosaveAt.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  ) : null}
+                </span>
+              )}
             </div>
           </div>
         </div>
