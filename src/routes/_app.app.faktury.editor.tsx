@@ -36,6 +36,8 @@ import {
 const searchSchema = z.object({
   id: z.string().optional(),
   clientId: z.string().optional(),
+  /** ID původní faktury, ze které se má vytvořit dobropis. */
+  creditFor: z.string().optional(),
 });
 
 export const Route = createFileRoute("/_app/app/faktury/editor")({
@@ -76,6 +78,8 @@ type ProfileRow = {
   invoice_number_prefix: string | null;
   invoice_number_format: string | null;
   next_invoice_seq: number;
+  credit_note_prefix: string | null;
+  next_credit_note_seq: number;
 };
 
 const newItem = (): InvoiceItemDraft => ({
