@@ -151,6 +151,9 @@ function InvoiceEditorPage() {
   const [lastAutosaveAt, setLastAutosaveAt] = useState<Date | null>(null);
   const autosavingRef = useRef(false);
 
+  // Stornovaný doklad je zamčený — nesmí se měnit ani znovu vystavit.
+  const isCancelled = loadedStatus === "cancelled";
+
   // Load profile, clients, and (optionally) existing invoice
   useEffect(() => {
     if (!user) return;
