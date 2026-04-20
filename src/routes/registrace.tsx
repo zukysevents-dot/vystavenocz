@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Logo } from "@/components/landing/Logo";
 import { toast } from "sonner";
 import { Loader2, Search, Check } from "lucide-react";
@@ -40,6 +41,7 @@ function RegisterPage() {
   const [aresData, setAresData] = useState<AresResult | null>(null);
   const [aresLoading, setAresLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [agreed, setAgreed] = useState(false);
 
   useEffect(() => {
     if (!authLoading && session) navigate({ to: "/app" });
@@ -79,6 +81,10 @@ function RegisterPage() {
     }
     if (password.length < 8) {
       toast.error("Heslo musí mít alespoň 8 znaků.");
+      return;
+    }
+    if (!agreed) {
+      toast.error("Pro registraci musíte souhlasit s obchodními podmínkami a zpracováním osobních údajů.");
       return;
     }
 
@@ -174,7 +180,27 @@ function RegisterPage() {
               <Input id="password" type="password" autoComplete="new-password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
 
-            <Button type="submit" variant="coral" size="lg" className="w-full" disabled={submitting}>
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="terms"
+                checked={agreed}
+                onCheckedChange={(v) => setAgreed(v === true)}
+                className="mt-0.5"
+              />
+              <Label htmlFor="terms" className="text-sm font-normal leading-relaxed text-muted-foreground">
+                Souhlasím s{" "}
+                <Link to="/podminky" target="_blank" className="font-medium text-primary hover:underline">
+                  obchodními podmínkami
+                </Link>{" "}
+                a{" "}
+                <Link to="/gdpr" target="_blank" className="font-medium text-primary hover:underline">
+                  zpracováním osobních údajů
+                </Link>
+                .
+              </Label>
+            </div>
+
+            <Button type="submit" variant="coral" size="lg" className="w-full" disabled={submitting || !agreed}>
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
               Vytvořit účet zdarma
             </Button>
