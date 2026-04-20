@@ -388,6 +388,19 @@ function InvoiceEditorPage() {
           .update({ next_invoice_seq: nextSeq })
           .eq("id", user.id);
         setProfile({ ...profile, next_invoice_seq: nextSeq });
+        // Po prvním uložení si "převezmeme" id do URL (?id=...), aby další
+        // (auto)save proběhl jako UPDATE a nevytvořil duplicitní fakturu.
+        if (!redirect && invoiceId) {
+          skipBlockerRef.current = true;
+          navigate({
+            to: "/_app/app/faktury/editor",
+            search: { id: invoiceId },
+            replace: true,
+          });
+          // Reset skipBlocker on next tick — replace navigation will have completed.
+          setTimeout(() => { skipBlockerRef.current = false; }, 0);
+        }
+        setLoadedStatus(status);
       }
 
       const itemRows = items.map((it, idx) => {
