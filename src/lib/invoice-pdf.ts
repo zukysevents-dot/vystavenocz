@@ -1,7 +1,7 @@
 /**
  * Generování PDF z DOM uzlu faktury pomocí html2canvas + jsPDF.
  */
-import html2canvas from "html2canvas";
+import html2canvas from "html2canvas-pro";
 import jsPDF from "jspdf";
 
 export async function downloadInvoicePdf(elementId: string, filename: string) {
