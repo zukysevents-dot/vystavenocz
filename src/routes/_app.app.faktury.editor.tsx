@@ -840,6 +840,8 @@ function InvoiceEditorPage() {
                 notes={notes}
                 paymentMethod={paymentMethod}
                 cancelled={loadedStatus === "cancelled"}
+                documentType={documentType}
+                originalInvoiceNumber={originalInvoiceNumber}
               />
             </div>
           </div>
@@ -861,6 +863,8 @@ function InvoiceEditorPage() {
             notes={notes}
             paymentMethod={paymentMethod}
             cancelled={loadedStatus === "cancelled"}
+            documentType={documentType}
+            originalInvoiceNumber={originalInvoiceNumber}
           />
         </div>
       )}
