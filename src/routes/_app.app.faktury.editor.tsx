@@ -316,9 +316,10 @@ function InvoiceEditorPage() {
 
   const save = async (
     status: "draft" | "issued",
-    opts: { redirect?: boolean } = {},
+    opts: { redirect?: boolean; silent?: boolean } = {},
   ): Promise<string | null> => {
     const redirect = opts.redirect !== false;
+    const silent = opts.silent === true;
     if (!user || !profile) return null;
     if (status === "issued" && !hasAccess) {
       setPaywallOpen(true);
@@ -326,23 +327,23 @@ function InvoiceEditorPage() {
     }
     // Validace
     if (!invoiceNumber.trim()) {
-      toast.error("Vyplňte číslo faktury.");
+      if (!silent) toast.error("Vyplňte číslo faktury.");
       return null;
     }
     if (!selectedClient) {
-      toast.error("Vyberte odběratele.");
+      if (!silent) toast.error("Vyberte odběratele.");
       return null;
     }
     if (items.some((it) => !it.description.trim())) {
-      toast.error("Vyplňte popis u všech položek.");
+      if (!silent) toast.error("Vyplňte popis u všech položek.");
       return null;
     }
     if (items.some((it) => !Number.isFinite(it.quantity) || !Number.isFinite(it.unit_price))) {
-      toast.error("Množství a cena musí být čísla.");
+      if (!silent) toast.error("Množství a cena musí být čísla.");
       return null;
     }
     if (new Date(dueDate) < new Date(issueDate)) {
-      toast.error("Datum splatnosti nemůže být před datem vystavení.");
+      if (!silent) toast.error("Datum splatnosti nemůže být před datem vystavení.");
       return null;
     }
     setSaving(true);
