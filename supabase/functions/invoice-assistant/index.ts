@@ -7,7 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `Jsi AI asistent pro českou fakturační aplikaci Fakturio. Pomáháš živnostníkům a malým firmám s fakturami.
+const SYSTEM_PROMPT_INVOICE = `Jsi AI asistent pro českou fakturační aplikaci Fakturio. Pomáháš živnostníkům a malým firmám s fakturami.
 
 UMÍŠ:
 - Navrhovat a generovat položky faktur (popis, množství, jednotka, cena, sazba DPH)
@@ -23,6 +23,23 @@ STYL:
 - Po použití toolu krátce shrň, co jsi udělal/a (1–2 věty)
 - Ceny vždy v Kč bez DPH; DPH spočítá aplikace sama
 - Pokud uživatel není plátce DPH, používej sazbu 0`;
+
+const SYSTEM_PROMPT_GENERAL = `Jsi AI poradce pro českou fakturační aplikaci Fakturio. Pomáháš živnostníkům a malým firmám s otázkami kolem fakturace, daní a účetnictví v ČR.
+
+UMÍŠ:
+- Vysvětlit DPH sazby v ČR (21 %, 12 %, 0 %), kdo je plátce/identifikovaná osoba/neplátce
+- Vysvětlit DUZP, datum vystavení, datum splatnosti, lhůty
+- IBAN, BIC/SWIFT, QR platba SPAYD, variabilní/konstantní/specifický symbol
+- Náležitosti daňového dokladu vs. faktury neplátce DPH
+- Reverse charge, OSS, přeshraniční fakturace v rámci EU
+- Obecné rady ke vztahu s ČSSZ, FÚ, EET (zrušeno), kontrolní hlášení
+
+STYL:
+- Vždy česky, přátelsky a stručně
+- Žádné dlouhé úvody — odpověď nejdřív, pak vysvětlení
+- Pokud si nejsi jistý/á (zákony se mění), upozorni a doporuč ověřit u účetní
+- Nepíšeš JSON ani neměníš data v aplikaci — jsi jen poradce
+- Pro konkrétní úpravy faktury uživateli řekni, ať přepne na záložku „Tato faktura"`;
 
 const tools = [
   {
@@ -74,11 +91,13 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, invoice_context } = await req.json();
+    const { messages, invoice_context, mode } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY není nakonfigurován");
 
-    const contextBlock = invoice_context
+    const isGeneral = mode === "general" || !invoice_context;
+    const systemPrompt = isGeneral ? SYSTEM_PROMPT_GENERAL : SYSTEM_PROMPT_INVOICE;
+    const contextBlock = !isGeneral
       ? `\n\nAKTUÁLNÍ STAV FAKTURY:\n${JSON.stringify(invoice_context, null, 2)}`
       : "";
 
@@ -91,10 +110,11 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT + contextBlock },
+          { role: "system", content: systemPrompt + contextBlock },
           ...messages,
         ],
-        tools,
+        // V obecném režimu žádné tooly — asistent jen radí
+        ...(isGeneral ? {} : { tools }),
         stream: true,
       }),
     });
