@@ -116,8 +116,9 @@ export function czAccountToIban(account: string): string | null {
   const prefixPad = prefix.padStart(6, "0");
   const numberPad = number.padStart(10, "0");
   const bban = `${bank}${prefixPad}${numberPad}`; // 20 chars
-  // mod-97 with country "CZ00" appended at end
-  const checkSrc = bban + "1228" + "00"; // C=12, Z=28
+  // mod-97 podle ISO 13616: BBAN + země převedené na čísla (A=10..Z=35) + "00"
+  // C = 12, Z = 35  →  "CZ" se přepíše na "1235"
+  const checkSrc = bban + "1235" + "00";
   const remainder = mod97(checkSrc);
   const check = String(98 - remainder).padStart(2, "0");
   return `CZ${check}${bban}`;

@@ -268,12 +268,25 @@ function InvoiceEditorPage() {
       setPaywallOpen(true);
       return null;
     }
+    // Validace
+    if (!invoiceNumber.trim()) {
+      toast.error("Vyplňte číslo faktury.");
+      return null;
+    }
     if (!selectedClient) {
       toast.error("Vyberte odběratele.");
       return null;
     }
     if (items.some((it) => !it.description.trim())) {
       toast.error("Vyplňte popis u všech položek.");
+      return null;
+    }
+    if (items.some((it) => !Number.isFinite(it.quantity) || !Number.isFinite(it.unit_price))) {
+      toast.error("Množství a cena musí být čísla.");
+      return null;
+    }
+    if (new Date(dueDate) < new Date(issueDate)) {
+      toast.error("Datum splatnosti nemůže být před datem vystavení.");
       return null;
     }
     setSaving(true);
@@ -303,8 +316,6 @@ function InvoiceEditorPage() {
       if (editingId) {
         const { error } = await supabase.from("invoices").update(payload).eq("id", editingId);
         if (error) throw error;
-        // wipe items & reinsert
-        await supabase.from("invoice_items").delete().eq("invoice_id", editingId);
       } else {
         const { data: ins, error } = await supabase
           .from("invoices")
@@ -313,11 +324,13 @@ function InvoiceEditorPage() {
           .single();
         if (error) throw error;
         invoiceId = ins.id;
-        // bump invoice sequence
+        // bump invoice sequence (lokálně i v DB) — zabrání reuse stejného čísla
+        const nextSeq = (profile.next_invoice_seq || 1) + 1;
         await supabase
           .from("profiles")
-          .update({ next_invoice_seq: (profile.next_invoice_seq || 1) + 1 })
+          .update({ next_invoice_seq: nextSeq })
           .eq("id", user.id);
+        setProfile({ ...profile, next_invoice_seq: nextSeq });
       }
 
       const itemRows = items.map((it, idx) => {
@@ -338,8 +351,25 @@ function InvoiceEditorPage() {
           line_total: Math.round((subtotal + vat + Number.EPSILON) * 100) / 100,
         };
       });
+      // Insert nových položek NEJDŘÍV; až po úspěšném insertu smažeme staré.
+      // Tím zabráníme tomu, že selhaný insert nechá fakturu úplně bez položek.
+      let oldIds: string[] = [];
+      if (editingId) {
+        const { data: existing } = await supabase
+          .from("invoice_items")
+          .select("id")
+          .eq("invoice_id", editingId);
+        oldIds = (existing ?? []).map((r) => r.id);
+      }
       const { error: itemsErr } = await supabase.from("invoice_items").insert(itemRows);
       if (itemsErr) throw itemsErr;
+      if (editingId && oldIds.length > 0) {
+        const { error: delErr } = await supabase
+          .from("invoice_items")
+          .delete()
+          .in("id", oldIds);
+        if (delErr) console.warn("Smazání starých položek selhalo:", delErr);
+      }
 
       if (redirect) {
         toast.success(status === "draft" ? "Uloženo jako koncept." : "Faktura vystavena.");
@@ -348,7 +378,12 @@ function InvoiceEditorPage() {
       return invoiceId ?? null;
     } catch (e) {
       console.error(e);
-      toast.error("Nepodařilo se uložit fakturu: " + (e as Error).message);
+      const msg = (e as Error).message || "";
+      if (msg.includes("invoices_user_number_unique") || msg.toLowerCase().includes("duplicate")) {
+        toast.error(`Faktura s číslem ${invoiceNumber} už existuje. Změňte číslo faktury.`);
+      } else {
+        toast.error("Nepodařilo se uložit fakturu: " + msg);
+      }
       return null;
     } finally {
       setSaving(false);
