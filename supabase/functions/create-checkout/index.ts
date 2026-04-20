@@ -32,7 +32,7 @@ serve(async (req) => {
       ui_mode: "embedded",
       return_url:
         returnUrl ||
-        `${req.headers.get("origin")}/app/predplatne/dekujeme?session_id={CHECKOUT_SESSION_ID}`,
+        `${req.headers.get("origin") ?? "https://fakturio.cz"}/app/predplatne/dekujeme?session_id={CHECKOUT_SESSION_ID}`,
       ...(customerEmail && { customer_email: customerEmail }),
       ...(userId && {
         metadata: { userId },
