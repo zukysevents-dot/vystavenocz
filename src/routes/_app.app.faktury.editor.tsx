@@ -128,6 +128,12 @@ function InvoiceEditorPage() {
 
   const previewRef = useRef<HTMLDivElement>(null);
 
+  // Unsaved-changes tracking. We start clean; mark dirty on the first user
+  // edit, reset to clean after load and after a successful save. Programmatic
+  // navigations done by the save flow set a ref so the blocker stays silent.
+  const [dirty, setDirty] = useState(false);
+  const skipBlockerRef = useRef(false);
+
   // Load profile, clients, and (optionally) existing invoice
   useEffect(() => {
     if (!user) return;
