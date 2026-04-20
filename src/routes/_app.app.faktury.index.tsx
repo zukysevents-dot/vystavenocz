@@ -389,14 +389,31 @@ function InvoicesListPage() {
       <AlertDialog open={!!deletingId} onOpenChange={(o) => !o && setDeletingId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Smazat fakturu?</AlertDialogTitle>
+            <AlertDialogTitle>Smazat koncept?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tuto akci nelze vrátit. Faktura a její položky budou trvale smazány.
+              Tuto akci nelze vrátit. Koncept a jeho položky budou trvale smazány.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Zrušit</AlertDialogCancel>
             <AlertDialogAction onClick={remove}>Smazat</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!cancellingId} onOpenChange={(o) => !o && setCancellingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Stornovat fakturu?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vystavené faktury nelze podle zákona o účetnictví mazat. Faktura
+              zůstane v evidenci se stavem „Stornováno" pro audit, ale nebude
+              se započítávat do přehledů a plateb.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction onClick={cancelInvoice}>Stornovat</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
