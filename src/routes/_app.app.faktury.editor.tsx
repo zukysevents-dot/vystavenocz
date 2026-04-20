@@ -630,6 +630,11 @@ function InvoiceEditorPage() {
           }
         }}
       />
+      <PaywallDialog
+        open={paywallOpen}
+        onOpenChange={setPaywallOpen}
+        reason="Bezplatná zkušební doba skončila. Pro vystavení faktury aktivujte tarif Fakturio Pro. Koncept můžete uložit i bez předplatného."
+      />
     </div>
   );
 }
