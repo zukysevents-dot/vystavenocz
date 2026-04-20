@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Plus, FileText, Search, MoreVertical, Pencil, Trash2,
-  Download, CheckCircle2, Send, Loader2, Mail,
+  Download, CheckCircle2, Send, Loader2, Mail, Ban,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -60,6 +60,7 @@ function InvoicesListPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
   const [pdfPayload, setPdfPayload] = useState<null | {
     invoice: InvoiceRow;
