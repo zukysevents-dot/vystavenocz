@@ -3,8 +3,15 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { FileText, Plus, TrendingUp, Clock, Users, AlertTriangle, Coins } from "lucide-react";
+import { FileText, Plus, TrendingUp, Clock, Users, AlertTriangle, Coins, Download } from "lucide-react";
 import { formatCZK } from "@/lib/invoice";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   ChartContainer,
   ChartTooltip,
@@ -36,19 +43,88 @@ type InvoiceStatRow = {
 
 const CZ_MONTHS = ["Led", "Úno", "Bře", "Dub", "Kvě", "Čer", "Čec", "Srp", "Zář", "Říj", "Lis", "Pro"];
 
-function lastSixMonths(): { key: string; label: string; year: number; month: number }[] {
+type Period = "month" | "quarter" | "year" | "all";
+
+function getPeriodRange(period: Period): { from: Date; to: Date; label: string } {
   const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  if (period === "month") {
+    return {
+      from: new Date(y, m, 1),
+      to: new Date(y, m + 1, 0, 23, 59, 59),
+      label: `${CZ_MONTHS[m]} ${y}`,
+    };
+  }
+  if (period === "quarter") {
+    const q = Math.floor(m / 3);
+    return {
+      from: new Date(y, q * 3, 1),
+      to: new Date(y, q * 3 + 3, 0, 23, 59, 59),
+      label: `Q${q + 1} ${y}`,
+    };
+  }
+  if (period === "year") {
+    return {
+      from: new Date(y, 0, 1),
+      to: new Date(y, 11, 31, 23, 59, 59),
+      label: `Rok ${y}`,
+    };
+  }
+  return { from: new Date(2000, 0, 1), to: new Date(2999, 11, 31), label: "Vše" };
+}
+
+function chartBucketsForPeriod(period: Period): { key: string; label: string }[] {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  if (period === "month") {
+    // 4 weeks of current month
+    const out = [];
+    for (let w = 0; w < 4; w++) out.push({ key: `w-${w}`, label: `T${w + 1}` });
+    return out;
+  }
+  if (period === "quarter") {
+    const q = Math.floor(m / 3);
+    return [0, 1, 2].map((i) => ({ key: `${y}-${q * 3 + i}`, label: CZ_MONTHS[q * 3 + i] }));
+  }
+  if (period === "year") {
+    return Array.from({ length: 12 }, (_, i) => ({ key: `${y}-${i}`, label: CZ_MONTHS[i] }));
+  }
+  // all: last 6 months
   const out = [];
   for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    out.push({
-      key: `${d.getFullYear()}-${d.getMonth()}`,
-      label: CZ_MONTHS[d.getMonth()],
-      year: d.getFullYear(),
-      month: d.getMonth(),
-    });
+    const d = new Date(y, m - i, 1);
+    out.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label: CZ_MONTHS[d.getMonth()] });
   }
   return out;
+}
+
+function bucketKeyFor(date: Date, period: Period): string {
+  if (period === "month") {
+    const day = date.getDate();
+    const w = Math.min(3, Math.floor((day - 1) / 7));
+    return `w-${w}`;
+  }
+  return `${date.getFullYear()}-${date.getMonth()}`;
+}
+
+function csvEscape(v: unknown): string {
+  const s = v == null ? "" : String(v);
+  if (/[",;\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function downloadCsv(filename: string, rows: (string | number)[][]) {
+  const csv = rows.map((r) => r.map(csvEscape).join(";")).join("\r\n");
+  // BOM pro správné kódování v Excelu
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function DashboardPage() {
@@ -57,6 +133,15 @@ function DashboardPage() {
   const [invoices, setInvoices] = useState<InvoiceStatRow[]>([]);
   const [clientsCount, setClientsCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<Period>("year");
+
+  const periodRange = useMemo(() => getPeriodRange(period), [period]);
+
+  const filteredInvoices = useMemo(() => {
+    const fromIso = periodRange.from.toISOString().slice(0, 10);
+    const toIso = periodRange.to.toISOString().slice(0, 10);
+    return invoices.filter((inv) => inv.issue_date >= fromIso && inv.issue_date <= toIso);
+  }, [invoices, periodRange]);
 
   useEffect(() => {
     if (!user) return;
@@ -98,13 +183,17 @@ function DashboardPage() {
     let pendingCount = 0;
     let overdueCount = 0;
     let paidCount = 0;
-    for (const inv of invoices) {
+    let paidAmount = 0;
+    for (const inv of filteredInvoices) {
       const amount = Number(inv.total) || 0;
       if (inv.status !== "draft" && inv.status !== "cancelled") {
         totalInvoiced += amount;
       }
       const isOverdue = inv.status === "overdue" || (inv.status === "issued" && inv.due_date < today);
-      if (inv.status === "paid") paidCount++;
+      if (inv.status === "paid") {
+        paidCount++;
+        paidAmount += amount;
+      }
       else if (isOverdue) {
         overdueCount++;
         overdueAmount += amount;
@@ -120,28 +209,29 @@ function DashboardPage() {
       overdueAmount,
       overdueCount,
       paidCount,
-      totalCount: invoices.length,
+      paidAmount,
+      totalCount: filteredInvoices.length,
     };
-  }, [invoices]);
+  }, [filteredInvoices]);
 
   const chartData = useMemo(() => {
-    const months = lastSixMonths();
-    const buckets = new Map(months.map((m) => [m.key, { month: m.label, vystaveno: 0, zaplaceno: 0 }]));
-    for (const inv of invoices) {
+    const buckets = chartBucketsForPeriod(period);
+    const map = new Map<string, { month: string; vystaveno: number; zaplaceno: number }>(
+      buckets.map((b) => [b.key, { month: b.label, vystaveno: 0, zaplaceno: 0 }]),
+    );
+    for (const inv of filteredInvoices) {
       if (inv.status === "draft" || inv.status === "cancelled") continue;
       const issued = new Date(inv.issue_date);
-      const key = `${issued.getFullYear()}-${issued.getMonth()}`;
-      const bucket = buckets.get(key);
+      const bucket = map.get(bucketKeyFor(issued, period));
       if (bucket) bucket.vystaveno += Number(inv.total) || 0;
       if (inv.paid_at) {
         const paid = new Date(inv.paid_at);
-        const pkey = `${paid.getFullYear()}-${paid.getMonth()}`;
-        const pbucket = buckets.get(pkey);
+        const pbucket = map.get(bucketKeyFor(paid, period));
         if (pbucket) pbucket.zaplaceno += Number(inv.total) || 0;
       }
     }
-    return Array.from(buckets.values());
-  }, [invoices]);
+    return Array.from(map.values());
+  }, [filteredInvoices, period]);
 
   const recentOverdue = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -149,6 +239,46 @@ function DashboardPage() {
       .filter((inv) => inv.status === "overdue" || (inv.status === "issued" && inv.due_date < today))
       .slice(0, 5);
   }, [invoices]);
+
+  function handleExportCsv() {
+    const header = [
+      "Číslo faktury",
+      "Klient",
+      "Datum vystavení",
+      "Datum splatnosti",
+      "Datum úhrady",
+      "Stav",
+      "Částka (Kč)",
+    ];
+    const statusLabel: Record<string, string> = {
+      draft: "Koncept",
+      issued: "Vystaveno",
+      paid: "Zaplaceno",
+      overdue: "Po splatnosti",
+      cancelled: "Stornováno",
+    };
+    const rows: (string | number)[][] = [header];
+    for (const inv of filteredInvoices) {
+      rows.push([
+        inv.invoice_number,
+        inv.client_snapshot?.name ?? "",
+        inv.issue_date,
+        inv.due_date,
+        inv.paid_at ? inv.paid_at.slice(0, 10) : "",
+        statusLabel[inv.status] ?? inv.status,
+        Number(inv.total) || 0,
+      ]);
+    }
+    rows.push([]);
+    rows.push(["Souhrn za období", periodRange.label]);
+    rows.push(["Celkem fakturováno", stats.totalInvoiced]);
+    rows.push(["Zaplaceno", stats.paidAmount]);
+    rows.push(["Čekající platby", stats.pendingAmount]);
+    rows.push(["Po splatnosti", stats.overdueAmount]);
+    rows.push(["Počet faktur", stats.totalCount]);
+    const fname = `fakturio-statistiky-${periodRange.label.replace(/\s+/g, "-")}.csv`;
+    downloadCsv(fname, rows);
+  }
 
   const trialDaysLeft = profile
     ? Math.max(0, Math.ceil((new Date(profile.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
@@ -163,9 +293,25 @@ function DashboardPage() {
           </h1>
           <p className="mt-1 text-muted-foreground">Přehled vaší fakturace</p>
         </div>
-        <Button variant="coral" size="lg" asChild>
-          <Link to="/app/faktury/editor"><Plus className="h-4 w-4" /> Nová faktura</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="month">Tento měsíc</SelectItem>
+              <SelectItem value="quarter">Tento kvartál</SelectItem>
+              <SelectItem value="year">Tento rok</SelectItem>
+              <SelectItem value="all">Vše</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="lg" onClick={handleExportCsv} disabled={filteredInvoices.length === 0}>
+            <Download className="h-4 w-4" /> Export CSV
+          </Button>
+          <Button variant="coral" size="lg" asChild>
+            <Link to="/app/faktury/editor"><Plus className="h-4 w-4" /> Nová faktura</Link>
+          </Button>
+        </div>
       </div>
 
       {trialDaysLeft > 0 && (
@@ -214,7 +360,7 @@ function DashboardPage() {
         <div className="rounded-2xl border border-border bg-card p-6 xl:col-span-2">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-semibold">Posledních 6 měsíců</h2>
+              <h2 className="text-base font-semibold">{periodRange.label}</h2>
               <p className="text-xs text-muted-foreground">Vystavené vs. zaplacené (Kč)</p>
             </div>
             <TrendingUp className="h-4 w-4 text-primary" />
