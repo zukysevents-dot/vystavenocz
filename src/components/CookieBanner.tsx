@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Cookie, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { applyAnalyticsConsent } from "@/lib/analytics";
 
 const STORAGE_KEY = "fakturio.cookieConsent.v1";
 
@@ -39,9 +42,14 @@ export function openCookieSettings() {
 
 export function CookieBanner() {
   const [visible, setVisible] = useState(false);
+  const [analyticsOn, setAnalyticsOn] = useState(false);
 
   useEffect(() => {
-    const check = () => setVisible(!getCookieConsent());
+    const check = () => {
+      const existing = getCookieConsent();
+      setVisible(!existing);
+      if (!existing) setAnalyticsOn(false); // GDPR: opt-in default
+    };
     check();
     window.addEventListener("fakturio:cookie-consent-reset", check);
     return () => window.removeEventListener("fakturio:cookie-consent-reset", check);
@@ -49,13 +57,21 @@ export function CookieBanner() {
 
   if (!visible) return null;
 
+  const handleSavePreferences = () => {
+    saveConsent(analyticsOn);
+    applyAnalyticsConsent(analyticsOn);
+    setVisible(false);
+  };
+
   const handleAcceptAll = () => {
     saveConsent(true);
+    applyAnalyticsConsent(true);
     setVisible(false);
   };
 
   const handleNecessaryOnly = () => {
     saveConsent(false);
+    applyAnalyticsConsent(false);
     setVisible(false);
   };
 
@@ -94,13 +110,45 @@ export function CookieBanner() {
               .
             </p>
 
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <div className="mt-3 space-y-2 rounded-xl border border-border bg-surface-soft/60 p-3">
+              <div className="flex items-center justify-between gap-3 opacity-70">
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-foreground">Nezbytné</div>
+                  <div className="text-[11px] text-muted-foreground">Přihlášení, bezpečnost. Vždy zapnuto.</div>
+                </div>
+                <Switch checked disabled aria-label="Nezbytné cookies (vždy aktivní)" />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <Label htmlFor="cookie-analytics" className="text-xs font-semibold text-foreground">
+                    Analytika
+                  </Label>
+                  <div className="text-[11px] text-muted-foreground">Google Analytics & Plausible — měření návštěvnosti.</div>
+                </div>
+                <Switch
+                  id="cookie-analytics"
+                  checked={analyticsOn}
+                  onCheckedChange={setAnalyticsOn}
+                  aria-label="Povolit analytické cookies"
+                />
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
               <Button size="sm" variant="coral" onClick={handleAcceptAll} className="w-full">
                 Přijmout vše
               </Button>
               <Button
                 size="sm"
                 variant="outline"
+                onClick={handleSavePreferences}
+                className="w-full"
+              >
+                Uložit volbu
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
                 onClick={handleNecessaryOnly}
                 className="w-full"
               >

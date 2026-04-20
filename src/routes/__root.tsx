@@ -1,7 +1,9 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "sonner";
-import { CookieBanner } from "@/components/CookieBanner";
+import { CookieBanner, getCookieConsent } from "@/components/CookieBanner";
+import { applyAnalyticsConsent } from "@/lib/analytics";
 
 import appCss from "../styles.css?url";
 
@@ -78,6 +80,11 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  useEffect(() => {
+    const consent = getCookieConsent();
+    if (consent?.analytics) applyAnalyticsConsent(true);
+  }, []);
+
   return (
     <AuthProvider>
       <Outlet />
