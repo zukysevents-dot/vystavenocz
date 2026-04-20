@@ -167,6 +167,7 @@ function InvoiceEditorPage() {
           setVariableSymbol(inv.variable_symbol || "");
           setNotes(inv.notes || "");
           setSelectedClientId(inv.client_id || "");
+          setLoadedStatus(inv.status as typeof loadedStatus);
           const loadedItems = (inv.invoice_items as Array<{
             id: string;
             description: string;
