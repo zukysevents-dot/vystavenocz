@@ -857,6 +857,7 @@ function InvoiceEditorPage() {
               <span className="text-2xl font-bold text-primary">{formatCZK(totals.total)}</span>
             </div>
           </div>
+          </fieldset>
         </div>
 
         {/* Live preview */}
