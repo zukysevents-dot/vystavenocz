@@ -99,6 +99,18 @@ function InvoicesListPage() {
 
   useEffect(() => { load(); }, [user]);
 
+  // U dobropisu dotáhneme číslo původní faktury — chceme ho zobrazit v PDF
+  // ("k faktuře FA-…"). Pro běžné faktury vrátíme null bez síťového volání.
+  const fetchOriginalNumber = async (inv: InvoiceRow): Promise<string | null> => {
+    if (inv.document_type !== "credit_note" || !inv.original_invoice_id) return null;
+    const { data } = await supabase
+      .from("invoices")
+      .select("invoice_number")
+      .eq("id", inv.original_invoice_id)
+      .maybeSingle();
+    return data?.invoice_number ?? null;
+  };
+
   const filtered = invoices.filter((inv) => {
     const q = search.toLowerCase().trim();
     if (!q) return true;
