@@ -308,7 +308,14 @@ function InvoicesListPage() {
                     className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/30"
                     onClick={() => navigate({ to: "/app/faktury/editor", search: { id: inv.id } })}
                   >
-                    <td className="px-4 py-3 font-medium">{inv.invoice_number}</td>
+                    <td className="px-4 py-3 font-medium">
+                      <div className="flex items-center gap-2">
+                        <span>{inv.invoice_number}</span>
+                        {inv.document_type === "credit_note" && (
+                          <Badge variant="outline" className="text-[10px]">Dobropis</Badge>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-muted-foreground">{inv.client_snapshot?.name || "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">{formatDate(inv.issue_date)}</td>
                     <td className="px-4 py-3 text-muted-foreground">{formatDate(inv.due_date)}</td>
