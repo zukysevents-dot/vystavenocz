@@ -22,6 +22,8 @@ import { formatCZK, formatDate } from "@/lib/invoice";
 import { InvoiceDocument } from "@/components/app/InvoiceDocument";
 import { downloadInvoicePdf } from "@/lib/invoice-pdf";
 import { SendInvoiceDialog, type SendInvoiceContext } from "@/components/app/SendInvoiceDialog";
+import { PaywallDialog } from "@/components/payments/PaywallDialog";
+import { useSubscription } from "@/hooks/use-subscription";
 
 export const Route = createFileRoute("/_app/app/faktury/")({
   head: () => ({ meta: [{ title: "Faktury — Fakturio" }] }),
@@ -58,6 +60,8 @@ const statusLabels: Record<InvoiceRow["status"], { label: string; variant: "defa
 function InvoicesListPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { hasAccess } = useSubscription();
+  const [paywallOpen, setPaywallOpen] = useState(false);
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -131,6 +135,11 @@ function InvoicesListPage() {
   };
 
   const reissue = async (id: string) => {
+    // Paywall: vystavení faktury (i z konceptu) vyžaduje aktivní předplatné.
+    if (!hasAccess) {
+      setPaywallOpen(true);
+      return;
+    }
     const { error } = await supabase
       .from("invoices")
       .update({ status: "issued" })
@@ -432,6 +441,12 @@ function InvoicesListPage() {
         }}
         context={sendCtx}
         onSent={() => load()}
+      />
+
+      <PaywallDialog
+        open={paywallOpen}
+        onOpenChange={setPaywallOpen}
+        reason="Vystavení faktury vyžaduje aktivní předplatné Fakturio Pro."
       />
 
       <AlertDialog open={!!deletingId} onOpenChange={(o) => !o && setDeletingId(null)}>
