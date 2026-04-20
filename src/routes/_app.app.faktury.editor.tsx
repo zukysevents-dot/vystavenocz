@@ -118,8 +118,6 @@ function InvoiceEditorPage() {
   const [preparingSend, setPreparingSend] = useState(false);
   const { hasAccess } = useSubscription();
 
-  // Stornovaný doklad je zamčený — nesmí se měnit ani znovu vystavit.
-  const isCancelled = loadedStatus === "cancelled";
 
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [clients, setClients] = useState<ClientRow[]>([]);
