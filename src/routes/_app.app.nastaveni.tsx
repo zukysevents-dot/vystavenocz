@@ -39,6 +39,9 @@ type Form = {
   invoice_number_prefix: string;
   invoice_color: string;
   logo_url: string | null;
+  next_invoice_seq: number;
+  credit_note_prefix: string;
+  next_credit_note_seq: number;
 };
 
 const defaults: Form = {
@@ -57,6 +60,9 @@ const defaults: Form = {
   invoice_number_prefix: "FA",
   invoice_color: "#0fbfb6",
   logo_url: null,
+  next_invoice_seq: 1,
+  credit_note_prefix: "OD",
+  next_credit_note_seq: 1,
 };
 
 function SettingsPage() {
