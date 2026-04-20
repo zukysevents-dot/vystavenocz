@@ -30,6 +30,7 @@ serve(async (req) => {
       line_items: [{ price: stripePrice.id, quantity: 1 }],
       mode: isRecurring ? "subscription" : "payment",
       ui_mode: "embedded",
+      locale: "cs",
       return_url:
         returnUrl ||
         `${req.headers.get("origin") ?? "https://fakturio.cz"}/app/predplatne/dekujeme?session_id={CHECKOUT_SESSION_ID}`,
