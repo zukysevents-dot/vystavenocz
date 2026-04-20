@@ -360,7 +360,7 @@ function DashboardPage() {
         <div className="rounded-2xl border border-border bg-card p-6 xl:col-span-2">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-semibold">Posledních 6 měsíců</h2>
+              <h2 className="text-base font-semibold">{periodRange.label}</h2>
               <p className="text-xs text-muted-foreground">Vystavené vs. zaplacené (Kč)</p>
             </div>
             <TrendingUp className="h-4 w-4 text-primary" />
