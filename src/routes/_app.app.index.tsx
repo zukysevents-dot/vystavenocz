@@ -179,7 +179,7 @@ function DashboardPage() {
         </div>
       )}
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           icon={Coins}
           label="Celkem fakturováno"
@@ -209,9 +209,9 @@ function DashboardPage() {
         />
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-3">
+      <div className="mt-8 grid gap-6 xl:grid-cols-3">
         {/* Chart */}
-        <div className="rounded-2xl border border-border bg-card p-6 lg:col-span-2">
+        <div className="rounded-2xl border border-border bg-card p-6 xl:col-span-2">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-semibold">Posledních 6 měsíců</h2>

@@ -14,13 +14,12 @@ export function Hero() {
           </div>
 
           <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            Fakturace, která{" "}
-            <span className="text-gradient-primary">vás konečně bude bavit</span>
+            Faktura hotová{" "}
+            <span className="text-gradient-primary">za půl minuty</span>
           </h1>
 
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Vystavte profesionální českou fakturu za 30 sekund. IČO, DIČ, DPH, QR platba i AI
-            asistent — vše v ceně. Pro OSVČ i firmy, bez účetnického jazyka.
+            Žádné účetnické termíny, žádné cvičení s šablonou. Vyplníte tři políčka, kliknete na Vystavit a posíláte klientovi PDF i s QR platbou. Pro OSVČ, plátce i neplátce DPH.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
