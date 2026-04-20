@@ -369,6 +369,7 @@ function InvoicesListPage() {
             notes={pdfPayload.invoice.notes || undefined}
             paymentMethod={pdfPayload.invoice.payment_method}
             currency={pdfPayload.invoice.currency}
+            cancelled={pdfPayload.invoice.status === "cancelled"}
           />
         </div>
       )}
