@@ -127,11 +127,35 @@ function InvoicesListPage() {
 
   const remove = async () => {
     if (!deletingId) return;
+    // Safety: only drafts may be hard-deleted (Czech accounting law requires
+    // an audit trail for issued documents). The dropdown already enforces
+    // this, but we double-check here in case state drifts.
+    const target = invoices.find((i) => i.id === deletingId);
+    if (target && target.status !== "draft") {
+      toast.error("Smazat lze jen koncepty. Vystavené faktury stornujte.");
+      setDeletingId(null);
+      return;
+    }
     await supabase.from("invoice_items").delete().eq("invoice_id", deletingId);
     const { error } = await supabase.from("invoices").delete().eq("id", deletingId);
     if (error) return toast.error("Nepodařilo se smazat.");
     toast.success("Faktura smazána.");
     setDeletingId(null);
+    load();
+  };
+
+  const cancelInvoice = async () => {
+    if (!cancellingId) return;
+    const { error } = await supabase
+      .from("invoices")
+      .update({ status: "cancelled" })
+      .eq("id", cancellingId);
+    if (error) {
+      toast.error("Nepodařilo se stornovat fakturu.");
+      return;
+    }
+    toast.success("Faktura stornována.");
+    setCancellingId(null);
     load();
   };
 
