@@ -31,6 +31,10 @@ export type InvoiceDocumentProps = {
   currency?: string;
   /** Stornovaná faktura — vykreslí přes celou stránku výrazný vodoznak. */
   cancelled?: boolean;
+  /** Typ dokladu — běžná faktura nebo dobropis (opravný daňový doklad). */
+  documentType?: "invoice" | "credit_note";
+  /** Číslo původní faktury, ke které dobropis patří (jen pro credit_note). */
+  originalInvoiceNumber?: string | null;
 };
 
 export function InvoiceDocument(props: InvoiceDocumentProps) {
@@ -47,7 +51,14 @@ export function InvoiceDocument(props: InvoiceDocumentProps) {
     paymentMethod = "bank_transfer",
     currency = "CZK",
     cancelled = false,
+    documentType = "invoice",
+    originalInvoiceNumber = null,
   } = props;
+
+  const isCreditNote = documentType === "credit_note";
+  const documentTitle = isCreditNote
+    ? "Opravný daňový doklad — dobropis"
+    : "Faktura — daňový doklad";
 
   const vatPayer = supplier.vat_mode === "payer";
   const totals = calcTotals(items, vatPayer);
@@ -130,11 +141,16 @@ export function InvoiceDocument(props: InvoiceDocumentProps) {
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            Faktura — daňový doklad
+            {documentTitle}
           </div>
           <div style={{ fontSize: "24px", fontWeight: 700, color: accentColor, marginTop: "4px" }}>
             {invoiceNumber}
           </div>
+          {isCreditNote && originalInvoiceNumber && (
+            <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>
+              k faktuře <strong>{originalInvoiceNumber}</strong>
+            </div>
+          )}
         </div>
       </div>
 
