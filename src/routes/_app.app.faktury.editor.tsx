@@ -448,6 +448,8 @@ function InvoiceEditorPage() {
         variable_symbol: vs,
         payment_method: paymentMethod,
         notes: notes || null,
+        document_type: documentType,
+        original_invoice_id: originalInvoiceId,
       };
 
       let invoiceId = editingId;
@@ -463,13 +465,23 @@ function InvoiceEditorPage() {
           .single();
         if (error) throw error;
         invoiceId = ins.id;
-        // bump invoice sequence (lokálně i v DB) — zabrání reuse stejného čísla
-        const nextSeq = (profile.next_invoice_seq || 1) + 1;
-        await supabase
-          .from("profiles")
-          .update({ next_invoice_seq: nextSeq })
-          .eq("id", user.id);
-        setProfile({ ...profile, next_invoice_seq: nextSeq });
+        // Bump pořadové číslo z odpovídající řady (faktury vs. dobropisy).
+        // Lokálně i v DB — zabrání reuse stejného čísla.
+        if (documentType === "credit_note") {
+          const nextSeq = (profile.next_credit_note_seq || 1) + 1;
+          await supabase
+            .from("profiles")
+            .update({ next_credit_note_seq: nextSeq })
+            .eq("id", user.id);
+          setProfile({ ...profile, next_credit_note_seq: nextSeq });
+        } else {
+          const nextSeq = (profile.next_invoice_seq || 1) + 1;
+          await supabase
+            .from("profiles")
+            .update({ next_invoice_seq: nextSeq })
+            .eq("id", user.id);
+          setProfile({ ...profile, next_invoice_seq: nextSeq });
+        }
         // Po prvním uložení si "převezmeme" id do URL (?id=...), aby další
         // (auto)save proběhl jako UPDATE a nevytvořil duplicitní fakturu.
         if (!redirect && invoiceId) {
