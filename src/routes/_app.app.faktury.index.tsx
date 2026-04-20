@@ -415,6 +415,8 @@ function InvoicesListPage() {
             paymentMethod={pdfPayload.invoice.payment_method}
             currency={pdfPayload.invoice.currency}
             cancelled={pdfPayload.invoice.status === "cancelled"}
+            documentType={pdfPayload.invoice.document_type}
+            originalInvoiceNumber={pdfPayload.originalInvoiceNumber}
           />
         </div>
       )}
