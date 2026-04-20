@@ -255,19 +255,23 @@ function InvoiceEditorPage() {
   const removeItem = (id: string) => setItems((prev) => prev.filter((it) => it.id !== id));
   const addItem = () => setItems((prev) => [...prev, newItem()]);
 
-  const save = async (status: "draft" | "issued") => {
-    if (!user || !profile) return;
+  const save = async (
+    status: "draft" | "issued",
+    opts: { redirect?: boolean } = {},
+  ): Promise<string | null> => {
+    const redirect = opts.redirect !== false;
+    if (!user || !profile) return null;
     if (status === "issued" && !hasAccess) {
       setPaywallOpen(true);
-      return;
+      return null;
     }
     if (!selectedClient) {
       toast.error("Vyberte odběratele.");
-      return;
+      return null;
     }
     if (items.some((it) => !it.description.trim())) {
       toast.error("Vyplňte popis u všech položek.");
-      return;
+      return null;
     }
     setSaving(true);
     try {
@@ -334,11 +338,15 @@ function InvoiceEditorPage() {
       const { error: itemsErr } = await supabase.from("invoice_items").insert(itemRows);
       if (itemsErr) throw itemsErr;
 
-      toast.success(status === "draft" ? "Uloženo jako koncept." : "Faktura vystavena.");
-      navigate({ to: "/app/faktury" });
+      if (redirect) {
+        toast.success(status === "draft" ? "Uloženo jako koncept." : "Faktura vystavena.");
+        navigate({ to: "/app/faktury" });
+      }
+      return invoiceId ?? null;
     } catch (e) {
       console.error(e);
       toast.error("Nepodařilo se uložit fakturu: " + (e as Error).message);
+      return null;
     } finally {
       setSaving(false);
     }
