@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Sparkles, Send, X, Loader2, Wand2, Trash2 } from "lucide-react";
+import {
+  Sparkles, Send, X, Loader2, Wand2, Trash2,
+  FileText, MessageCircle, PlusCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -43,11 +46,20 @@ export type ApplyPatchFn = (patch: InvoicePatch) => void;
 
 type ChatMsg = { role: "user" | "assistant"; content: string };
 
-const SUGGESTIONS = [
+type Mode = "invoice" | "general";
+
+const INVOICE_SUGGESTIONS = [
   "Přidej položku: konzultace 2 hodiny po 1500 Kč",
   "Vygeneruj 3 položky pro vývoj webu za 30 000 Kč",
   "Změň splatnost na 30 dní",
   "Napiš poznámku pro klienta s poděkováním",
+];
+
+const GENERAL_SUGGESTIONS = [
+  "Vysvětli sazby DPH v ČR (21 %, 12 %, 0 %)",
+  "Co je IBAN a jak se liší od čísla účtu?",
+  "Jak funguje QR platba SPAYD na faktuře?",
+  "Co je DUZP a kdy se uvádí?",
 ];
 
 type Props = {
@@ -60,6 +72,8 @@ type Props = {
 };
 
 const STORAGE_PREFIX = "fakturio:assistant:";
+const MODE_STORAGE_KEY = "fakturio:assistant:mode";
+const GENERAL_STORAGE_KEY = "global";
 
 function loadHistory(key?: string): ChatMsg[] {
   if (!key || typeof window === "undefined") return [];
@@ -74,31 +88,51 @@ function loadHistory(key?: string): ChatMsg[] {
   return [];
 }
 
+function loadMode(): Mode {
+  if (typeof window === "undefined") return "invoice";
+  try {
+    const v = localStorage.getItem(MODE_STORAGE_KEY);
+    return v === "general" ? "general" : "invoice";
+  } catch {
+    return "invoice";
+  }
+}
+
 export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, storageKey }: Props) {
-  const [messages, setMessages] = useState<ChatMsg[]>(() => loadHistory(storageKey));
+  const [mode, setMode] = useState<Mode>(() => loadMode());
+  // Aktivní storage klíč: invoice režim → editorův klíč; general → "global"
+  const activeStorageKey = mode === "general" ? GENERAL_STORAGE_KEY : storageKey;
+  const [messages, setMessages] = useState<ChatMsg[]>(() => loadHistory(activeStorageKey));
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  // Načti historii pokud se změní klíč (přepnutí mezi fakturami)
+  // Načti historii pokud se změní klíč (přepnutí mezi fakturami nebo režimy)
   useEffect(() => {
-    setMessages(loadHistory(storageKey));
-  }, [storageKey]);
+    abortRef.current?.abort();
+    setMessages(loadHistory(activeStorageKey));
+  }, [activeStorageKey]);
+
+  // Persist režim
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try { localStorage.setItem(MODE_STORAGE_KEY, mode); } catch { /* ignore */ }
+  }, [mode]);
 
   // Ukládej do localStorage při každé změně zpráv
   useEffect(() => {
-    if (!storageKey || typeof window === "undefined") return;
+    if (!activeStorageKey || typeof window === "undefined") return;
     try {
       if (messages.length === 0) {
-        localStorage.removeItem(STORAGE_PREFIX + storageKey);
+        localStorage.removeItem(STORAGE_PREFIX + activeStorageKey);
       } else {
-        localStorage.setItem(STORAGE_PREFIX + storageKey, JSON.stringify(messages));
+        localStorage.setItem(STORAGE_PREFIX + activeStorageKey, JSON.stringify(messages));
       }
     } catch {
       /* quota exceeded — ignore */
     }
-  }, [messages, storageKey]);
+  }, [messages, activeStorageKey]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -106,14 +140,19 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  const clearHistory = () => {
+  const newConversation = () => {
     abortRef.current?.abort();
     setMessages([]);
-    if (storageKey && typeof window !== "undefined") {
-      localStorage.removeItem(STORAGE_PREFIX + storageKey);
+    if (activeStorageKey && typeof window !== "undefined") {
+      localStorage.removeItem(STORAGE_PREFIX + activeStorageKey);
     }
-    toast.success("Historie chatu vymazána.");
+    toast.success("Nová konverzace");
   };
+
+  const suggestions = useMemo(
+    () => (mode === "general" ? GENERAL_SUGGESTIONS : INVOICE_SUGGESTIONS),
+    [mode],
+  );
 
   const send = async (text: string) => {
     const trimmed = text.trim();
