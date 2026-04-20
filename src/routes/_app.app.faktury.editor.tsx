@@ -195,6 +195,8 @@ function InvoiceEditorPage() {
       }
 
       setLoading(false);
+      // Allow one render cycle for state to settle, then arm the dirty tracker.
+      requestAnimationFrame(() => setDirty(false));
     })();
   }, [user, editingId, search.clientId]);
 
@@ -206,6 +208,47 @@ function InvoiceEditorPage() {
       setDueDate(addDaysISO(c.default_payment_days));
     }
   }, [selectedClientId, clients, editingId]);
+
+  // Mark form dirty whenever any tracked field changes (after initial load).
+  useEffect(() => {
+    if (loading) return;
+    setDirty(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    invoiceNumber,
+    issueDate,
+    taxableDate,
+    dueDate,
+    paymentMethod,
+    variableSymbol,
+    notes,
+    selectedClientId,
+    items,
+  ]);
+
+  // Warn on tab close / hard refresh while there are unsaved changes.
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Required for Chrome to actually display the prompt.
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
+
+  // Warn on intra-app navigation (router-driven). Bypassed via skipBlockerRef
+  // when the save flow itself triggers the redirect.
+  useBlocker({
+    shouldBlockFn: () => {
+      if (!dirty || skipBlockerRef.current) return false;
+      return !window.confirm(
+        "Máte neuložené změny ve faktuře. Opravdu chcete odejít? Změny budou ztraceny.",
+      );
+    },
+    enableBeforeUnload: false, // we own beforeunload above
+  });
 
   const selectedClient = useMemo(
     () => clients.find((c) => c.id === selectedClientId),
