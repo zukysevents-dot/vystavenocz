@@ -14,6 +14,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { InvoiceDocument } from "@/components/app/InvoiceDocument";
 import { downloadInvoicePdf } from "@/lib/invoice-pdf";
 import {
+  InvoiceAssistant,
+  applyPatchToItems,
+  type InvoiceContext,
+  type InvoicePatch,
+} from "@/components/app/InvoiceAssistant";
+import {
   buildInvoiceNumber,
   calcTotals,
   formatCZK,
