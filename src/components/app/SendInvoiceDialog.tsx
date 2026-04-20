@@ -1,0 +1,218 @@
+import { useEffect, useState } from "react";
+import { Loader2, Mail, Send, Paperclip } from "lucide-react";
+import { toast } from "sonner";
+
+import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { sendInvoiceEmail } from "@/lib/email/send-invoice.functions";
+import { renderInvoicePdfBlob } from "@/lib/invoice-pdf";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+
+export type SendInvoiceContext = {
+  invoiceId: string;
+  invoiceNumber: string;
+  recipientEmail?: string | null;
+  recipientName?: string | null;
+  supplierName?: string | null;
+  total?: number;
+  currency?: string;
+  dueDate?: string;
+  /** Element ID s vyrenderovaným <InvoiceDocument/> připraveným pro html2canvas. */
+  pdfElementId: string;
+};
+
+type Props = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  context: SendInvoiceContext | null;
+  onSent?: () => void;
+};
+
+export function SendInvoiceDialog({ open, onOpenChange, context, onSent }: Props) {
+  const sendFn = useServerFn(sendInvoiceEmail);
+  const [to, setTo] = useState("");
+  const [cc, setCc] = useState("");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (!context || !open) return;
+    setTo(context.recipientEmail ?? "");
+    setCc("");
+    const supplier = context.supplierName ?? "";
+    setSubject(`Faktura ${context.invoiceNumber}${supplier ? ` od ${supplier}` : ""}`);
+    const greeting = context.recipientName ? `Dobrý den, ${context.recipientName},` : "Dobrý den,";
+    const amountLine =
+      context.total != null
+        ? `\nČástka k úhradě: ${formatAmount(context.total, context.currency ?? "CZK")}`
+        : "";
+    const dueLine = context.dueDate ? `\nSplatnost: ${formatDate(context.dueDate)}` : "";
+    setMessage(
+      `${greeting}\n\nv příloze Vám zasílám fakturu č. ${context.invoiceNumber}.${amountLine}${dueLine}\n\nV případě dotazů mě neváhejte kontaktovat.\n\nS pozdravem${supplier ? `\n${supplier}` : ""}`,
+    );
+  }, [context, open]);
+
+  if (!context) return null;
+
+  const handleSend = async () => {
+    if (!to.trim()) {
+      toast.error("Zadejte e-mail příjemce.");
+      return;
+    }
+    setSending(true);
+    try {
+      // 1) Vygeneruj PDF z DOM
+      const blob = await renderInvoicePdfBlob(context.pdfElementId);
+
+      // 2) Nahraj do Storage pod {user_id}/{invoice_id}.pdf
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userData.user) throw new Error("Nejste přihlášeni.");
+      const path = `${userData.user.id}/${context.invoiceId}.pdf`;
+      const { error: upErr } = await supabase.storage
+        .from("invoices")
+        .upload(path, blob, { upsert: true, contentType: "application/pdf" });
+      if (upErr) throw new Error("Nahrání PDF selhalo: " + upErr.message);
+
+      // 3) Získej access token pro server fn
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      if (!token) throw new Error("Chybí přihlašovací token.");
+
+      // 4) Zavolej server funkci s Authorization header
+      await sendFn({
+        data: {
+          invoiceId: context.invoiceId,
+          pdfPath: path,
+          to: to.trim(),
+          cc: cc.trim() || undefined,
+          subject: subject.trim(),
+          message: message.trim(),
+          filename: `${context.invoiceNumber}.pdf`,
+        },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      toast.success("E-mail odeslán.");
+      onOpenChange(false);
+      onSent?.();
+    } catch (e) {
+      console.error(e);
+      toast.error(e instanceof Error ? e.message : "Odeslání selhalo.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !sending && onOpenChange(o)}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5 text-primary" />
+            Odeslat fakturu e-mailem
+          </DialogTitle>
+          <DialogDescription>
+            Faktura {context.invoiceNumber} bude odeslána jako PDF v příloze.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="send-to">Příjemce *</Label>
+            <Input
+              id="send-to"
+              type="email"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              placeholder="klient@example.com"
+              disabled={sending}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="send-cc">Kopie (volitelné)</Label>
+            <Input
+              id="send-cc"
+              type="email"
+              value={cc}
+              onChange={(e) => setCc(e.target.value)}
+              placeholder="kopie@example.com"
+              disabled={sending}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="send-subject">Předmět</Label>
+            <Input
+              id="send-subject"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              disabled={sending}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="send-message">Zpráva</Label>
+            <Textarea
+              id="send-message"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={8}
+              disabled={sending}
+              className="font-sans"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            <Paperclip className="h-4 w-4" />
+            Příloha: <span className="font-medium text-foreground">{context.invoiceNumber}.pdf</span>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>
+            Zrušit
+          </Button>
+          <Button variant="coral" onClick={handleSend} disabled={sending}>
+            {sending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Odesílám…
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4" /> Odeslat
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function formatAmount(n: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("cs-CZ", { style: "currency", currency }).format(n);
+  } catch {
+    return `${n} ${currency}`;
+  }
+}
+function formatDate(s: string): string {
+  try {
+    return new Date(s).toLocaleDateString("cs-CZ");
+  } catch {
+    return s;
+  }
+}
