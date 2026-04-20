@@ -428,7 +428,9 @@ function InvoiceEditorPage() {
       }
 
       const itemRows = items.map((it, idx) => {
-        const subtotal = Math.round((it.quantity * it.unit_price + Number.EPSILON) * 100) / 100;
+        const qty = Number.isFinite(it.quantity) ? it.quantity : 0;
+        const price = Number.isFinite(it.unit_price) ? it.unit_price : 0;
+        const subtotal = Math.round((qty * price + Number.EPSILON) * 100) / 100;
         const vat = profile.vat_mode === "payer"
           ? Math.round((subtotal * it.vat_rate / 100 + Number.EPSILON) * 100) / 100
           : 0;
@@ -436,9 +438,9 @@ function InvoiceEditorPage() {
           invoice_id: invoiceId!,
           position: idx,
           description: it.description,
-          quantity: it.quantity,
+          quantity: qty,
           unit: it.unit,
-          unit_price: it.unit_price,
+          unit_price: price,
           vat_rate: it.vat_rate,
           line_subtotal: subtotal,
           line_vat: vat,
