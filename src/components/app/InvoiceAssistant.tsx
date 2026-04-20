@@ -60,8 +60,8 @@ type Mode = "invoice" | "general";
 const INVOICE_SUGGESTIONS = [
   "Přidej položku: konzultace 2 hodiny po 1500 Kč",
   "Vygeneruj 3 položky pro vývoj webu za 30 000 Kč",
-  "Změň splatnost na 30 dní",
-  "Napiš poznámku pro klienta s poděkováním",
+  "Změň barvu šablony na zelenou (#16A34A)",
+  "Změň splatnost na 30 dní a napiš poděkování",
 ];
 
 const GENERAL_SUGGESTIONS = [
