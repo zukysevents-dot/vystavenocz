@@ -1,6 +1,14 @@
 import { Check, Minus } from "lucide-react";
 
-const rows: { label: string; us: boolean | string; fakturoid: boolean | string; idoklad: boolean | string; vyfakturuj: boolean | string }[] = [
+type Row = {
+  label: string;
+  us: boolean | string;
+  fakturoid: boolean | string;
+  idoklad: boolean | string;
+  vyfakturuj: boolean | string;
+};
+
+const rows: Row[] = [
   { label: "AI asistent v češtině", us: true, fakturoid: false, idoklad: false, vyfakturuj: false },
   { label: "QR platba (ČBA standard)", us: true, fakturoid: true, idoklad: true, vyfakturuj: true },
   { label: "Vlastní logo a šablony", us: true, fakturoid: true, idoklad: true, vyfakturuj: "Omezeně" },
@@ -17,7 +25,7 @@ const rows: { label: string; us: boolean | string; fakturoid: boolean | string; 
   { label: "Cena od (měsíčně)", us: "100 Kč", fakturoid: "199 Kč", idoklad: "270 Kč", vyfakturuj: "149 Kč" },
 ];
 
-const ourFeatures = [
+const ourFeatures: Row[] = [
   { label: "AI asistent v češtině", us: true, fakturoid: false, idoklad: false, vyfakturuj: false },
   { label: "Autosave konceptů (30 s)", us: true, fakturoid: false, idoklad: false, vyfakturuj: false },
   { label: "Vodoznak STORNOVÁNO v PDF", us: true, fakturoid: false, idoklad: false, vyfakturuj: false },
@@ -28,7 +36,7 @@ const ourFeatures = [
   { label: "Chytrá validace konceptů", us: true, fakturoid: "Omezeně", idoklad: "Omezeně", vyfakturuj: false },
 ];
 
-const standardFeatures = [
+const standardFeatures: Row[] = [
   { label: "QR platba (ČBA standard)", us: true, fakturoid: true, idoklad: true, vyfakturuj: true },
   { label: "Vlastní logo a šablony", us: true, fakturoid: true, idoklad: true, vyfakturuj: "Omezeně" },
   { label: "Klientské portfolio", us: true, fakturoid: true, idoklad: true, vyfakturuj: true },
@@ -39,14 +47,14 @@ const standardFeatures = [
   { label: "Mobil-first (bez instalace)", us: true, fakturoid: "Aplikace", idoklad: "Aplikace", vyfakturuj: true },
 ];
 
-const honestFeatures = [
+const honestFeatures: Row[] = [
   { label: "Vedení skladu", us: false, fakturoid: "Maximum", idoklad: "Plus", vyfakturuj: false },
   { label: "Cenové nabídky", us: "Brzy", fakturoid: "Maximum", idoklad: true, vyfakturuj: true },
   { label: "Veřejné REST API", us: "Brzy", fakturoid: true, idoklad: true, vyfakturuj: false },
   { label: "Nativní mobilní aplikace", us: false, fakturoid: true, idoklad: true, vyfakturuj: false },
 ];
 
-const priceRow = { label: "Cena od (měsíčně, ročně placeno)", us: "100 Kč", fakturoid: "151 Kč", idoklad: "270 Kč", vyfakturuj: "149 Kč" };
+const priceRow: Row = { label: "Cena od (měsíčně, ročně placeno)", us: "100 Kč", fakturoid: "151 Kč", idoklad: "270 Kč", vyfakturuj: "149 Kč" };
 
 function Cell({ value, highlight = false }: { value: boolean | string; highlight?: boolean }) {
   if (typeof value === "boolean") {
@@ -76,7 +84,7 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
   );
 }
 
-function Rows({ data, startIndex = 0 }: { data: typeof ourFeatures; startIndex?: number }) {
+function Rows({ data, startIndex = 0 }: { data: Row[]; startIndex?: number }) {
   return (
     <>
       {data.map((r, i) => (
