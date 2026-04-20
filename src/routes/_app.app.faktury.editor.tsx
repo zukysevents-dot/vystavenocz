@@ -422,6 +422,8 @@ function InvoiceEditorPage() {
 
       if (redirect) {
         toast.success(status === "draft" ? "Uloženo jako koncept." : "Faktura vystavena.");
+        skipBlockerRef.current = true;
+        setDirty(false);
         navigate({ to: "/app/faktury" });
       }
       return invoiceId ?? null;
