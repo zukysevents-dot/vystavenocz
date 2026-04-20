@@ -371,6 +371,36 @@ function InvoiceEditorPage() {
     }
   };
 
+  const handleSendEmail = async () => {
+    if (!hasAccess) {
+      setPaywallOpen(true);
+      return;
+    }
+    setPreparingSend(true);
+    try {
+      // Ulož bez přesměrování, abychom měli ID
+      const id = await save("issued", { redirect: false });
+      if (!id) return;
+      setShowPreview(true);
+      await new Promise((r) => setTimeout(r, 200));
+      setSendCtx({
+        invoiceId: id,
+        invoiceNumber,
+        recipientEmail: selectedClient?.email ?? null,
+        recipientName: selectedClient?.name ?? null,
+        supplierName:
+          supplierSnapshot.company_name ?? supplierSnapshot.full_name ?? null,
+        total: totals.total,
+        currency: "CZK",
+        dueDate,
+        pdfElementId: "invoice-document",
+      });
+      setSendOpen(true);
+    } finally {
+      setPreparingSend(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
