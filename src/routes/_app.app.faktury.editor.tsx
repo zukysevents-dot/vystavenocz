@@ -393,7 +393,7 @@ function InvoiceEditorPage() {
         if (!redirect && invoiceId) {
           skipBlockerRef.current = true;
           navigate({
-            to: "/_app/app/faktury/editor",
+            to: "/app/faktury/editor",
             search: { id: invoiceId },
             replace: true,
           });
