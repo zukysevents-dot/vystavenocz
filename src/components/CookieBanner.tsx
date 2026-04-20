@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Cookie, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { applyAnalyticsConsent } from "@/lib/analytics";
 
 const STORAGE_KEY = "fakturio.cookieConsent.v1";
 
@@ -39,9 +42,14 @@ export function openCookieSettings() {
 
 export function CookieBanner() {
   const [visible, setVisible] = useState(false);
+  const [analyticsOn, setAnalyticsOn] = useState(false);
 
   useEffect(() => {
-    const check = () => setVisible(!getCookieConsent());
+    const check = () => {
+      const existing = getCookieConsent();
+      setVisible(!existing);
+      if (!existing) setAnalyticsOn(false); // GDPR: opt-in default
+    };
     check();
     window.addEventListener("fakturio:cookie-consent-reset", check);
     return () => window.removeEventListener("fakturio:cookie-consent-reset", check);
@@ -49,13 +57,21 @@ export function CookieBanner() {
 
   if (!visible) return null;
 
+  const handleSavePreferences = () => {
+    saveConsent(analyticsOn);
+    applyAnalyticsConsent(analyticsOn);
+    setVisible(false);
+  };
+
   const handleAcceptAll = () => {
     saveConsent(true);
+    applyAnalyticsConsent(true);
     setVisible(false);
   };
 
   const handleNecessaryOnly = () => {
     saveConsent(false);
+    applyAnalyticsConsent(false);
     setVisible(false);
   };
 
