@@ -14,10 +14,14 @@ export type InvoiceContext = {
   invoice_number: string;
   client_name: string;
   vat_payer: boolean;
+  issue_date: string;
+  taxable_date: string;
   due_date: string;
   payment_method: string;
   variable_symbol: string;
   notes: string;
+  template_color: string;
+  available_clients: string[];
   items: Array<{
     description: string;
     quantity: number;
@@ -36,10 +40,15 @@ export type InvoicePatch = {
     unit_price: number;
     vat_rate: number;
   }>;
+  invoice_number?: string;
+  issue_date?: string;
+  taxable_date?: string;
   due_date?: string;
   notes?: string;
   variable_symbol?: string;
   payment_method?: "bank_transfer" | "cash" | "card";
+  client_name?: string;
+  template_color?: string;
 };
 
 export type ApplyPatchFn = (patch: InvoicePatch) => void;
@@ -51,8 +60,8 @@ type Mode = "invoice" | "general";
 const INVOICE_SUGGESTIONS = [
   "Přidej položku: konzultace 2 hodiny po 1500 Kč",
   "Vygeneruj 3 položky pro vývoj webu za 30 000 Kč",
-  "Změň splatnost na 30 dní",
-  "Napiš poznámku pro klienta s poděkováním",
+  "Změň barvu šablony na zelenou (#16A34A)",
+  "Změň splatnost na 30 dní a napiš poděkování",
 ];
 
 const GENERAL_SUGGESTIONS = [

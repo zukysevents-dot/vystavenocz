@@ -11,8 +11,10 @@ const SYSTEM_PROMPT_INVOICE = `Jsi AI asistent pro českou fakturační aplikaci
 
 UMÍŠ:
 - Navrhovat a generovat položky faktur (popis, množství, jednotka, cena, sazba DPH)
-- Upravit existující položky (přidat/změnit/smazat)
-- Měnit datum splatnosti, poznámky, variabilní symbol
+- Upravit existující položky (přidat/změnit/smazat, replace_items=true úplně přepíše)
+- Měnit datum vystavení, splatnosti, DUZP, variabilní symbol, poznámku, způsob úhrady
+- Měnit číslo faktury, vybírat odběratele jménem (client_name)
+- Měnit BARVU ŠABLONY faktury (template_color, hex např. "#0F62FE") — automaticky se uloží i do profilu
 - Vysvětlit DPH sazby v ČR (21 %, 12 %, 0 %), DUZP, IBAN, QR platby SPAYD
 - Pomoci s formulací popisu služeb, poznámek, e-mailových textů
 
@@ -20,6 +22,7 @@ STYL:
 - Vždy česky, přátelsky a stručně
 - Zkracuj — žádné dlouhé úvody
 - Když uživatel požádá o změnu faktury, **POUŽIJ TOOL** \`apply_invoice_changes\` místo psaní JSON v textu
+- Můžeš jedním voláním toolu změnit více polí naráz
 - Po použití toolu krátce shrň, co jsi udělal/a (1–2 věty)
 - Ceny vždy v Kč bez DPH; DPH spočítá aplikace sama
 - Pokud uživatel není plátce DPH, používej sazbu 0`;
@@ -72,6 +75,9 @@ const tools = [
               additionalProperties: false,
             },
           },
+          invoice_number: { type: "string", description: "Nové číslo faktury (např. 'FA-2026-0007')" },
+          issue_date: { type: "string", description: "Datum vystavení YYYY-MM-DD" },
+          taxable_date: { type: "string", description: "DUZP / datum plnění YYYY-MM-DD" },
           due_date: { type: "string", description: "Datum splatnosti ve formátu YYYY-MM-DD" },
           notes: { type: "string", description: "Poznámka pro klienta na faktuře" },
           variable_symbol: { type: "string", description: "Variabilní symbol (jen číslice)" },
@@ -79,6 +85,14 @@ const tools = [
             type: "string",
             enum: ["bank_transfer", "cash", "card"],
             description: "Způsob úhrady",
+          },
+          client_name: {
+            type: "string",
+            description: "Vyber odběratele podle jména (musí existovat v seznamu klientů uživatele).",
+          },
+          template_color: {
+            type: "string",
+            description: "Barva šablony faktury jako hex (např. '#0F62FE'). Změna se uloží i do profilu uživatele jako výchozí.",
           },
         },
         additionalProperties: false,
