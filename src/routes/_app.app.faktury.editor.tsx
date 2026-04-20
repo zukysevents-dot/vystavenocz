@@ -121,6 +121,11 @@ function InvoiceEditorPage() {
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
 
+  // Typ dokladu (faktura / dobropis) + vazba na původní fakturu při dobropisu.
+  const [documentType, setDocumentType] = useState<"invoice" | "credit_note">("invoice");
+  const [originalInvoiceId, setOriginalInvoiceId] = useState<string | null>(null);
+  const [originalInvoiceNumber, setOriginalInvoiceNumber] = useState<string | null>(null);
+
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [issueDate, setIssueDate] = useState(todayISO());
   const [taxableDate, setTaxableDate] = useState(todayISO());
