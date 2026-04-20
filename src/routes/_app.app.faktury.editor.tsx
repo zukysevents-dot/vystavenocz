@@ -763,6 +763,7 @@ function InvoiceEditorPage() {
                 variableSymbol={variableSymbol}
                 notes={notes}
                 paymentMethod={paymentMethod}
+                cancelled={loadedStatus === "cancelled"}
               />
             </div>
           </div>
@@ -783,6 +784,7 @@ function InvoiceEditorPage() {
             variableSymbol={variableSymbol}
             notes={notes}
             paymentMethod={paymentMethod}
+            cancelled={loadedStatus === "cancelled"}
           />
         </div>
       )}
