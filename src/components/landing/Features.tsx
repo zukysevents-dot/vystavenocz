@@ -102,21 +102,9 @@ const features = [
 
 export function Features() {
   return (
-    <section id="funkce" className="bg-background py-20 sm:py-28">
+    <section id="funkce" className="bg-background py-16 sm:py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-primary">
-            Funkce
-          </p>
-          <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            Vše, co potřebujete. Nic, co nepotřebujete.
-          </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
-            Postaveno pro české podnikatele, kteří chtějí trávit čas obchodem, ne papírováním.
-          </p>
-        </div>
-
-        <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((f) => (
             <div
               key={f.title}

@@ -11,13 +11,13 @@ export const Route = createFileRoute("/funkce")({
       {
         name: "description",
         content:
-          "AI asistent v češtině, QR platby, opakované faktury, cizí měny, automatické DPH a další funkce. Vše v ceně tarifu Fakturio Pro.",
+          "AI asistent v češtině, QR platby na každé faktuře, opakované faktury, cizí měny i automatické DPH. Vše v jedné ceně.",
       },
       { property: "og:title", content: "Funkce — Fakturio.cz" },
       {
         property: "og:description",
         content:
-          "Vše, co české podnikání potřebuje: AI v češtině, QR platby, opakované faktury, cizí měny i automatické DPH.",
+          "Všechno, co k fakturaci potřebujete — bez účetnického jazyka a bez příplatků.",
       },
     ],
   }),
@@ -29,8 +29,8 @@ function FunkcePage() {
     <PageShell>
       <PageHeader
         eyebrow="Funkce"
-        title="Vše, co potřebujete. Nic, co nepotřebujete."
-        subtitle="Postaveno pro české podnikatele, kteří chtějí trávit čas obchodem, ne papírováním."
+        title="Všechno potřebné. Nic navíc."
+        subtitle="Pro živnostníky a malé firmy, kterým se nechce řešit účetnictví — chtějí prostě vystavit fakturu a jít dál."
       />
       <Features />
       <Cta />

@@ -42,21 +42,12 @@ const faqs = [
 
 export function Faq() {
   return (
-    <section id="faq" className="bg-surface-soft py-20 sm:py-28">
+    <section id="faq" className="bg-surface-soft py-16 sm:py-20">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-primary">
-            Časté otázky
-          </p>
-          <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            Možná vás napadlo
-          </h2>
-        </div>
-
         <Accordion
           type="single"
           collapsible
-          className="mt-10 overflow-hidden rounded-2xl border border-border bg-card shadow-card"
+          className="overflow-hidden rounded-2xl border border-border bg-card shadow-card"
         >
           {faqs.map((f, i) => (
             <AccordionItem

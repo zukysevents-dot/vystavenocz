@@ -19,23 +19,10 @@ export function Pricing() {
   const [yearly, setYearly] = useState(true);
 
   return (
-    <section id="cenik" className="bg-background py-20 sm:py-28">
+    <section id="cenik" className="bg-background py-16 sm:py-20">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-primary">
-            Ceník
-          </p>
-          <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            Jeden tarif. Všechno v ceně.
-          </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
-            Žádné triky, žádná omezení podle počtu faktur. Plaťte jen za to, že vám fakturace
-            funguje.
-          </p>
-        </div>
-
         {/* Toggle */}
-        <div className="mt-10 flex items-center justify-center">
+        <div className="flex items-center justify-center">
           <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card p-1 shadow-sm">
             <button
               onClick={() => setYearly(false)}

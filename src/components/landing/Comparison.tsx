@@ -32,21 +32,9 @@ function Cell({ value, highlight = false }: { value: boolean | string; highlight
 
 export function Comparison() {
   return (
-    <section id="srovnani" className="bg-surface-soft py-20 sm:py-28">
+    <section id="srovnani" className="bg-surface-soft py-16 sm:py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-primary">
-            Srovnání s konkurencí
-          </p>
-          <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            Více funkcí. Lepší cena. Česky.
-          </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
-            Porovnali jsme Fakturio s nejznámějšími českými fakturačními službami.
-          </p>
-        </div>
-
-        <div className="mt-12 overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px]">
               <thead>

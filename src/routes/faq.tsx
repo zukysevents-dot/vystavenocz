@@ -11,13 +11,13 @@ export const Route = createFileRoute("/faq")({
       {
         name: "description",
         content:
-          "Odpovědi na časté otázky o fakturaci, DPH, QR platbách, AI asistentovi a tarifech Fakturio.cz.",
+          "Co se vás nejčastěji ptáme — DPH, QR platby, AI asistent, neplátci DPH i zkušebka.",
       },
       { property: "og:title", content: "Časté otázky — Fakturio.cz" },
       {
         property: "og:description",
         content:
-          "Vše o legislativě, AI asistentovi, QR platbách, neplátcích DPH i zkušebním období.",
+          "Odpovědi na to, na co se podnikatelé ptají nejčastěji.",
       },
     ],
   }),
@@ -28,9 +28,9 @@ function FaqPage() {
   return (
     <PageShell>
       <PageHeader
-        eyebrow="FAQ"
-        title="Možná vás napadlo"
-        subtitle="Zodpověděli jsme nejčastější dotazy o fakturaci, DPH, AI asistentovi a QR platbách."
+        eyebrow="Časté otázky"
+        title="Co se vás nejčastěji ptáme"
+        subtitle="Pokud tu odpověď nenajdete, napište nám — během chvilky vám odepíšeme."
       />
       <Faq />
       <Cta />
