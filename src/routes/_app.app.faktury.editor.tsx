@@ -459,15 +459,39 @@ function InvoiceEditorPage() {
             {downloadingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             PDF
           </Button>
-          <Button variant="outline" size="sm" onClick={handleSendEmail} disabled={preparingSend || saving}>
-            {preparingSend ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSendEmail}
+            disabled={preparingSend || saving}
+            title={hasAccess ? "Odeslat fakturu e-mailem" : "Vyžaduje aktivní předplatné"}
+          >
+            {preparingSend ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : !hasAccess ? (
+              <Lock className="h-4 w-4" />
+            ) : (
+              <Mail className="h-4 w-4" />
+            )}
             E-mail
           </Button>
           <Button variant="outline" size="sm" onClick={() => save("draft")} disabled={saving}>
             <Save className="h-4 w-4" /> Koncept
           </Button>
-          <Button variant="coral" size="sm" onClick={() => save("issued")} disabled={saving}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          <Button
+            variant="coral"
+            size="sm"
+            onClick={() => save("issued")}
+            disabled={saving}
+            title={hasAccess ? "Vystavit fakturu" : "Vyžaduje aktivní předplatné"}
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : !hasAccess ? (
+              <Lock className="h-4 w-4" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
             Vystavit
           </Button>
         </div>
