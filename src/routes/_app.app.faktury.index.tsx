@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Plus, FileText, Search, MoreVertical, Pencil, Trash2,
-  Download, CheckCircle2, Send, Loader2, Mail,
+  Download, CheckCircle2, Send, Loader2, Mail, Ban,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -60,6 +60,7 @@ function InvoicesListPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
   const [pdfPayload, setPdfPayload] = useState<null | {
     invoice: InvoiceRow;
@@ -126,11 +127,35 @@ function InvoicesListPage() {
 
   const remove = async () => {
     if (!deletingId) return;
+    // Safety: only drafts may be hard-deleted (Czech accounting law requires
+    // an audit trail for issued documents). The dropdown already enforces
+    // this, but we double-check here in case state drifts.
+    const target = invoices.find((i) => i.id === deletingId);
+    if (target && target.status !== "draft") {
+      toast.error("Smazat lze jen koncepty. Vystavené faktury stornujte.");
+      setDeletingId(null);
+      return;
+    }
     await supabase.from("invoice_items").delete().eq("invoice_id", deletingId);
     const { error } = await supabase.from("invoices").delete().eq("id", deletingId);
     if (error) return toast.error("Nepodařilo se smazat.");
     toast.success("Faktura smazána.");
     setDeletingId(null);
+    load();
+  };
+
+  const cancelInvoice = async () => {
+    if (!cancellingId) return;
+    const { error } = await supabase
+      .from("invoices")
+      .update({ status: "cancelled" })
+      .eq("id", cancellingId);
+    if (error) {
+      toast.error("Nepodařilo se stornovat fakturu.");
+      return;
+    }
+    toast.success("Faktura stornována.");
+    setCancellingId(null);
     load();
   };
 
@@ -285,7 +310,7 @@ function InvoicesListPage() {
                           <DropdownMenuItem onClick={() => exportPdf(inv)}>
                             <Download className="h-4 w-4" /> Stáhnout PDF
                           </DropdownMenuItem>
-                          {inv.status !== "paid" && inv.status !== "draft" && (
+                          {inv.status !== "paid" && inv.status !== "draft" && inv.status !== "cancelled" && (
                             <DropdownMenuItem onClick={() => markPaid(inv.id)}>
                               <CheckCircle2 className="h-4 w-4" /> Označit zaplaceno
                             </DropdownMenuItem>
@@ -296,9 +321,21 @@ function InvoicesListPage() {
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => setDeletingId(inv.id)} className="text-destructive focus:text-destructive">
-                            <Trash2 className="h-4 w-4" /> Smazat
-                          </DropdownMenuItem>
+                          {inv.status === "draft" ? (
+                            <DropdownMenuItem
+                              onClick={() => setDeletingId(inv.id)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" /> Smazat koncept
+                            </DropdownMenuItem>
+                          ) : inv.status !== "cancelled" ? (
+                            <DropdownMenuItem
+                              onClick={() => setCancellingId(inv.id)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Ban className="h-4 w-4" /> Stornovat
+                            </DropdownMenuItem>
+                          ) : null}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
@@ -352,14 +389,31 @@ function InvoicesListPage() {
       <AlertDialog open={!!deletingId} onOpenChange={(o) => !o && setDeletingId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Smazat fakturu?</AlertDialogTitle>
+            <AlertDialogTitle>Smazat koncept?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tuto akci nelze vrátit. Faktura a její položky budou trvale smazány.
+              Tuto akci nelze vrátit. Koncept a jeho položky budou trvale smazány.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Zrušit</AlertDialogCancel>
             <AlertDialogAction onClick={remove}>Smazat</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!cancellingId} onOpenChange={(o) => !o && setCancellingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Stornovat fakturu?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vystavené faktury nelze podle zákona o účetnictví mazat. Faktura
+              zůstane v evidenci se stavem „Stornováno" pro audit, ale nebude
+              se započítávat do přehledů a plateb.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction onClick={cancelInvoice}>Stornovat</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
