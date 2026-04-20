@@ -50,8 +50,9 @@ async function upsertSubscription(subscription: any, env: StripeEnv) {
   const priceId = item?.price?.metadata?.lovable_external_id || item?.price?.id;
   const productId = item?.price?.product;
 
-  const periodStart = subscription.current_period_start;
-  const periodEnd = subscription.current_period_end;
+  // Stripe API 2025+ moves period fields onto the subscription item
+  const periodStart = subscription.current_period_start ?? item?.current_period_start;
+  const periodEnd = subscription.current_period_end ?? item?.current_period_end;
 
   await supabase.from("subscriptions").upsert(
     {
