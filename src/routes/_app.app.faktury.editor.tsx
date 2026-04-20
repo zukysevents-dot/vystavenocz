@@ -575,10 +575,14 @@ function InvoiceEditorPage() {
           invoice_number: invoiceNumber,
           client_name: selectedClient?.name || "",
           vat_payer: profile?.vat_mode === "payer",
+          issue_date: issueDate,
+          taxable_date: taxableDate,
           due_date: dueDate,
           payment_method: paymentMethod,
           variable_symbol: variableSymbol,
           notes,
+          template_color: profile?.invoice_color || "#0F62FE",
+          available_clients: clients.map((c) => c.name),
           items: items.map((it) => ({
             description: it.description,
             quantity: it.quantity,
@@ -589,10 +593,33 @@ function InvoiceEditorPage() {
         }}
         onApplyPatch={(patch: InvoicePatch) => {
           if (patch.items) setItems((prev) => applyPatchToItems(prev, patch));
+          if (patch.invoice_number) setInvoiceNumber(patch.invoice_number);
+          if (patch.issue_date) setIssueDate(patch.issue_date);
+          if (patch.taxable_date) setTaxableDate(patch.taxable_date);
           if (patch.due_date) setDueDate(patch.due_date);
           if (patch.notes !== undefined) setNotes(patch.notes);
           if (patch.variable_symbol !== undefined) setVariableSymbol(patch.variable_symbol);
           if (patch.payment_method) setPaymentMethod(patch.payment_method);
+          if (patch.client_name) {
+            const match = clients.find(
+              (c) => c.name.toLowerCase() === patch.client_name!.toLowerCase(),
+            );
+            if (match) setSelectedClientId(match.id);
+            else toast.error(`Klient „${patch.client_name}" nebyl nalezen.`);
+          }
+          if (patch.template_color && profile && user) {
+            const color = patch.template_color.startsWith("#")
+              ? patch.template_color
+              : `#${patch.template_color}`;
+            setProfile({ ...profile, invoice_color: color });
+            supabase
+              .from("profiles")
+              .update({ invoice_color: color })
+              .eq("id", user.id)
+              .then(({ error }) => {
+                if (error) toast.error("Barvu se nepodařilo uložit do profilu.");
+              });
+          }
         }}
       />
     </div>

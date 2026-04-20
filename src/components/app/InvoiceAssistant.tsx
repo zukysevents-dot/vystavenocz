@@ -14,10 +14,14 @@ export type InvoiceContext = {
   invoice_number: string;
   client_name: string;
   vat_payer: boolean;
+  issue_date: string;
+  taxable_date: string;
   due_date: string;
   payment_method: string;
   variable_symbol: string;
   notes: string;
+  template_color: string;
+  available_clients: string[];
   items: Array<{
     description: string;
     quantity: number;
@@ -36,10 +40,15 @@ export type InvoicePatch = {
     unit_price: number;
     vat_rate: number;
   }>;
+  invoice_number?: string;
+  issue_date?: string;
+  taxable_date?: string;
   due_date?: string;
   notes?: string;
   variable_symbol?: string;
   payment_method?: "bank_transfer" | "cash" | "card";
+  client_name?: string;
+  template_color?: string;
 };
 
 export type ApplyPatchFn = (patch: InvoicePatch) => void;
