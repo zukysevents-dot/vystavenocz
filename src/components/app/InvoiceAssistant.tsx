@@ -166,6 +166,55 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
     [mode],
   );
 
+  // Načte obrázek, downscale na max 1600px (zachovává poměr) a vrátí jako data URL JPEG.
+  const compressImage = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("Soubor se nepodařilo načíst"));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error("Obrázek se nepodařilo dekódovat"));
+        img.onload = () => {
+          const MAX = 1600;
+          let { width, height } = img;
+          if (width > MAX || height > MAX) {
+            const scale = Math.min(MAX / width, MAX / height);
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return reject(new Error("Canvas nedostupný"));
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", 0.85));
+        };
+        img.src = String(reader.result);
+      };
+      reader.readAsDataURL(file);
+    });
+
+  const handlePickFile = async (file: File | undefined | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vyber obrázek (JPG, PNG, WEBP).");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Obrázek je příliš velký (max 10 MB).");
+      return;
+    }
+    try {
+      const dataUrl = await compressImage(file);
+      setPendingImage(dataUrl);
+      if (mode === "general") setMode("invoice");
+    } catch (e) {
+      console.error(e);
+      toast.error("Nepodařilo se zpracovat obrázek.");
+    }
+  };
+
   const send = async (text: string, imageDataUrl?: string | null) => {
     const trimmed = text.trim();
     const image = imageDataUrl ?? pendingImage;
