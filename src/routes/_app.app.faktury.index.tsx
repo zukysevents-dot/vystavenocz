@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Plus, FileText, Search, MoreVertical, Pencil, Trash2,
-  Download, CheckCircle2, Send, Loader2, Mail, Ban,
+  Download, CheckCircle2, Send, Loader2, Mail, Ban, FileMinus,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -43,6 +43,8 @@ type InvoiceRow = {
   notes: string | null;
   taxable_date: string;
   supplier_snapshot: Record<string, unknown>;
+  document_type: "invoice" | "credit_note";
+  original_invoice_id: string | null;
 };
 
 const statusLabels: Record<InvoiceRow["status"], { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
