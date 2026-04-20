@@ -23,7 +23,9 @@ import { Route as AppAppIndexRouteImport } from './routes/_app.app.index'
 import { Route as AppAppOnboardingRouteImport } from './routes/_app.app.onboarding'
 import { Route as AppAppNastaveniRouteImport } from './routes/_app.app.nastaveni'
 import { Route as AppAppKlientiRouteImport } from './routes/_app.app.klienti'
+import { Route as AppAppPredplatneIndexRouteImport } from './routes/_app.app.predplatne.index'
 import { Route as AppAppFakturyIndexRouteImport } from './routes/_app.app.faktury.index'
+import { Route as AppAppPredplatneDekujemeRouteImport } from './routes/_app.app.predplatne.dekujeme'
 import { Route as AppAppFakturyEditorRouteImport } from './routes/_app.app.faktury.editor'
 
 const ZapomenuteHesloRoute = ZapomenuteHesloRouteImport.update({
@@ -95,11 +97,22 @@ const AppAppKlientiRoute = AppAppKlientiRouteImport.update({
   path: '/app/klienti',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAppPredplatneIndexRoute = AppAppPredplatneIndexRouteImport.update({
+  id: '/app/predplatne/',
+  path: '/app/predplatne/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAppFakturyIndexRoute = AppAppFakturyIndexRouteImport.update({
   id: '/app/faktury/',
   path: '/app/faktury/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAppPredplatneDekujemeRoute =
+  AppAppPredplatneDekujemeRouteImport.update({
+    id: '/app/predplatne/dekujeme',
+    path: '/app/predplatne/dekujeme',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppAppFakturyEditorRoute = AppAppFakturyEditorRouteImport.update({
   id: '/app/faktury/editor',
   path: '/app/faktury/editor',
@@ -121,7 +134,9 @@ export interface FileRoutesByFullPath {
   '/app/onboarding': typeof AppAppOnboardingRoute
   '/app/': typeof AppAppIndexRoute
   '/app/faktury/editor': typeof AppAppFakturyEditorRoute
+  '/app/predplatne/dekujeme': typeof AppAppPredplatneDekujemeRoute
   '/app/faktury/': typeof AppAppFakturyIndexRoute
+  '/app/predplatne/': typeof AppAppPredplatneIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -138,7 +153,9 @@ export interface FileRoutesByTo {
   '/app/onboarding': typeof AppAppOnboardingRoute
   '/app': typeof AppAppIndexRoute
   '/app/faktury/editor': typeof AppAppFakturyEditorRoute
+  '/app/predplatne/dekujeme': typeof AppAppPredplatneDekujemeRoute
   '/app/faktury': typeof AppAppFakturyIndexRoute
+  '/app/predplatne': typeof AppAppPredplatneIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -157,7 +174,9 @@ export interface FileRoutesById {
   '/_app/app/onboarding': typeof AppAppOnboardingRoute
   '/_app/app/': typeof AppAppIndexRoute
   '/_app/app/faktury/editor': typeof AppAppFakturyEditorRoute
+  '/_app/app/predplatne/dekujeme': typeof AppAppPredplatneDekujemeRoute
   '/_app/app/faktury/': typeof AppAppFakturyIndexRoute
+  '/_app/app/predplatne/': typeof AppAppPredplatneIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -176,7 +195,9 @@ export interface FileRouteTypes {
     | '/app/onboarding'
     | '/app/'
     | '/app/faktury/editor'
+    | '/app/predplatne/dekujeme'
     | '/app/faktury/'
+    | '/app/predplatne/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -193,7 +214,9 @@ export interface FileRouteTypes {
     | '/app/onboarding'
     | '/app'
     | '/app/faktury/editor'
+    | '/app/predplatne/dekujeme'
     | '/app/faktury'
+    | '/app/predplatne'
   id:
     | '__root__'
     | '/'
@@ -211,7 +234,9 @@ export interface FileRouteTypes {
     | '/_app/app/onboarding'
     | '/_app/app/'
     | '/_app/app/faktury/editor'
+    | '/_app/app/predplatne/dekujeme'
     | '/_app/app/faktury/'
+    | '/_app/app/predplatne/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -327,11 +352,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAppKlientiRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/app/predplatne/': {
+      id: '/_app/app/predplatne/'
+      path: '/app/predplatne'
+      fullPath: '/app/predplatne/'
+      preLoaderRoute: typeof AppAppPredplatneIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/app/faktury/': {
       id: '/_app/app/faktury/'
       path: '/app/faktury'
       fullPath: '/app/faktury/'
       preLoaderRoute: typeof AppAppFakturyIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/app/predplatne/dekujeme': {
+      id: '/_app/app/predplatne/dekujeme'
+      path: '/app/predplatne/dekujeme'
+      fullPath: '/app/predplatne/dekujeme'
+      preLoaderRoute: typeof AppAppPredplatneDekujemeRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/app/faktury/editor': {
@@ -350,7 +389,9 @@ interface AppRouteChildren {
   AppAppOnboardingRoute: typeof AppAppOnboardingRoute
   AppAppIndexRoute: typeof AppAppIndexRoute
   AppAppFakturyEditorRoute: typeof AppAppFakturyEditorRoute
+  AppAppPredplatneDekujemeRoute: typeof AppAppPredplatneDekujemeRoute
   AppAppFakturyIndexRoute: typeof AppAppFakturyIndexRoute
+  AppAppPredplatneIndexRoute: typeof AppAppPredplatneIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -359,7 +400,9 @@ const AppRouteChildren: AppRouteChildren = {
   AppAppOnboardingRoute: AppAppOnboardingRoute,
   AppAppIndexRoute: AppAppIndexRoute,
   AppAppFakturyEditorRoute: AppAppFakturyEditorRoute,
+  AppAppPredplatneDekujemeRoute: AppAppPredplatneDekujemeRoute,
   AppAppFakturyIndexRoute: AppAppFakturyIndexRoute,
+  AppAppPredplatneIndexRoute: AppAppPredplatneIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

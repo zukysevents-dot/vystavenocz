@@ -1,13 +1,14 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { LayoutDashboard, FileText, Users, Settings, LogOut, Sparkles } from "lucide-react";
+import { LayoutDashboard, FileText, Users, Settings, LogOut, Sparkles, CreditCard } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/landing/Logo";
 import { Button } from "@/components/ui/button";
 
-const nav: { to: "/app" | "/app/faktury" | "/app/klienti" | "/app/nastaveni"; label: string; icon: typeof LayoutDashboard; exact?: boolean }[] = [
+const nav: { to: "/app" | "/app/faktury" | "/app/klienti" | "/app/predplatne" | "/app/nastaveni"; label: string; icon: typeof LayoutDashboard; exact?: boolean }[] = [
   { to: "/app", label: "Přehled", icon: LayoutDashboard, exact: true },
   { to: "/app/faktury", label: "Faktury", icon: FileText },
   { to: "/app/klienti", label: "Klienti", icon: Users },
+  { to: "/app/predplatne", label: "Předplatné", icon: CreditCard },
   { to: "/app/nastaveni", label: "Nastavení", icon: Settings },
 ];
 
