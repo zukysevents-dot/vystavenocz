@@ -9,6 +9,10 @@ const rows: { label: string; us: boolean | string; fakturoid: boolean | string; 
   { label: "Cizí měny + kurz ČNB", us: true, fakturoid: true, idoklad: true, vyfakturuj: false },
   { label: "Reverse charge & OSS", us: true, fakturoid: true, idoklad: true, vyfakturuj: false },
   { label: "Automatické upomínky", us: true, fakturoid: "Plus", idoklad: "Plus", vyfakturuj: false },
+  { label: "Dobropisy s vlastní řadou OD-", us: true, fakturoid: true, idoklad: true, vyfakturuj: "Omezeně" },
+  { label: "Autosave konceptů (30 s)", us: true, fakturoid: false, idoklad: false, vyfakturuj: false },
+  { label: "Vodoznak STORNOVÁNO v PDF", us: true, fakturoid: false, idoklad: false, vyfakturuj: false },
+  { label: "Uložení rozpracovaného konceptu", us: true, fakturoid: "Omezeně", idoklad: "Omezeně", vyfakturuj: "Omezeně" },
   { label: "Cash-flow predikce", us: true, fakturoid: false, idoklad: false, vyfakturuj: false },
   { label: "Cena od (měsíčně)", us: "100 Kč", fakturoid: "199 Kč", idoklad: "270 Kč", vyfakturuj: "149 Kč" },
 ];
