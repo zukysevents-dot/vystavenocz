@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Plus, FileText, Search, MoreVertical, Pencil, Trash2,
-  Download, CheckCircle2, Send, Loader2,
+  Download, CheckCircle2, Send, Loader2, Mail,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +21,7 @@ import {
 import { formatCZK, formatDate } from "@/lib/invoice";
 import { InvoiceDocument } from "@/components/app/InvoiceDocument";
 import { downloadInvoicePdf } from "@/lib/invoice-pdf";
+import { SendInvoiceDialog, type SendInvoiceContext } from "@/components/app/SendInvoiceDialog";
 
 export const Route = createFileRoute("/_app/app/faktury/")({
   head: () => ({ meta: [{ title: "Faktury — Fakturio" }] }),
@@ -67,6 +68,9 @@ function InvoicesListPage() {
       unit_price: number; vat_rate: number;
     }>;
   }>(null);
+  const [sendCtx, setSendCtx] = useState<SendInvoiceContext | null>(null);
+  const [sendOpen, setSendOpen] = useState(false);
+  const [preparingSendId, setPreparingSendId] = useState<string | null>(null);
 
   const load = async () => {
     if (!user) return;
@@ -153,6 +157,41 @@ function InvoicesListPage() {
     }
   };
 
+  const openSend = async (inv: InvoiceRow) => {
+    setPreparingSendId(inv.id);
+    try {
+      const { data: items, error } = await supabase
+        .from("invoice_items")
+        .select("*")
+        .eq("invoice_id", inv.id)
+        .order("position");
+      if (error) throw error;
+      setPdfPayload({ invoice: inv, items: items as NonNullable<typeof pdfPayload>["items"] });
+      // počkej na render
+      await new Promise((r) => setTimeout(r, 200));
+      const supplier = (inv.supplier_snapshot as { company_name?: string; full_name?: string }) || {};
+      const client = inv.client_snapshot as { name?: string; email?: string };
+      setSendCtx({
+        invoiceId: inv.id,
+        invoiceNumber: inv.invoice_number,
+        recipientEmail: client?.email ?? null,
+        recipientName: client?.name ?? null,
+        supplierName: supplier.company_name ?? supplier.full_name ?? null,
+        total: Number(inv.total),
+        currency: inv.currency,
+        dueDate: inv.due_date,
+        pdfElementId: "invoice-document",
+      });
+      setSendOpen(true);
+    } catch (e) {
+      console.error(e);
+      toast.error("Nepodařilo se připravit fakturu k odeslání.");
+      setPdfPayload(null);
+    } finally {
+      setPreparingSendId(null);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-6xl p-8">
       <div className="flex items-center justify-between">
@@ -227,7 +266,7 @@ function InvoicesListPage() {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon">
-                            {pdfLoadingId === inv.id
+                            {pdfLoadingId === inv.id || preparingSendId === inv.id
                               ? <Loader2 className="h-4 w-4 animate-spin" />
                               : <MoreVertical className="h-4 w-4" />}
                           </Button>
@@ -235,6 +274,9 @@ function InvoicesListPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => navigate({ to: "/app/faktury/editor", search: { id: inv.id } })}>
                             <Pencil className="h-4 w-4" /> Upravit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openSend(inv)}>
+                            <Mail className="h-4 w-4" /> Odeslat e-mailem
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => exportPdf(inv)}>
                             <Download className="h-4 w-4" /> Stáhnout PDF
