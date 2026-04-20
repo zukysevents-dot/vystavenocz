@@ -690,47 +690,69 @@ function InvoiceEditorPage() {
             {downloadingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             PDF
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSendEmail}
-            disabled={preparingSend || saving}
-            title={hasAccess ? "Odeslat fakturu e-mailem" : "Vyžaduje aktivní předplatné"}
-          >
-            {preparingSend ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : !hasAccess ? (
-              <Lock className="h-4 w-4" />
-            ) : (
-              <Mail className="h-4 w-4" />
-            )}
-            E-mail
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => save("draft")} disabled={saving}>
-            <Save className="h-4 w-4" /> Koncept
-          </Button>
-          <Button
-            variant="coral"
-            size="sm"
-            onClick={() => save("issued")}
-            disabled={saving}
-            title={hasAccess ? "Vystavit fakturu" : "Vyžaduje aktivní předplatné"}
-          >
-            {saving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : !hasAccess ? (
-              <Lock className="h-4 w-4" />
-            ) : (
-              <Save className="h-4 w-4" />
-            )}
-            Vystavit
-          </Button>
+          {!isCancelled && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSendEmail}
+                disabled={preparingSend || saving}
+                title={hasAccess ? "Odeslat fakturu e-mailem" : "Vyžaduje aktivní předplatné"}
+              >
+                {preparingSend ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : !hasAccess ? (
+                  <Lock className="h-4 w-4" />
+                ) : (
+                  <Mail className="h-4 w-4" />
+                )}
+                E-mail
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => save("draft")} disabled={saving}>
+                <Save className="h-4 w-4" /> Koncept
+              </Button>
+              <Button
+                variant="coral"
+                size="sm"
+                onClick={() => save("issued")}
+                disabled={saving}
+                title={hasAccess ? "Vystavit fakturu" : "Vyžaduje aktivní předplatné"}
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : !hasAccess ? (
+                  <Lock className="h-4 w-4" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Vystavit
+              </Button>
+            </>
+          )}
+          {isCancelled && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 bg-destructive/10 px-3 py-1 text-xs font-medium text-destructive">
+              <Lock className="h-3.5 w-3.5" /> Stornováno · jen ke čtení
+            </span>
+          )}
         </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Form */}
         <div className="w-full overflow-auto border-r border-border bg-background p-6 lg:w-1/2">
+          {isCancelled && (
+            <div className="mb-4 flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
+              <Lock className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+              <div>
+                <p className="font-semibold text-destructive">Tento doklad je stornovaný a nelze ho upravovat.</p>
+                <p className="mt-1 text-muted-foreground">
+                  Stornované doklady jsou uchovávány jen pro evidenci. Pokud potřebujete provést opravu, vystavte
+                  nový doklad nebo dobropis k původní faktuře.
+                </p>
+              </div>
+            </div>
+          )}
+          <fieldset disabled={isCancelled} className="contents">
           <section className="space-y-4">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Základ</h2>
             <div className="grid gap-3 sm:grid-cols-2">
