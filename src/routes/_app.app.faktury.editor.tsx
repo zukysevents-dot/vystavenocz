@@ -581,9 +581,9 @@ function InvoiceEditorPage() {
               {(loadedStatus === null || loadedStatus === "draft") && (
                 <span className="ml-2 text-[11px]">
                   {dirty ? (
-                    <span className="text-amber-600">• neuložené změny</span>
+                    <span className="text-coral">• neuložené změny</span>
                   ) : lastAutosaveAt ? (
-                    <span className="text-emerald-600">
+                    <span className="text-primary">
                       • automaticky uloženo {lastAutosaveAt.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })}
                     </span>
                   ) : null}
