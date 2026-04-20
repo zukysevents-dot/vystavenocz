@@ -589,8 +589,10 @@ function InvoiceEditorPage() {
     }
     setPreparingSend(true);
     try {
-      // Ulož bez přesměrování, abychom měli ID
-      const id = await save("issued", { redirect: false });
+      // Ulož jako KONCEPT — fakturu vystavíme až po úspěšném odeslání e-mailu
+      // (status update je v SendInvoiceDialog). Tím zabráníme tomu, že
+      // uživatel zruší dialog, ale faktura už je nenávratně vystavená.
+      const id = await save("draft", { redirect: false });
       if (!id) return;
       setShowPreview(true);
       await new Promise((r) => setTimeout(r, 200));
@@ -632,7 +634,10 @@ function InvoiceEditorPage() {
     );
   }
 
-  if (clients.length === 0) {
+  // Pokud editujeme existující fakturu/dobropis, povolíme přístup i bez klientů
+  // (uživatel mohl mezitím všechny klienty smazat — fakturu by jinak nešlo
+  // ani otevřít, stáhnout PDF nebo stornovat).
+  if (clients.length === 0 && !editingId) {
     return (
       <div className="mx-auto max-w-2xl p-8 text-center">
         <h1 className="text-2xl font-bold">Nejprve přidejte klienta</h1>
