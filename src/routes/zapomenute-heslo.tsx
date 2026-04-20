@@ -36,7 +36,7 @@ function ForgotPasswordPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-hero px-4 py-12">
       <div className="w-full max-w-md">
-        <div className="mb-8 flex justify-center"><Link to="/"><Logo /></Link></div>
+        <div className="mb-8 flex justify-center"><Logo /></div>
         <div className="rounded-2xl border border-border bg-card p-8 shadow-card">
           <h1 className="text-2xl font-bold tracking-tight">Zapomenuté heslo</h1>
           <p className="mt-1 text-sm text-muted-foreground">Pošleme vám odkaz pro nastavení nového hesla.</p>

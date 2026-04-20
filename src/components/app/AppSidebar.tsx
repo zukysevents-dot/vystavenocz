@@ -18,7 +18,7 @@ export function AppSidebar() {
   return (
     <aside className="flex h-screen w-64 flex-col border-r border-border bg-card">
       <div className="flex h-16 items-center border-b border-border px-5">
-        <Link to="/"><Logo /></Link>
+        <Logo />
       </div>
 
       <nav className="flex-1 space-y-1 p-3">
