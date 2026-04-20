@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Sparkles, Send, X, Loader2, Wand2 } from "lucide-react";
+import { Sparkles, Send, X, Loader2, Wand2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -55,20 +55,65 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   context: InvoiceContext;
   onApplyPatch: ApplyPatchFn;
+  /** Klíč pro localStorage persistenci konverzace (např. ID faktury nebo "new"). */
+  storageKey?: string;
 };
 
-export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch }: Props) {
-  const [messages, setMessages] = useState<ChatMsg[]>([]);
+const STORAGE_PREFIX = "fakturio:assistant:";
+
+function loadHistory(key?: string): ChatMsg[] {
+  if (!key || typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_PREFIX + key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.filter((m) => m && (m.role === "user" || m.role === "assistant"));
+  } catch {
+    /* ignore */
+  }
+  return [];
+}
+
+export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, storageKey }: Props) {
+  const [messages, setMessages] = useState<ChatMsg[]>(() => loadHistory(storageKey));
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Načti historii pokud se změní klíč (přepnutí mezi fakturami)
+  useEffect(() => {
+    setMessages(loadHistory(storageKey));
+  }, [storageKey]);
+
+  // Ukládej do localStorage při každé změně zpráv
+  useEffect(() => {
+    if (!storageKey || typeof window === "undefined") return;
+    try {
+      if (messages.length === 0) {
+        localStorage.removeItem(STORAGE_PREFIX + storageKey);
+      } else {
+        localStorage.setItem(STORAGE_PREFIX + storageKey, JSON.stringify(messages));
+      }
+    } catch {
+      /* quota exceeded — ignore */
+    }
+  }, [messages, storageKey]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, isStreaming]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  const clearHistory = () => {
+    abortRef.current?.abort();
+    setMessages([]);
+    if (storageKey && typeof window !== "undefined") {
+      localStorage.removeItem(STORAGE_PREFIX + storageKey);
+    }
+    toast.success("Historie chatu vymazána.");
+  };
 
   const send = async (text: string) => {
     const trimmed = text.trim();
@@ -205,9 +250,21 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch }: 
             <div className="text-xs text-muted-foreground">Editor i generátor faktur</div>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          {messages.length > 0 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={clearHistory}
+              title="Vymazat historii konverzace"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">

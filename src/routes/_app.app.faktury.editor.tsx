@@ -570,6 +570,7 @@ function InvoiceEditorPage() {
       <InvoiceAssistant
         open={assistantOpen}
         onOpenChange={setAssistantOpen}
+        storageKey={editingId ?? "new"}
         context={{
           invoice_number: invoiceNumber,
           client_name: selectedClient?.name || "",
