@@ -13,6 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InvoiceDocument } from "@/components/app/InvoiceDocument";
 import { downloadInvoicePdf } from "@/lib/invoice-pdf";
+import { PaywallDialog } from "@/components/payments/PaywallDialog";
+import { useSubscription } from "@/hooks/use-subscription";
 import {
   InvoiceAssistant,
   applyPatchToItems,
@@ -104,6 +106,8 @@ function InvoiceEditorPage() {
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const { hasAccess } = useSubscription();
 
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [clients, setClients] = useState<ClientRow[]>([]);
@@ -252,6 +256,10 @@ function InvoiceEditorPage() {
 
   const save = async (status: "draft" | "issued") => {
     if (!user || !profile) return;
+    if (status === "issued" && !hasAccess) {
+      setPaywallOpen(true);
+      return;
+    }
     if (!selectedClient) {
       toast.error("Vyberte odběratele.");
       return;
@@ -621,6 +629,11 @@ function InvoiceEditorPage() {
               });
           }
         }}
+      />
+      <PaywallDialog
+        open={paywallOpen}
+        onOpenChange={setPaywallOpen}
+        reason="Bezplatná zkušební doba skončila. Pro vystavení faktury aktivujte tarif Fakturio Pro. Koncept můžete uložit i bez předplatného."
       />
     </div>
   );

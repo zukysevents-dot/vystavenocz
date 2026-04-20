@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AppSidebar } from "@/components/app/AppSidebar";
+import { TrialBanner } from "@/components/app/TrialBanner";
 import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_app")({
@@ -29,8 +30,11 @@ function AppLayout() {
   return (
     <div className="flex h-screen bg-background">
       <AppSidebar />
-      <main className="flex-1 overflow-auto">
-        <Outlet />
+      <main className="flex flex-1 flex-col overflow-hidden">
+        <TrialBanner />
+        <div className="flex-1 overflow-auto">
+          <Outlet />
+        </div>
       </main>
     </div>
   );
