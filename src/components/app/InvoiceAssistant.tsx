@@ -114,6 +114,8 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
   const [messages, setMessages] = useState<ChatMsg[]>(() => loadHistory(activeStorageKey));
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -152,6 +154,7 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
   const newConversation = () => {
     abortRef.current?.abort();
     setMessages([]);
+    setPendingImage(null);
     if (activeStorageKey && typeof window !== "undefined") {
       localStorage.removeItem(STORAGE_PREFIX + activeStorageKey);
     }
@@ -163,13 +166,21 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
     [mode],
   );
 
-  const send = async (text: string) => {
+  const send = async (text: string, imageDataUrl?: string | null) => {
     const trimmed = text.trim();
-    if (!trimmed || isStreaming) return;
-    const userMsg: ChatMsg = { role: "user", content: trimmed };
+    const image = imageDataUrl ?? pendingImage;
+    // Povolíme odeslat samotný obrázek bez textu (asistent dostane výchozí pokyn)
+    if (!trimmed && !image) return;
+    if (isStreaming) return;
+    const userMsg: ChatMsg = {
+      role: "user",
+      content: trimmed || (image ? "📎 Přiložen obrázek — rozpoznej položky." : ""),
+      image_thumb: image ?? undefined,
+    };
     const next = [...messages, userMsg];
     setMessages(next);
     setInput("");
+    setPendingImage(null);
     setIsStreaming(true);
 
     let assistantSoFar = "";
@@ -201,6 +212,7 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
           messages: next.map((m) => ({ role: m.role, content: m.content })),
           invoice_context: mode === "invoice" ? context : null,
           mode,
+          image_data_url: image ?? undefined,
         }),
       });
 
