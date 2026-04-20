@@ -650,7 +650,16 @@ function InvoiceEditorPage() {
           </Button>
           <div>
             <div className="text-sm font-semibold">
-              {editingId ? "Úprava faktury" : "Nová faktura"} — {invoiceNumber}
+              {documentType === "credit_note"
+                ? (editingId ? "Úprava dobropisu" : "Nový dobropis")
+                : (editingId ? "Úprava faktury" : "Nová faktura")}
+              {" — "}
+              {invoiceNumber}
+              {documentType === "credit_note" && originalInvoiceNumber && (
+                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                  k {originalInvoiceNumber}
+                </span>
+              )}
             </div>
             <div className="text-xs text-muted-foreground">
               {selectedClient?.name || "vyberte odběratele"} · {formatCZK(totals.total)}
