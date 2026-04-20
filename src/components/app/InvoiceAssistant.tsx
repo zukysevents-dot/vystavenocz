@@ -1,0 +1,310 @@
+import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import { Sparkles, Send, X, Loader2, Wand2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import type { InvoiceItemDraft, VatRate } from "@/lib/invoice";
+
+export type InvoiceContext = {
+  invoice_number: string;
+  client_name: string;
+  vat_payer: boolean;
+  due_date: string;
+  payment_method: string;
+  variable_symbol: string;
+  notes: string;
+  items: Array<{
+    description: string;
+    quantity: number;
+    unit: string;
+    unit_price: number;
+    vat_rate: number;
+  }>;
+};
+
+export type InvoicePatch = {
+  replace_items?: boolean;
+  items?: Array<{
+    description: string;
+    quantity: number;
+    unit: string;
+    unit_price: number;
+    vat_rate: number;
+  }>;
+  due_date?: string;
+  notes?: string;
+  variable_symbol?: string;
+  payment_method?: "bank_transfer" | "cash" | "card";
+};
+
+export type ApplyPatchFn = (patch: InvoicePatch) => void;
+
+type ChatMsg = { role: "user" | "assistant"; content: string };
+
+const SUGGESTIONS = [
+  "Přidej položku: konzultace 2 hodiny po 1500 Kč",
+  "Vygeneruj 3 položky pro vývoj webu za 30 000 Kč",
+  "Změň splatnost na 30 dní",
+  "Napiš poznámku pro klienta s poděkováním",
+];
+
+type Props = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  context: InvoiceContext;
+  onApplyPatch: ApplyPatchFn;
+};
+
+export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch }: Props) {
+  const [messages, setMessages] = useState<ChatMsg[]>([]);
+  const [input, setInput] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages, isStreaming]);
+
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  const send = async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed || isStreaming) return;
+    const userMsg: ChatMsg = { role: "user", content: trimmed };
+    const next = [...messages, userMsg];
+    setMessages(next);
+    setInput("");
+    setIsStreaming(true);
+
+    let assistantSoFar = "";
+    let toolName = "";
+    let toolArgsBuf = "";
+
+    const upsertAssistant = (chunk: string) => {
+      assistantSoFar += chunk;
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.role === "assistant") {
+          return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantSoFar } : m));
+        }
+        return [...prev, { role: "assistant", content: assistantSoFar }];
+      });
+    };
+
+    try {
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invoice-assistant`, {
+        method: "POST",
+        signal: ctrl.signal,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          messages: next.map((m) => ({ role: m.role, content: m.content })),
+          invoice_context: context,
+        }),
+      });
+
+      if (!resp.ok || !resp.body) {
+        if (resp.status === 429) toast.error("Příliš mnoho požadavků, zkuste to za chvíli.");
+        else if (resp.status === 402) toast.error("AI kredit vyčerpán. Doplňte si kredit.");
+        else toast.error("Asistent nedostupný.");
+        setIsStreaming(false);
+        return;
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+      let streamDone = false;
+
+      while (!streamDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let nl: number;
+        while ((nl = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, nl);
+          textBuffer = textBuffer.slice(nl + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") {
+            streamDone = true;
+            break;
+          }
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const delta = parsed.choices?.[0]?.delta;
+            if (delta?.content) upsertAssistant(delta.content);
+            if (delta?.tool_calls) {
+              for (const tc of delta.tool_calls) {
+                if (tc.function?.name) toolName = tc.function.name;
+                if (tc.function?.arguments) toolArgsBuf += tc.function.arguments;
+              }
+            }
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+
+      if (toolName === "apply_invoice_changes" && toolArgsBuf) {
+        try {
+          const patch = JSON.parse(toolArgsBuf) as InvoicePatch;
+          onApplyPatch(patch);
+          if (!assistantSoFar.trim()) {
+            upsertAssistant("✅ Hotovo, změny aplikovány do faktury.");
+          }
+          toast.success("Faktura aktualizována asistentem");
+        } catch (e) {
+          console.error("Tool args parse error:", e, toolArgsBuf);
+          toast.error("Asistent vrátil neplatná data.");
+        }
+      }
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") {
+        console.error(e);
+        toast.error("Chyba spojení s asistentem.");
+      }
+    } finally {
+      setIsStreaming(false);
+      abortRef.current = null;
+    }
+  };
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => onOpenChange(true)}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-coral px-5 py-3 text-sm font-semibold text-coral-foreground shadow-glow transition-all hover:scale-105"
+      >
+        <Sparkles className="h-4 w-4" />
+        AI asistent
+      </button>
+    );
+  }
+
+  return (
+    <div className="fixed bottom-6 right-6 z-40 flex h-[600px] w-[400px] max-w-[calc(100vw-2rem)] flex-col rounded-2xl border border-border bg-card shadow-glow">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-coral/15">
+            <Sparkles className="h-4 w-4 text-coral" />
+          </div>
+          <div>
+            <div className="text-sm font-semibold">AI asistent</div>
+            <div className="text-xs text-muted-foreground">Editor i generátor faktur</div>
+          </div>
+        </div>
+        <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
+        {messages.length === 0 && (
+          <div className="space-y-3">
+            <div className="rounded-lg bg-primary-soft/50 p-3 text-sm text-foreground">
+              <div className="flex items-center gap-1.5 font-semibold">
+                <Wand2 className="h-3.5 w-3.5 text-primary" /> Ahoj!
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Pomůžu ti vyplnit fakturu. Zkus mi říct, co fakturuješ — položky vygeneruju a vložím přímo
+                do formuláře.
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              {SUGGESTIONS.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => send(s)}
+                  className="block w-full rounded-lg border border-border bg-background px-3 py-2 text-left text-xs hover:border-primary hover:bg-primary-soft/30"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {messages.map((m, i) => (
+          <div
+            key={i}
+            className={cn(
+              "max-w-[90%] rounded-2xl px-3 py-2 text-sm",
+              m.role === "user"
+                ? "ml-auto bg-primary text-primary-foreground"
+                : "bg-muted text-foreground",
+            )}
+          >
+            <div className="prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_code]:rounded [&_code]:bg-background/50 [&_code]:px-1">
+              <ReactMarkdown>{m.content || "…"}</ReactMarkdown>
+            </div>
+          </div>
+        ))}
+        {isStreaming && messages[messages.length - 1]?.role === "user" && (
+          <div className="max-w-[90%] rounded-2xl bg-muted px-3 py-2 text-sm">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        )}
+      </div>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          send(input);
+        }}
+        className="border-t border-border p-3"
+      >
+        <div className="flex items-end gap-2">
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                send(input);
+              }
+            }}
+            placeholder="Napiš mi, co potřebuješ…"
+            className="min-h-[44px] resize-none"
+            disabled={isStreaming}
+          />
+          <Button type="submit" size="icon" variant="coral" disabled={isStreaming || !input.trim()}>
+            {isStreaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+/** Pomocná: aplikuje patch z asistenta do stavu položek + ostatních polí. */
+export function applyPatchToItems(
+  current: InvoiceItemDraft[],
+  patch: InvoicePatch,
+): InvoiceItemDraft[] {
+  if (!patch.items || patch.items.length === 0) return current;
+  const newOnes: InvoiceItemDraft[] = patch.items.map((it) => ({
+    id: crypto.randomUUID(),
+    description: it.description,
+    quantity: Number(it.quantity) || 1,
+    unit: it.unit || "ks",
+    unit_price: Number(it.unit_price) || 0,
+    vat_rate: ([0, 12, 21].includes(Number(it.vat_rate)) ? Number(it.vat_rate) : 21) as VatRate,
+  }));
+  if (patch.replace_items) return newOnes;
+  // Pokud původně je jediná prázdná položka, nahradíme ji
+  if (current.length === 1 && !current[0].description.trim() && current[0].unit_price === 0) {
+    return newOnes;
+  }
+  return [...current, ...newOnes];
+}

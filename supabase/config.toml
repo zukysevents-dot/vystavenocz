@@ -2,3 +2,6 @@ project_id = "zyzlmzfbuucpjdkhrfhg"
 
 [functions.ares-lookup]
 verify_jwt = false
+
+[functions.invoice-assistant]
+verify_jwt = false
