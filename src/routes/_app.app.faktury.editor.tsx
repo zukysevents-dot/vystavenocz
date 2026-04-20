@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
-import { ArrowLeft, Plus, Trash2, Save, Download, Loader2, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Download, Loader2, Eye, EyeOff, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InvoiceDocument } from "@/components/app/InvoiceDocument";
 import { downloadInvoicePdf } from "@/lib/invoice-pdf";
+import { SendInvoiceDialog, type SendInvoiceContext } from "@/components/app/SendInvoiceDialog";
 import { PaywallDialog } from "@/components/payments/PaywallDialog";
 import { useSubscription } from "@/hooks/use-subscription";
 import {
