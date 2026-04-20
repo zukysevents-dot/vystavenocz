@@ -105,6 +105,7 @@ function InvoiceEditorPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/_app/app/faktury/editor" });
   const editingId = search.id;
+  const creditForId = search.creditFor;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -164,7 +165,7 @@ function InvoiceEditorPage() {
       if (editingId) {
         const { data: inv } = await supabase
           .from("invoices")
-          .select("*, invoice_items(*)")
+          .select("*, invoice_items(*), original_invoice:original_invoice_id(invoice_number)")
           .eq("id", editingId)
           .single();
         if (inv) {
@@ -177,6 +178,10 @@ function InvoiceEditorPage() {
           setNotes(inv.notes || "");
           setSelectedClientId(inv.client_id || "");
           setLoadedStatus(inv.status as typeof loadedStatus);
+          setDocumentType((inv.document_type as "invoice" | "credit_note") || "invoice");
+          setOriginalInvoiceId(inv.original_invoice_id ?? null);
+          const orig = (inv as unknown as { original_invoice?: { invoice_number: string } | null }).original_invoice;
+          setOriginalInvoiceNumber(orig?.invoice_number ?? null);
           const loadedItems = (inv.invoice_items as Array<{
             id: string;
             description: string;
@@ -196,6 +201,50 @@ function InvoiceEditorPage() {
             }));
           setItems(loadedItems.length > 0 ? loadedItems : [newItem()]);
         }
+      } else if (creditForId && profRes.data) {
+        // Vytvoření dobropisu z existující faktury — předvyplníme položky
+        // se zápornými množstvími, klienta převezmeme z originálu, číslo
+        // vygenerujeme z vlastní řady dobropisů.
+        const { data: src } = await supabase
+          .from("invoices")
+          .select("*, invoice_items(*)")
+          .eq("id", creditForId)
+          .single();
+        if (src) {
+          setDocumentType("credit_note");
+          setOriginalInvoiceId(src.id);
+          setOriginalInvoiceNumber(src.invoice_number);
+          setSelectedClientId(src.client_id || "");
+          setPaymentMethod(src.payment_method);
+          setNotes(`Dobropis k faktuře ${src.invoice_number}.`);
+          // Číslo dobropisu z vlastní řady (OD-YYYY-NNNN výchozí formát).
+          const num = buildInvoiceNumber(
+            profRes.data.credit_note_prefix || "OD",
+            profRes.data.invoice_number_format || "{prefix}-{year}-{seq}",
+            profRes.data.next_credit_note_seq || 1,
+          );
+          setInvoiceNumber(num);
+          // Položky se zápornými množstvími — částky a sazby zachováme.
+          const srcItems = (src.invoice_items as Array<{
+            id: string;
+            description: string;
+            quantity: number;
+            unit: string;
+            unit_price: number;
+            vat_rate: number;
+            position: number;
+          }>)
+            .sort((a, b) => a.position - b.position)
+            .map((it) => ({
+              id: crypto.randomUUID(),
+              description: it.description,
+              quantity: -Math.abs(Number(it.quantity)),
+              unit: it.unit,
+              unit_price: Number(it.unit_price),
+              vat_rate: Number(it.vat_rate) as VatRate,
+            }));
+          setItems(srcItems.length > 0 ? srcItems : [newItem()]);
+        }
       } else {
         // pre-fill invoice number
         if (profRes.data) {
@@ -214,7 +263,7 @@ function InvoiceEditorPage() {
       // Allow one render cycle for state to settle, then arm the dirty tracker.
       requestAnimationFrame(() => setDirty(false));
     })();
-  }, [user, editingId, search.clientId]);
+  }, [user, editingId, search.clientId, creditForId]);
 
   // Adjust due date when client changes
   useEffect(() => {
