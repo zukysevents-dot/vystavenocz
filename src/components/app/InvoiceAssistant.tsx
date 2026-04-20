@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import {
   Sparkles, Send, X, Loader2, Wand2, Trash2,
-  FileText, MessageCircle, PlusCircle,
+  FileText, MessageCircle, PlusCircle, Paperclip, Image as ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,7 +53,7 @@ export type InvoicePatch = {
 
 export type ApplyPatchFn = (patch: InvoicePatch) => void;
 
-type ChatMsg = { role: "user" | "assistant"; content: string };
+type ChatMsg = { role: "user" | "assistant"; content: string; image_thumb?: string };
 
 type Mode = "invoice" | "general";
 
