@@ -171,7 +171,12 @@ function InvoicesListPage() {
         .eq("invoice_id", inv.id)
         .order("position");
       if (error) throw error;
-      setPdfPayload({ invoice: inv, items: items as typeof pdfPayload extends null ? never : NonNullable<typeof pdfPayload>["items"] });
+      const originalInvoiceNumber = await fetchOriginalNumber(inv);
+      setPdfPayload({
+        invoice: inv,
+        items: items as NonNullable<typeof pdfPayload>["items"],
+        originalInvoiceNumber,
+      });
       // wait for next paint
       await new Promise((r) => setTimeout(r, 200));
       await downloadInvoicePdf("invoice-document", `${inv.invoice_number}.pdf`);
@@ -194,7 +199,12 @@ function InvoicesListPage() {
         .eq("invoice_id", inv.id)
         .order("position");
       if (error) throw error;
-      setPdfPayload({ invoice: inv, items: items as NonNullable<typeof pdfPayload>["items"] });
+      const originalInvoiceNumber = await fetchOriginalNumber(inv);
+      setPdfPayload({
+        invoice: inv,
+        items: items as NonNullable<typeof pdfPayload>["items"],
+        originalInvoiceNumber,
+      });
       // počkej na render
       await new Promise((r) => setTimeout(r, 200));
       const supplier = (inv.supplier_snapshot as { company_name?: string; full_name?: string }) || {};
