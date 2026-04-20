@@ -446,15 +446,19 @@ function InvoiceEditorPage() {
         skipBlockerRef.current = true;
         setDirty(false);
         navigate({ to: "/app/faktury" });
+      } else {
+        // Tichý save (autosave) — jen označit jako čisté a zaznamenat čas.
+        setDirty(false);
+        if (silent) setLastAutosaveAt(new Date());
       }
       return invoiceId ?? null;
     } catch (e) {
       console.error(e);
       const msg = (e as Error).message || "";
       if (msg.includes("invoices_user_number_unique") || msg.toLowerCase().includes("duplicate")) {
-        toast.error(`Faktura s číslem ${invoiceNumber} už existuje. Změňte číslo faktury.`);
+        if (!silent) toast.error(`Faktura s číslem ${invoiceNumber} už existuje. Změňte číslo faktury.`);
       } else {
-        toast.error("Nepodařilo se uložit fakturu: " + msg);
+        if (!silent) toast.error("Nepodařilo se uložit fakturu: " + msg);
       }
       return null;
     } finally {
