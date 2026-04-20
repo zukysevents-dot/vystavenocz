@@ -108,6 +108,9 @@ function InvoiceEditorPage() {
   const [showPreview, setShowPreview] = useState(true);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
+  const [sendCtx, setSendCtx] = useState<SendInvoiceContext | null>(null);
+  const [preparingSend, setPreparingSend] = useState(false);
   const { hasAccess } = useSubscription();
 
   const [profile, setProfile] = useState<ProfileRow | null>(null);
