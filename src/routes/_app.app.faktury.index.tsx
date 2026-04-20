@@ -70,6 +70,7 @@ function InvoicesListPage() {
       id: string; description: string; quantity: number; unit: string;
       unit_price: number; vat_rate: number;
     }>;
+    originalInvoiceNumber?: string | null;
   }>(null);
   const [sendCtx, setSendCtx] = useState<SendInvoiceContext | null>(null);
   const [sendOpen, setSendOpen] = useState(false);
