@@ -566,6 +566,34 @@ function InvoiceEditorPage() {
           />
         </div>
       )}
+
+      <InvoiceAssistant
+        open={assistantOpen}
+        onOpenChange={setAssistantOpen}
+        context={{
+          invoice_number: invoiceNumber,
+          client_name: selectedClient?.name || "",
+          vat_payer: profile?.vat_mode === "payer",
+          due_date: dueDate,
+          payment_method: paymentMethod,
+          variable_symbol: variableSymbol,
+          notes,
+          items: items.map((it) => ({
+            description: it.description,
+            quantity: it.quantity,
+            unit: it.unit,
+            unit_price: it.unit_price,
+            vat_rate: it.vat_rate,
+          })),
+        }}
+        onApplyPatch={(patch: InvoicePatch) => {
+          if (patch.items) setItems((prev) => applyPatchToItems(prev, patch));
+          if (patch.due_date) setDueDate(patch.due_date);
+          if (patch.notes !== undefined) setNotes(patch.notes);
+          if (patch.variable_symbol !== undefined) setVariableSymbol(patch.variable_symbol);
+          if (patch.payment_method) setPaymentMethod(patch.payment_method);
+        }}
+      />
     </div>
   );
 }
