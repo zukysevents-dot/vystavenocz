@@ -459,6 +459,10 @@ function InvoiceEditorPage() {
             {downloadingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             PDF
           </Button>
+          <Button variant="outline" size="sm" onClick={handleSendEmail} disabled={preparingSend || saving}>
+            {preparingSend ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+            E-mail
+          </Button>
           <Button variant="outline" size="sm" onClick={() => save("draft")} disabled={saving}>
             <Save className="h-4 w-4" /> Koncept
           </Button>
