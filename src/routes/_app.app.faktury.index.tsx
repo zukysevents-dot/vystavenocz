@@ -443,6 +443,12 @@ function InvoicesListPage() {
         onSent={() => load()}
       />
 
+      <PaywallDialog
+        open={paywallOpen}
+        onOpenChange={setPaywallOpen}
+        reason="Vystavení faktury vyžaduje aktivní předplatné Fakturio Pro."
+      />
+
       <AlertDialog open={!!deletingId} onOpenChange={(o) => !o && setDeletingId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
