@@ -11,6 +11,10 @@ import {
   PieChart,
   Bell,
   Smartphone,
+  Save,
+  Stamp,
+  FileMinus,
+  CheckCircle2,
 } from "lucide-react";
 
 const features = [
@@ -25,6 +29,34 @@ const features = [
     icon: QrCode,
     title: "QR platba na každé faktuře",
     desc: "Standardní QR kód podle ČBA. Klient zaplatí naskenováním v bance za 5 sekund.",
+    color: "text-primary",
+    bg: "bg-primary-soft",
+  },
+  {
+    icon: FileMinus,
+    title: "Dobropisy (opravné doklady)",
+    desc: "Z vystavené faktury jedním klikem vytvoříte opravný daňový doklad s vlastní řadou OD- a vazbou na původní fakturu.",
+    color: "text-coral",
+    bg: "bg-coral/10",
+  },
+  {
+    icon: Save,
+    title: "Autosave konceptů",
+    desc: "Každých 30 sekund automaticky ukládáme rozpracovanou fakturu na pozadí. O práci nepřijdete, ani když zavřete tab.",
+    color: "text-primary",
+    bg: "bg-primary-soft",
+  },
+  {
+    icon: Stamp,
+    title: "Vodoznak STORNOVÁNO v PDF",
+    desc: "Stornované faktury mají v PDF výrazný vodoznak přes celou stránku — na první pohled je jasné, že doklad není platný.",
+    color: "text-foreground",
+    bg: "bg-mint/30",
+  },
+  {
+    icon: CheckCircle2,
+    title: "Chytrá validace konceptů",
+    desc: "Koncept uložíte i napůl rozpracovaný — stačí číslo faktury. Přísnou kontrolu spustíme až při finálním vystavení.",
     color: "text-primary",
     bg: "bg-primary-soft",
   },
