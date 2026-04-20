@@ -82,8 +82,41 @@ export function InvoiceDocument(props: InvoiceDocumentProps) {
     <div
       id="invoice-document"
       className="mx-auto bg-white text-slate-900"
-      style={{ width: "794px", minHeight: "1123px", padding: "48px", fontFamily: "Inter, system-ui, sans-serif", fontSize: "12px", lineHeight: 1.5 }}
+      style={{ width: "794px", minHeight: "1123px", padding: "48px", fontFamily: "Inter, system-ui, sans-serif", fontSize: "12px", lineHeight: 1.5, position: "relative", overflow: "hidden" }}
     >
+      {cancelled && (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+            zIndex: 10,
+          }}
+        >
+          <div
+            style={{
+              transform: "rotate(-28deg)",
+              border: "10px solid #dc2626",
+              color: "#dc2626",
+              fontWeight: 900,
+              fontSize: "120px",
+              letterSpacing: "0.08em",
+              padding: "16px 56px",
+              borderRadius: "12px",
+              opacity: 0.22,
+              fontFamily: "Inter, system-ui, sans-serif",
+              whiteSpace: "nowrap",
+              textTransform: "uppercase",
+            }}
+          >
+            Stornováno
+          </div>
+        </div>
+      )}
       {/* Hlavička */}
       <div className="flex items-start justify-between" style={{ borderBottom: `3px solid ${accentColor}`, paddingBottom: "16px" }}>
         <div>
