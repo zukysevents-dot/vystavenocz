@@ -332,6 +332,19 @@ function InvoicesListPage() {
         </div>
       )}
 
+      <SendInvoiceDialog
+        open={sendOpen}
+        onOpenChange={(o) => {
+          setSendOpen(o);
+          if (!o) {
+            setSendCtx(null);
+            setPdfPayload(null);
+          }
+        }}
+        context={sendCtx}
+        onSent={() => load()}
+      />
+
       <AlertDialog open={!!deletingId} onOpenChange={(o) => !o && setDeletingId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
