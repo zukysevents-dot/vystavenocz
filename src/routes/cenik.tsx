@@ -11,13 +11,13 @@ export const Route = createFileRoute("/cenik")({
       {
         name: "description",
         content:
-          "Jeden tarif Fakturio Pro za 100 Kč měsíčně při ročním placení nebo 159 Kč měsíčně. Neomezeně faktur, klientů a všech funkcí.",
+          "Stovka měsíčně a máte všechno: neomezeně faktur, AI asistent, QR platby, cizí měny. Bez skrytých limitů.",
       },
       { property: "og:title", content: "Ceník Fakturio.cz — od 100 Kč měsíčně" },
       {
         property: "og:description",
         content:
-          "Jeden tarif, vše v ceně. Neomezeně faktur, AI, QR platby, cizí měny. 30 dní zdarma bez karty.",
+          "Jedna cena, žádné triky. 14 dní na vyzkoušení bez platební karty.",
       },
     ],
   }),
@@ -29,8 +29,8 @@ function CenikPage() {
     <PageShell>
       <PageHeader
         eyebrow="Ceník"
-        title="Jeden tarif. Všechno v ceně."
-        subtitle="Žádné triky, žádná omezení podle počtu faktur. Plaťte jen za to, že vám fakturace funguje."
+        title="Stovka měsíčně. Hotovo."
+        subtitle="Bez limitů na počet faktur, klientů ani uživatelů. Co je v ceně, je opravdu v ceně."
       />
       <Pricing />
       <Faq />
