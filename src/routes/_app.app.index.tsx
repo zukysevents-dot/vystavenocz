@@ -133,6 +133,15 @@ function DashboardPage() {
   const [invoices, setInvoices] = useState<InvoiceStatRow[]>([]);
   const [clientsCount, setClientsCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<Period>("year");
+
+  const periodRange = useMemo(() => getPeriodRange(period), [period]);
+
+  const filteredInvoices = useMemo(() => {
+    const fromIso = periodRange.from.toISOString().slice(0, 10);
+    const toIso = periodRange.to.toISOString().slice(0, 10);
+    return invoices.filter((inv) => inv.issue_date >= fromIso && inv.issue_date <= toIso);
+  }, [invoices, periodRange]);
 
   useEffect(() => {
     if (!user) return;
@@ -174,13 +183,17 @@ function DashboardPage() {
     let pendingCount = 0;
     let overdueCount = 0;
     let paidCount = 0;
-    for (const inv of invoices) {
+    let paidAmount = 0;
+    for (const inv of filteredInvoices) {
       const amount = Number(inv.total) || 0;
       if (inv.status !== "draft" && inv.status !== "cancelled") {
         totalInvoiced += amount;
       }
       const isOverdue = inv.status === "overdue" || (inv.status === "issued" && inv.due_date < today);
-      if (inv.status === "paid") paidCount++;
+      if (inv.status === "paid") {
+        paidCount++;
+        paidAmount += amount;
+      }
       else if (isOverdue) {
         overdueCount++;
         overdueAmount += amount;
@@ -196,28 +209,29 @@ function DashboardPage() {
       overdueAmount,
       overdueCount,
       paidCount,
-      totalCount: invoices.length,
+      paidAmount,
+      totalCount: filteredInvoices.length,
     };
-  }, [invoices]);
+  }, [filteredInvoices]);
 
   const chartData = useMemo(() => {
-    const months = lastSixMonths();
-    const buckets = new Map(months.map((m) => [m.key, { month: m.label, vystaveno: 0, zaplaceno: 0 }]));
-    for (const inv of invoices) {
+    const buckets = chartBucketsForPeriod(period);
+    const map = new Map<string, { month: string; vystaveno: number; zaplaceno: number }>(
+      buckets.map((b) => [b.key, { month: b.label, vystaveno: 0, zaplaceno: 0 }]),
+    );
+    for (const inv of filteredInvoices) {
       if (inv.status === "draft" || inv.status === "cancelled") continue;
       const issued = new Date(inv.issue_date);
-      const key = `${issued.getFullYear()}-${issued.getMonth()}`;
-      const bucket = buckets.get(key);
+      const bucket = map.get(bucketKeyFor(issued, period));
       if (bucket) bucket.vystaveno += Number(inv.total) || 0;
       if (inv.paid_at) {
         const paid = new Date(inv.paid_at);
-        const pkey = `${paid.getFullYear()}-${paid.getMonth()}`;
-        const pbucket = buckets.get(pkey);
+        const pbucket = map.get(bucketKeyFor(paid, period));
         if (pbucket) pbucket.zaplaceno += Number(inv.total) || 0;
       }
     }
-    return Array.from(buckets.values());
-  }, [invoices]);
+    return Array.from(map.values());
+  }, [filteredInvoices, period]);
 
   const recentOverdue = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -225,6 +239,46 @@ function DashboardPage() {
       .filter((inv) => inv.status === "overdue" || (inv.status === "issued" && inv.due_date < today))
       .slice(0, 5);
   }, [invoices]);
+
+  function handleExportCsv() {
+    const header = [
+      "Číslo faktury",
+      "Klient",
+      "Datum vystavení",
+      "Datum splatnosti",
+      "Datum úhrady",
+      "Stav",
+      "Částka (Kč)",
+    ];
+    const statusLabel: Record<string, string> = {
+      draft: "Koncept",
+      issued: "Vystaveno",
+      paid: "Zaplaceno",
+      overdue: "Po splatnosti",
+      cancelled: "Stornováno",
+    };
+    const rows: (string | number)[][] = [header];
+    for (const inv of filteredInvoices) {
+      rows.push([
+        inv.invoice_number,
+        inv.client_snapshot?.name ?? "",
+        inv.issue_date,
+        inv.due_date,
+        inv.paid_at ? inv.paid_at.slice(0, 10) : "",
+        statusLabel[inv.status] ?? inv.status,
+        Number(inv.total) || 0,
+      ]);
+    }
+    rows.push([]);
+    rows.push(["Souhrn za období", periodRange.label]);
+    rows.push(["Celkem fakturováno", stats.totalInvoiced]);
+    rows.push(["Zaplaceno", stats.paidAmount]);
+    rows.push(["Čekající platby", stats.pendingAmount]);
+    rows.push(["Po splatnosti", stats.overdueAmount]);
+    rows.push(["Počet faktur", stats.totalCount]);
+    const fname = `fakturio-statistiky-${periodRange.label.replace(/\s+/g, "-")}.csv`;
+    downloadCsv(fname, rows);
+  }
 
   const trialDaysLeft = profile
     ? Math.max(0, Math.ceil((new Date(profile.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
@@ -239,9 +293,25 @@ function DashboardPage() {
           </h1>
           <p className="mt-1 text-muted-foreground">Přehled vaší fakturace</p>
         </div>
-        <Button variant="coral" size="lg" asChild>
-          <Link to="/app/faktury/editor"><Plus className="h-4 w-4" /> Nová faktura</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="month">Tento měsíc</SelectItem>
+              <SelectItem value="quarter">Tento kvartál</SelectItem>
+              <SelectItem value="year">Tento rok</SelectItem>
+              <SelectItem value="all">Vše</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="lg" onClick={handleExportCsv} disabled={filteredInvoices.length === 0}>
+            <Download className="h-4 w-4" /> Export CSV
+          </Button>
+          <Button variant="coral" size="lg" asChild>
+            <Link to="/app/faktury/editor"><Plus className="h-4 w-4" /> Nová faktura</Link>
+          </Button>
+        </div>
       </div>
 
       {trialDaysLeft > 0 && (
