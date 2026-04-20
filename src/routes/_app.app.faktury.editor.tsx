@@ -257,6 +257,26 @@ function InvoiceEditorPage() {
     enableBeforeUnload: false, // we own beforeunload above
   });
 
+  // Autosave: každých 30 s tiše uložit draft, pokud je formulář dirty.
+  // Spouštíme jen pro nové faktury a koncepty (vystavené/zaplacené/stornované
+  // nikdy nepřepisujeme automaticky). Validace v save() ošetří chybějící data
+  // (silent: true → žádné toasty).
+  useEffect(() => {
+    if (loading) return;
+    const canAutosave = loadedStatus === null || loadedStatus === "draft";
+    if (!canAutosave) return;
+
+    const interval = setInterval(() => {
+      if (!dirty || saving || autosavingRef.current) return;
+      autosavingRef.current = true;
+      void save("draft", { redirect: false, silent: true }).finally(() => {
+        autosavingRef.current = false;
+      });
+    }, 30_000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, loadedStatus, dirty, saving]);
+
   const selectedClient = useMemo(
     () => clients.find((c) => c.id === selectedClientId),
     [clients, selectedClientId],
