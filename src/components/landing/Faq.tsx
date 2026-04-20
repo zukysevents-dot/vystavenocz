@@ -23,6 +23,18 @@ const faqs = [
     a: "Samozřejmě. Při registraci si zvolíte režim — neplátce DPH, plátce DPH, identifikovaná osoba. Šablona faktury se přizpůsobí. Přechod mezi režimy je kdykoliv jedním kliknutím.",
   },
   {
+    q: "Umí Fakturio dobropisy (opravné daňové doklady)?",
+    a: "Ano. U každé vystavené faktury najdete v menu akci „Vytvořit dobropis“ — otevře se editor s předvyplněným klientem, odkazem na původní fakturu a položkami se zápornými množstvími. Dobropisy mají vlastní číselnou řadu s prefixem OD- (např. OD-2026-0001), takže v účetnictví je odlišíte na první pohled. V seznamu faktur jsou označené badgem „Dobropis“.",
+  },
+  {
+    q: "Co se stane, když zavřu tab uprostřed vystavování faktury?",
+    a: "Nic se neztratí. Každých 30 sekund automaticky ukládáme rozpracovaný koncept na pozadí — i bez kliknutí na „Uložit“. Když se vrátíte, najdete fakturu v seznamu jako Koncept přesně tam, kde jste přestali. Funguje to i při výpadku internetu nebo havárii prohlížeče.",
+  },
+  {
+    q: "Můžu uložit rozpracovaný koncept bez vyplněného klienta?",
+    a: "Ano. Pro uložení konceptu stačí jediné — číslo faktury (které vyplníme za vás). Klient, popis položek i částky můžete doplnit kdykoliv později. Přísnou kontrolu (povinný odběratel, popis položky atd.) spustíme až ve chvíli, kdy kliknete na „Vystavit“. Pro koncepty necháváme volnost.",
+  },
+  {
     q: "Kolik faktur mohu vystavit?",
     a: "Neomezeně. Žádné skryté limity podle počtu faktur, klientů ani uživatelů. Tarif Pro zahrnuje vše bez omezení.",
   },
