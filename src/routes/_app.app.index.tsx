@@ -3,8 +3,15 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { FileText, Plus, TrendingUp, Clock, Users, AlertTriangle, Coins } from "lucide-react";
+import { FileText, Plus, TrendingUp, Clock, Users, AlertTriangle, Coins, Download } from "lucide-react";
 import { formatCZK } from "@/lib/invoice";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   ChartContainer,
   ChartTooltip,
@@ -36,19 +43,88 @@ type InvoiceStatRow = {
 
 const CZ_MONTHS = ["Led", "Úno", "Bře", "Dub", "Kvě", "Čer", "Čec", "Srp", "Zář", "Říj", "Lis", "Pro"];
 
-function lastSixMonths(): { key: string; label: string; year: number; month: number }[] {
+type Period = "month" | "quarter" | "year" | "all";
+
+function getPeriodRange(period: Period): { from: Date; to: Date; label: string } {
   const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  if (period === "month") {
+    return {
+      from: new Date(y, m, 1),
+      to: new Date(y, m + 1, 0, 23, 59, 59),
+      label: `${CZ_MONTHS[m]} ${y}`,
+    };
+  }
+  if (period === "quarter") {
+    const q = Math.floor(m / 3);
+    return {
+      from: new Date(y, q * 3, 1),
+      to: new Date(y, q * 3 + 3, 0, 23, 59, 59),
+      label: `Q${q + 1} ${y}`,
+    };
+  }
+  if (period === "year") {
+    return {
+      from: new Date(y, 0, 1),
+      to: new Date(y, 11, 31, 23, 59, 59),
+      label: `Rok ${y}`,
+    };
+  }
+  return { from: new Date(2000, 0, 1), to: new Date(2999, 11, 31), label: "Vše" };
+}
+
+function chartBucketsForPeriod(period: Period): { key: string; label: string }[] {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  if (period === "month") {
+    // 4 weeks of current month
+    const out = [];
+    for (let w = 0; w < 4; w++) out.push({ key: `w-${w}`, label: `T${w + 1}` });
+    return out;
+  }
+  if (period === "quarter") {
+    const q = Math.floor(m / 3);
+    return [0, 1, 2].map((i) => ({ key: `${y}-${q * 3 + i}`, label: CZ_MONTHS[q * 3 + i] }));
+  }
+  if (period === "year") {
+    return Array.from({ length: 12 }, (_, i) => ({ key: `${y}-${i}`, label: CZ_MONTHS[i] }));
+  }
+  // all: last 6 months
   const out = [];
   for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    out.push({
-      key: `${d.getFullYear()}-${d.getMonth()}`,
-      label: CZ_MONTHS[d.getMonth()],
-      year: d.getFullYear(),
-      month: d.getMonth(),
-    });
+    const d = new Date(y, m - i, 1);
+    out.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label: CZ_MONTHS[d.getMonth()] });
   }
   return out;
+}
+
+function bucketKeyFor(date: Date, period: Period): string {
+  if (period === "month") {
+    const day = date.getDate();
+    const w = Math.min(3, Math.floor((day - 1) / 7));
+    return `w-${w}`;
+  }
+  return `${date.getFullYear()}-${date.getMonth()}`;
+}
+
+function csvEscape(v: unknown): string {
+  const s = v == null ? "" : String(v);
+  if (/[",;\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function downloadCsv(filename: string, rows: (string | number)[][]) {
+  const csv = rows.map((r) => r.map(csvEscape).join(";")).join("\r\n");
+  // BOM pro správné kódování v Excelu
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function DashboardPage() {
