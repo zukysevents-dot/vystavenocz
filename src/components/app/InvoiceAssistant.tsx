@@ -417,7 +417,7 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
                 {mode === "invoice"
-                  ? "Pomůžu ti vyplnit fakturu. Řekni, co fakturuješ — položky vygeneruju a vložím přímo do formuláře."
+                  ? "Pomůžu ti vyplnit fakturu. Napiš, co fakturuješ — nebo přilož foto účtenky/objednávky 📎 a já z něj rozpoznám položky."
                   : "Zeptej se mě na cokoli kolem fakturace v ČR — DPH, IBAN, QR platba, DUZP, lhůty…"}
               </p>
             </div>
