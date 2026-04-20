@@ -310,7 +310,7 @@ function InvoicesListPage() {
                           <DropdownMenuItem onClick={() => exportPdf(inv)}>
                             <Download className="h-4 w-4" /> Stáhnout PDF
                           </DropdownMenuItem>
-                          {inv.status !== "paid" && inv.status !== "draft" && (
+                          {inv.status !== "paid" && inv.status !== "draft" && inv.status !== "cancelled" && (
                             <DropdownMenuItem onClick={() => markPaid(inv.id)}>
                               <CheckCircle2 className="h-4 w-4" /> Označit zaplaceno
                             </DropdownMenuItem>
