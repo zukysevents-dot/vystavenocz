@@ -190,7 +190,8 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
         },
         body: JSON.stringify({
           messages: next.map((m) => ({ role: m.role, content: m.content })),
-          invoice_context: context,
+          invoice_context: mode === "invoice" ? context : null,
+          mode,
         }),
       });
 
@@ -286,24 +287,55 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
           </div>
           <div>
             <div className="text-sm font-semibold">AI asistent</div>
-            <div className="text-xs text-muted-foreground">Editor i generátor faktur</div>
+            <div className="text-xs text-muted-foreground">
+              {mode === "invoice" ? "Editor i generátor faktur" : "Obecné dotazy k fakturaci"}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-1">
-          {messages.length > 0 && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={clearHistory}
-              title="Vymazat historii konverzace"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={newConversation}
+            title="Nová konverzace"
+            disabled={messages.length === 0 && !isStreaming}
+          >
+            <PlusCircle className="h-4 w-4" />
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
             <X className="h-4 w-4" />
           </Button>
         </div>
+      </div>
+
+      {/* Mode switcher */}
+      <div className="flex gap-1 border-b border-border bg-muted/30 p-1">
+        <button
+          type="button"
+          onClick={() => setMode("invoice")}
+          className={cn(
+            "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+            mode === "invoice"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <FileText className="h-3.5 w-3.5" />
+          Tato faktura
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("general")}
+          className={cn(
+            "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+            mode === "general"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <MessageCircle className="h-3.5 w-3.5" />
+          Obecný chat
+        </button>
       </div>
 
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
@@ -314,12 +346,13 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
                 <Wand2 className="h-3.5 w-3.5 text-primary" /> Ahoj!
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                Pomůžu ti vyplnit fakturu. Zkus mi říct, co fakturuješ — položky vygeneruju a vložím přímo
-                do formuláře.
+                {mode === "invoice"
+                  ? "Pomůžu ti vyplnit fakturu. Řekni, co fakturuješ — položky vygeneruju a vložím přímo do formuláře."
+                  : "Zeptej se mě na cokoli kolem fakturace v ČR — DPH, IBAN, QR platba, DUZP, lhůty…"}
               </p>
             </div>
             <div className="space-y-1.5">
-              {SUGGESTIONS.map((s) => (
+              {suggestions.map((s) => (
                 <button
                   key={s}
                   onClick={() => send(s)}
