@@ -681,6 +681,14 @@ function InvoiceEditorPage() {
         onOpenChange={setPaywallOpen}
         reason="Bezplatná zkušební doba skončila. Pro vystavení faktury aktivujte tarif Fakturio Pro. Koncept můžete uložit i bez předplatného."
       />
+      <SendInvoiceDialog
+        open={sendOpen}
+        onOpenChange={(o) => {
+          setSendOpen(o);
+          if (!o) setSendCtx(null);
+        }}
+        context={sendCtx}
+      />
     </div>
   );
 }
