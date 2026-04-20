@@ -128,6 +128,7 @@ export type Database = {
           constant_symbol: string | null
           created_at: string
           currency: string
+          document_type: Database["public"]["Enums"]["document_type"]
           due_date: string
           exchange_rate: number
           id: string
@@ -135,6 +136,7 @@ export type Database = {
           invoice_number: string
           issue_date: string
           notes: string | null
+          original_invoice_id: string | null
           paid_at: string | null
           payment_method: string
           rounding: number
@@ -155,6 +157,7 @@ export type Database = {
           constant_symbol?: string | null
           created_at?: string
           currency?: string
+          document_type?: Database["public"]["Enums"]["document_type"]
           due_date?: string
           exchange_rate?: number
           id?: string
@@ -162,6 +165,7 @@ export type Database = {
           invoice_number: string
           issue_date?: string
           notes?: string | null
+          original_invoice_id?: string | null
           paid_at?: string | null
           payment_method?: string
           rounding?: number
@@ -182,6 +186,7 @@ export type Database = {
           constant_symbol?: string | null
           created_at?: string
           currency?: string
+          document_type?: Database["public"]["Enums"]["document_type"]
           due_date?: string
           exchange_rate?: number
           id?: string
@@ -189,6 +194,7 @@ export type Database = {
           invoice_number?: string
           issue_date?: string
           notes?: string | null
+          original_invoice_id?: string | null
           paid_at?: string | null
           payment_method?: string
           rounding?: number
@@ -211,6 +217,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "invoices_original_invoice_id_fkey"
+            columns: ["original_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
@@ -220,6 +233,7 @@ export type Database = {
           company_name: string | null
           country: string
           created_at: string
+          credit_note_prefix: string
           dic: string | null
           email: string
           full_name: string | null
@@ -230,6 +244,7 @@ export type Database = {
           invoice_number_format: string | null
           invoice_number_prefix: string | null
           logo_url: string | null
+          next_credit_note_seq: number
           next_invoice_seq: number
           street: string | null
           subscription_active: boolean
@@ -246,6 +261,7 @@ export type Database = {
           company_name?: string | null
           country?: string
           created_at?: string
+          credit_note_prefix?: string
           dic?: string | null
           email: string
           full_name?: string | null
@@ -256,6 +272,7 @@ export type Database = {
           invoice_number_format?: string | null
           invoice_number_prefix?: string | null
           logo_url?: string | null
+          next_credit_note_seq?: number
           next_invoice_seq?: number
           street?: string | null
           subscription_active?: boolean
@@ -272,6 +289,7 @@ export type Database = {
           company_name?: string | null
           country?: string
           created_at?: string
+          credit_note_prefix?: string
           dic?: string | null
           email?: string
           full_name?: string | null
@@ -282,6 +300,7 @@ export type Database = {
           invoice_number_format?: string | null
           invoice_number_prefix?: string | null
           logo_url?: string | null
+          next_credit_note_seq?: number
           next_invoice_seq?: number
           street?: string | null
           subscription_active?: boolean
@@ -386,6 +405,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      document_type: "invoice" | "credit_note"
       invoice_status: "draft" | "issued" | "paid" | "overdue" | "cancelled"
       vat_mode: "payer" | "identified" | "non_payer"
     }
@@ -516,6 +536,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      document_type: ["invoice", "credit_note"],
       invoice_status: ["draft", "issued", "paid", "overdue", "cancelled"],
       vat_mode: ["payer", "identified", "non_payer"],
     },

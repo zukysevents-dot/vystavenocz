@@ -36,6 +36,8 @@ import {
 const searchSchema = z.object({
   id: z.string().optional(),
   clientId: z.string().optional(),
+  /** ID původní faktury, ze které se má vytvořit dobropis. */
+  creditFor: z.string().optional(),
 });
 
 export const Route = createFileRoute("/_app/app/faktury/editor")({
@@ -76,6 +78,8 @@ type ProfileRow = {
   invoice_number_prefix: string | null;
   invoice_number_format: string | null;
   next_invoice_seq: number;
+  credit_note_prefix: string | null;
+  next_credit_note_seq: number;
 };
 
 const newItem = (): InvoiceItemDraft => ({
@@ -101,6 +105,7 @@ function InvoiceEditorPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/_app/app/faktury/editor" });
   const editingId = search.id;
+  const creditForId = search.creditFor;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -116,6 +121,11 @@ function InvoiceEditorPage() {
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
+
+  // Typ dokladu (faktura / dobropis) + vazba na původní fakturu při dobropisu.
+  const [documentType, setDocumentType] = useState<"invoice" | "credit_note">("invoice");
+  const [originalInvoiceId, setOriginalInvoiceId] = useState<string | null>(null);
+  const [originalInvoiceNumber, setOriginalInvoiceNumber] = useState<string | null>(null);
 
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [issueDate, setIssueDate] = useState(todayISO());
@@ -155,7 +165,7 @@ function InvoiceEditorPage() {
       if (editingId) {
         const { data: inv } = await supabase
           .from("invoices")
-          .select("*, invoice_items(*)")
+          .select("*, invoice_items(*), original_invoice:original_invoice_id(invoice_number)")
           .eq("id", editingId)
           .single();
         if (inv) {
@@ -168,6 +178,10 @@ function InvoiceEditorPage() {
           setNotes(inv.notes || "");
           setSelectedClientId(inv.client_id || "");
           setLoadedStatus(inv.status as typeof loadedStatus);
+          setDocumentType((inv.document_type as "invoice" | "credit_note") || "invoice");
+          setOriginalInvoiceId(inv.original_invoice_id ?? null);
+          const orig = (inv as unknown as { original_invoice?: { invoice_number: string } | null }).original_invoice;
+          setOriginalInvoiceNumber(orig?.invoice_number ?? null);
           const loadedItems = (inv.invoice_items as Array<{
             id: string;
             description: string;
@@ -187,6 +201,50 @@ function InvoiceEditorPage() {
             }));
           setItems(loadedItems.length > 0 ? loadedItems : [newItem()]);
         }
+      } else if (creditForId && profRes.data) {
+        // Vytvoření dobropisu z existující faktury — předvyplníme položky
+        // se zápornými množstvími, klienta převezmeme z originálu, číslo
+        // vygenerujeme z vlastní řady dobropisů.
+        const { data: src } = await supabase
+          .from("invoices")
+          .select("*, invoice_items(*)")
+          .eq("id", creditForId)
+          .single();
+        if (src) {
+          setDocumentType("credit_note");
+          setOriginalInvoiceId(src.id);
+          setOriginalInvoiceNumber(src.invoice_number);
+          setSelectedClientId(src.client_id || "");
+          setPaymentMethod(src.payment_method);
+          setNotes(`Dobropis k faktuře ${src.invoice_number}.`);
+          // Číslo dobropisu z vlastní řady (OD-YYYY-NNNN výchozí formát).
+          const num = buildInvoiceNumber(
+            profRes.data.credit_note_prefix || "OD",
+            profRes.data.invoice_number_format || "{prefix}-{year}-{seq}",
+            profRes.data.next_credit_note_seq || 1,
+          );
+          setInvoiceNumber(num);
+          // Položky se zápornými množstvími — částky a sazby zachováme.
+          const srcItems = (src.invoice_items as Array<{
+            id: string;
+            description: string;
+            quantity: number;
+            unit: string;
+            unit_price: number;
+            vat_rate: number;
+            position: number;
+          }>)
+            .sort((a, b) => a.position - b.position)
+            .map((it) => ({
+              id: crypto.randomUUID(),
+              description: it.description,
+              quantity: -Math.abs(Number(it.quantity)),
+              unit: it.unit,
+              unit_price: Number(it.unit_price),
+              vat_rate: Number(it.vat_rate) as VatRate,
+            }));
+          setItems(srcItems.length > 0 ? srcItems : [newItem()]);
+        }
       } else {
         // pre-fill invoice number
         if (profRes.data) {
@@ -205,7 +263,7 @@ function InvoiceEditorPage() {
       // Allow one render cycle for state to settle, then arm the dirty tracker.
       requestAnimationFrame(() => setDirty(false));
     })();
-  }, [user, editingId, search.clientId]);
+  }, [user, editingId, search.clientId, creditForId]);
 
   // Adjust due date when client changes
   useEffect(() => {
@@ -390,6 +448,8 @@ function InvoiceEditorPage() {
         variable_symbol: vs,
         payment_method: paymentMethod,
         notes: notes || null,
+        document_type: documentType,
+        original_invoice_id: originalInvoiceId,
       };
 
       let invoiceId = editingId;
@@ -405,13 +465,23 @@ function InvoiceEditorPage() {
           .single();
         if (error) throw error;
         invoiceId = ins.id;
-        // bump invoice sequence (lokálně i v DB) — zabrání reuse stejného čísla
-        const nextSeq = (profile.next_invoice_seq || 1) + 1;
-        await supabase
-          .from("profiles")
-          .update({ next_invoice_seq: nextSeq })
-          .eq("id", user.id);
-        setProfile({ ...profile, next_invoice_seq: nextSeq });
+        // Bump pořadové číslo z odpovídající řady (faktury vs. dobropisy).
+        // Lokálně i v DB — zabrání reuse stejného čísla.
+        if (documentType === "credit_note") {
+          const nextSeq = (profile.next_credit_note_seq || 1) + 1;
+          await supabase
+            .from("profiles")
+            .update({ next_credit_note_seq: nextSeq })
+            .eq("id", user.id);
+          setProfile({ ...profile, next_credit_note_seq: nextSeq });
+        } else {
+          const nextSeq = (profile.next_invoice_seq || 1) + 1;
+          await supabase
+            .from("profiles")
+            .update({ next_invoice_seq: nextSeq })
+            .eq("id", user.id);
+          setProfile({ ...profile, next_invoice_seq: nextSeq });
+        }
         // Po prvním uložení si "převezmeme" id do URL (?id=...), aby další
         // (auto)save proběhl jako UPDATE a nevytvořil duplicitní fakturu.
         if (!redirect && invoiceId) {
@@ -580,7 +650,16 @@ function InvoiceEditorPage() {
           </Button>
           <div>
             <div className="text-sm font-semibold">
-              {editingId ? "Úprava faktury" : "Nová faktura"} — {invoiceNumber}
+              {documentType === "credit_note"
+                ? (editingId ? "Úprava dobropisu" : "Nový dobropis")
+                : (editingId ? "Úprava faktury" : "Nová faktura")}
+              {" — "}
+              {invoiceNumber}
+              {documentType === "credit_note" && originalInvoiceNumber && (
+                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                  k {originalInvoiceNumber}
+                </span>
+              )}
             </div>
             <div className="text-xs text-muted-foreground">
               {selectedClient?.name || "vyberte odběratele"} · {formatCZK(totals.total)}
@@ -770,6 +849,8 @@ function InvoiceEditorPage() {
                 notes={notes}
                 paymentMethod={paymentMethod}
                 cancelled={loadedStatus === "cancelled"}
+                documentType={documentType}
+                originalInvoiceNumber={originalInvoiceNumber}
               />
             </div>
           </div>
@@ -791,6 +872,8 @@ function InvoiceEditorPage() {
             notes={notes}
             paymentMethod={paymentMethod}
             cancelled={loadedStatus === "cancelled"}
+            documentType={documentType}
+            originalInvoiceNumber={originalInvoiceNumber}
           />
         </div>
       )}

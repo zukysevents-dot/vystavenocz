@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Plus, FileText, Search, MoreVertical, Pencil, Trash2,
-  Download, CheckCircle2, Send, Loader2, Mail, Ban,
+  Download, CheckCircle2, Send, Loader2, Mail, Ban, FileMinus,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -43,6 +43,8 @@ type InvoiceRow = {
   notes: string | null;
   taxable_date: string;
   supplier_snapshot: Record<string, unknown>;
+  document_type: "invoice" | "credit_note";
+  original_invoice_id: string | null;
 };
 
 const statusLabels: Record<InvoiceRow["status"], { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -68,6 +70,7 @@ function InvoicesListPage() {
       id: string; description: string; quantity: number; unit: string;
       unit_price: number; vat_rate: number;
     }>;
+    originalInvoiceNumber?: string | null;
   }>(null);
   const [sendCtx, setSendCtx] = useState<SendInvoiceContext | null>(null);
   const [sendOpen, setSendOpen] = useState(false);
@@ -95,6 +98,18 @@ function InvoicesListPage() {
   };
 
   useEffect(() => { load(); }, [user]);
+
+  // U dobropisu dotáhneme číslo původní faktury — chceme ho zobrazit v PDF
+  // ("k faktuře FA-…"). Pro běžné faktury vrátíme null bez síťového volání.
+  const fetchOriginalNumber = async (inv: InvoiceRow): Promise<string | null> => {
+    if (inv.document_type !== "credit_note" || !inv.original_invoice_id) return null;
+    const { data } = await supabase
+      .from("invoices")
+      .select("invoice_number")
+      .eq("id", inv.original_invoice_id)
+      .maybeSingle();
+    return data?.invoice_number ?? null;
+  };
 
   const filtered = invoices.filter((inv) => {
     const q = search.toLowerCase().trim();
@@ -168,7 +183,12 @@ function InvoicesListPage() {
         .eq("invoice_id", inv.id)
         .order("position");
       if (error) throw error;
-      setPdfPayload({ invoice: inv, items: items as typeof pdfPayload extends null ? never : NonNullable<typeof pdfPayload>["items"] });
+      const originalInvoiceNumber = await fetchOriginalNumber(inv);
+      setPdfPayload({
+        invoice: inv,
+        items: items as NonNullable<typeof pdfPayload>["items"],
+        originalInvoiceNumber,
+      });
       // wait for next paint
       await new Promise((r) => setTimeout(r, 200));
       await downloadInvoicePdf("invoice-document", `${inv.invoice_number}.pdf`);
@@ -191,7 +211,12 @@ function InvoicesListPage() {
         .eq("invoice_id", inv.id)
         .order("position");
       if (error) throw error;
-      setPdfPayload({ invoice: inv, items: items as NonNullable<typeof pdfPayload>["items"] });
+      const originalInvoiceNumber = await fetchOriginalNumber(inv);
+      setPdfPayload({
+        invoice: inv,
+        items: items as NonNullable<typeof pdfPayload>["items"],
+        originalInvoiceNumber,
+      });
       // počkej na render
       await new Promise((r) => setTimeout(r, 200));
       const supplier = (inv.supplier_snapshot as { company_name?: string; full_name?: string }) || {};
@@ -283,7 +308,14 @@ function InvoicesListPage() {
                     className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/30"
                     onClick={() => navigate({ to: "/app/faktury/editor", search: { id: inv.id } })}
                   >
-                    <td className="px-4 py-3 font-medium">{inv.invoice_number}</td>
+                    <td className="px-4 py-3 font-medium">
+                      <div className="flex items-center gap-2">
+                        <span>{inv.invoice_number}</span>
+                        {inv.document_type === "credit_note" && (
+                          <Badge variant="outline" className="text-[10px]">Dobropis</Badge>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-muted-foreground">{inv.client_snapshot?.name || "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">{formatDate(inv.issue_date)}</td>
                     <td className="px-4 py-3 text-muted-foreground">{formatDate(inv.due_date)}</td>
@@ -320,6 +352,19 @@ function InvoicesListPage() {
                               <Send className="h-4 w-4" /> Vystavit
                             </DropdownMenuItem>
                           )}
+                          {inv.document_type === "invoice" &&
+                            (inv.status === "issued" || inv.status === "paid" || inv.status === "overdue") && (
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  navigate({
+                                    to: "/app/faktury/editor",
+                                    search: { creditFor: inv.id },
+                                  })
+                                }
+                              >
+                                <FileMinus className="h-4 w-4" /> Vytvořit dobropis
+                              </DropdownMenuItem>
+                            )}
                           <DropdownMenuSeparator />
                           {inv.status === "draft" ? (
                             <DropdownMenuItem
@@ -370,6 +415,8 @@ function InvoicesListPage() {
             paymentMethod={pdfPayload.invoice.payment_method}
             currency={pdfPayload.invoice.currency}
             cancelled={pdfPayload.invoice.status === "cancelled"}
+            documentType={pdfPayload.invoice.document_type}
+            originalInvoiceNumber={pdfPayload.originalInvoiceNumber}
           />
         </div>
       )}
