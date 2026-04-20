@@ -103,6 +103,7 @@ function InvoiceEditorPage() {
   const [saving, setSaving] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
+  const [assistantOpen, setAssistantOpen] = useState(false);
 
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [clients, setClients] = useState<ClientRow[]>([]);
