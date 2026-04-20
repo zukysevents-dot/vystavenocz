@@ -14,6 +14,8 @@ import { Route as SrovnaniRouteImport } from './routes/srovnani'
 import { Route as ResetHeslaRouteImport } from './routes/reset-hesla'
 import { Route as RegistraceRouteImport } from './routes/registrace'
 import { Route as PrihlaseniRouteImport } from './routes/prihlaseni'
+import { Route as PodminkyRouteImport } from './routes/podminky'
+import { Route as GdprRouteImport } from './routes/gdpr'
 import { Route as FunkceRouteImport } from './routes/funkce'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as CenikRouteImport } from './routes/cenik'
@@ -51,6 +53,16 @@ const RegistraceRoute = RegistraceRouteImport.update({
 const PrihlaseniRoute = PrihlaseniRouteImport.update({
   id: '/prihlaseni',
   path: '/prihlaseni',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PodminkyRoute = PodminkyRouteImport.update({
+  id: '/podminky',
+  path: '/podminky',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GdprRoute = GdprRouteImport.update({
+  id: '/gdpr',
+  path: '/gdpr',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FunkceRoute = FunkceRouteImport.update({
@@ -124,6 +136,8 @@ export interface FileRoutesByFullPath {
   '/cenik': typeof CenikRoute
   '/faq': typeof FaqRoute
   '/funkce': typeof FunkceRoute
+  '/gdpr': typeof GdprRoute
+  '/podminky': typeof PodminkyRoute
   '/prihlaseni': typeof PrihlaseniRoute
   '/registrace': typeof RegistraceRoute
   '/reset-hesla': typeof ResetHeslaRoute
@@ -143,6 +157,8 @@ export interface FileRoutesByTo {
   '/cenik': typeof CenikRoute
   '/faq': typeof FaqRoute
   '/funkce': typeof FunkceRoute
+  '/gdpr': typeof GdprRoute
+  '/podminky': typeof PodminkyRoute
   '/prihlaseni': typeof PrihlaseniRoute
   '/registrace': typeof RegistraceRoute
   '/reset-hesla': typeof ResetHeslaRoute
@@ -164,6 +180,8 @@ export interface FileRoutesById {
   '/cenik': typeof CenikRoute
   '/faq': typeof FaqRoute
   '/funkce': typeof FunkceRoute
+  '/gdpr': typeof GdprRoute
+  '/podminky': typeof PodminkyRoute
   '/prihlaseni': typeof PrihlaseniRoute
   '/registrace': typeof RegistraceRoute
   '/reset-hesla': typeof ResetHeslaRoute
@@ -185,6 +203,8 @@ export interface FileRouteTypes {
     | '/cenik'
     | '/faq'
     | '/funkce'
+    | '/gdpr'
+    | '/podminky'
     | '/prihlaseni'
     | '/registrace'
     | '/reset-hesla'
@@ -204,6 +224,8 @@ export interface FileRouteTypes {
     | '/cenik'
     | '/faq'
     | '/funkce'
+    | '/gdpr'
+    | '/podminky'
     | '/prihlaseni'
     | '/registrace'
     | '/reset-hesla'
@@ -224,6 +246,8 @@ export interface FileRouteTypes {
     | '/cenik'
     | '/faq'
     | '/funkce'
+    | '/gdpr'
+    | '/podminky'
     | '/prihlaseni'
     | '/registrace'
     | '/reset-hesla'
@@ -245,6 +269,8 @@ export interface RootRouteChildren {
   CenikRoute: typeof CenikRoute
   FaqRoute: typeof FaqRoute
   FunkceRoute: typeof FunkceRoute
+  GdprRoute: typeof GdprRoute
+  PodminkyRoute: typeof PodminkyRoute
   PrihlaseniRoute: typeof PrihlaseniRoute
   RegistraceRoute: typeof RegistraceRoute
   ResetHeslaRoute: typeof ResetHeslaRoute
@@ -287,6 +313,20 @@ declare module '@tanstack/react-router' {
       path: '/prihlaseni'
       fullPath: '/prihlaseni'
       preLoaderRoute: typeof PrihlaseniRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/podminky': {
+      id: '/podminky'
+      path: '/podminky'
+      fullPath: '/podminky'
+      preLoaderRoute: typeof PodminkyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gdpr': {
+      id: '/gdpr'
+      path: '/gdpr'
+      fullPath: '/gdpr'
+      preLoaderRoute: typeof GdprRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/funkce': {
@@ -413,6 +453,8 @@ const rootRouteChildren: RootRouteChildren = {
   CenikRoute: CenikRoute,
   FaqRoute: FaqRoute,
   FunkceRoute: FunkceRoute,
+  GdprRoute: GdprRoute,
+  PodminkyRoute: PodminkyRoute,
   PrihlaseniRoute: PrihlaseniRoute,
   RegistraceRoute: RegistraceRoute,
   ResetHeslaRoute: ResetHeslaRoute,
@@ -422,3 +464,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
