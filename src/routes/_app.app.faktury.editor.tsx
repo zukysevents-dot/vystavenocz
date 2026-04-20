@@ -134,6 +134,12 @@ function InvoiceEditorPage() {
   const [dirty, setDirty] = useState(false);
   const skipBlockerRef = useRef(false);
 
+  // Autosave: track loaded invoice status (only drafts/new are autosaved),
+  // and show "Saved …" indicator in the header.
+  const [loadedStatus, setLoadedStatus] = useState<"draft" | "issued" | "paid" | "overdue" | "cancelled" | null>(null);
+  const [lastAutosaveAt, setLastAutosaveAt] = useState<Date | null>(null);
+  const autosavingRef = useRef(false);
+
   // Load profile, clients, and (optionally) existing invoice
   useEffect(() => {
     if (!user) return;
