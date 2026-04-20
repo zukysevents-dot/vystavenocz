@@ -4,7 +4,10 @@
 import html2canvas from "html2canvas-pro";
 import jsPDF from "jspdf";
 
-export async function downloadInvoicePdf(elementId: string, filename: string) {
+/**
+ * Vyrenderuje fakturu z DOM uzlu do PDF a vrátí jsPDF instanci.
+ */
+async function renderInvoicePdf(elementId: string) {
   const el = document.getElementById(elementId);
   if (!el) throw new Error("Invoice element not found");
 
@@ -36,5 +39,18 @@ export async function downloadInvoicePdf(elementId: string, filename: string) {
     heightLeft -= pageHeight;
   }
 
+  return pdf;
+}
+
+export async function downloadInvoicePdf(elementId: string, filename: string) {
+  const pdf = await renderInvoicePdf(elementId);
   pdf.save(filename);
+}
+
+/**
+ * Vyrenderuje fakturu jako Blob PDF — pro upload do Storage či odeslání e-mailem.
+ */
+export async function renderInvoicePdfBlob(elementId: string): Promise<Blob> {
+  const pdf = await renderInvoicePdf(elementId);
+  return pdf.output("blob");
 }

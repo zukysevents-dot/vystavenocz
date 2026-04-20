@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
-import { ArrowLeft, Plus, Trash2, Save, Download, Loader2, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Download, Loader2, Eye, EyeOff, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InvoiceDocument } from "@/components/app/InvoiceDocument";
 import { downloadInvoicePdf } from "@/lib/invoice-pdf";
+import { SendInvoiceDialog, type SendInvoiceContext } from "@/components/app/SendInvoiceDialog";
 import { PaywallDialog } from "@/components/payments/PaywallDialog";
 import { useSubscription } from "@/hooks/use-subscription";
 import {
@@ -107,6 +108,9 @@ function InvoiceEditorPage() {
   const [showPreview, setShowPreview] = useState(true);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
+  const [sendCtx, setSendCtx] = useState<SendInvoiceContext | null>(null);
+  const [preparingSend, setPreparingSend] = useState(false);
   const { hasAccess } = useSubscription();
 
   const [profile, setProfile] = useState<ProfileRow | null>(null);
@@ -254,19 +258,23 @@ function InvoiceEditorPage() {
   const removeItem = (id: string) => setItems((prev) => prev.filter((it) => it.id !== id));
   const addItem = () => setItems((prev) => [...prev, newItem()]);
 
-  const save = async (status: "draft" | "issued") => {
-    if (!user || !profile) return;
+  const save = async (
+    status: "draft" | "issued",
+    opts: { redirect?: boolean } = {},
+  ): Promise<string | null> => {
+    const redirect = opts.redirect !== false;
+    if (!user || !profile) return null;
     if (status === "issued" && !hasAccess) {
       setPaywallOpen(true);
-      return;
+      return null;
     }
     if (!selectedClient) {
       toast.error("Vyberte odběratele.");
-      return;
+      return null;
     }
     if (items.some((it) => !it.description.trim())) {
       toast.error("Vyplňte popis u všech položek.");
-      return;
+      return null;
     }
     setSaving(true);
     try {
@@ -333,11 +341,15 @@ function InvoiceEditorPage() {
       const { error: itemsErr } = await supabase.from("invoice_items").insert(itemRows);
       if (itemsErr) throw itemsErr;
 
-      toast.success(status === "draft" ? "Uloženo jako koncept." : "Faktura vystavena.");
-      navigate({ to: "/app/faktury" });
+      if (redirect) {
+        toast.success(status === "draft" ? "Uloženo jako koncept." : "Faktura vystavena.");
+        navigate({ to: "/app/faktury" });
+      }
+      return invoiceId ?? null;
     } catch (e) {
       console.error(e);
       toast.error("Nepodařilo se uložit fakturu: " + (e as Error).message);
+      return null;
     } finally {
       setSaving(false);
     }
@@ -356,6 +368,36 @@ function InvoiceEditorPage() {
       toast.error("Nepodařilo se vygenerovat PDF.");
     } finally {
       setDownloadingPdf(false);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (!hasAccess) {
+      setPaywallOpen(true);
+      return;
+    }
+    setPreparingSend(true);
+    try {
+      // Ulož bez přesměrování, abychom měli ID
+      const id = await save("issued", { redirect: false });
+      if (!id) return;
+      setShowPreview(true);
+      await new Promise((r) => setTimeout(r, 200));
+      setSendCtx({
+        invoiceId: id,
+        invoiceNumber,
+        recipientEmail: selectedClient?.email ?? null,
+        recipientName: selectedClient?.name ?? null,
+        supplierName:
+          supplierSnapshot.company_name ?? supplierSnapshot.full_name ?? null,
+        total: totals.total,
+        currency: "CZK",
+        dueDate,
+        pdfElementId: "invoice-document",
+      });
+      setSendOpen(true);
+    } finally {
+      setPreparingSend(false);
     }
   };
 
@@ -416,6 +458,10 @@ function InvoiceEditorPage() {
           <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={downloadingPdf}>
             {downloadingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleSendEmail} disabled={preparingSend || saving}>
+            {preparingSend ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+            E-mail
           </Button>
           <Button variant="outline" size="sm" onClick={() => save("draft")} disabled={saving}>
             <Save className="h-4 w-4" /> Koncept
@@ -634,6 +680,14 @@ function InvoiceEditorPage() {
         open={paywallOpen}
         onOpenChange={setPaywallOpen}
         reason="Bezplatná zkušební doba skončila. Pro vystavení faktury aktivujte tarif Fakturio Pro. Koncept můžete uložit i bez předplatného."
+      />
+      <SendInvoiceDialog
+        open={sendOpen}
+        onOpenChange={(o) => {
+          setSendOpen(o);
+          if (!o) setSendCtx(null);
+        }}
+        context={sendCtx}
       />
     </div>
   );
