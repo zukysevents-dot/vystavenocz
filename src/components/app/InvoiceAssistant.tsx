@@ -470,7 +470,54 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
         }}
         className="border-t border-border p-3"
       >
+        {pendingImage && (
+          <div className="mb-2 flex items-center gap-2 rounded-lg border border-border bg-muted/40 p-2">
+            <img
+              src={pendingImage}
+              alt="Náhled"
+              className="h-12 w-12 rounded object-cover"
+            />
+            <div className="flex-1 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1 font-medium text-foreground">
+                <ImageIcon className="h-3.5 w-3.5" /> Příloha připravena
+              </div>
+              <div>AI rozpozná položky z obrázku.</div>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setPendingImage(null)}
+              title="Odebrat přílohu"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            handlePickFile(e.target.files?.[0]);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+          }}
+        />
         <div className="flex items-end gap-2">
+          {mode === "invoice" && (
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isStreaming}
+              title="Přidat foto účtenky / objednávky"
+              className="shrink-0"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+          )}
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -480,11 +527,16 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
                 send(input);
               }
             }}
-            placeholder="Napiš mi, co potřebuješ…"
+            placeholder={pendingImage ? "Volitelně doplň pokyn k obrázku…" : "Napiš mi, co potřebuješ…"}
             className="min-h-[44px] resize-none"
             disabled={isStreaming}
           />
-          <Button type="submit" size="icon" variant="coral" disabled={isStreaming || !input.trim()}>
+          <Button
+            type="submit"
+            size="icon"
+            variant="coral"
+            disabled={isStreaming || (!input.trim() && !pendingImage)}
+          >
             {isStreaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>
