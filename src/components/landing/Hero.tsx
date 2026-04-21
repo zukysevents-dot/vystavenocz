@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Check, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Sparkles, Mic } from "lucide-react";
 import { InvoicePreview } from "./InvoicePreview";
 
 export function Hero() {
@@ -8,18 +8,24 @@ export function Hero() {
       <div className="absolute inset-0 bg-mesh opacity-70" aria-hidden />
       <div className="relative mx-auto grid max-w-7xl gap-12 px-4 pb-20 pt-12 sm:px-6 lg:grid-cols-2 lg:gap-8 lg:px-8 lg:pb-28 lg:pt-20">
         <div className="flex flex-col justify-center">
-          <div className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-border bg-background/80 px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm backdrop-blur">
+          <a
+            href="/registrace"
+            className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-coral/40 bg-coral/10 px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm backdrop-blur transition-colors hover:bg-coral/15"
+          >
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-coral text-white">
+              <Mic className="h-3 w-3" />
+            </span>
+            <span>Novinka: Vystavte fakturu hlasem — i z auta</span>
             <Sparkles className="h-3.5 w-3.5 text-coral" />
-            <span>Nově: AI asistent v češtině</span>
-          </div>
+          </a>
 
           <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
             Faktura hotová{" "}
-            <span className="text-gradient-primary">za půl minuty</span>
+            <span className="text-gradient-primary">na jedno řeknutí</span>
           </h1>
 
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Žádné účetnické termíny, žádné cvičení s šablonou. Vyplníte tři políčka, kliknete na Vystavit a posíláte klientovi PDF i s QR platbou. Pro OSVČ, plátce i neplátce DPH.
+            Řekněte „Vystav fakturu firmě Alza na 2 hodiny konzultace" a AI asistent v češtině ji připraví za vás — včetně odběratele, položek a DPH. Funguje i hands-free v autě. Pro OSVČ, plátce i neplátce DPH.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
