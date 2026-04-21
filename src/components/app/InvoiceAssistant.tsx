@@ -232,17 +232,18 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
     };
     rec.onresult = (event: any) => {
       let finalText = "";
-      let interimText = "";
+      let interim = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) finalText += transcript;
-        else interimText += transcript;
+        else interim += transcript;
       }
       if (finalText) {
         baseText = (baseText ? baseText + " " : "") + finalText.trim();
       }
-      const combined = (baseText + (interimText ? " " + interimText : "")).trim();
+      const combined = (baseText + (interim ? " " + interim : "")).trim();
       setInput(combined);
+      setInterimText(interim.trim());
       // Hands-free auto-send: po 1,6s ticha odešli automaticky
       if (handsFree) {
         if (autoSendTimerRef.current) clearTimeout(autoSendTimerRef.current);
