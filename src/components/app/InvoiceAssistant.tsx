@@ -132,6 +132,7 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
   const recognitionRef = useRef<any>(null);
   const [isListening, setIsListening] = useState(false);
   const [handsFree, setHandsFree] = useState(false);
+  const [showMicConsent, setShowMicConsent] = useState(false);
   const autoSendTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestInputRef = useRef("");
   const speechSupported = typeof window !== "undefined" &&
