@@ -156,6 +156,65 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
+  // Cleanup speech recognition při unmountu
+  useEffect(() => () => {
+    try { recognitionRef.current?.stop(); } catch { /* ignore */ }
+  }, []);
+
+  const toggleDictation = () => {
+    if (!speechSupported) {
+      toast.error("Tvůj prohlížeč nepodporuje hlasový vstup. Zkus Chrome, Edge nebo Safari.");
+      return;
+    }
+    if (isListening) {
+      try { recognitionRef.current?.stop(); } catch { /* ignore */ }
+      return;
+    }
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const rec = new SR();
+    rec.lang = "cs-CZ";
+    rec.continuous = true;
+    rec.interimResults = true;
+    let baseText = input;
+    rec.onstart = () => {
+      setIsListening(true);
+      baseText = input;
+    };
+    rec.onresult = (event: any) => {
+      let finalText = "";
+      let interimText = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) finalText += transcript;
+        else interimText += transcript;
+      }
+      if (finalText) {
+        baseText = (baseText ? baseText + " " : "") + finalText.trim();
+      }
+      const combined = (baseText + (interimText ? " " + interimText : "")).trim();
+      setInput(combined);
+    };
+    rec.onerror = (e: any) => {
+      console.error("Speech recognition error:", e);
+      if (e.error === "not-allowed") toast.error("Mikrofon zamítnut. Povol přístup v nastavení prohlížeče.");
+      else if (e.error === "no-speech") { /* ignore */ }
+      else toast.error("Chyba hlasového vstupu.");
+      setIsListening(false);
+    };
+    rec.onend = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+    };
+    recognitionRef.current = rec;
+    try {
+      rec.start();
+    } catch (e) {
+      console.error(e);
+      toast.error("Nepodařilo se spustit mikrofon.");
+      setIsListening(false);
+    }
+  };
+
   const newConversation = () => {
     abortRef.current?.abort();
     setMessages([]);
