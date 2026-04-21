@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Check, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Sparkles, Mic } from "lucide-react";
 import { InvoicePreview } from "./InvoicePreview";
 
 export function Hero() {
@@ -8,18 +8,18 @@ export function Hero() {
       <div className="absolute inset-0 bg-mesh opacity-70" aria-hidden />
       <div className="relative mx-auto grid max-w-7xl gap-12 px-4 pb-20 pt-12 sm:px-6 lg:grid-cols-2 lg:gap-8 lg:px-8 lg:pb-28 lg:pt-20">
         <div className="flex flex-col justify-center">
-          <div className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-border bg-background/80 px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm backdrop-blur">
-            <Sparkles className="h-3.5 w-3.5 text-coral" />
-            <span>Nově: AI asistent v češtině</span>
+          <div className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-coral/30 bg-coral/10 px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm backdrop-blur">
+            <Mic className="h-3.5 w-3.5 text-coral" />
+            <span>Novinka: Vystav fakturu hlasem — i za jízdy</span>
           </div>
 
           <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            Faktura hotová{" "}
-            <span className="text-gradient-primary">za půl minuty</span>
+            Řekni a máš{" "}
+            <span className="text-gradient-primary">fakturu hotovou</span>
           </h1>
 
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Žádné účetnické termíny, žádné cvičení s šablonou. Vyplníte tři políčka, kliknete na Vystavit a posíláte klientovi PDF i s QR platbou. Pro OSVČ, plátce i neplátce DPH.
+            <span className="font-semibold text-foreground">„Vystav fakturu pro Alzu na 2 hodiny konzultace po 1 500 Kč."</span> Hands-free režim pro auto, foto účtenek, AI asistent v češtině. Bez instalace, bez účetnických termínů.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -35,7 +35,7 @@ export function Hero() {
           </div>
 
           <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-            {["Bez platební karty", "Zrušení kdykoliv", "Česká podpora"].map((b) => (
+            {["🎙️ Hlasem i za jízdy", "📸 Foto účtenky → položky", "Bez platební karty"].map((b) => (
               <li key={b} className="flex items-center gap-1.5">
                 <Check className="h-4 w-4 text-success" />
                 {b}
