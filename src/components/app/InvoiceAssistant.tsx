@@ -162,7 +162,23 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
   // Cleanup speech recognition při unmountu
   useEffect(() => () => {
     try { recognitionRef.current?.stop(); } catch { /* ignore */ }
+    if (autoSendTimerRef.current) clearTimeout(autoSendTimerRef.current);
   }, []);
+
+  // Drž poslední input v ref pro auto-send timer
+  useEffect(() => { latestInputRef.current = input; }, [input]);
+
+  // Mluvený výstup (TTS) — zpětná vazba pro hands-free režim
+  const speak = (text: string) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    try {
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = "cs-CZ";
+      utter.rate = 1.05;
+      window.speechSynthesis.speak(utter);
+    } catch { /* ignore */ }
+  };
 
   const toggleDictation = () => {
     if (!speechSupported) {
@@ -171,6 +187,10 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
     }
     if (isListening) {
       try { recognitionRef.current?.stop(); } catch { /* ignore */ }
+      if (autoSendTimerRef.current) {
+        clearTimeout(autoSendTimerRef.current);
+        autoSendTimerRef.current = null;
+      }
       return;
     }
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -182,6 +202,7 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
     rec.onstart = () => {
       setIsListening(true);
       baseText = input;
+      if (handsFree) speak("Poslouchám");
     };
     rec.onresult = (event: any) => {
       let finalText = "";
@@ -196,6 +217,17 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
       }
       const combined = (baseText + (interimText ? " " + interimText : "")).trim();
       setInput(combined);
+      // Hands-free auto-send: po 1,6s ticha odešli automaticky
+      if (handsFree) {
+        if (autoSendTimerRef.current) clearTimeout(autoSendTimerRef.current);
+        autoSendTimerRef.current = setTimeout(() => {
+          const txt = latestInputRef.current.trim();
+          if (txt.length >= 3) {
+            try { recognitionRef.current?.stop(); } catch { /* ignore */ }
+            send(txt);
+          }
+        }, 1600);
+      }
     };
     rec.onerror = (e: any) => {
       console.error("Speech recognition error:", e);
