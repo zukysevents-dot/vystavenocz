@@ -135,6 +135,7 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
   const [showMicConsent, setShowMicConsent] = useState(false);
   const autoSendTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestInputRef = useRef("");
+  const [interimText, setInterimText] = useState("");
   const speechSupported = typeof window !== "undefined" &&
     !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
 
@@ -231,17 +232,18 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
     };
     rec.onresult = (event: any) => {
       let finalText = "";
-      let interimText = "";
+      let interim = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) finalText += transcript;
-        else interimText += transcript;
+        else interim += transcript;
       }
       if (finalText) {
         baseText = (baseText ? baseText + " " : "") + finalText.trim();
       }
-      const combined = (baseText + (interimText ? " " + interimText : "")).trim();
+      const combined = (baseText + (interim ? " " + interim : "")).trim();
       setInput(combined);
+      setInterimText(interim.trim());
       // Hands-free auto-send: po 1,6s ticha odešli automaticky
       if (handsFree) {
         if (autoSendTimerRef.current) clearTimeout(autoSendTimerRef.current);
@@ -264,6 +266,7 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
     rec.onend = () => {
       setIsListening(false);
       recognitionRef.current = null;
+      setInterimText("");
     };
     recognitionRef.current = rec;
     try {
@@ -652,6 +655,24 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
             >
               <X className="h-4 w-4" />
             </Button>
+          </div>
+        )}
+        {isListening && (
+          <div className="mb-2 flex items-start gap-2 rounded-lg border border-coral/40 bg-coral/5 p-2 text-xs">
+            <span className="relative mt-0.5 flex h-2 w-2 shrink-0">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-coral opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-coral" />
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-foreground">
+                🎙️ Poslouchám {handsFree && <span className="text-muted-foreground">(po pauze odešle)</span>}
+              </div>
+              {interimText ? (
+                <div className="mt-0.5 italic text-muted-foreground line-clamp-2">„{interimText}"</div>
+              ) : (
+                <div className="mt-0.5 text-muted-foreground">Mluv česky…</div>
+              )}
+            </div>
           </div>
         )}
         <input
