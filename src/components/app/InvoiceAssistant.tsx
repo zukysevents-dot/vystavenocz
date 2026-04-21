@@ -582,6 +582,19 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
               <Paperclip className="h-4 w-4" />
             </Button>
           )}
+          {speechSupported && (
+            <Button
+              type="button"
+              size="icon"
+              variant={isListening ? "coral" : "outline"}
+              onClick={toggleDictation}
+              disabled={isStreaming}
+              title={isListening ? "Zastavit diktování" : "Diktovat hlasem (česky)"}
+              className="shrink-0"
+            >
+              {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </Button>
+          )}
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -591,7 +604,13 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
                 send(input);
               }
             }}
-            placeholder={pendingImage ? "Volitelně doplň pokyn k obrázku…" : "Napiš mi, co potřebuješ…"}
+            placeholder={
+              isListening
+                ? "🎙️ Poslouchám… mluv česky"
+                : pendingImage
+                  ? "Volitelně doplň pokyn k obrázku…"
+                  : "Napiš nebo nadiktuj, co potřebuješ…"
+            }
             className="min-h-[44px] resize-none"
             disabled={isStreaming}
           />
