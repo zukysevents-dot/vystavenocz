@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import {
   Sparkles, Send, X, Loader2, Wand2, Trash2,
   FileText, MessageCircle, PlusCircle, Paperclip, Image as ImageIcon,
+  Mic, MicOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
