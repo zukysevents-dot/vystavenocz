@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import {
   Sparkles, Send, X, Loader2, Wand2, Trash2,
   FileText, MessageCircle, PlusCircle, Paperclip, Image as ImageIcon,
+  Mic, MicOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -118,6 +119,10 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const [isListening, setIsListening] = useState(false);
+  const speechSupported = typeof window !== "undefined" &&
+    !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
 
   // Načti historii pokud se změní klíč (přepnutí mezi fakturami nebo režimy)
   useEffect(() => {
@@ -150,6 +155,65 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
   }, [messages, isStreaming]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  // Cleanup speech recognition při unmountu
+  useEffect(() => () => {
+    try { recognitionRef.current?.stop(); } catch { /* ignore */ }
+  }, []);
+
+  const toggleDictation = () => {
+    if (!speechSupported) {
+      toast.error("Tvůj prohlížeč nepodporuje hlasový vstup. Zkus Chrome, Edge nebo Safari.");
+      return;
+    }
+    if (isListening) {
+      try { recognitionRef.current?.stop(); } catch { /* ignore */ }
+      return;
+    }
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const rec = new SR();
+    rec.lang = "cs-CZ";
+    rec.continuous = true;
+    rec.interimResults = true;
+    let baseText = input;
+    rec.onstart = () => {
+      setIsListening(true);
+      baseText = input;
+    };
+    rec.onresult = (event: any) => {
+      let finalText = "";
+      let interimText = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) finalText += transcript;
+        else interimText += transcript;
+      }
+      if (finalText) {
+        baseText = (baseText ? baseText + " " : "") + finalText.trim();
+      }
+      const combined = (baseText + (interimText ? " " + interimText : "")).trim();
+      setInput(combined);
+    };
+    rec.onerror = (e: any) => {
+      console.error("Speech recognition error:", e);
+      if (e.error === "not-allowed") toast.error("Mikrofon zamítnut. Povol přístup v nastavení prohlížeče.");
+      else if (e.error === "no-speech") { /* ignore */ }
+      else toast.error("Chyba hlasového vstupu.");
+      setIsListening(false);
+    };
+    rec.onend = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+    };
+    recognitionRef.current = rec;
+    try {
+      rec.start();
+    } catch (e) {
+      console.error(e);
+      toast.error("Nepodařilo se spustit mikrofon.");
+      setIsListening(false);
+    }
+  };
 
   const newConversation = () => {
     abortRef.current?.abort();
@@ -518,6 +582,19 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
               <Paperclip className="h-4 w-4" />
             </Button>
           )}
+          {speechSupported && (
+            <Button
+              type="button"
+              size="icon"
+              variant={isListening ? "coral" : "outline"}
+              onClick={toggleDictation}
+              disabled={isStreaming}
+              title={isListening ? "Zastavit diktování" : "Diktovat hlasem (česky)"}
+              className="shrink-0"
+            >
+              {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </Button>
+          )}
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -527,7 +604,13 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
                 send(input);
               }
             }}
-            placeholder={pendingImage ? "Volitelně doplň pokyn k obrázku…" : "Napiš mi, co potřebuješ…"}
+            placeholder={
+              isListening
+                ? "🎙️ Poslouchám… mluv česky"
+                : pendingImage
+                  ? "Volitelně doplň pokyn k obrázku…"
+                  : "Napiš nebo nadiktuj, co potřebuješ…"
+            }
             className="min-h-[44px] resize-none"
             disabled={isStreaming}
           />
