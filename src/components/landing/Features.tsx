@@ -15,9 +15,25 @@ import {
   Stamp,
   FileMinus,
   CheckCircle2,
+  Mic,
+  Camera,
 } from "lucide-react";
 
 const features = [
+  {
+    icon: Mic,
+    title: "Diktování hlasem (i v autě)",
+    desc: '„Vystav fakturu pro Alzu na 2 hodiny po 1 500 Kč." Hands-free režim pošle příkaz po pauze sám a AI nahlas potvrdí výsledek. Ideální za volantem.',
+    color: "text-coral",
+    bg: "bg-coral/10",
+  },
+  {
+    icon: Camera,
+    title: "Foto účtenky → položky",
+    desc: "Vyfoť účtenku, objednávku nebo dodací list. AI z obrázku vytáhne popis, množství, cenu i sazbu DPH a navrhne položky k přidání.",
+    color: "text-primary",
+    bg: "bg-primary-soft",
+  },
   {
     icon: Sparkles,
     title: "AI asistent v češtině",
