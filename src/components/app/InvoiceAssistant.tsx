@@ -119,6 +119,10 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const [isListening, setIsListening] = useState(false);
+  const speechSupported = typeof window !== "undefined" &&
+    !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
 
   // Načti historii pokud se změní klíč (přepnutí mezi fakturami nebo režimy)
   useEffect(() => {
