@@ -7,6 +7,16 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { InvoiceItemDraft, VatRate } from "@/lib/invoice";
@@ -122,6 +132,7 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
   const recognitionRef = useRef<any>(null);
   const [isListening, setIsListening] = useState(false);
   const [handsFree, setHandsFree] = useState(false);
+  const [showMicConsent, setShowMicConsent] = useState(false);
   const autoSendTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestInputRef = useRef("");
   const speechSupported = typeof window !== "undefined" &&
@@ -180,6 +191,8 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
     } catch { /* ignore */ }
   };
 
+  const MIC_CONSENT_KEY = "fakturio:assistant:mic-consent";
+
   const toggleDictation = () => {
     if (!speechSupported) {
       toast.error("Tvůj prohlížeč nepodporuje hlasový vstup. Zkus Chrome, Edge nebo Safari.");
@@ -193,7 +206,19 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
       }
       return;
     }
+    // První spuštění → zobraz potvrzovací dialog
+    let consented = false;
+    try { consented = localStorage.getItem(MIC_CONSENT_KEY) === "1"; } catch { /* ignore */ }
+    if (!consented) {
+      setShowMicConsent(true);
+      return;
+    }
+    startDictation();
+  };
+
+  const startDictation = () => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) return;
     const rec = new SR();
     rec.lang = "cs-CZ";
     rec.continuous = true;
@@ -456,6 +481,7 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
   }
 
   return (
+    <>
     <div className="fixed bottom-6 right-6 z-40 flex h-[600px] w-[400px] max-w-[calc(100vw-2rem)] flex-col rounded-2xl border border-border bg-card shadow-glow">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
@@ -695,6 +721,41 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
         </div>
       </form>
     </div>
+
+    <AlertDialog open={showMicConsent} onOpenChange={setShowMicConsent}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <Mic className="h-5 w-5 text-coral" />
+            Spustit hlasový vstup?
+          </AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="space-y-2 text-sm">
+              <p>Co se stane, když potvrdíš:</p>
+              <ul className="list-disc space-y-1 pl-5">
+                <li>Prohlížeč si vyžádá přístup k <strong>mikrofonu</strong>.</li>
+                <li>Tvůj hlas převádí na text <strong>samotný prohlížeč</strong> (lokálně, neposílá se nikam).</li>
+                <li>Až klikneš na Odeslat (nebo se v hands-free režimu odešle samo), text půjde do <strong>AI asistenta Fakturio</strong> a může upravit fakturu.</li>
+                <li>Tato hláška se ti už nezobrazí — můžeš ji obnovit smazáním cookies / dat stránky.</li>
+              </ul>
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Zrušit</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => {
+              try { localStorage.setItem(MIC_CONSENT_KEY, "1"); } catch { /* ignore */ }
+              setShowMicConsent(false);
+              startDictation();
+            }}
+          >
+            Rozumím, spustit
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
 
