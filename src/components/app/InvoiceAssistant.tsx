@@ -481,6 +481,7 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
   }
 
   return (
+    <>
     <div className="fixed bottom-6 right-6 z-40 flex h-[600px] w-[400px] max-w-[calc(100vw-2rem)] flex-col rounded-2xl border border-border bg-card shadow-glow">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
