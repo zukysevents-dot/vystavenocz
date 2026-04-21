@@ -657,6 +657,24 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
             </Button>
           </div>
         )}
+        {isListening && (
+          <div className="mb-2 flex items-start gap-2 rounded-lg border border-coral/40 bg-coral/5 p-2 text-xs">
+            <span className="relative mt-0.5 flex h-2 w-2 shrink-0">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-coral opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-coral" />
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-foreground">
+                🎙️ Poslouchám {handsFree && <span className="text-muted-foreground">(po pauze odešle)</span>}
+              </div>
+              {interimText ? (
+                <div className="mt-0.5 italic text-muted-foreground line-clamp-2">„{interimText}"</div>
+              ) : (
+                <div className="mt-0.5 text-muted-foreground">Mluv česky…</div>
+              )}
+            </div>
+          </div>
+        )}
         <input
           ref={fileInputRef}
           type="file"
