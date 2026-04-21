@@ -266,6 +266,7 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
     rec.onend = () => {
       setIsListening(false);
       recognitionRef.current = null;
+      setInterimText("");
     };
     recognitionRef.current = rec;
     try {
