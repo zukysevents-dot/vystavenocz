@@ -121,6 +121,9 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
   const abortRef = useRef<AbortController | null>(null);
   const recognitionRef = useRef<any>(null);
   const [isListening, setIsListening] = useState(false);
+  const [handsFree, setHandsFree] = useState(false);
+  const autoSendTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestInputRef = useRef("");
   const speechSupported = typeof window !== "undefined" &&
     !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
 
@@ -159,7 +162,23 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
   // Cleanup speech recognition při unmountu
   useEffect(() => () => {
     try { recognitionRef.current?.stop(); } catch { /* ignore */ }
+    if (autoSendTimerRef.current) clearTimeout(autoSendTimerRef.current);
   }, []);
+
+  // Drž poslední input v ref pro auto-send timer
+  useEffect(() => { latestInputRef.current = input; }, [input]);
+
+  // Mluvený výstup (TTS) — zpětná vazba pro hands-free režim
+  const speak = (text: string) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    try {
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = "cs-CZ";
+      utter.rate = 1.05;
+      window.speechSynthesis.speak(utter);
+    } catch { /* ignore */ }
+  };
 
   const toggleDictation = () => {
     if (!speechSupported) {
@@ -168,6 +187,10 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
     }
     if (isListening) {
       try { recognitionRef.current?.stop(); } catch { /* ignore */ }
+      if (autoSendTimerRef.current) {
+        clearTimeout(autoSendTimerRef.current);
+        autoSendTimerRef.current = null;
+      }
       return;
     }
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -179,6 +202,7 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
     rec.onstart = () => {
       setIsListening(true);
       baseText = input;
+      if (handsFree) speak("Poslouchám");
     };
     rec.onresult = (event: any) => {
       let finalText = "";
@@ -193,6 +217,17 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
       }
       const combined = (baseText + (interimText ? " " + interimText : "")).trim();
       setInput(combined);
+      // Hands-free auto-send: po 1,6s ticha odešli automaticky
+      if (handsFree) {
+        if (autoSendTimerRef.current) clearTimeout(autoSendTimerRef.current);
+        autoSendTimerRef.current = setTimeout(() => {
+          const txt = latestInputRef.current.trim();
+          if (txt.length >= 3) {
+            try { recognitionRef.current?.stop(); } catch { /* ignore */ }
+            send(txt);
+          }
+        }, 1600);
+      }
     };
     rec.onerror = (e: any) => {
       console.error("Speech recognition error:", e);
@@ -384,6 +419,14 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
             upsertAssistant("✅ Hotovo, změny aplikovány do faktury.");
           }
           toast.success("Faktura aktualizována asistentem");
+          if (handsFree) {
+            // Krátké hlasové potvrzení v autě
+            const itemCount = patch.items?.length ?? 0;
+            const parts: string[] = ["Hotovo."];
+            if (itemCount > 0) parts.push(`Přidáno ${itemCount} ${itemCount === 1 ? "položka" : itemCount < 5 ? "položky" : "položek"}.`);
+            if (patch.client_name) parts.push(`Odběratel ${patch.client_name}.`);
+            speak(parts.join(" "));
+          }
         } catch (e) {
           console.error("Tool args parse error:", e, toolArgsBuf);
           toast.error("Asistent vrátil neplatná data.");
@@ -471,6 +514,33 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
           Obecný chat
         </button>
       </div>
+
+      {/* Hands-free přepínač — pro diktování v autě */}
+      {speechSupported && mode === "invoice" && (
+        <div className="flex items-center justify-between gap-2 border-b border-border bg-coral/5 px-3 py-2">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-foreground font-medium">🚗 Hands-free režim</span>
+            <span className="text-muted-foreground hidden sm:inline">— mluv, automaticky odešle</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setHandsFree((v) => !v)}
+            className={cn(
+              "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
+              handsFree ? "bg-coral" : "bg-muted",
+            )}
+            aria-pressed={handsFree}
+            aria-label="Přepnout hands-free režim"
+          >
+            <span
+              className={cn(
+                "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                handsFree ? "translate-x-4" : "translate-x-0.5",
+              )}
+            />
+          </button>
+        </div>
+      )}
 
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
         {messages.length === 0 && (
