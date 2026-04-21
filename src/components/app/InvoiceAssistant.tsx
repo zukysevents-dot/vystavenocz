@@ -419,6 +419,14 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
             upsertAssistant("✅ Hotovo, změny aplikovány do faktury.");
           }
           toast.success("Faktura aktualizována asistentem");
+          if (handsFree) {
+            // Krátké hlasové potvrzení v autě
+            const itemCount = patch.items?.length ?? 0;
+            const parts: string[] = ["Hotovo."];
+            if (itemCount > 0) parts.push(`Přidáno ${itemCount} ${itemCount === 1 ? "položka" : itemCount < 5 ? "položky" : "položek"}.`);
+            if (patch.client_name) parts.push(`Odběratel ${patch.client_name}.`);
+            speak(parts.join(" "));
+          }
         } catch (e) {
           console.error("Tool args parse error:", e, toolArgsBuf);
           toast.error("Asistent vrátil neplatná data.");
