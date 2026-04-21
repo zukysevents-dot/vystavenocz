@@ -515,6 +515,33 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
         </button>
       </div>
 
+      {/* Hands-free přepínač — pro diktování v autě */}
+      {speechSupported && mode === "invoice" && (
+        <div className="flex items-center justify-between gap-2 border-b border-border bg-coral/5 px-3 py-2">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-foreground font-medium">🚗 Hands-free režim</span>
+            <span className="text-muted-foreground hidden sm:inline">— mluv, automaticky odešle</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setHandsFree((v) => !v)}
+            className={cn(
+              "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
+              handsFree ? "bg-coral" : "bg-muted",
+            )}
+            aria-pressed={handsFree}
+            aria-label="Přepnout hands-free režim"
+          >
+            <span
+              className={cn(
+                "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                handsFree ? "translate-x-4" : "translate-x-0.5",
+              )}
+            />
+          </button>
+        </div>
+      )}
+
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
         {messages.length === 0 && (
           <div className="space-y-3">
