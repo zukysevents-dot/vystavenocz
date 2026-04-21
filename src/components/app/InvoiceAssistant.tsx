@@ -720,6 +720,41 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
         </div>
       </form>
     </div>
+
+    <AlertDialog open={showMicConsent} onOpenChange={setShowMicConsent}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <Mic className="h-5 w-5 text-coral" />
+            Spustit hlasový vstup?
+          </AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="space-y-2 text-sm">
+              <p>Co se stane, když potvrdíš:</p>
+              <ul className="list-disc space-y-1 pl-5">
+                <li>Prohlížeč si vyžádá přístup k <strong>mikrofonu</strong>.</li>
+                <li>Tvůj hlas převádí na text <strong>samotný prohlížeč</strong> (lokálně, neposílá se nikam).</li>
+                <li>Až klikneš na Odeslat (nebo se v hands-free režimu odešle samo), text půjde do <strong>AI asistenta Fakturio</strong> a může upravit fakturu.</li>
+                <li>Tato hláška se ti už nezobrazí — můžeš ji obnovit smazáním cookies / dat stránky.</li>
+              </ul>
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Zrušit</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => {
+              try { localStorage.setItem(MIC_CONSENT_KEY, "1"); } catch { /* ignore */ }
+              setShowMicConsent(false);
+              startDictation();
+            }}
+          >
+            Rozumím, spustit
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
 
