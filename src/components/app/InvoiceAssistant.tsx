@@ -191,6 +191,8 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
     } catch { /* ignore */ }
   };
 
+  const MIC_CONSENT_KEY = "fakturio:assistant:mic-consent";
+
   const toggleDictation = () => {
     if (!speechSupported) {
       toast.error("Tvůj prohlížeč nepodporuje hlasový vstup. Zkus Chrome, Edge nebo Safari.");
@@ -204,7 +206,19 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
       }
       return;
     }
+    // První spuštění → zobraz potvrzovací dialog
+    let consented = false;
+    try { consented = localStorage.getItem(MIC_CONSENT_KEY) === "1"; } catch { /* ignore */ }
+    if (!consented) {
+      setShowMicConsent(true);
+      return;
+    }
+    startDictation();
+  };
+
+  const startDictation = () => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) return;
     const rec = new SR();
     rec.lang = "cs-CZ";
     rec.continuous = true;
