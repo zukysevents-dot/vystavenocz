@@ -30,11 +30,11 @@ function AppLayout() {
 
   return (
     <SubscriptionProvider>
-      <div className="flex h-screen bg-background">
+      <div className="flex min-h-screen bg-background md:h-screen md:overflow-hidden">
         <AppSidebar />
-        <main className="flex flex-1 flex-col overflow-hidden">
+        <main className="flex min-w-0 flex-1 flex-col md:overflow-hidden">
           <TrialBanner />
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 md:overflow-auto">
             <Outlet />
           </div>
         </main>
