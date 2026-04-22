@@ -113,6 +113,10 @@ function InvoiceEditorPage() {
   const [saving, setSaving] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
+  // Volby exportu PDF (přetahují se do <InvoiceDocument /> i pro náhled).
+  const [pdfShowFooter, setPdfShowFooter] = useState(true);
+  const [pdfShowVatBreakdown, setPdfShowVatBreakdown] = useState(true);
+  const [pdfCreditNoteDisplay, setPdfCreditNoteDisplay] = useState<"full" | "compact">("full");
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
