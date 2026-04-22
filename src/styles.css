@@ -60,47 +60,47 @@
 :root {
   --radius: 0.875rem;
 
-  /* Brand: dark Czech — deep navy bg, bright teal primary, coral accent, mint */
-  --background: oklch(0.16 0.025 240);
-  --foreground: oklch(0.98 0.005 220);
+  /* Brand: light & airy — warm off-white bg, deep ink text, refined teal primary, coral accent */
+  --background: oklch(0.99 0.005 95);
+  --foreground: oklch(0.22 0.02 240);
 
-  --surface: oklch(0.20 0.03 240);
-  --surface-soft: oklch(0.23 0.035 235);
+  --surface: oklch(0.975 0.008 90);
+  --surface-soft: oklch(0.96 0.012 85);
 
-  --card: oklch(0.21 0.03 240);
-  --card-foreground: oklch(0.98 0.005 220);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.02 240);
 
-  --popover: oklch(0.21 0.03 240);
-  --popover-foreground: oklch(0.98 0.005 220);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.02 240);
 
-  --primary: oklch(0.78 0.14 190);          /* bright teal */
-  --primary-foreground: oklch(0.16 0.025 240);
-  --primary-soft: oklch(0.32 0.07 200);
+  --primary: oklch(0.55 0.11 195);          /* deep refined teal */
+  --primary-foreground: oklch(0.99 0.005 95);
+  --primary-soft: oklch(0.93 0.04 195);
 
-  --secondary: oklch(0.27 0.04 235);
-  --secondary-foreground: oklch(0.98 0.005 220);
+  --secondary: oklch(0.95 0.01 240);
+  --secondary-foreground: oklch(0.22 0.02 240);
 
-  --muted: oklch(0.27 0.04 235);
-  --muted-foreground: oklch(0.72 0.025 220);
+  --muted: oklch(0.95 0.01 240);
+  --muted-foreground: oklch(0.48 0.02 240);
 
-  --accent: oklch(0.32 0.07 200);
-  --accent-foreground: oklch(0.98 0.005 220);
+  --accent: oklch(0.93 0.04 195);
+  --accent-foreground: oklch(0.28 0.06 200);
 
-  --coral: oklch(0.74 0.18 35);             /* warm coral CTA */
-  --coral-foreground: oklch(0.16 0.025 240);
+  --coral: oklch(0.68 0.19 32);             /* warm coral CTA */
+  --coral-foreground: oklch(0.99 0.005 95);
 
-  --mint: oklch(0.80 0.14 165);             /* soft mint */
-  --sun: oklch(0.86 0.15 90);               /* warm yellow accent */
+  --mint: oklch(0.85 0.10 165);             /* soft mint */
+  --sun: oklch(0.88 0.13 90);               /* warm yellow accent */
 
-  --success: oklch(0.78 0.16 155);
-  --success-foreground: oklch(0.16 0.025 240);
+  --success: oklch(0.62 0.16 155);
+  --success-foreground: oklch(0.99 0.005 95);
 
-  --destructive: oklch(0.68 0.22 25);
+  --destructive: oklch(0.60 0.22 25);
   --destructive-foreground: oklch(1 0 0);
 
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.78 0.14 190);
+  --border: oklch(0.22 0.02 240 / 10%);
+  --input: oklch(0.22 0.02 240 / 14%);
+  --ring: oklch(0.55 0.11 195);
 }
 
 .dark {
