@@ -462,6 +462,8 @@ function InvoiceEditorPage() {
         vat_total: totals.vat_total,
         total: totals.total,
         variable_symbol: vs,
+        constant_symbol: constantSymbol.trim() || null,
+        specific_symbol: specificSymbol.trim() || null,
         payment_method: paymentMethod,
         notes: notes || null,
         document_type: documentType,
