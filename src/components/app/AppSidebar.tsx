@@ -96,8 +96,6 @@ export function AppSidebar() {
           <Menu className="h-5 w-5" />
         </Button>
       </div>
-      {/* Spacer pod fixní topbar – jen na mobilu */}
-      <div className="h-14 shrink-0 md:hidden" aria-hidden />
 
       {/* Desktopový sidebar */}
       <aside className="hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-card md:flex">

@@ -32,7 +32,7 @@ function AppLayout() {
     <SubscriptionProvider>
       <div className="flex min-h-screen bg-background md:h-screen md:overflow-hidden">
         <AppSidebar />
-        <main className="flex min-w-0 flex-1 flex-col md:overflow-hidden">
+        <main className="flex min-w-0 flex-1 flex-col pt-14 md:overflow-hidden md:pt-0">
           <TrialBanner />
           <div className="flex-1 md:overflow-auto">
             <Outlet />
