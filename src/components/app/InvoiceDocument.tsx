@@ -35,6 +35,15 @@ export type InvoiceDocumentProps = {
   documentType?: "invoice" | "credit_note";
   /** Číslo původní faktury, ke které dobropis patří (jen pro credit_note). */
   originalInvoiceNumber?: string | null;
+  /** Zobrazit patičku „Vystaveno v aplikaci Fakturio". Default true. */
+  showFooter?: boolean;
+  /** Zobrazit detailní rozpis DPH po sazbách. Default true (jen pro plátce). */
+  showVatBreakdown?: boolean;
+  /** Způsob zobrazení dobropisu na PDF.
+   *  - "full"    : plný titulek „Opravný daňový doklad — dobropis" v hlavičce (default)
+   *  - "compact" : titulek zůstane „Faktura — daňový doklad" + diskrétní badge „DOBROPIS" vpravo nahoře
+   */
+  creditNoteDisplay?: "full" | "compact";
 };
 
 export function InvoiceDocument(props: InvoiceDocumentProps) {
@@ -53,12 +62,17 @@ export function InvoiceDocument(props: InvoiceDocumentProps) {
     cancelled = false,
     documentType = "invoice",
     originalInvoiceNumber = null,
+    showFooter = true,
+    showVatBreakdown = true,
+    creditNoteDisplay = "full",
   } = props;
 
   const isCreditNote = documentType === "credit_note";
-  const documentTitle = isCreditNote
-    ? "Opravný daňový doklad — dobropis"
-    : "Faktura — daňový doklad";
+  const documentTitle =
+    isCreditNote && creditNoteDisplay === "full"
+      ? "Opravný daňový doklad — dobropis"
+      : "Faktura — daňový doklad";
+  const showCompactCreditBadge = isCreditNote && creditNoteDisplay === "compact";
 
   const vatPayer = supplier.vat_mode === "payer";
   const totals = calcTotals(items, vatPayer);
