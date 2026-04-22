@@ -25,10 +25,10 @@ const points = [
 
 export function Legislativa() {
   return (
-    <section className="bg-background py-16 sm:py-20">
+    <section className="bg-surface-soft py-16 sm:py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-primary">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-coral">
             Legislativa a DPH
           </p>
           <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
@@ -44,9 +44,9 @@ export function Legislativa() {
           {points.map((p) => (
             <div
               key={p.title}
-              className="flex gap-4 rounded-2xl border border-border bg-card p-6 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-soft"
+              className="flex gap-4 rounded-2xl border border-border bg-card p-6 shadow-card transition-all hover:-translate-y-0.5 hover:border-coral/30 hover:shadow-soft"
             >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-coral/20 bg-coral/10 text-coral">
                 <p.icon className="h-5 w-5" />
               </div>
               <div>

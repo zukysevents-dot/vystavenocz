@@ -9,7 +9,7 @@ export function InvoicePreview() {
   return (
     <div className="relative mx-auto w-full max-w-md">
       {/* dekorativní glow za fakturou */}
-      <div className="absolute -inset-8 -z-10 rounded-[3rem] bg-gradient-to-br from-primary/40 via-mint/25 to-coral/30 blur-3xl" />
+      <div className="absolute -inset-8 -z-10 rounded-[3rem] bg-gradient-to-br from-coral/30 via-coral/15 to-transparent blur-3xl" />
 
       <div className="rotate-1 transition-transform duration-500 hover:rotate-0">
         <div className="overflow-hidden rounded-2xl bg-white text-slate-900 shadow-glow ring-1 ring-white/20">
@@ -84,7 +84,7 @@ export function InvoicePreview() {
             </div>
             <div className="mt-2 flex items-end justify-between border-t border-slate-200 pt-2">
               <span className="text-sm font-semibold text-slate-900">K úhradě</span>
-              <span className="text-xl font-bold text-teal-600">42 350 Kč</span>
+              <span className="text-xl font-bold text-slate-900">42 350 Kč</span>
             </div>
           </div>
 
@@ -104,10 +104,10 @@ export function InvoicePreview() {
       </div>
 
       {/* Plovoucí badge */}
-      <div className="absolute -bottom-4 -right-2 rotate-3 rounded-full bg-coral px-4 py-2 text-xs font-bold text-coral-foreground shadow-glow sm:-right-6">
+      <div className="absolute -bottom-4 -right-2 rotate-3 rounded-full bg-coral px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-coral-foreground shadow-glow sm:-right-6">
         ✨ Vystaveno za 30 s
       </div>
-      <div className="absolute -left-2 top-1/3 -rotate-6 rounded-full bg-mint px-3 py-1.5 text-[11px] font-bold text-background shadow-soft sm:-left-6">
+      <div className="absolute -left-2 top-1/3 -rotate-6 rounded-full border border-coral/30 bg-background/95 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-coral shadow-soft backdrop-blur sm:-left-6">
         DPH automaticky
       </div>
     </div>
