@@ -1,4 +1,4 @@
-import { Lightbulb, Zap, Rocket, Mail, Clock } from "lucide-react";
+import { Lightbulb, Zap, Rocket, Mail, Clock, MessageSquare, CheckCircle2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const steps = [
