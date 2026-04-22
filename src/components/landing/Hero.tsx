@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Check, FileText, QrCode, Wallet, Sparkles } from "lucide-react";
-import { InvoicePreview } from "./InvoicePreview";
+import { DashboardPreview } from "./DashboardPreview";
 
 export function Hero() {
   return (
@@ -73,7 +73,7 @@ export function Hero() {
         </div>
 
         <div className="flex items-center justify-center">
-          <InvoicePreview />
+          <DashboardPreview />
         </div>
       </div>
     </section>
