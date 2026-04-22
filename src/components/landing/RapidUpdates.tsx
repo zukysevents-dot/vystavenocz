@@ -16,21 +16,37 @@ const steps = [
   {
     icon: Lightbulb,
     step: "01",
-    title: "Pošlete nápad",
-    desc: "Napište nám e-mailem, co vám ve fakturaci chybí nebo co by šlo udělat lépe. Stačí pár vět.",
+    title: "Napište nám",
+    desc: "Stačí pár vět e-mailem — co vám chybí, co vás v fakturaci zdržuje, nebo co by se dalo líp.",
   },
   {
     icon: Zap,
     step: "02",
-    title: "Zapracujeme do dnů",
-    desc: 'Většinu úprav nasazujeme do 48 hodin. Žádné roadmapy na čtvrtletí, žádné „uvidíme příští rok".',
+    title: "Pustíme se do toho",
+    desc: 'Drobné úpravy stíháme do 48 hodin. Žádné čtvrtletní plány, žádné „uvidíme příští rok".',
   },
   {
     icon: Rocket,
     step: "03",
-    title: "Nasadíme všem",
-    desc: "Vylepšení dostanete automaticky — bez aktualizací, bez příplatků, bez čekání na novou verzi.",
+    title: "Máte to v aplikaci",
+    desc: "Vylepšení se objeví automaticky — bez aktualizací, bez příplatků, bez čekání na novou verzi.",
   },
+];
+
+const promiseItems = [
+  "Drobné úpravy v rozhraní — texty, ikony, pořadí polí",
+  "Nová pole na faktuře (KS, SS, vlastní poznámky)",
+  "Opravy chyb a překlepů v aplikaci i PDF",
+  "Vylepšení AI asistenta — lepší pochopení češtiny",
+  "Další možnosti exportu PDF a šablon",
+];
+
+const expectItems = [
+  "Napojení na české banky (Fio, ČSOB, Raiffeisen…)",
+  "Propojení s účetními systémy (Pohoda, Money S3)",
+  "Větší změny ve struktuře dat a fakturačních řadách",
+  "Funkce s právním přesahem (kontrolní hlášení, B2B EU)",
+  "Mobilní aplikace pro iOS a Android",
 ];
 
 export function RapidUpdates() {
@@ -44,18 +60,18 @@ export function RapidUpdates() {
         <div className="mx-auto max-w-2xl text-center">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-coral/30 bg-coral/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-coral">
             <Clock className="h-3.5 w-3.5" />
-            Změny děláme okamžitě
+            Stavíme to s vámi
           </div>
           <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            Vaše nápady jsou naše roadmapa
+            Co napíšete, to brzo uvidíte
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Nejsme korporát s ročním plánem. Když vám něco chybí, napíšete — a my to zpravidla
-            <span className="font-semibold text-foreground"> nasadíme do 48 hodin</span>.
+            Nejsme velký korporát s ročními plány. Když vám něco chybí, řeknete — a my to
+            <span className="font-semibold text-foreground"> obvykle nasadíme do 48 hodin</span>.
           </p>
           <p className="mt-3 text-sm text-muted-foreground">
-            Hrajeme fér: některé věci uděláme do hodiny, jiné potřebují víc času. Tady je, co
-            můžete čekat.
+            Hrajeme fér — některé věci stihneme ještě dnes, jiné si chvíli počkají. Tady je
+            přehled, co od nás kdy reálně čekat.
           </p>
         </div>
 
@@ -91,21 +107,21 @@ export function RapidUpdates() {
               </div>
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-coral">
-                  Slib · do 48 hodin
+                  Náš slib · do 48 hodin
                 </p>
-                <h3 className="text-base font-semibold text-foreground">Děláme okamžitě</h3>
+                <h3 className="text-base font-semibold text-foreground">
+                  Tohle vyřešíme obratem
+                </h3>
               </div>
             </div>
             <ul className="space-y-2.5 text-sm text-foreground/90">
-              <PromiseItem>Drobné UI úpravy (texty, ikony, pořadí polí)</PromiseItem>
-              <PromiseItem>Doplnění polí na faktuře (KS, SS, poznámky)</PromiseItem>
-              <PromiseItem>Opravy chyb a překlepů</PromiseItem>
-              <PromiseItem>Vylepšení AI promptů a chování asistenta</PromiseItem>
-              <PromiseItem>Nové možnosti exportu PDF</PromiseItem>
+              {promiseItems.map((it) => (
+                <PromiseItem key={it}>{it}</PromiseItem>
+              ))}
             </ul>
             <p className="mt-4 border-t border-coral/20 pt-3 text-xs text-muted-foreground">
-              <span className="font-semibold text-foreground">Když to nestihneme za 48 h</span>,
-              dáme vědět konkrétní termín do druhého dne.
+              <span className="font-semibold text-foreground">Pokud nám to vyjde jinak</span>,
+              ozveme se nejpozději druhý den s konkrétním termínem. Bez výmluv.
             </p>
           </div>
 
@@ -116,21 +132,22 @@ export function RapidUpdates() {
               </div>
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                  Očekávání · 1–6 týdnů
+                  Realita · 1–6 týdnů
                 </p>
-                <h3 className="text-base font-semibold text-foreground">Vyžaduje víc času</h3>
+                <h3 className="text-base font-semibold text-foreground">
+                  Tohle si zaslouží čas
+                </h3>
               </div>
             </div>
             <ul className="space-y-2.5 text-sm text-foreground/90">
-              <ExpectItem>Integrace s bankami (Fio, ČSOB, Raiffeisen…)</ExpectItem>
-              <ExpectItem>Napojení na účetní systémy (Pohoda, Money S3)</ExpectItem>
-              <ExpectItem>Větší změny v datovém modelu</ExpectItem>
-              <ExpectItem>Funkce vyžadující právní konzultaci (EET, B2B EU)</ExpectItem>
-              <ExpectItem>Mobilní aplikace pro iOS / Android</ExpectItem>
+              {expectItems.map((it) => (
+                <ExpectItem key={it}>{it}</ExpectItem>
+              ))}
             </ul>
             <p className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">
               <ShieldCheck className="mr-1 inline h-3.5 w-3.5 align-text-bottom text-foreground/70" />
-              Vždy řekneme rovnou, co je v plánu, co odkládáme — a proč.
+              Vždycky řekneme rovnou, co máme v plánu, co posouváme — a proč. Bez prázdných
+              roadmap.
             </p>
           </div>
         </div>
