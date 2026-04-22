@@ -12,7 +12,7 @@ const steps = [
     icon: Zap,
     step: "02",
     title: "Zapracujeme do dnů",
-    desc: "Většinu úprav nasazujeme do 48 hodin. Žádné roadmapy na čtvrtletí, žádné „uvidíme příští rok".",
+    desc: 'Většinu úprav nasazujeme do 48 hodin. Žádné roadmapy na čtvrtletí, žádné „uvidíme příští rok".',
   },
   {
     icon: Rocket,
