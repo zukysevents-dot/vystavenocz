@@ -986,6 +986,8 @@ function InvoiceEditorPage() {
                 dueDate={dueDate}
                 taxableDate={taxableDate}
                 variableSymbol={variableSymbol}
+                constantSymbol={constantSymbol}
+                specificSymbol={specificSymbol}
                 notes={notes}
                 paymentMethod={paymentMethod}
                 cancelled={loadedStatus === "cancelled"}
