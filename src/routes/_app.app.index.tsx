@@ -285,17 +285,17 @@ function DashboardPage() {
     : 0;
 
   return (
-    <div className="mx-auto max-w-6xl p-8">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
             Vítejte{profile?.company_name ? `, ${profile.company_name}` : ""}!
           </h1>
-          <p className="mt-1 text-muted-foreground">Přehled vaší fakturace</p>
+          <p className="mt-1 text-sm text-muted-foreground sm:text-base">Přehled vaší fakturace</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-[160px] sm:flex-none">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -305,10 +305,18 @@ function DashboardPage() {
               <SelectItem value="all">Vše</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="lg" onClick={handleExportCsv} disabled={filteredInvoices.length === 0}>
-            <Download className="h-4 w-4" /> Export CSV
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={handleExportCsv}
+            disabled={filteredInvoices.length === 0}
+            className="flex-1 sm:flex-none"
+          >
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:inline">Export CSV</span>
+            <span className="sm:hidden">Export</span>
           </Button>
-          <Button variant="coral" size="lg" asChild>
+          <Button variant="coral" size="lg" asChild className="flex-1 sm:flex-none">
             <Link to="/app/faktury/editor"><Plus className="h-4 w-4" /> Nová faktura</Link>
           </Button>
         </div>
@@ -325,7 +333,7 @@ function DashboardPage() {
         </div>
       )}
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard
           icon={Coins}
           label="Celkem fakturováno"
@@ -355,9 +363,9 @@ function DashboardPage() {
         />
       </div>
 
-      <div className="mt-8 grid gap-6 xl:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:gap-6 xl:grid-cols-3">
         {/* Chart */}
-        <div className="rounded-2xl border border-border bg-card p-6 xl:col-span-2">
+        <div className="rounded-2xl border border-border bg-card p-4 sm:p-6 xl:col-span-2">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-semibold">{periodRange.label}</h2>
@@ -366,7 +374,7 @@ function DashboardPage() {
             <TrendingUp className="h-4 w-4 text-primary" />
           </div>
           <ChartContainer
-            className="mt-4 h-[260px] w-full"
+            className="mt-4 h-[220px] w-full sm:h-[260px]"
             config={{
               vystaveno: { label: "Vystaveno", color: "hsl(var(--primary))" },
               zaplaceno: { label: "Zaplaceno", color: "hsl(var(--success, 142 71% 45%))" },
@@ -395,7 +403,7 @@ function DashboardPage() {
         </div>
 
         {/* Overdue list */}
-        <div className="rounded-2xl border border-border bg-card p-6">
+        <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold">Po splatnosti</h2>
             <AlertTriangle className="h-4 w-4 text-coral" />
@@ -473,13 +481,13 @@ function StatCard({
           ? "text-primary"
           : "text-foreground";
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">{label}</span>
-        <Icon className={`h-4 w-4 ${accentColor}`} />
+    <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs text-muted-foreground sm:text-sm">{label}</span>
+        <Icon className={`h-4 w-4 flex-none ${accentColor}`} />
       </div>
-      <div className="mt-2 text-2xl font-bold tracking-tight">{value}</div>
-      {subtitle && <div className="mt-0.5 text-xs text-muted-foreground">{subtitle}</div>}
+      <div className="mt-2 text-xl font-bold tracking-tight sm:text-2xl">{value}</div>
+      {subtitle && <div className="mt-0.5 text-[11px] text-muted-foreground sm:text-xs">{subtitle}</div>}
     </div>
   );
 }
