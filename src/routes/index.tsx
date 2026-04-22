@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageShell } from "@/components/landing/PageShell";
 import { Hero } from "@/components/landing/Hero";
 import { WhatsNew } from "@/components/landing/WhatsNew";
+import { AiDemo } from "@/components/landing/AiDemo";
 import { RapidUpdates } from "@/components/landing/RapidUpdates";
 import { Legislativa } from "@/components/landing/Legislativa";
 import { Cta } from "@/components/landing/Cta";
@@ -31,6 +32,7 @@ function Index() {
     <PageShell>
       <Hero />
       <WhatsNew />
+      <AiDemo />
       <RapidUpdates />
       <Legislativa />
       <Cta />
