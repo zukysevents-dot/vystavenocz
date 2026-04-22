@@ -23,7 +23,7 @@ const steps = [
     icon: Zap,
     step: "02",
     title: "Pustíme se do toho",
-    desc: "Drobné úpravy stíháme do 48 hodin. Žádné čtvrtletní plány, žádné „uvidíme příští rok".",
+    desc: 'Drobné úpravy stíháme do 48 hodin. Žádné čtvrtletní plány, žádné „uvidíme příští rok".',
   },
   {
     icon: Rocket,
