@@ -221,3 +221,21 @@ export function RapidUpdates() {
     </section>
   );
 }
+
+function PromiseItem({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex items-start gap-2.5">
+      <CheckCircle2 className="mt-0.5 h-4 w-4 flex-none text-coral" />
+      <span>{children}</span>
+    </li>
+  );
+}
+
+function ExpectItem({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex items-start gap-2.5">
+      <Hourglass className="mt-0.5 h-4 w-4 flex-none text-muted-foreground" />
+      <span>{children}</span>
+    </li>
+  );
+}
