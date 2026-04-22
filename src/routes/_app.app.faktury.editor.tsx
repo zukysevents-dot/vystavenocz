@@ -878,6 +878,22 @@ function InvoiceEditorPage() {
               <Field label="Variabilní symbol">
                 <Input value={variableSymbol} onChange={(e) => setVariableSymbol(e.target.value)} placeholder="auto z čísla faktury" />
               </Field>
+              <Field label="Konstantní symbol">
+                <Input
+                  value={constantSymbol}
+                  onChange={(e) => setConstantSymbol(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  placeholder="nepovinné (např. 0308)"
+                  inputMode="numeric"
+                />
+              </Field>
+              <Field label="Specifický symbol">
+                <Input
+                  value={specificSymbol}
+                  onChange={(e) => setSpecificSymbol(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  placeholder="nepovinné"
+                  inputMode="numeric"
+                />
+              </Field>
               <Field label="Způsob úhrady">
                 <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
