@@ -45,12 +45,12 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
 
-  --shadow-soft: 0 1px 2px color-mix(in oklab, var(--foreground) 6%, transparent), 0 8px 24px -8px color-mix(in oklab, var(--foreground) 10%, transparent);
-  --shadow-glow: 0 12px 40px -12px color-mix(in oklab, var(--coral) 35%, transparent), 0 4px 12px -4px color-mix(in oklab, var(--foreground) 8%, transparent);
-  --shadow-card: 0 1px 2px color-mix(in oklab, var(--foreground) 4%, transparent), 0 8px 28px -12px color-mix(in oklab, var(--foreground) 12%, transparent);
+  --shadow-soft: 0 1px 0 oklch(1 0 0 / 4%) inset, 0 8px 24px -12px oklch(0 0 0 / 50%);
+  --shadow-glow: 0 0 0 1px color-mix(in oklab, var(--coral) 30%, transparent), 0 16px 48px -16px color-mix(in oklab, var(--coral) 45%, transparent);
+  --shadow-card: 0 1px 0 oklch(1 0 0 / 4%) inset, 0 12px 32px -16px oklch(0 0 0 / 60%);
 
   --gradient-hero: linear-gradient(180deg, var(--surface-soft) 0%, var(--background) 100%);
-  --gradient-primary: linear-gradient(135deg, var(--primary) 0%, var(--mint) 100%);
+  --gradient-primary: linear-gradient(135deg, var(--coral) 0%, var(--sun) 100%);
   --gradient-coral: linear-gradient(135deg, var(--coral) 0%, oklch(0.78 0.16 35) 100%);
   --gradient-mesh: radial-gradient(at 20% 10%, color-mix(in oklab, var(--primary) 30%, transparent) 0px, transparent 50%),
                    radial-gradient(at 90% 20%, color-mix(in oklab, var(--coral) 22%, transparent) 0px, transparent 50%),
@@ -60,47 +60,47 @@
 :root {
   --radius: 0.875rem;
 
-  /* Brand: light & airy — warm off-white bg, deep ink text, refined teal primary, coral accent */
-  --background: oklch(0.99 0.005 95);
-  --foreground: oklch(0.22 0.02 240);
+  /* Brand: sofistikovaný dark — hluboká ink čerň s lehkým teplým nádechem, monochrome s jedním coral akcentem */
+  --background: oklch(0.15 0.005 60);        /* deep warm ink */
+  --foreground: oklch(0.97 0.005 80);
 
-  --surface: oklch(0.975 0.008 90);
-  --surface-soft: oklch(0.96 0.012 85);
+  --surface: oklch(0.18 0.006 60);
+  --surface-soft: oklch(0.21 0.008 60);
 
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.22 0.02 240);
+  --card: oklch(0.19 0.007 60);
+  --card-foreground: oklch(0.97 0.005 80);
 
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.22 0.02 240);
+  --popover: oklch(0.19 0.007 60);
+  --popover-foreground: oklch(0.97 0.005 80);
 
-  --primary: oklch(0.55 0.11 195);          /* deep refined teal */
-  --primary-foreground: oklch(0.99 0.005 95);
-  --primary-soft: oklch(0.93 0.04 195);
+  --primary: oklch(0.97 0.005 80);           /* primary = jas/text, tlačítka jsou bílá */
+  --primary-foreground: oklch(0.15 0.005 60);
+  --primary-soft: oklch(0.28 0.01 60);
 
-  --secondary: oklch(0.95 0.01 240);
-  --secondary-foreground: oklch(0.22 0.02 240);
+  --secondary: oklch(0.24 0.008 60);
+  --secondary-foreground: oklch(0.97 0.005 80);
 
-  --muted: oklch(0.95 0.01 240);
-  --muted-foreground: oklch(0.48 0.02 240);
+  --muted: oklch(0.24 0.008 60);
+  --muted-foreground: oklch(0.68 0.008 70);
 
-  --accent: oklch(0.93 0.04 195);
-  --accent-foreground: oklch(0.28 0.06 200);
+  --accent: oklch(0.28 0.01 60);
+  --accent-foreground: oklch(0.97 0.005 80);
 
-  --coral: oklch(0.68 0.19 32);             /* warm coral CTA */
-  --coral-foreground: oklch(0.99 0.005 95);
+  --coral: oklch(0.72 0.18 38);              /* hlavní akcent — warm coral */
+  --coral-foreground: oklch(0.15 0.005 60);
 
-  --mint: oklch(0.85 0.10 165);             /* soft mint */
-  --sun: oklch(0.88 0.13 90);               /* warm yellow accent */
+  --mint: oklch(0.82 0.10 165);
+  --sun: oklch(0.85 0.13 80);
 
-  --success: oklch(0.62 0.16 155);
-  --success-foreground: oklch(0.99 0.005 95);
+  --success: oklch(0.78 0.14 155);
+  --success-foreground: oklch(0.15 0.005 60);
 
-  --destructive: oklch(0.60 0.22 25);
+  --destructive: oklch(0.65 0.22 25);
   --destructive-foreground: oklch(1 0 0);
 
-  --border: oklch(0.22 0.02 240 / 10%);
-  --input: oklch(0.22 0.02 240 / 14%);
-  --ring: oklch(0.55 0.11 195);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 10%);
+  --ring: oklch(0.72 0.18 38);
 }
 
 .dark {
