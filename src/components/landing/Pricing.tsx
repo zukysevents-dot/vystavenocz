@@ -105,15 +105,6 @@ export function Pricing() {
         <p className="mt-6 text-center text-xs text-muted-foreground">
           Fakturujete méně než 5× měsíčně? Napište nám, máme i tarif Start zdarma.
         </p>
-
-        <div className="mt-4 text-center">
-          <a
-            href="/nase-sliby"
-            className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
-          >
-            Přečtěte si naše sliby a garance →
-          </a>
-        </div>
       </div>
     </section>
   );
