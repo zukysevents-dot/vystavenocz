@@ -19,13 +19,15 @@ export function Hero() {
             <Sparkles className="h-3.5 w-3.5 text-coral" />
           </a>
 
-          <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            Faktura hotová{" "}
-            <span className="text-gradient-primary">na jedno řeknutí</span>
+          <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-[3.75rem]">
+            Fakturujte{" "}
+            <span className="text-gradient-primary">hlasem.</span>
+            <br className="hidden sm:block" />
+            Hotovo za 30 sekund.
           </h1>
 
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Řekněte „Vystav fakturu firmě Alza na 2 hodiny konzultace" a AI asistent v češtině ji připraví za vás — včetně odběratele, položek a DPH. Funguje i hands-free v autě. Pro OSVČ, plátce i neplátce DPH.
+            Řekněte „Vystav fakturu firmě Alza na 2 hodiny konzultace" a AI asistent v češtině doplní odběratele, položky i DPH. Funguje i hands‑free v autě. Pro OSVČ, plátce i neplátce DPH.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
