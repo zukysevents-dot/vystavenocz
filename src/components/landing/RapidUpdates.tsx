@@ -135,6 +135,67 @@ export function RapidUpdates() {
           </div>
         </div>
 
+        <div className="mx-auto mt-10 max-w-4xl rounded-2xl border border-border bg-card p-5 shadow-card sm:p-6">
+          <div className="mb-4 flex items-center gap-2.5">
+            <span className="inline-flex items-center gap-1 rounded-full border border-coral/30 bg-coral/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.15em] text-coral">
+              <Sparkles className="h-3 w-3" />
+              Příklad ze slibu
+            </span>
+            <span className="text-sm font-semibold text-foreground">
+              Změna splatnosti přes AI chat
+            </span>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-stretch">
+            {/* User message */}
+            <div className="rounded-xl border border-border bg-background p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+                Napíšete v chatu
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-foreground">
+                „Změň splatnost na 30 dní."
+              </p>
+            </div>
+
+            {/* Arrow */}
+            <div className="flex items-center justify-center text-coral sm:px-1">
+              <span className="hidden text-lg font-bold sm:inline">→</span>
+              <span className="inline text-lg font-bold sm:hidden">↓</span>
+            </div>
+
+            {/* Immediate result */}
+            <div className="rounded-xl border border-coral/30 bg-coral/5 p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-coral">
+                Uvidíte hned (do 1 s)
+              </p>
+              <ul className="mt-2 space-y-1.5 text-sm text-foreground/90">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 flex-none text-coral" />
+                  Pole „Splatnost" se přepíše na <span className="font-semibold">30 dní</span>.
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 flex-none text-coral" />
+                  Datum splatnosti se přepočítá podle data vystavení.
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 flex-none text-coral" />
+                  AI potvrdí: „Hotovo — splatnost 30 dní, datum 21. 5. 2025."
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 flex-none text-coral" />
+                  Změna se uloží do konceptu — žádné tlačítko „Uložit".
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <p className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">
+            <Clock className="mr-1 inline h-3.5 w-3.5 align-text-bottom text-foreground/70" />
+            Stejně rychle reagují i další požadavky: sleva, změna množství, přidání položky nebo
+            přepnutí měny. Větší zásahy (nová pole, integrace) si vyžádají čas podle tabulky výše.
+          </p>
+        </div>
+
         <div className="mt-12 flex flex-col items-center gap-3">
           <Button variant="coral" size="lg" asChild>
             <a href="mailto:napady@fakturio.cz?subject=N%C3%A1vrh%20na%20vylep%C5%A1en%C3%AD%20Fakturio">
