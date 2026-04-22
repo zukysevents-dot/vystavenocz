@@ -1,4 +1,4 @@
-import { Lightbulb, Zap, Rocket, Mail, Clock } from "lucide-react";
+import { Lightbulb, Zap, Rocket, Mail, Clock, MessageSquare, CheckCircle2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const steps = [
@@ -78,6 +78,77 @@ export function RapidUpdates() {
           <p className="text-xs text-muted-foreground">
             Píšeme zpět osobně — žádné automatické odpovědi.
           </p>
+        </div>
+
+        <div className="mx-auto mt-16 max-w-3xl">
+          <p className="mb-4 text-center text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            Jak to vypadá v praxi
+          </p>
+          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+            <div className="flex items-center justify-between border-b border-border bg-surface-soft px-5 py-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-coral/70" />
+                <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
+                <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
+              </div>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Reálný požadavek · březen 2025
+              </span>
+            </div>
+
+            <ol className="divide-y divide-border">
+              <li className="flex gap-4 p-5 sm:p-6">
+                <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full border border-border bg-background text-muted-foreground">
+                  <MessageSquare className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="text-sm font-semibold text-foreground">Pondělí 9:14</span>
+                    <span className="text-xs text-muted-foreground">— Tomáš, OSVČ</span>
+                  </div>
+                  <p className="mt-1.5 text-sm leading-relaxed text-foreground/90">
+                    „Šlo by na fakturu přidat <span className="font-medium">konstantní a specifický symbol</span>?
+                    Banka mi je vyžaduje a teď je dopisuju ručně."
+                  </p>
+                </div>
+              </li>
+
+              <li className="flex gap-4 p-5 sm:p-6">
+                <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full border border-coral/30 bg-coral/10 text-coral">
+                  <Zap className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="text-sm font-semibold text-foreground">Pondělí 11:42</span>
+                    <span className="text-xs text-muted-foreground">— odpověď z Fakturia</span>
+                  </div>
+                  <p className="mt-1.5 text-sm leading-relaxed text-foreground/90">
+                    „Dává smysl, dáváme to do práce. Ozveme se, až bude nasazeno."
+                  </p>
+                </div>
+              </li>
+
+              <li className="flex gap-4 p-5 sm:p-6">
+                <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full border border-coral/40 bg-coral/15 text-coral">
+                  <CheckCircle2 className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="text-sm font-semibold text-foreground">Středa 16:08</span>
+                    <span className="inline-flex items-center gap-1 rounded-full border border-coral/30 bg-coral/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.15em] text-coral">
+                      <Sparkles className="h-3 w-3" />
+                      Nasazeno
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-sm leading-relaxed text-foreground/90">
+                    KS a SS jsou v editoru i v PDF — pro všechny uživatele.
+                    <span className="text-muted-foreground"> Od nápadu k nasazení: </span>
+                    <span className="font-semibold text-foreground">~55 hodin.</span>
+                  </p>
+                </div>
+              </li>
+            </ol>
+          </div>
         </div>
       </div>
     </section>
