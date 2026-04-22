@@ -29,6 +29,10 @@ export type InvoiceDocumentProps = {
   notes?: string;
   paymentMethod?: string;
   currency?: string;
+  /** Konstantní symbol — zobrazí se v meta řádku jen pokud má hodnotu. */
+  constantSymbol?: string | null;
+  /** Specifický symbol — zobrazí se v meta řádku jen pokud má hodnotu. */
+  specificSymbol?: string | null;
   /** Stornovaná faktura — vykreslí přes celou stránku výrazný vodoznak. */
   cancelled?: boolean;
   /** Typ dokladu — běžná faktura nebo dobropis (opravný daňový doklad). */
