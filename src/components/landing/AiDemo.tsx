@@ -111,13 +111,14 @@ export function AiDemo() {
         <div className="mx-auto max-w-2xl text-center">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-coral/30 bg-coral/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-coral">
             <Sparkles className="h-3.5 w-3.5" />
-            Živá ukázka
+            Bonus · AI asistent
           </div>
           <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            Napíšete, co chcete změnit. Faktura se přepíše hned.
+            A když nechcete klikat — řeknete to AI
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Žádné klikání po formulářích. AI rozumí česky a sama přepočítá DPH, slevy i splatnost.
+            Vystavovat a spravovat můžete úplně klasicky. AI asistent je bonus navrch — když
+            spěcháte, napíšete změnu česky a faktura se přepíše sama.
           </p>
         </div>
 
