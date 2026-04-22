@@ -29,6 +29,10 @@ export type InvoiceDocumentProps = {
   notes?: string;
   paymentMethod?: string;
   currency?: string;
+  /** Konstantní symbol — zobrazí se v meta řádku jen pokud má hodnotu. */
+  constantSymbol?: string | null;
+  /** Specifický symbol — zobrazí se v meta řádku jen pokud má hodnotu. */
+  specificSymbol?: string | null;
   /** Stornovaná faktura — vykreslí přes celou stránku výrazný vodoznak. */
   cancelled?: boolean;
   /** Typ dokladu — běžná faktura nebo dobropis (opravný daňový doklad). */
@@ -59,6 +63,8 @@ export function InvoiceDocument(props: InvoiceDocumentProps) {
     notes,
     paymentMethod = "bank_transfer",
     currency = "CZK",
+    constantSymbol = null,
+    specificSymbol = null,
     cancelled = false,
     documentType = "invoice",
     originalInvoiceNumber = null,
@@ -227,12 +233,27 @@ export function InvoiceDocument(props: InvoiceDocumentProps) {
       </div>
 
       {/* Meta info */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "12px", marginTop: "24px", padding: "12px", background: "#f8fafc", borderRadius: "8px" }}>
-        <MetaCell label="Datum vystavení" value={formatDate(issueDate)} />
-        <MetaCell label={vatPayer ? "DUZP" : "Datum plnění"} value={formatDate(taxableDate)} />
-        <MetaCell label="Datum splatnosti" value={formatDate(dueDate)} />
-        <MetaCell label="Variabilní symbol" value={vs} />
-      </div>
+      {(() => {
+        const ks = constantSymbol?.trim() || "";
+        const ss = specificSymbol?.trim() || "";
+        const cells: Array<{ label: string; value: string }> = [
+          { label: "Datum vystavení", value: formatDate(issueDate) },
+          { label: vatPayer ? "DUZP" : "Datum plnění", value: formatDate(taxableDate) },
+          { label: "Datum splatnosti", value: formatDate(dueDate) },
+          { label: "Variabilní symbol", value: vs },
+        ];
+        if (ks) cells.push({ label: "Konstantní symbol", value: ks });
+        if (ss) cells.push({ label: "Specifický symbol", value: ss });
+        // Při 4 polích → 4 sloupce; při 5–6 polích přejdeme na 3 sloupce ve dvou řádcích pro lepší čitelnost.
+        const cols = cells.length <= 4 ? cells.length : 3;
+        return (
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: "12px", marginTop: "24px", padding: "12px", background: "#f8fafc", borderRadius: "8px" }}>
+            {cells.map((c) => (
+              <MetaCell key={c.label} label={c.label} value={c.value} />
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Položky */}
       <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "24px", fontSize: "11.5px" }}>
@@ -285,6 +306,8 @@ export function InvoiceDocument(props: InvoiceDocumentProps) {
               {iban && <div>IBAN: <strong>{iban}</strong></div>}
               {supplier.swift && <div>SWIFT: <strong>{supplier.swift}</strong></div>}
               <div>VS: <strong>{vs}</strong></div>
+              {constantSymbol?.trim() && <div>KS: <strong>{constantSymbol.trim()}</strong></div>}
+              {specificSymbol?.trim() && <div>SS: <strong>{specificSymbol.trim()}</strong></div>}
               <div style={{ marginTop: "4px", fontSize: "11px", color: "#64748b" }}>
                 Způsob úhrady: bankovní převod
               </div>

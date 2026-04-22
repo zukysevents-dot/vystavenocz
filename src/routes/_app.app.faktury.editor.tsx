@@ -140,6 +140,8 @@ function InvoiceEditorPage() {
   const [dueDate, setDueDate] = useState(addDaysISO(14));
   const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
   const [variableSymbol, setVariableSymbol] = useState("");
+  const [constantSymbol, setConstantSymbol] = useState("");
+  const [specificSymbol, setSpecificSymbol] = useState("");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<InvoiceItemDraft[]>([newItem()]);
 
@@ -185,6 +187,8 @@ function InvoiceEditorPage() {
           setDueDate(inv.due_date);
           setPaymentMethod(inv.payment_method);
           setVariableSymbol(inv.variable_symbol || "");
+          setConstantSymbol(inv.constant_symbol || "");
+          setSpecificSymbol(inv.specific_symbol || "");
           setNotes(inv.notes || "");
           setSelectedClientId(inv.client_id || "");
           setLoadedStatus(inv.status as typeof loadedStatus);
@@ -296,6 +300,8 @@ function InvoiceEditorPage() {
     dueDate,
     paymentMethod,
     variableSymbol,
+    constantSymbol,
+    specificSymbol,
     notes,
     selectedClientId,
     items,
@@ -456,6 +462,8 @@ function InvoiceEditorPage() {
         vat_total: totals.vat_total,
         total: totals.total,
         variable_symbol: vs,
+        constant_symbol: constantSymbol.trim() || null,
+        specific_symbol: specificSymbol.trim() || null,
         payment_method: paymentMethod,
         notes: notes || null,
         document_type: documentType,
@@ -870,6 +878,22 @@ function InvoiceEditorPage() {
               <Field label="Variabilní symbol">
                 <Input value={variableSymbol} onChange={(e) => setVariableSymbol(e.target.value)} placeholder="auto z čísla faktury" />
               </Field>
+              <Field label="Konstantní symbol">
+                <Input
+                  value={constantSymbol}
+                  onChange={(e) => setConstantSymbol(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  placeholder="nepovinné (např. 0308)"
+                  inputMode="numeric"
+                />
+              </Field>
+              <Field label="Specifický symbol">
+                <Input
+                  value={specificSymbol}
+                  onChange={(e) => setSpecificSymbol(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  placeholder="nepovinné"
+                  inputMode="numeric"
+                />
+              </Field>
               <Field label="Způsob úhrady">
                 <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -962,6 +986,8 @@ function InvoiceEditorPage() {
                 dueDate={dueDate}
                 taxableDate={taxableDate}
                 variableSymbol={variableSymbol}
+                constantSymbol={constantSymbol}
+                specificSymbol={specificSymbol}
                 notes={notes}
                 paymentMethod={paymentMethod}
                 cancelled={loadedStatus === "cancelled"}
@@ -988,6 +1014,8 @@ function InvoiceEditorPage() {
             dueDate={dueDate}
             taxableDate={taxableDate}
             variableSymbol={variableSymbol}
+            constantSymbol={constantSymbol}
+            specificSymbol={specificSymbol}
             notes={notes}
             paymentMethod={paymentMethod}
             cancelled={loadedStatus === "cancelled"}
