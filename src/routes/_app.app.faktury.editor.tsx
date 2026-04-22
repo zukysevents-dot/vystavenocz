@@ -187,6 +187,8 @@ function InvoiceEditorPage() {
           setDueDate(inv.due_date);
           setPaymentMethod(inv.payment_method);
           setVariableSymbol(inv.variable_symbol || "");
+          setConstantSymbol(inv.constant_symbol || "");
+          setSpecificSymbol(inv.specific_symbol || "");
           setNotes(inv.notes || "");
           setSelectedClientId(inv.client_id || "");
           setLoadedStatus(inv.status as typeof loadedStatus);
