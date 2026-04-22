@@ -5,6 +5,7 @@ import { openCookieSettings } from "@/components/CookieBanner";
 const productLinks = [
   { to: "/funkce", label: "Funkce" },
   { to: "/cenik", label: "Ceník" },
+  { to: "/akce", label: "Akce do 1. 6." },
   { to: "/nase-sliby", label: "Naše sliby" },
   { to: "/srovnani", label: "Srovnání" },
   { to: "/faq", label: "FAQ" },

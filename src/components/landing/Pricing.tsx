@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Check, Sparkles, Tag } from "lucide-react";
+import { Check, Sparkles } from "lucide-react";
 import { useState } from "react";
 
 const features = [
@@ -18,22 +18,9 @@ const features = [
 export function Pricing() {
   const [yearly, setYearly] = useState(true);
 
-  const currentPrice = yearly ? "100" : "159";
-  const futurePrice = yearly ? "167" : "269";
-  const yearlyTotalNow = "1 200";
-  const yearlyTotalFuture = "2 000";
-
   return (
     <section id="cenik" className="bg-background py-16 sm:py-20">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        {/* Action banner */}
-        <div className="mb-8 flex justify-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-coral/30 bg-coral/10 px-4 py-2 text-sm font-semibold text-coral">
-            <Tag className="h-4 w-4" />
-            Akce do 1. 6. — současná cena se vám zamkne na 12 měsíců
-          </div>
-        </div>
-
         {/* Toggle */}
         <div className="flex items-center justify-center">
           <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card p-1 shadow-sm">
@@ -79,31 +66,20 @@ export function Pricing() {
             </div>
 
             <div className="px-8 py-8">
-              <div className="flex items-end gap-3">
+              <div className="flex items-end gap-2">
                 <span className="text-6xl font-extrabold tracking-tight text-foreground">
-                  {currentPrice}
+                  {yearly ? "100" : "159"}
                 </span>
                 <div className="pb-2">
                   <p className="text-lg font-semibold text-foreground">Kč</p>
                   <p className="text-xs text-muted-foreground">měsíčně bez DPH</p>
                 </div>
-                <div className="ml-auto pb-2 text-right">
-                  <p className="text-xs font-medium text-muted-foreground">Po 1. 6.</p>
-                  <p className="text-sm font-semibold text-muted-foreground line-through">
-                    {futurePrice} Kč/měs
-                  </p>
-                </div>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
                 {yearly
-                  ? `Účtováno ročně ${yearlyTotalNow} Kč (po 1. 6. ${yearlyTotalFuture} Kč). Ušetříte 708 Kč.`
+                  ? "Účtováno ročně 1 200 Kč. Ušetříte 708 Kč."
                   : "Účtováno měsíčně. Přechod na roční tarif kdykoliv."}
               </p>
-              <div className="mt-3 rounded-lg border border-coral/20 bg-coral/5 px-3 py-2 text-xs text-foreground">
-                <strong className="font-semibold">Zaregistrujte se do 1. 6.</strong> a cenu vám
-                garantujeme po dobu 12 měsíců. Po tomto datu se ceník mění na{" "}
-                <strong>269 Kč/měs</strong> nebo <strong>2 000 Kč/rok</strong>.
-              </div>
 
               <Button variant="coral" size="lg" className="mt-6 w-full" asChild>
                 <a href="/registrace">Vyzkoušet 14 dní zdarma</a>
