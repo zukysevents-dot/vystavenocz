@@ -9,7 +9,10 @@ import {
   Sparkles,
   Hourglass,
   ShieldCheck,
+  Loader2,
+  RotateCcw,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 const steps = [
