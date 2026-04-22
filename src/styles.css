@@ -50,11 +50,11 @@
   --shadow-card: 0 1px 0 oklch(1 0 0 / 4%) inset, 0 12px 32px -16px oklch(0 0 0 / 60%);
 
   --gradient-hero: linear-gradient(180deg, var(--surface-soft) 0%, var(--background) 100%);
-  --gradient-primary: linear-gradient(135deg, var(--coral) 0%, var(--sun) 100%);
-  --gradient-coral: linear-gradient(135deg, var(--coral) 0%, oklch(0.78 0.16 35) 100%);
-  --gradient-mesh: radial-gradient(at 20% 10%, color-mix(in oklab, var(--primary) 30%, transparent) 0px, transparent 50%),
-                   radial-gradient(at 90% 20%, color-mix(in oklab, var(--coral) 22%, transparent) 0px, transparent 50%),
-                   radial-gradient(at 60% 90%, color-mix(in oklab, var(--mint) 26%, transparent) 0px, transparent 50%);
+  --gradient-primary: linear-gradient(135deg, oklch(0.82 0.14 45) 0%, var(--coral) 60%, oklch(0.62 0.18 28) 100%);
+  --gradient-coral: linear-gradient(135deg, var(--coral) 0%, oklch(0.62 0.18 28) 100%);
+  --gradient-mesh: radial-gradient(at 18% 12%, color-mix(in oklab, var(--coral) 18%, transparent) 0px, transparent 55%),
+                   radial-gradient(at 88% 28%, color-mix(in oklab, var(--coral) 10%, transparent) 0px, transparent 55%),
+                   radial-gradient(at 60% 95%, oklch(1 0 0 / 4%) 0px, transparent 50%);
 }
 
 :root {
