@@ -53,6 +53,10 @@ export function RapidUpdates() {
             Nejsme korporát s ročním plánem. Když vám něco chybí, napíšete — a my to zpravidla
             <span className="font-semibold text-foreground"> nasadíme do 48 hodin</span>.
           </p>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Hrajeme fér: některé věci uděláme do hodiny, jiné potřebují víc času. Tady je, co
+            můžete čekat.
+          </p>
         </div>
 
         <div className="relative mt-14 grid gap-6 sm:grid-cols-3">
