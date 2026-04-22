@@ -132,7 +132,7 @@ export function AiDemo() {
                 <span className="text-sm font-semibold text-foreground">AI asistent</span>
               </div>
               <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                <span className="h-1.5 w-1.5 rounded-full bg-coral" />
                 Online · česky
               </span>
             </div>
@@ -176,7 +176,7 @@ export function AiDemo() {
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1.5">
-                        <Check className="h-3.5 w-3.5 text-emerald-500" />
+                        <Check className="h-3.5 w-3.5 text-coral" />
                         {step.reply}
                       </span>
                     )}
