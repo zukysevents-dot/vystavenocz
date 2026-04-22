@@ -16,21 +16,37 @@ const steps = [
   {
     icon: Lightbulb,
     step: "01",
-    title: "Pošlete nápad",
-    desc: "Napište nám e-mailem, co vám ve fakturaci chybí nebo co by šlo udělat lépe. Stačí pár vět.",
+    title: "Napište nám",
+    desc: "Stačí pár vět e-mailem — co vám chybí, co vás v fakturaci zdržuje, nebo co by se dalo líp.",
   },
   {
     icon: Zap,
     step: "02",
-    title: "Zapracujeme do dnů",
-    desc: 'Většinu úprav nasazujeme do 48 hodin. Žádné roadmapy na čtvrtletí, žádné „uvidíme příští rok".',
+    title: "Pustíme se do toho",
+    desc: "Drobné úpravy stíháme do 48 hodin. Žádné čtvrtletní plány, žádné „uvidíme příští rok".",
   },
   {
     icon: Rocket,
     step: "03",
-    title: "Nasadíme všem",
-    desc: "Vylepšení dostanete automaticky — bez aktualizací, bez příplatků, bez čekání na novou verzi.",
+    title: "Máte to v aplikaci",
+    desc: "Vylepšení se objeví automaticky — bez aktualizací, bez příplatků, bez čekání na novou verzi.",
   },
+];
+
+const promiseItems = [
+  "Drobné úpravy v rozhraní — texty, ikony, pořadí polí",
+  "Nová pole na faktuře (KS, SS, vlastní poznámky)",
+  "Opravy chyb a překlepů v aplikaci i PDF",
+  "Vylepšení AI asistenta — lepší pochopení češtiny",
+  "Další možnosti exportu PDF a šablon",
+];
+
+const expectItems = [
+  "Napojení na české banky (Fio, ČSOB, Raiffeisen…)",
+  "Propojení s účetními systémy (Pohoda, Money S3)",
+  "Větší změny ve struktuře dat a fakturačních řadách",
+  "Funkce s právním přesahem (kontrolní hlášení, B2B EU)",
+  "Mobilní aplikace pro iOS a Android",
 ];
 
 export function RapidUpdates() {
