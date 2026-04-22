@@ -154,6 +154,24 @@ export function InvoiceDocument(props: InvoiceDocumentProps) {
           )}
         </div>
         <div style={{ textAlign: "right" }}>
+          {showCompactCreditBadge && (
+            <div
+              style={{
+                display: "inline-block",
+                marginBottom: "6px",
+                padding: "2px 10px",
+                borderRadius: "999px",
+                background: "#fee2e2",
+                color: "#991b1b",
+                fontSize: "10px",
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+              }}
+            >
+              Dobropis
+            </div>
+          )}
           <div style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
             {documentTitle}
           </div>
@@ -286,9 +304,14 @@ export function InvoiceDocument(props: InvoiceDocumentProps) {
           {vatPayer && (
             <>
               <Row label="Základ daně" value={formatCZK(totals.subtotal, currency)} />
-              {Object.entries(totals.vat_breakdown).map(([rate, b]) => (
-                <Row key={rate} label={`DPH ${rate}% z ${formatCZK(b.base, currency)}`} value={formatCZK(b.vat, currency)} />
-              ))}
+              {showVatBreakdown &&
+                Object.entries(totals.vat_breakdown).map(([rate, b]) => (
+                  <Row
+                    key={rate}
+                    label={`DPH ${rate}% z ${formatCZK(b.base, currency)}`}
+                    value={formatCZK(b.vat, currency)}
+                  />
+                ))}
               <Row label="DPH celkem" value={formatCZK(totals.vat_total, currency)} />
               <div style={{ borderTop: "2px solid #cbd5e1", marginTop: "8px", paddingTop: "8px" }}>
                 <Row label="K úhradě" value={formatCZK(totals.total, currency)} bold accent={accentColor} />
@@ -312,9 +335,11 @@ export function InvoiceDocument(props: InvoiceDocumentProps) {
         </div>
       )}
 
-      <div style={{ marginTop: "32px", paddingTop: "16px", borderTop: "1px solid #e2e8f0", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>
-        Vystaveno v aplikaci Fakturio · fakturio.cz
-      </div>
+      {showFooter && (
+        <div style={{ marginTop: "32px", paddingTop: "16px", borderTop: "1px solid #e2e8f0", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>
+          Vystaveno v aplikaci Fakturio · fakturio.cz
+        </div>
+      )}
     </div>
   );
 }
