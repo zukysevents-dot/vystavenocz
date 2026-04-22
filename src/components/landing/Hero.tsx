@@ -10,13 +10,15 @@ export function Hero() {
         <div className="flex flex-col justify-center">
           <a
             href="/registrace"
-            className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-coral/40 bg-coral/10 px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm backdrop-blur transition-colors hover:bg-coral/15"
+            className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-coral/30 bg-coral/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-coral shadow-sm backdrop-blur transition-colors hover:bg-coral/15"
           >
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-coral text-white">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-coral text-coral-foreground">
               <Mic className="h-3 w-3" />
             </span>
-            <span>Novinka: Diktujte fakturu — funguje i v autě</span>
-            <Sparkles className="h-3.5 w-3.5 text-coral" />
+            <span className="normal-case tracking-normal text-foreground">
+              Novinka: Diktujte fakturu — funguje i v autě
+            </span>
+            <Sparkles className="h-3.5 w-3.5" />
           </a>
 
           <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-[3.75rem]">
