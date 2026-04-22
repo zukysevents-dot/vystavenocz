@@ -18,13 +18,36 @@ serve(async (req) => {
     console.log("Stripe event:", event.type, "env:", env);
 
     switch (event.type) {
+      // Předplatné vytvořeno (po úspěšné platbě v checkoutu)
       case "customer.subscription.created":
+      // Změna stavu (renew, upgrade, cancel_at_period_end, past_due → active …)
       case "customer.subscription.updated":
         await upsertSubscription(event.data.object, env);
         break;
+
+      // Definitivní zrušení (po vypršení období nebo okamžité)
       case "customer.subscription.deleted":
         await markCanceled(event.data.object, env);
         break;
+
+      // Úspěšná platba (renewal) — prodlužuje aktivní přístup
+      case "invoice.payment_succeeded":
+        await handleInvoicePaid(event.data.object, env);
+        break;
+
+      // Neúspěšná platba — Stripe bude zkoušet znovu, ale přístup pozastavíme,
+      // jakmile subscription přejde do past_due/unpaid (řeší subscription.updated).
+      // Tady jen logujeme pro audit.
+      case "invoice.payment_failed":
+        console.warn(
+          "Invoice payment failed:",
+          event.data.object.id,
+          "subscription:",
+          event.data.object.subscription,
+        );
+        await handleInvoiceFailed(event.data.object, env);
+        break;
+
       default:
         break;
     }
