@@ -48,21 +48,6 @@ export function Hero() {
               </li>
             ))}
           </ul>
-
-          <div className="mt-10 flex items-center gap-4 text-xs text-muted-foreground">
-            <div className="flex -space-x-2">
-              {["bg-primary", "bg-coral", "bg-mint", "bg-sun"].map((c, i) => (
-                <div
-                  key={i}
-                  className={`h-7 w-7 rounded-full border-2 border-background ${c}`}
-                />
-              ))}
-            </div>
-            <p>
-              <span className="font-semibold text-foreground">2 400+ podnikatelů</span> už
-              fakturuje s Fakturio.cz
-            </p>
-          </div>
         </div>
 
         <div className="flex items-center justify-center">
