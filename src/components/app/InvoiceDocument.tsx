@@ -35,6 +35,15 @@ export type InvoiceDocumentProps = {
   documentType?: "invoice" | "credit_note";
   /** Číslo původní faktury, ke které dobropis patří (jen pro credit_note). */
   originalInvoiceNumber?: string | null;
+  /** Zobrazit patičku „Vystaveno v aplikaci Fakturio". Default true. */
+  showFooter?: boolean;
+  /** Zobrazit detailní rozpis DPH po sazbách. Default true (jen pro plátce). */
+  showVatBreakdown?: boolean;
+  /** Způsob zobrazení dobropisu na PDF.
+   *  - "full"    : plný titulek „Opravný daňový doklad — dobropis" v hlavičce (default)
+   *  - "compact" : titulek zůstane „Faktura — daňový doklad" + diskrétní badge „DOBROPIS" vpravo nahoře
+   */
+  creditNoteDisplay?: "full" | "compact";
 };
 
 export function InvoiceDocument(props: InvoiceDocumentProps) {
@@ -53,12 +62,17 @@ export function InvoiceDocument(props: InvoiceDocumentProps) {
     cancelled = false,
     documentType = "invoice",
     originalInvoiceNumber = null,
+    showFooter = true,
+    showVatBreakdown = true,
+    creditNoteDisplay = "full",
   } = props;
 
   const isCreditNote = documentType === "credit_note";
-  const documentTitle = isCreditNote
-    ? "Opravný daňový doklad — dobropis"
-    : "Faktura — daňový doklad";
+  const documentTitle =
+    isCreditNote && creditNoteDisplay === "full"
+      ? "Opravný daňový doklad — dobropis"
+      : "Faktura — daňový doklad";
+  const showCompactCreditBadge = isCreditNote && creditNoteDisplay === "compact";
 
   const vatPayer = supplier.vat_mode === "payer";
   const totals = calcTotals(items, vatPayer);
@@ -140,6 +154,24 @@ export function InvoiceDocument(props: InvoiceDocumentProps) {
           )}
         </div>
         <div style={{ textAlign: "right" }}>
+          {showCompactCreditBadge && (
+            <div
+              style={{
+                display: "inline-block",
+                marginBottom: "6px",
+                padding: "2px 10px",
+                borderRadius: "999px",
+                background: "#fee2e2",
+                color: "#991b1b",
+                fontSize: "10px",
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+              }}
+            >
+              Dobropis
+            </div>
+          )}
           <div style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
             {documentTitle}
           </div>
@@ -272,9 +304,14 @@ export function InvoiceDocument(props: InvoiceDocumentProps) {
           {vatPayer && (
             <>
               <Row label="Základ daně" value={formatCZK(totals.subtotal, currency)} />
-              {Object.entries(totals.vat_breakdown).map(([rate, b]) => (
-                <Row key={rate} label={`DPH ${rate}% z ${formatCZK(b.base, currency)}`} value={formatCZK(b.vat, currency)} />
-              ))}
+              {showVatBreakdown &&
+                Object.entries(totals.vat_breakdown).map(([rate, b]) => (
+                  <Row
+                    key={rate}
+                    label={`DPH ${rate}% z ${formatCZK(b.base, currency)}`}
+                    value={formatCZK(b.vat, currency)}
+                  />
+                ))}
               <Row label="DPH celkem" value={formatCZK(totals.vat_total, currency)} />
               <div style={{ borderTop: "2px solid #cbd5e1", marginTop: "8px", paddingTop: "8px" }}>
                 <Row label="K úhradě" value={formatCZK(totals.total, currency)} bold accent={accentColor} />
@@ -298,9 +335,11 @@ export function InvoiceDocument(props: InvoiceDocumentProps) {
         </div>
       )}
 
-      <div style={{ marginTop: "32px", paddingTop: "16px", borderTop: "1px solid #e2e8f0", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>
-        Vystaveno v aplikaci Fakturio · fakturio.cz
-      </div>
+      {showFooter && (
+        <div style={{ marginTop: "32px", paddingTop: "16px", borderTop: "1px solid #e2e8f0", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>
+          Vystaveno v aplikaci Fakturio · fakturio.cz
+        </div>
+      )}
     </div>
   );
 }
