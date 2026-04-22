@@ -149,6 +149,11 @@ export function RapidUpdates() {
               Vždycky řekneme rovnou, co máme v plánu, co posouváme — a proč. Bez prázdných
               roadmap.
             </p>
+            <p className="mt-2 text-xs italic text-muted-foreground">
+              Termín může protáhnout to, co nemáme úplně v rukou — schvalování u Stripe nebo
+              bank, čekání na rozhraní třetích stran nebo změny v legislativě. Když to nastane,
+              dáme vědět.
+            </p>
           </div>
         </div>
 
