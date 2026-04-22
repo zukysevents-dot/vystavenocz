@@ -83,6 +83,58 @@ export function RapidUpdates() {
           ))}
         </div>
 
+        <div className="mx-auto mt-14 grid max-w-4xl gap-5 sm:grid-cols-2">
+          <div className="rounded-2xl border border-coral/30 bg-coral/5 p-6 shadow-card">
+            <div className="mb-4 flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-coral/30 bg-coral/10 text-coral">
+                <Zap className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-coral">
+                  Slib · do 48 hodin
+                </p>
+                <h3 className="text-base font-semibold text-foreground">Děláme okamžitě</h3>
+              </div>
+            </div>
+            <ul className="space-y-2.5 text-sm text-foreground/90">
+              <PromiseItem>Drobné UI úpravy (texty, ikony, pořadí polí)</PromiseItem>
+              <PromiseItem>Doplnění polí na faktuře (KS, SS, poznámky)</PromiseItem>
+              <PromiseItem>Opravy chyb a překlepů</PromiseItem>
+              <PromiseItem>Vylepšení AI promptů a chování asistenta</PromiseItem>
+              <PromiseItem>Nové možnosti exportu PDF</PromiseItem>
+            </ul>
+            <p className="mt-4 border-t border-coral/20 pt-3 text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">Když to nestihneme za 48 h</span>,
+              dáme vědět konkrétní termín do druhého dne.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+            <div className="mb-4 flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface-soft text-muted-foreground">
+                <Hourglass className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                  Očekávání · 1–6 týdnů
+                </p>
+                <h3 className="text-base font-semibold text-foreground">Vyžaduje víc času</h3>
+              </div>
+            </div>
+            <ul className="space-y-2.5 text-sm text-foreground/90">
+              <ExpectItem>Integrace s bankami (Fio, ČSOB, Raiffeisen…)</ExpectItem>
+              <ExpectItem>Napojení na účetní systémy (Pohoda, Money S3)</ExpectItem>
+              <ExpectItem>Větší změny v datovém modelu</ExpectItem>
+              <ExpectItem>Funkce vyžadující právní konzultaci (EET, B2B EU)</ExpectItem>
+              <ExpectItem>Mobilní aplikace pro iOS / Android</ExpectItem>
+            </ul>
+            <p className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">
+              <ShieldCheck className="mr-1 inline h-3.5 w-3.5 align-text-bottom text-foreground/70" />
+              Vždy řekneme rovnou, co je v plánu, co odkládáme — a proč.
+            </p>
+          </div>
+        </div>
+
         <div className="mt-12 flex flex-col items-center gap-3">
           <Button variant="coral" size="lg" asChild>
             <a href="mailto:napady@fakturio.cz?subject=N%C3%A1vrh%20na%20vylep%C5%A1en%C3%AD%20Fakturio">
