@@ -63,6 +63,8 @@ export function InvoiceDocument(props: InvoiceDocumentProps) {
     notes,
     paymentMethod = "bank_transfer",
     currency = "CZK",
+    constantSymbol = null,
+    specificSymbol = null,
     cancelled = false,
     documentType = "invoice",
     originalInvoiceNumber = null,
