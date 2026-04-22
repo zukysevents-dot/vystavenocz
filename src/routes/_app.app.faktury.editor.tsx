@@ -300,6 +300,8 @@ function InvoiceEditorPage() {
     dueDate,
     paymentMethod,
     variableSymbol,
+    constantSymbol,
+    specificSymbol,
     notes,
     selectedClientId,
     items,
