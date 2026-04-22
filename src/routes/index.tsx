@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageShell } from "@/components/landing/PageShell";
 import { Hero } from "@/components/landing/Hero";
+import { InvoiceFlow } from "@/components/landing/InvoiceFlow";
 import { WhatsNew } from "@/components/landing/WhatsNew";
 import { AiDemo } from "@/components/landing/AiDemo";
 import { RapidUpdates } from "@/components/landing/RapidUpdates";
@@ -10,17 +11,17 @@ import { Cta } from "@/components/landing/Cta";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Fakturio.cz — Fakturace, která vám ušetří hodiny týdně" },
+      { title: "Fakturio.cz — Tvorba a správa faktur pro OSVČ a firmy" },
       {
         name: "description",
         content:
-          "Moderní česká fakturace pro OSVČ a firmy. Faktury s IČO, DIČ, DPH 21 %, QR platbou a AI asistentem v češtině. Od 100 Kč měsíčně.",
+          "Vystavujte, posílejte a spravujte faktury na jednom místě. Automatické DPH 21 %, QR platby, IČO/DIČ z ARESu, přehled stavů. AI asistent jako bonus. Od 100 Kč měsíčně.",
       },
-      { property: "og:title", content: "Fakturio.cz — Fakturace s AI a QR platbami" },
+      { property: "og:title", content: "Fakturio.cz — Česká fakturace s QR platbami a přehledem" },
       {
         property: "og:description",
         content:
-          "Vystavujte faktury česky během 30 sekund. AI asistent, QR platby, automatické DPH, krásný design.",
+          "Tvorba a správa faktur za 30 sekund. QR platby, automatické DPH, ARES, sledování stavů. AI asistent jako bonus.",
       },
     ],
   }),
@@ -31,10 +32,11 @@ function Index() {
   return (
     <PageShell>
       <Hero />
+      <InvoiceFlow />
       <WhatsNew />
-      <AiDemo />
       <RapidUpdates />
       <Legislativa />
+      <AiDemo />
       <Cta />
     </PageShell>
   );
