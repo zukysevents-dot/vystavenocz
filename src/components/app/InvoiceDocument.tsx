@@ -306,6 +306,8 @@ export function InvoiceDocument(props: InvoiceDocumentProps) {
               {iban && <div>IBAN: <strong>{iban}</strong></div>}
               {supplier.swift && <div>SWIFT: <strong>{supplier.swift}</strong></div>}
               <div>VS: <strong>{vs}</strong></div>
+              {constantSymbol?.trim() && <div>KS: <strong>{constantSymbol.trim()}</strong></div>}
+              {specificSymbol?.trim() && <div>SS: <strong>{specificSymbol.trim()}</strong></div>}
               <div style={{ marginTop: "4px", fontSize: "11px", color: "#64748b" }}>
                 Způsob úhrady: bankovní převod
               </div>
