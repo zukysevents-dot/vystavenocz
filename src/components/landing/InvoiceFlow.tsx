@@ -36,7 +36,7 @@ export function InvoiceFlow() {
             step="01"
             icon={FilePlus2}
             title="Vystavte za 30 sekund"
-            desc="Otevřete editor, klikněte „Nová faktura". Pole jsou předvyplněná podle posledních dokladů."
+            desc='Otevřete editor, klikněte „Nová faktura". Pole jsou předvyplněná podle posledních dokladů.'
           >
             <div className="space-y-2 rounded-xl border border-border bg-background p-3 text-xs">
               <FlowRow icon={Building2} label="Odběratel" value="Načteno z ARESu podle IČO" />
@@ -66,7 +66,7 @@ export function InvoiceFlow() {
             step="03"
             icon={LayoutList}
             title="Spravujte v přehledu"
-            desc="Filtrujte podle stavu, klienta, období. Stav „zaplaceno" jedním klikem nebo automaticky podle připsání."
+            desc='Filtrujte podle stavu, klienta, období. Stav „zaplaceno" jedním klikem nebo automaticky podle připsání.'
           >
             <div className="space-y-2 rounded-xl border border-border bg-background p-3 text-xs">
               <StatusRow label="2025-014 · Alza" amount="34 848 Kč" status="paid" />
