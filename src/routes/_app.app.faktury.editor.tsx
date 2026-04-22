@@ -140,6 +140,8 @@ function InvoiceEditorPage() {
   const [dueDate, setDueDate] = useState(addDaysISO(14));
   const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
   const [variableSymbol, setVariableSymbol] = useState("");
+  const [constantSymbol, setConstantSymbol] = useState("");
+  const [specificSymbol, setSpecificSymbol] = useState("");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<InvoiceItemDraft[]>([newItem()]);
 
