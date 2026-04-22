@@ -967,6 +967,9 @@ function InvoiceEditorPage() {
                 cancelled={loadedStatus === "cancelled"}
                 documentType={documentType}
                 originalInvoiceNumber={originalInvoiceNumber}
+                showFooter={pdfShowFooter}
+                showVatBreakdown={pdfShowVatBreakdown}
+                creditNoteDisplay={pdfCreditNoteDisplay}
               />
             </div>
           </div>
@@ -990,6 +993,9 @@ function InvoiceEditorPage() {
             cancelled={loadedStatus === "cancelled"}
             documentType={documentType}
             originalInvoiceNumber={originalInvoiceNumber}
+            showFooter={pdfShowFooter}
+            showVatBreakdown={pdfShowVatBreakdown}
+            creditNoteDisplay={pdfCreditNoteDisplay}
           />
         </div>
       )}
