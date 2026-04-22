@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Check, Sparkles, Mic } from "lucide-react";
+import { ArrowRight, Check, FileText, QrCode, Wallet, Sparkles } from "lucide-react";
 import { InvoicePreview } from "./InvoicePreview";
 
 export function Hero() {
@@ -8,28 +8,31 @@ export function Hero() {
       <div className="absolute inset-0 bg-mesh opacity-70" aria-hidden />
       <div className="relative mx-auto grid max-w-7xl gap-12 px-4 pb-20 pt-12 sm:px-6 lg:grid-cols-2 lg:gap-8 lg:px-8 lg:pb-28 lg:pt-20">
         <div className="flex flex-col justify-center">
-          <a
-            href="/registrace"
-            className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-coral/30 bg-coral/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-coral shadow-sm backdrop-blur transition-colors hover:bg-coral/15"
-          >
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-coral text-coral-foreground">
-              <Mic className="h-3 w-3" />
+          <div className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-coral/15 text-coral">
+              <FileText className="h-3 w-3" />
             </span>
-            <span className="normal-case tracking-normal text-foreground">
-              Novinka: Diktujte fakturu — funguje i v autě
+            <span className="text-foreground">Česká fakturace pro OSVČ a firmy</span>
+            <span className="hidden h-3 w-px bg-border sm:inline-block" />
+            <span className="hidden items-center gap-1 text-coral sm:inline-flex">
+              <Sparkles className="h-3 w-3" />
+              <span className="text-[10px] font-semibold uppercase tracking-[0.12em]">
+                + AI asistent
+              </span>
             </span>
-            <Sparkles className="h-3.5 w-3.5" />
-          </a>
+          </div>
 
           <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-[3.75rem]">
-            Fakturujte{" "}
-            <span className="text-gradient-primary">hlasem.</span>
+            Faktury, které{" "}
+            <span className="text-gradient-primary">vystavíte za 30 sekund.</span>
             <br className="hidden sm:block" />
-            Hotovo za 30 sekund.
+            A přehled, který se sám stará.
           </h1>
 
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Řekněte „Vystav fakturu firmě Alza na 2 hodiny konzultace" a AI asistent v češtině doplní odběratele, položky i DPH. Funguje i hands‑free v autě. Pro OSVČ, plátce i neplátce DPH.
+            Vystavujte, posílejte a sledujte faktury na jednom místě. Automatické DPH 21 %, QR
+            platba, IČO/DIČ z ARESu, přehled stavů a připomínky splatnosti. Pro OSVČ, plátce
+            i neplátce DPH.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -52,6 +55,21 @@ export function Hero() {
               </li>
             ))}
           </ul>
+
+          <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 border-t border-border pt-5 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <FileText className="h-3.5 w-3.5 text-coral" />
+              Faktury, dobropisy, zálohy
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <QrCode className="h-3.5 w-3.5 text-coral" />
+              QR platby
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Wallet className="h-3.5 w-3.5 text-coral" />
+              Sledování stavů & splatnosti
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center justify-center">
