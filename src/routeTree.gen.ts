@@ -15,6 +15,7 @@ import { Route as ResetHeslaRouteImport } from './routes/reset-hesla'
 import { Route as RegistraceRouteImport } from './routes/registrace'
 import { Route as PrihlaseniRouteImport } from './routes/prihlaseni'
 import { Route as PodminkyRouteImport } from './routes/podminky'
+import { Route as NaseSlibyRouteImport } from './routes/nase-sliby'
 import { Route as GdprRouteImport } from './routes/gdpr'
 import { Route as FunkceRouteImport } from './routes/funkce'
 import { Route as FaqRouteImport } from './routes/faq'
@@ -58,6 +59,11 @@ const PrihlaseniRoute = PrihlaseniRouteImport.update({
 const PodminkyRoute = PodminkyRouteImport.update({
   id: '/podminky',
   path: '/podminky',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NaseSlibyRoute = NaseSlibyRouteImport.update({
+  id: '/nase-sliby',
+  path: '/nase-sliby',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GdprRoute = GdprRouteImport.update({
@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/faq': typeof FaqRoute
   '/funkce': typeof FunkceRoute
   '/gdpr': typeof GdprRoute
+  '/nase-sliby': typeof NaseSlibyRoute
   '/podminky': typeof PodminkyRoute
   '/prihlaseni': typeof PrihlaseniRoute
   '/registrace': typeof RegistraceRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/faq': typeof FaqRoute
   '/funkce': typeof FunkceRoute
   '/gdpr': typeof GdprRoute
+  '/nase-sliby': typeof NaseSlibyRoute
   '/podminky': typeof PodminkyRoute
   '/prihlaseni': typeof PrihlaseniRoute
   '/registrace': typeof RegistraceRoute
@@ -181,6 +189,7 @@ export interface FileRoutesById {
   '/faq': typeof FaqRoute
   '/funkce': typeof FunkceRoute
   '/gdpr': typeof GdprRoute
+  '/nase-sliby': typeof NaseSlibyRoute
   '/podminky': typeof PodminkyRoute
   '/prihlaseni': typeof PrihlaseniRoute
   '/registrace': typeof RegistraceRoute
@@ -204,6 +213,7 @@ export interface FileRouteTypes {
     | '/faq'
     | '/funkce'
     | '/gdpr'
+    | '/nase-sliby'
     | '/podminky'
     | '/prihlaseni'
     | '/registrace'
@@ -225,6 +235,7 @@ export interface FileRouteTypes {
     | '/faq'
     | '/funkce'
     | '/gdpr'
+    | '/nase-sliby'
     | '/podminky'
     | '/prihlaseni'
     | '/registrace'
@@ -247,6 +258,7 @@ export interface FileRouteTypes {
     | '/faq'
     | '/funkce'
     | '/gdpr'
+    | '/nase-sliby'
     | '/podminky'
     | '/prihlaseni'
     | '/registrace'
@@ -270,6 +282,7 @@ export interface RootRouteChildren {
   FaqRoute: typeof FaqRoute
   FunkceRoute: typeof FunkceRoute
   GdprRoute: typeof GdprRoute
+  NaseSlibyRoute: typeof NaseSlibyRoute
   PodminkyRoute: typeof PodminkyRoute
   PrihlaseniRoute: typeof PrihlaseniRoute
   RegistraceRoute: typeof RegistraceRoute
@@ -320,6 +333,13 @@ declare module '@tanstack/react-router' {
       path: '/podminky'
       fullPath: '/podminky'
       preLoaderRoute: typeof PodminkyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nase-sliby': {
+      id: '/nase-sliby'
+      path: '/nase-sliby'
+      fullPath: '/nase-sliby'
+      preLoaderRoute: typeof NaseSlibyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/gdpr': {
@@ -454,6 +474,7 @@ const rootRouteChildren: RootRouteChildren = {
   FaqRoute: FaqRoute,
   FunkceRoute: FunkceRoute,
   GdprRoute: GdprRoute,
+  NaseSlibyRoute: NaseSlibyRoute,
   PodminkyRoute: PodminkyRoute,
   PrihlaseniRoute: PrihlaseniRoute,
   RegistraceRoute: RegistraceRoute,
