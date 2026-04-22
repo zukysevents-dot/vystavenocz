@@ -94,7 +94,8 @@ async function upsertSubscription(subscription: any, env: StripeEnv) {
     { onConflict: "stripe_subscription_id" },
   );
 
-  // Mirror onto profile for fast checks
+  // Mirror na profil pro rychlé kontroly v UI/RLS bez dotazu na subscriptions
+  // Aktivní = active nebo trialing. past_due / unpaid / incomplete / canceled = neaktivní.
   const active = ["active", "trialing"].includes(subscription.status);
   await supabase
     .from("profiles")
@@ -103,6 +104,86 @@ async function upsertSubscription(subscription: any, env: StripeEnv) {
       subscription_until: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
     })
     .eq("id", userId);
+}
+
+// Renewal úspěšně zaplacen → najdi subscription a obnov její stav.
+// Stripe pošle vzápětí i customer.subscription.updated, ale pro jistotu
+// promítáme i tady (idempotentní upsert).
+async function handleInvoicePaid(invoice: any, env: StripeEnv) {
+  const subscriptionId = invoice.subscription;
+  if (!subscriptionId) return; // jednorázová platba, ne subscription
+
+  const { data: sub } = await supabase
+    .from("subscriptions")
+    .select("user_id, current_period_end")
+    .eq("stripe_subscription_id", subscriptionId)
+    .eq("environment", env)
+    .maybeSingle();
+
+  if (!sub?.user_id) {
+    console.warn("invoice.payment_succeeded: subscription not found", subscriptionId);
+    return;
+  }
+
+  // Pokud invoice obsahuje period_end, použijeme jej (rychlejší než čekat na subscription.updated)
+  const line = invoice.lines?.data?.[0];
+  const periodEnd = line?.period?.end;
+  const updates: Record<string, unknown> = {
+    status: "active",
+    updated_at: new Date().toISOString(),
+  };
+  if (periodEnd) {
+    updates.current_period_end = new Date(periodEnd * 1000).toISOString();
+  }
+
+  await supabase
+    .from("subscriptions")
+    .update(updates)
+    .eq("stripe_subscription_id", subscriptionId)
+    .eq("environment", env);
+
+  await supabase
+    .from("profiles")
+    .update({
+      subscription_active: true,
+      ...(periodEnd && {
+        subscription_until: new Date(periodEnd * 1000).toISOString(),
+      }),
+    })
+    .eq("id", sub.user_id);
+
+  console.log("Subscription renewed:", subscriptionId, "user:", sub.user_id);
+}
+
+// Neúspěšná platba — Stripe sám pošle subscription.updated s novým status
+// (past_due / unpaid). Pro audit logujeme + okamžitě deaktivujeme přístup
+// na profilu, aby uživatel ihned viděl, že je něco špatně.
+async function handleInvoiceFailed(invoice: any, env: StripeEnv) {
+  const subscriptionId = invoice.subscription;
+  if (!subscriptionId) return;
+
+  const { data: sub } = await supabase
+    .from("subscriptions")
+    .select("user_id")
+    .eq("stripe_subscription_id", subscriptionId)
+    .eq("environment", env)
+    .maybeSingle();
+
+  if (!sub?.user_id) return;
+
+  // Pozastav přístup okamžitě. Po úspěšné retry platbě se přes
+  // invoice.payment_succeeded / subscription.updated vrátí na true.
+  await supabase
+    .from("profiles")
+    .update({ subscription_active: false })
+    .eq("id", sub.user_id);
+
+  console.warn(
+    "Subscription access suspended (payment failed):",
+    subscriptionId,
+    "user:",
+    sub.user_id,
+  );
 }
 
 async function markCanceled(subscription: any, env: StripeEnv) {
