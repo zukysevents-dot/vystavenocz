@@ -20,6 +20,7 @@ import { Route as GdprRouteImport } from './routes/gdpr'
 import { Route as FunkceRouteImport } from './routes/funkce'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as CenikRouteImport } from './routes/cenik'
+import { Route as AkceRouteImport } from './routes/akce'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppAppIndexRouteImport } from './routes/_app.app.index'
@@ -86,6 +87,11 @@ const CenikRoute = CenikRouteImport.update({
   path: '/cenik',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AkceRoute = AkceRouteImport.update({
+  id: '/akce',
+  path: '/akce',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
@@ -139,6 +145,7 @@ const AppAppFakturyEditorRoute = AppAppFakturyEditorRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/akce': typeof AkceRoute
   '/cenik': typeof CenikRoute
   '/faq': typeof FaqRoute
   '/funkce': typeof FunkceRoute
@@ -161,6 +168,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/akce': typeof AkceRoute
   '/cenik': typeof CenikRoute
   '/faq': typeof FaqRoute
   '/funkce': typeof FunkceRoute
@@ -185,6 +193,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
+  '/akce': typeof AkceRoute
   '/cenik': typeof CenikRoute
   '/faq': typeof FaqRoute
   '/funkce': typeof FunkceRoute
@@ -209,6 +218,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/akce'
     | '/cenik'
     | '/faq'
     | '/funkce'
@@ -231,6 +241,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/akce'
     | '/cenik'
     | '/faq'
     | '/funkce'
@@ -254,6 +265,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_app'
+    | '/akce'
     | '/cenik'
     | '/faq'
     | '/funkce'
@@ -278,6 +290,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  AkceRoute: typeof AkceRoute
   CenikRoute: typeof CenikRoute
   FaqRoute: typeof FaqRoute
   FunkceRoute: typeof FunkceRoute
@@ -368,6 +381,13 @@ declare module '@tanstack/react-router' {
       path: '/cenik'
       fullPath: '/cenik'
       preLoaderRoute: typeof CenikRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/akce': {
+      id: '/akce'
+      path: '/akce'
+      fullPath: '/akce'
+      preLoaderRoute: typeof AkceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -470,6 +490,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  AkceRoute: AkceRoute,
   CenikRoute: CenikRoute,
   FaqRoute: FaqRoute,
   FunkceRoute: FunkceRoute,
