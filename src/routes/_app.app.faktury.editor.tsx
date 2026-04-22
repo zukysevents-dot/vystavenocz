@@ -701,6 +701,84 @@ function InvoiceEditorPage() {
             {downloadingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             PDF
           </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="px-2"
+                title="Možnosti exportu PDF"
+                aria-label="Možnosti exportu PDF"
+              >
+                <Settings2 className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-80">
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-semibold">Možnosti exportu PDF</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Volby se promítnou do náhledu i staženého PDF.
+                  </p>
+                </div>
+
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="pdf-footer" className="text-sm">
+                      Patička „Vystaveno v Fakturio"
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Diskrétní text v patičce dokumentu.
+                    </p>
+                  </div>
+                  <Switch
+                    id="pdf-footer"
+                    checked={pdfShowFooter}
+                    onCheckedChange={setPdfShowFooter}
+                  />
+                </div>
+
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="pdf-vat" className="text-sm">
+                      Rozpis DPH po sazbách
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Jednotlivé řádky 21 % / 12 % / 0 %. Vypnuto = jen souhrnné DPH.
+                    </p>
+                  </div>
+                  <Switch
+                    id="pdf-vat"
+                    checked={pdfShowVatBreakdown}
+                    onCheckedChange={setPdfShowVatBreakdown}
+                    disabled={profile?.vat_mode !== "payer"}
+                  />
+                </div>
+
+                {documentType === "credit_note" && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">Zobrazení dobropisu</Label>
+                    <Select
+                      value={pdfCreditNoteDisplay}
+                      onValueChange={(v) => setPdfCreditNoteDisplay(v as "full" | "compact")}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="full">
+                          Plný titulek „Opravný daňový doklad — dobropis"
+                        </SelectItem>
+                        <SelectItem value="compact">
+                          Kompaktní — badge „DOBROPIS" v rohu
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
           {!isCancelled && (
             <>
               <Button
