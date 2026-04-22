@@ -60,18 +60,18 @@ export function RapidUpdates() {
         <div className="mx-auto max-w-2xl text-center">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-coral/30 bg-coral/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-coral">
             <Clock className="h-3.5 w-3.5" />
-            Změny děláme okamžitě
+            Stavíme to s vámi
           </div>
           <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            Vaše nápady jsou naše roadmapa
+            Co napíšete, to brzo uvidíte
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Nejsme korporát s ročním plánem. Když vám něco chybí, napíšete — a my to zpravidla
-            <span className="font-semibold text-foreground"> nasadíme do 48 hodin</span>.
+            Nejsme velký korporát s ročními plány. Když vám něco chybí, řeknete — a my to
+            <span className="font-semibold text-foreground"> obvykle nasadíme do 48 hodin</span>.
           </p>
           <p className="mt-3 text-sm text-muted-foreground">
-            Hrajeme fér: některé věci uděláme do hodiny, jiné potřebují víc času. Tady je, co
-            můžete čekat.
+            Hrajeme fér — některé věci stihneme ještě dnes, jiné si chvíli počkají. Tady je
+            přehled, co od nás kdy reálně čekat.
           </p>
         </div>
 
