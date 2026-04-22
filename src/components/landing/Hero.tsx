@@ -15,7 +15,7 @@ export function Hero() {
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-coral text-white">
               <Mic className="h-3 w-3" />
             </span>
-            <span>Novinka: Vystavte fakturu hlasem — i z auta</span>
+            <span>Novinka: Diktujte fakturu — funguje i v autě</span>
             <Sparkles className="h-3.5 w-3.5 text-coral" />
           </a>
 
