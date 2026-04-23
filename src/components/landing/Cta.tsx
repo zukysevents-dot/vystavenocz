@@ -17,24 +17,24 @@ export function Cta() {
           />
           <div className="relative">
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-coral">
-              Začněte ještě dnes
+              Začněte ještě dnes · Od 100 Kč měsíčně
             </p>
             <h2 className="mx-auto max-w-2xl text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-              Začněte fakturovat za 60 sekund
+              Vaše první faktura je hotová za minutu
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground">
-              Bez kreditní karty. Bez instalace. Bez nutnosti volat účetní. Vystavte první
-              fakturu hned po registraci.
+              14 dní zdarma bez karty. Žádná instalace, žádné smlouvy, žádné volání účetní.
+              Po zkušebce 100 Kč měsíčně při ročním tarifu — neomezeně faktur i klientů.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button variant="coral" size="xl" className="group" asChild>
                 <a href="/registrace">
-                  Vyzkoušet 14 dní zdarma
+                  Začít zdarma — bez karty
                   <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
                 </a>
               </Button>
               <Button variant="outline" size="xl" asChild>
-                <a href="/prihlaseni">Přihlásit se</a>
+                <a href="/cenik">Zobrazit ceník</a>
               </Button>
             </div>
           </div>
