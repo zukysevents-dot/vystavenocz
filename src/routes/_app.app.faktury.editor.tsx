@@ -281,7 +281,7 @@ function InvoiceEditorPage() {
       // Allow one render cycle for state to settle, then arm the dirty tracker.
       requestAnimationFrame(() => setDirty(false));
     })();
-  }, [user, editingId, search.clientId, creditForId]);
+  }, [user?.id, editingId, search.clientId, creditForId]);
 
   // Adjust due date when client changes
   useEffect(() => {
