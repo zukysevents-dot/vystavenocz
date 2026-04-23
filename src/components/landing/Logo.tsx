@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import logo from "@/assets/fakturio-logo.png";
+import logo from "@/assets/vystaveno-logo.png";
 
 interface LogoProps {
   variant?: "full" | "mark";
