@@ -35,7 +35,7 @@ function GdprPage() {
           <h2 className="text-2xl font-bold">1. Správce osobních údajů</h2>
           <p className="mt-3 text-muted-foreground">
             Správcem osobních údajů je společnost <strong>Vystaveno s.r.o.</strong>, IČO
-            12345678, se sídlem Praha, Česká republika, zapsaná v obchodním rejstříku
+            24991686, se sídlem Praha, Česká republika, zapsaná v obchodním rejstříku
             vedeném Městským soudem v Praze. Kontaktní e-mail:{" "}
             <a href="mailto:gdpr@vystaveno.cz" className="text-primary underline">
               gdpr@vystaveno.cz
