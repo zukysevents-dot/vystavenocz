@@ -168,34 +168,42 @@ export function AiDemo() {
   useEffect(() => {
     setTyped("");
     setPhase("typing");
+    const timeouts: number[] = [];
     let i = 0;
-    const id = window.setInterval(() => {
+    const intervalId = window.setInterval(() => {
       i += 1;
       setTyped(step.prompt.slice(0, i));
       if (i >= step.prompt.length) {
-        window.clearInterval(id);
-        window.setTimeout(() => {
+        window.clearInterval(intervalId);
+        const typingPauseId = window.setTimeout(() => {
           setPhase("sent");
-          window.setTimeout(() => {
+          const sentPauseId = window.setTimeout(() => {
             setPhase("applied");
             setFlashKey((k) => k + 1);
-            window.setTimeout(() => {
+            const applyPauseId = window.setTimeout(() => {
               const isLastStep = stepIndex >= scenario.steps.length - 1;
               if (isLastStep) {
                 // Move to next scenario
-                window.setTimeout(() => {
+                const nextScenarioId = window.setTimeout(() => {
                   setScenarioIndex((s) => (s + 1) % SCENARIOS.length);
                   setStepIndex(0);
                 }, PAUSE_BETWEEN_SCENARIOS);
+                timeouts.push(nextScenarioId);
               } else {
                 setStepIndex((s) => s + 1);
               }
             }, PAUSE_AFTER_APPLY);
+            timeouts.push(applyPauseId);
           }, 700);
+          timeouts.push(sentPauseId);
         }, PAUSE_AFTER_TYPING);
+        timeouts.push(typingPauseId);
       }
     }, TYPING_SPEED);
-    return () => window.clearInterval(id);
+    return () => {
+      window.clearInterval(intervalId);
+      timeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    };
   }, [scenarioIndex, stepIndex, step.prompt, scenario.steps.length]);
 
   return (
@@ -287,9 +295,9 @@ export function AiDemo() {
                         <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60" />
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5">
-                        <Check className="h-3.5 w-3.5 text-coral" />
-                        {step.reply}
+                      <span className="flex items-start gap-1.5">
+                        <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-coral" />
+                        <span className="min-w-0 break-words">{step.reply}</span>
                       </span>
                     )}
                   </div>
@@ -377,6 +385,7 @@ export function AiDemo() {
                   <Field label={shownInvoice.unitPriceLabel} value={shownInvoice.unitPrice} />
                   <Field
                     label="Splatnost"
+                    mobileLabel="Splat."
                     value={`${shownInvoice.dueDays} dní`}
                     flash={step.highlight === "due" && phase === "applied"}
                     flashKey={flashKey}
@@ -424,23 +433,26 @@ export function AiDemo() {
 
 function Field({
   label,
+  mobileLabel,
   value,
   flash,
   flashKey,
 }: {
   label: string;
+  mobileLabel?: string;
   value: string;
   flash?: boolean;
   flashKey?: number;
 }) {
   return (
-    <div>
-      <div className="text-[9px] font-semibold uppercase leading-tight tracking-[0.1em] text-muted-foreground sm:text-[10px] sm:tracking-[0.12em]">
-        {label}
+    <div className="rounded-lg border border-border/70 bg-surface-soft px-1.5 py-1.5 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0">
+      <div className="truncate text-[8px] font-semibold uppercase leading-tight tracking-[0.08em] text-muted-foreground sm:text-[10px] sm:tracking-[0.12em]">
+        <span className="sm:hidden">{mobileLabel ?? label}</span>
+        <span className="hidden sm:inline">{label}</span>
       </div>
       <div
         key={flash ? `f-${flashKey}` : undefined}
-        className={`mt-0.5 inline-block rounded px-1 py-0.5 text-[11px] font-semibold leading-tight text-foreground sm:px-1.5 sm:text-sm ${
+        className={`mt-1 inline-block max-w-full rounded px-1 py-0.5 text-[10px] font-semibold leading-tight text-foreground sm:mt-0.5 sm:px-1.5 sm:text-sm ${
           flash ? "animate-in fade-in zoom-in-95 bg-coral/15 text-coral" : ""
         }`}
       >
