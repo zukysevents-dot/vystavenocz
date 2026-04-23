@@ -18,6 +18,7 @@ import { Loader2, Search, Upload, Image as ImageIcon, Trash2, Mail, Send } from 
 import { Switch } from "@/components/ui/switch";
 import { useServerFn } from "@tanstack/react-start";
 import { sendTestInvoiceEmail } from "@/lib/email/send-test.functions";
+import { PrivacySection } from "@/components/app/PrivacySection";
 
 export const Route = createFileRoute("/_app/app/nastaveni")({
   head: () => ({ meta: [{ title: "Nastavení — Vystaveno" }] }),
@@ -501,6 +502,10 @@ function SettingsPage() {
           </Button>
         </div>
       </form>
+
+      <div className="mt-8">
+        <PrivacySection />
+      </div>
     </div>
   );
 }
