@@ -244,6 +244,7 @@ export type Database = {
           invoice_color: string | null
           invoice_number_format: string | null
           invoice_number_prefix: string | null
+          invoice_sender_local_part: string | null
           logo_url: string | null
           next_credit_note_seq: number
           next_invoice_seq: number
@@ -273,6 +274,7 @@ export type Database = {
           invoice_color?: string | null
           invoice_number_format?: string | null
           invoice_number_prefix?: string | null
+          invoice_sender_local_part?: string | null
           logo_url?: string | null
           next_credit_note_seq?: number
           next_invoice_seq?: number
@@ -302,6 +304,7 @@ export type Database = {
           invoice_color?: string | null
           invoice_number_format?: string | null
           invoice_number_prefix?: string | null
+          invoice_sender_local_part?: string | null
           logo_url?: string | null
           next_credit_note_seq?: number
           next_invoice_seq?: number
