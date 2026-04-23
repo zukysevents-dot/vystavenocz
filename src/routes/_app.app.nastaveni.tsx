@@ -103,6 +103,7 @@ function SettingsPage() {
           next_invoice_seq: data.next_invoice_seq ?? 1,
           credit_note_prefix: data.credit_note_prefix ?? "OD",
           next_credit_note_seq: data.next_credit_note_seq ?? 1,
+          auto_send_invoice_email: (data as { auto_send_invoice_email?: boolean }).auto_send_invoice_email ?? false,
         });
       }
       setLoading(false);
