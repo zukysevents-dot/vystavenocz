@@ -34,9 +34,9 @@ function GdprPage() {
         <section>
           <h2 className="text-2xl font-bold">1. Správce osobních údajů</h2>
           <p className="mt-3 text-muted-foreground">
-            Správcem osobních údajů je <strong>[Jméno a příjmení]</strong>, IČO
-            24991686, se sídlem [adresa], Česká republika, podnikající fyzická osoba zapsaná
-            v živnostenském rejstříku. Kontaktní e-mail:{" "}
+            Správcem osobních údajů je <strong>Patrik Zukal</strong>, IČO
+            24991686, se sídlem Brodská 1914/40, 591 01 Žďár nad Sázavou, Česká republika,
+            podnikající fyzická osoba zapsaná v živnostenském rejstříku. Kontaktní e-mail:{" "}
             <a href="mailto:gdpr@vystaveno.cz" className="text-primary underline">
               gdpr@vystaveno.cz
             </a>

@@ -36,8 +36,9 @@ function TermsPage() {
           <p className="mt-3 text-muted-foreground">
             Tyto obchodní podmínky (dále jen <strong>„Podmínky"</strong>) upravují vzájemná
             práva a povinnosti mezi provozovatelem služby Vystaveno.cz,{" "}
-            <strong>[Jméno a příjmení]</strong>, IČO: 24991686, se sídlem [adresa],
-            Česká republika, podnikající fyzickou osobou zapsanou v živnostenském rejstříku
+            <strong>Patrikem Zukalem</strong>, IČO: 24991686, se sídlem Brodská 1914/40,
+            591 01 Žďár nad Sázavou, Česká republika, podnikající fyzickou osobou zapsanou
+            v živnostenském rejstříku
             (dále jen <strong>„Provozovatel"</strong>), a osobou, která využívá službu
             Vystaveno (dále jen <strong>„Uživatel"</strong>). Provozovatel není plátcem DPH.
           </p>
@@ -171,7 +172,8 @@ function TermsPage() {
 
         <section className="rounded-2xl border border-border bg-surface-soft p-6 text-sm text-muted-foreground">
           <p>
-            <strong>Kontakt:</strong> [Jméno a příjmení], IČO 24991686, e-mail{" "}
+            <strong>Kontakt:</strong> Patrik Zukal, Brodská 1914/40, 591 01 Žďár nad Sázavou,
+            IČO 24991686, e-mail{" "}
             <a href="mailto:podpora@vystaveno.cz" className="text-primary underline">
               podpora@vystaveno.cz
             </a>
