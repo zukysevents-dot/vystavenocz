@@ -849,7 +849,10 @@ function InvoiceEditorPage() {
               </div>
             </div>
           )}
-          <fieldset disabled={isCancelled} className="contents">
+          <fieldset
+            disabled={isCancelled}
+            className="m-0 min-w-0 border-0 p-0"
+          >
           <section className="space-y-4">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Základ</h2>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -908,9 +911,15 @@ function InvoiceEditorPage() {
           </section>
 
           <section className="mt-8 space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Položky</h2>
-              <Button size="sm" variant="outline" onClick={addItem}>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={addItem}
+                className="relative z-10 shrink-0"
+              >
                 <Plus className="h-4 w-4" /> Přidat položku
               </Button>
             </div>
