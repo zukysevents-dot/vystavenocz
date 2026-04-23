@@ -1,56 +1,75 @@
 /**
- * Generování PDF z DOM uzlu faktury pomocí html2canvas + jsPDF.
+ * Generování faktur jako vektorové PDF přes @react-pdf/renderer.
+ * Plná česká diakritika (Inter latin-ext), selectovatelný text, malé soubory.
  */
-import html2canvas from "html2canvas-pro";
-import jsPDF from "jspdf";
+import { pdf } from "@react-pdf/renderer";
+import QRCode from "qrcode";
+import { InvoicePdfDocument, type InvoicePdfProps } from "@/lib/pdf/InvoicePdfDoc";
+import {
+  buildSpayd,
+  calcTotals,
+  czAccountToIban,
+  variableSymbolFromInvoiceNumber,
+} from "@/lib/invoice";
 
 /**
- * Vyrenderuje fakturu z DOM uzlu do PDF a vrátí jsPDF instanci.
+ * Vrátí data pro <InvoicePdfDocument /> obohacená o QR platbu (pokud má smysl).
  */
-async function renderInvoicePdf(elementId: string) {
-  const el = document.getElementById(elementId);
-  if (!el) throw new Error("Invoice element not found");
+async function enrichWithQr(props: InvoicePdfProps): Promise<InvoicePdfProps> {
+  if (props.qrDataUrl !== undefined) return props; // volající už dodal
+  const { supplier, items, currency = "CZK", invoiceNumber, variableSymbol, paymentMethod = "bank_transfer" } = props;
+  if (paymentMethod !== "bank_transfer") return { ...props, qrDataUrl: null };
 
-  const canvas = await html2canvas(el, {
-    scale: 2,
-    backgroundColor: "#ffffff",
-    useCORS: true,
-    logging: false,
+  const vatPayer = supplier.vat_mode === "payer";
+  const totals = calcTotals(items, vatPayer);
+  const iban =
+    supplier.iban?.replace(/\s/g, "") ||
+    (supplier.bank_account ? czAccountToIban(supplier.bank_account) : null);
+
+  if (!iban || totals.total <= 0) return { ...props, qrDataUrl: null };
+
+  const vs = variableSymbol || variableSymbolFromInvoiceNumber(invoiceNumber);
+  const spayd = buildSpayd({
+    iban,
+    amount: totals.total,
+    currency,
+    variableSymbol: vs,
+    message: invoiceNumber,
+    swift: supplier.swift,
   });
-
-  const imgData = canvas.toDataURL("image/jpeg", 0.95);
-  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-
-  const imgWidth = pageWidth;
-  const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-  let position = 0;
-  let heightLeft = imgHeight;
-
-  pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
-  heightLeft -= pageHeight;
-
-  while (heightLeft > 0) {
-    position = heightLeft - imgHeight;
-    pdf.addPage();
-    pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
+  try {
+    const qrDataUrl = await QRCode.toDataURL(spayd, {
+      margin: 1,
+      width: 240,
+      errorCorrectionLevel: "M",
+    });
+    return { ...props, qrDataUrl };
+  } catch {
+    return { ...props, qrDataUrl: null };
   }
-
-  return pdf;
-}
-
-export async function downloadInvoicePdf(elementId: string, filename: string) {
-  const pdf = await renderInvoicePdf(elementId);
-  pdf.save(filename);
 }
 
 /**
  * Vyrenderuje fakturu jako Blob PDF — pro upload do Storage či odeslání e-mailem.
  */
-export async function renderInvoicePdfBlob(elementId: string): Promise<Blob> {
-  const pdf = await renderInvoicePdf(elementId);
-  return pdf.output("blob");
+export async function renderInvoicePdfBlob(props: InvoicePdfProps): Promise<Blob> {
+  const enriched = await enrichWithQr(props);
+  const blob = await pdf(<InvoicePdfDocument {...enriched} />).toBlob();
+  return blob;
+}
+
+/**
+ * Stáhne PDF v prohlížeči pod daným názvem.
+ */
+export async function downloadInvoicePdf(props: InvoicePdfProps, filename: string): Promise<void> {
+  const blob = await renderInvoicePdfBlob(props);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename.endsWith(".pdf") ? filename : `${filename}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  // Necháme URL chvilku platnou kvůli download zpracování
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
