@@ -171,7 +171,7 @@ function TermsPage() {
 
         <section className="rounded-2xl border border-border bg-surface-soft p-6 text-sm text-muted-foreground">
           <p>
-            <strong>Kontakt:</strong> Vystaveno s.r.o., IČO 12345678, e-mail{" "}
+            <strong>Kontakt:</strong> Vystaveno s.r.o., IČO 24991686, e-mail{" "}
             <a href="mailto:podpora@vystaveno.cz" className="text-primary underline">
               podpora@vystaveno.cz
             </a>
