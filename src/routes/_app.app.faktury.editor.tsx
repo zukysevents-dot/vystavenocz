@@ -574,7 +574,21 @@ function InvoiceEditorPage() {
           try {
             setShowPreview(true);
             await new Promise((r) => setTimeout(r, 250));
-            const blob = await renderInvoicePdfBlob("invoice-document");
+            const autoPdfProps: InvoicePdfProps = {
+              supplier: supplierSnapshot,
+              client: clientSnapshot,
+              items,
+              invoiceNumber,
+              issueDate,
+              dueDate,
+              taxableDate,
+              variableSymbol: variableSymbol || undefined,
+              notes: notes || undefined,
+              paymentMethod,
+              currency: "CZK",
+              documentType,
+            };
+            const blob = await renderInvoicePdfBlob(autoPdfProps);
             const path = `${user.id}/${invoiceId}.pdf`;
             const { error: upErr } = await supabase.storage
               .from("invoices")
