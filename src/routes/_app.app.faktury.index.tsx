@@ -252,13 +252,13 @@ function InvoicesListPage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl p-8">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-6xl p-4 sm:p-6 md:p-8">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Faktury</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Faktury</h1>
           <p className="mt-1 text-muted-foreground">Spravujte své faktury a sledujte platby.</p>
         </div>
-        <Button variant="coral" onClick={() => navigate({ to: "/app/faktury/editor" })}>
+        <Button variant="coral" className="shrink-0" onClick={() => navigate({ to: "/app/faktury/editor" })}>
           <Plus className="h-4 w-4" /> Nová faktura
         </Button>
       </div>
