@@ -44,6 +44,7 @@ type Form = {
   credit_note_prefix: string;
   next_credit_note_seq: number;
   auto_send_invoice_email: boolean;
+  invoice_sender_local_part: string;
 };
 
 const defaults: Form = {
@@ -66,7 +67,11 @@ const defaults: Form = {
   credit_note_prefix: "OD",
   next_credit_note_seq: 1,
   auto_send_invoice_email: false,
+  invoice_sender_local_part: "faktury",
 };
+
+const SENDER_DOMAIN = "vystaveno.cz";
+const LOCAL_PART_REGEX = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/;
 
 function SettingsPage() {
   const { user } = useAuth();
@@ -104,6 +109,8 @@ function SettingsPage() {
           credit_note_prefix: data.credit_note_prefix ?? "OD",
           next_credit_note_seq: data.next_credit_note_seq ?? 1,
           auto_send_invoice_email: (data as { auto_send_invoice_email?: boolean }).auto_send_invoice_email ?? false,
+          invoice_sender_local_part:
+            (data as { invoice_sender_local_part?: string | null }).invoice_sender_local_part ?? "faktury",
         });
       }
       setLoading(false);
@@ -159,11 +166,19 @@ function SettingsPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    const localPart = form.invoice_sender_local_part.trim().toLowerCase();
+    if (!LOCAL_PART_REGEX.test(localPart)) {
+      toast.error(
+        "Odesílatel může obsahovat jen malá písmena, číslice, tečku, pomlčku nebo podtržítko (např. faktury, info, no-reply).",
+      );
+      return;
+    }
     setSubmitting(true);
     const { error } = await supabase
       .from("profiles")
       .update({
         ...form,
+        invoice_sender_local_part: localPart,
         ico: form.ico || null,
         dic: form.dic || null,
         street: form.street || null,
@@ -348,6 +363,29 @@ function SettingsPage() {
         </Section>
 
         <Section title="Automatické odesílání e-mailem">
+          <div className="space-y-2">
+            <Label htmlFor="invoice_sender_local_part">Odesílatel e-mailů</Label>
+            <div className="flex items-center gap-0 overflow-hidden rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring">
+              <Input
+                id="invoice_sender_local_part"
+                value={form.invoice_sender_local_part}
+                onChange={(e) =>
+                  setForm({ ...form, invoice_sender_local_part: e.target.value.toLowerCase() })
+                }
+                placeholder="faktury"
+                className="rounded-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+              <span className="select-none whitespace-nowrap border-l border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
+                @{SENDER_DOMAIN}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Z této adresy budou klientům chodit faktury (např. <span className="font-mono">faktury@{SENDER_DOMAIN}</span>,{" "}
+              <span className="font-mono">info@{SENDER_DOMAIN}</span>, <span className="font-mono">no-reply@{SENDER_DOMAIN}</span>).
+              Schránka existovat nemusí — odpovědi klientů jdou na váš e-mail ({user?.email}).
+            </p>
+          </div>
+
           <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-muted/30 p-4">
             <div className="flex items-start gap-3">
               <Mail className="mt-0.5 h-5 w-5 text-primary" />

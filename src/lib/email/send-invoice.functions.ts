@@ -52,7 +52,7 @@ export const sendInvoiceEmail = createServerFn({ method: "POST" })
     // Profil odesílatele pro from name
     const { data: profile } = await supabase
       .from("profiles")
-      .select("company_name, full_name, email")
+      .select("company_name, full_name, email, invoice_sender_local_part")
       .eq("id", userId)
       .single();
 
@@ -66,8 +66,12 @@ export const sendInvoiceEmail = createServerFn({ method: "POST" })
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY není nakonfigurován.");
     if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY není nakonfigurován.");
 
-    // Použij Resend test sender (onboarding@resend.dev) - funguje bez ověřené domény
-    const fromAddress = `${fromName} <onboarding@resend.dev>`;
+    // Sestav odesílatele z profilu uživatele. Doména musí být ověřena v Resendu.
+    const localPartRaw = profile?.invoice_sender_local_part?.trim().toLowerCase() || "faktury";
+    const localPart = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/.test(localPartRaw)
+      ? localPartRaw
+      : "faktury";
+    const fromAddress = `${fromName} <${localPart}@vystaveno.cz>`;
 
     const replyTo = profile?.email || undefined;
 
