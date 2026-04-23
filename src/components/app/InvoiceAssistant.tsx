@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { InvoiceItemDraft, VatRate } from "@/lib/invoice";
+import { supabase } from "@/integrations/supabase/client";
 
 export type InvoiceContext = {
   invoice_number: string;
@@ -377,12 +378,19 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
     try {
       const ctrl = new AbortController();
       abortRef.current = ctrl;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error("Pro použití asistenta se přihlaste.");
+        setIsStreaming(false);
+        return;
+      }
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invoice-assistant`, {
         method: "POST",
         signal: ctrl.signal,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
         body: JSON.stringify({
           messages: next.map((m) => ({ role: m.role, content: m.content })),
@@ -395,6 +403,7 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
       if (!resp.ok || !resp.body) {
         if (resp.status === 429) toast.error("Příliš mnoho požadavků, zkuste to za chvíli.");
         else if (resp.status === 402) toast.error("AI kredit vyčerpán. Doplňte si kredit.");
+        else if (resp.status === 401) toast.error("Pro použití asistenta se přihlaste.");
         else toast.error("Asistent nedostupný.");
         setIsStreaming(false);
         return;
