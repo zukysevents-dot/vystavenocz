@@ -347,6 +347,28 @@ function SettingsPage() {
           </p>
         </Section>
 
+        <Section title="Automatické odesílání e-mailem">
+          <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-muted/30 p-4">
+            <div className="flex items-start gap-3">
+              <Mail className="mt-0.5 h-5 w-5 text-primary" />
+              <div className="space-y-1">
+                <Label htmlFor="auto_send" className="text-sm font-medium">
+                  Po vystavení automaticky odeslat klientovi
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Když fakturu vystavíte, systém ji rovnou pošle e-mailem klientovi (pokud má vyplněný e-mail).
+                  PDF se přiloží do zprávy. Odpovědi přijdou na váš e-mail.
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="auto_send"
+              checked={form.auto_send_invoice_email}
+              onCheckedChange={(v) => setForm({ ...form, auto_send_invoice_email: v })}
+            />
+          </div>
+        </Section>
+
         <Section title="Číslování dobropisů">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field
