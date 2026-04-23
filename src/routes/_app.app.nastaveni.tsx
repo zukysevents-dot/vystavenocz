@@ -14,8 +14,10 @@ import {
 } from "@/components/ui/select";
 import { useAres } from "@/hooks/use-ares";
 import { toast } from "sonner";
-import { Loader2, Search, Upload, Image as ImageIcon, Trash2, Mail } from "lucide-react";
+import { Loader2, Search, Upload, Image as ImageIcon, Trash2, Mail, Send } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { useServerFn } from "@tanstack/react-start";
+import { sendTestInvoiceEmail } from "@/lib/email/send-test.functions";
 
 export const Route = createFileRoute("/_app/app/nastaveni")({
   head: () => ({ meta: [{ title: "Nastavení — Vystaveno" }] }),
