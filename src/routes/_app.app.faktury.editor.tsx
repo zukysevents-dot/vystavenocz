@@ -712,15 +712,15 @@ function InvoiceEditorPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex min-h-[calc(100vh-3.5rem)] flex-col md:h-screen md:min-h-0">
       {/* Toolbar */}
-      <div className="flex items-center justify-between border-b border-border bg-card px-6 py-3">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 border-b border-border bg-card px-3 py-3 sm:px-6 md:flex-row md:items-center md:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
           <Button variant="ghost" size="sm" asChild>
-            <Link to="/app/faktury"><ArrowLeft className="h-4 w-4" /> Zpět</Link>
+            <Link to="/app/faktury"><ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">Zpět</span></Link>
           </Button>
-          <div>
-            <div className="text-sm font-semibold">
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-semibold">
               {documentType === "credit_note"
                 ? (editingId ? "Úprava dobropisu" : "Nový dobropis")
                 : (editingId ? "Úprava faktury" : "Nová faktura")}
@@ -732,7 +732,7 @@ function InvoiceEditorPage() {
                 </span>
               )}
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="truncate text-xs text-muted-foreground">
               {selectedClient?.name || "vyberte odběratele"} · {formatCZK(totals.total)}
               {(loadedStatus === null || loadedStatus === "draft") && (
                 <span className="ml-2 text-[11px]">
@@ -748,12 +748,12 @@ function InvoiceEditorPage() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => setShowPreview((v) => !v)}>
+        <div className="-mx-3 flex items-center gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:px-0 sm:pb-0 md:flex-shrink-0">
+          <Button variant="ghost" size="sm" className="hidden lg:inline-flex" onClick={() => setShowPreview((v) => !v)}>
             {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             {showPreview ? "Skrýt náhled" : "Náhled"}
           </Button>
-          <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={downloadingPdf}>
+          <Button variant="outline" size="sm" className="shrink-0" onClick={handleDownloadPdf} disabled={downloadingPdf}>
             {downloadingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             PDF
           </Button>
@@ -840,6 +840,7 @@ function InvoiceEditorPage() {
               <Button
                 variant="outline"
                 size="sm"
+                className="shrink-0"
                 onClick={handleSendEmail}
                 disabled={preparingSend || saving}
                 title={hasAccess ? "Odeslat fakturu e-mailem" : "Vyžaduje aktivní předplatné"}
@@ -853,12 +854,13 @@ function InvoiceEditorPage() {
                 )}
                 E-mail
               </Button>
-              <Button variant="outline" size="sm" onClick={() => save("draft")} disabled={saving}>
+              <Button variant="outline" size="sm" className="shrink-0" onClick={() => save("draft")} disabled={saving}>
                 <Save className="h-4 w-4" /> Koncept
               </Button>
               <Button
                 variant="coral"
                 size="sm"
+                className="shrink-0"
                 onClick={() => save("issued")}
                 disabled={saving}
                 title={hasAccess ? "Vystavit fakturu" : "Vyžaduje aktivní předplatné"}
@@ -882,9 +884,9 @@ function InvoiceEditorPage() {
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 flex-col md:flex-row md:overflow-hidden">
         {/* Form */}
-        <div className="w-full overflow-auto border-r border-border bg-background p-6 lg:w-1/2">
+        <div className="w-full bg-background p-4 sm:p-6 md:overflow-auto md:border-r md:border-border lg:w-1/2">
           {isCancelled && (
             <div className="mb-4 flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
               <Lock className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />

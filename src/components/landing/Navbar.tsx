@@ -22,7 +22,7 @@ export function Navbar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Logo />
 
-        <nav className="hidden items-center gap-8 md:flex">
+        <nav className="hidden items-center gap-5 lg:flex xl:gap-8">
           {links.map((l) => (
             <Link
               key={l.to}
@@ -35,7 +35,7 @@ export function Navbar() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="hidden items-center gap-2 lg:flex">
           <ThemeToggle size="sm" />
           <Button variant="ghost" size="sm" asChild>
             <a href="/prihlaseni">Přihlásit se</a>
@@ -45,7 +45,7 @@ export function Navbar() {
           </Button>
         </div>
 
-        <div className="flex items-center gap-1 md:hidden">
+        <div className="flex items-center gap-1 lg:hidden">
           <ThemeToggle size="sm" />
           <button
             className="inline-flex h-10 w-10 items-center justify-center rounded-md text-foreground"
@@ -58,7 +58,7 @@ export function Navbar() {
       </div>
 
       {open && (
-        <div className="border-t border-border bg-background md:hidden">
+        <div className="border-t border-border bg-background lg:hidden">
           <nav className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-3">
             {links.map((l) => (
               <Link

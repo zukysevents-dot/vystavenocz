@@ -111,10 +111,10 @@ function ClientsPage() {
   });
 
   return (
-    <div className="mx-auto max-w-6xl p-8">
+    <div className="mx-auto max-w-6xl p-4 sm:p-6 md:p-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Klienti</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Klienti</h1>
           <p className="mt-1 text-muted-foreground">Spravujte odběratele pro vaše faktury.</p>
         </div>
         <Button
