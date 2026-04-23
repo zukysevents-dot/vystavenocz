@@ -41,7 +41,7 @@ export function PaywallDialog({ open, onOpenChange, reason }: Props) {
             100 Kč <span className="text-sm font-normal text-muted-foreground">/ měsíc</span>
           </p>
           <p className="text-xs text-muted-foreground">
-            Při ročním tarifu. Měsíční 159 Kč. Bez DPH.
+            Při ročním tarifu (1 200 Kč/rok). Měsíčně 159 Kč. Cena je konečná — neplátce DPH.
           </p>
         </div>
 

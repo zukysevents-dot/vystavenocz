@@ -167,13 +167,13 @@ function PredplatnePage() {
               </span>
               <div className="pb-2">
                 <p className="text-lg font-semibold text-foreground">Kč</p>
-                <p className="text-xs text-muted-foreground">měsíčně bez DPH</p>
+                <p className="text-xs text-muted-foreground">měsíčně</p>
               </div>
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
               {yearly
-                ? "Účtováno ročně 1 200 Kč. Ušetříte 708 Kč."
-                : "Účtováno měsíčně. Přechod na roční tarif kdykoliv."}
+                ? "Účtováno ročně 1 200 Kč. Ušetříte 708 Kč oproti měsíčnímu tarifu."
+                : "Účtováno měsíčně. Roční tarif vyjde na 100 Kč/měsíc — ušetříte 708 Kč ročně."}
             </p>
 
             <Button variant="coral" size="lg" className="mt-6 w-full" onClick={onSubscribe}>

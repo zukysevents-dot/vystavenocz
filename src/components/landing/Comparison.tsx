@@ -174,7 +174,7 @@ export function Comparison() {
           </div>
         </div>
         <p className="mt-4 text-center text-xs text-muted-foreground">
-          Ceny konkurence k 4/2026, vždy nejnižší placený tarif s ročním předplatným bez DPH. Zdroj: veřejné ceníky.
+          Ceny konkurence k 4/2026, vždy nejnižší placený tarif s ročním předplatným. Zdroj: veřejné ceníky.
         </p>
       </div>
     </section>
