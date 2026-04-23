@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/landing/Logo";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const nav: { to: "/app" | "/app/faktury" | "/app/klienti" | "/app/predplatne" | "/app/nastaveni"; label: string; icon: typeof LayoutDashboard; exact?: boolean }[] = [
   { to: "/app", label: "Přehled", icon: LayoutDashboard, exact: true },
@@ -75,6 +76,7 @@ export function AppSidebar() {
           <div className="flex-1 truncate">
             <div className="truncate text-xs font-medium">{user?.email}</div>
           </div>
+          <ThemeToggle size="sm" />
           <Button variant="ghost" size="icon" onClick={signOut} title="Odhlásit se">
             <LogOut className="h-4 w-4" />
           </Button>
@@ -87,14 +89,17 @@ export function AppSidebar() {
       {/* Mobilní topbar – jen na malých obrazovkách */}
       <div className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-card px-3 md:hidden">
         <Logo />
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setMobileOpen(true)}
-          aria-label="Otevřít menu"
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <ThemeToggle size="sm" />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Otevřít menu"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
 
       {/* Desktopový sidebar */}
