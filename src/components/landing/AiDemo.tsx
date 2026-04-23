@@ -231,29 +231,29 @@ export function AiDemo() {
           </div>
         </div>
 
-        <div className="mx-auto mt-12 grid max-w-5xl gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+        <div className="mx-auto mt-12 grid max-w-5xl grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
           {/* Chat panel */}
           <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
-            <div className="flex items-center justify-between border-b border-border bg-surface-soft px-5 py-3">
+            <div className="flex items-center justify-between border-b border-border bg-surface-soft px-3 py-2 sm:px-5 sm:py-3">
               <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-coral/30 bg-coral/10 text-coral">
+                <div className="flex h-6 w-6 items-center justify-center rounded-lg border border-coral/30 bg-coral/10 text-coral sm:h-7 sm:w-7">
                   <Sparkles className="h-3.5 w-3.5" />
                 </div>
-                <span className="text-sm font-semibold text-foreground">AI asistent</span>
+                <span className="text-xs font-semibold text-foreground sm:text-sm">AI asistent</span>
               </div>
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+              <span className="hidden items-center gap-1.5 text-[11px] font-medium text-muted-foreground sm:inline-flex">
                 <span className="h-1.5 w-1.5 rounded-full bg-coral" />
                 Online · česky
               </span>
             </div>
 
-            <div className="flex min-h-[280px] flex-col gap-4 p-5 sm:p-6">
+            <div className="flex min-h-[220px] flex-col gap-2.5 p-3 text-[13px] sm:min-h-[280px] sm:gap-4 sm:p-5 sm:text-sm">
               {/* Previous assistant reply for context */}
-              <div className="flex items-start gap-2.5">
-                <div className="flex h-7 w-7 flex-none items-center justify-center rounded-full border border-coral/20 bg-coral/10 text-coral">
+              <div className="flex items-start gap-1.5 sm:gap-2.5">
+                <div className="hidden h-7 w-7 flex-none items-center justify-center rounded-full border border-coral/20 bg-coral/10 text-coral sm:flex">
                   <Sparkles className="h-3.5 w-3.5" />
                 </div>
-                <div className="rounded-2xl rounded-tl-sm border border-border bg-background px-3.5 py-2 text-sm text-foreground/90">
+                <div className="rounded-2xl rounded-tl-sm border border-border bg-background px-2.5 py-1.5 text-foreground/90 sm:px-3.5 sm:py-2">
                   {scenario.id === "create"
                     ? "Co potřebujete vystavit? Stačí říct česky."
                     : "Tady je vaše faktura. Co mám upravit?"}
@@ -261,25 +261,25 @@ export function AiDemo() {
               </div>
 
               {/* User typing */}
-              <div className="flex items-start justify-end gap-2.5">
-                <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-coral px-3.5 py-2 text-sm text-coral-foreground shadow-soft">
+              <div className="flex items-start justify-end gap-1.5 sm:gap-2.5">
+                <div className="max-w-[95%] rounded-2xl rounded-tr-sm bg-coral px-2.5 py-1.5 text-coral-foreground shadow-soft sm:max-w-[85%] sm:px-3.5 sm:py-2">
                   {typed || "\u00A0"}
                   {phase === "typing" && (
                     <span className="ml-0.5 inline-block h-3.5 w-[2px] animate-pulse bg-coral-foreground/80 align-middle" />
                   )}
                 </div>
-                <div className="flex h-7 w-7 flex-none items-center justify-center rounded-full border border-border bg-background text-muted-foreground">
+                <div className="hidden h-7 w-7 flex-none items-center justify-center rounded-full border border-border bg-background text-muted-foreground sm:flex">
                   <User className="h-3.5 w-3.5" />
                 </div>
               </div>
 
               {/* Assistant reply (after sent) */}
               {phase !== "typing" && (
-                <div className="flex items-start gap-2.5">
-                  <div className="flex h-7 w-7 flex-none items-center justify-center rounded-full border border-coral/20 bg-coral/10 text-coral">
+                <div className="flex items-start gap-1.5 sm:gap-2.5">
+                  <div className="hidden h-7 w-7 flex-none items-center justify-center rounded-full border border-coral/20 bg-coral/10 text-coral sm:flex">
                     <Sparkles className="h-3.5 w-3.5" />
                   </div>
-                  <div className="rounded-2xl rounded-tl-sm border border-border bg-background px-3.5 py-2 text-sm text-foreground/90">
+                  <div className="rounded-2xl rounded-tl-sm border border-border bg-background px-2.5 py-1.5 text-foreground/90 sm:px-3.5 sm:py-2">
                     {phase === "sent" ? (
                       <span className="inline-flex items-center gap-1 text-muted-foreground">
                         <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:-0.2s]" />
@@ -297,7 +297,7 @@ export function AiDemo() {
               )}
             </div>
 
-            <div className="border-t border-border bg-surface-soft px-5 py-3">
+            <div className="hidden border-t border-border bg-surface-soft px-5 py-3 sm:block">
               <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
                 <span className="flex-1 truncate">Napište, co potřebujete…</span>
                 <button
@@ -314,60 +314,60 @@ export function AiDemo() {
 
           {/* Invoice preview */}
           <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
-            <div className="flex items-center justify-between border-b border-border bg-surface-soft px-5 py-3">
+            <div className="flex items-center justify-between gap-2 border-b border-border bg-surface-soft px-3 py-2 sm:px-5 sm:py-3">
               <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-coral/70" />
-                <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
-                <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
-                <span className="ml-2 text-xs font-semibold text-muted-foreground">
+                <span className="h-2 w-2 rounded-full bg-coral/70 sm:h-2.5 sm:w-2.5" />
+                <span className="hidden h-2.5 w-2.5 rounded-full bg-muted-foreground/30 sm:inline-block" />
+                <span className="hidden h-2.5 w-2.5 rounded-full bg-muted-foreground/30 sm:inline-block" />
+                <span className="ml-1 text-[11px] font-semibold text-muted-foreground sm:ml-2 sm:text-xs">
                   Faktura {shownInvoice.invoiceNumber}
                 </span>
               </div>
               {phase === "applied" && step.appliedBadge && (
                 <span
                   key={`badge-${flashKey}`}
-                  className="inline-flex animate-in fade-in zoom-in-95 items-center gap-1 rounded-full border border-coral/30 bg-coral/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.15em] text-coral"
+                  className="inline-flex animate-in fade-in zoom-in-95 items-center gap-1 rounded-full border border-coral/30 bg-coral/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-coral sm:px-2 sm:text-[10px] sm:tracking-[0.15em]"
                 >
-                  <Sparkles className="h-3 w-3" />
+                  <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                   {step.appliedBadge}
                 </span>
               )}
             </div>
 
-            <div className="space-y-4 p-5 sm:p-6">
+            <div className="space-y-2.5 p-3 sm:space-y-4 sm:p-5">
               {/* Client */}
               <div
                 key={`client-${flashKey}-${shownInvoice.client}`}
-                className={`rounded-xl border p-4 ${
+                className={`rounded-xl border p-2.5 sm:p-4 ${
                   step.highlight === "client" && phase === "applied"
                     ? "animate-in fade-in slide-in-from-left-2 border-coral/40 bg-coral/5"
                     : "border-border bg-background"
                 }`}
               >
-                <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+                <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground sm:text-[10px] sm:tracking-[0.15em]">
                   Klient
                 </div>
-                <div className="mt-1 text-sm font-semibold text-foreground">
+                <div className="mt-0.5 text-[13px] font-semibold leading-tight text-foreground sm:mt-1 sm:text-sm">
                   {shownInvoice.client}
                 </div>
                 {shownInvoice.clientMeta && (
-                  <div className="mt-0.5 text-xs text-muted-foreground">
+                  <div className="mt-0.5 text-[10px] leading-tight text-muted-foreground sm:text-xs">
                     {shownInvoice.clientMeta}
                   </div>
                 )}
               </div>
 
               {/* Line item */}
-              <div className="rounded-xl border border-border bg-background p-4">
-                <div className="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+              <div className="rounded-xl border border-border bg-background p-2.5 sm:p-4">
+                <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground sm:text-xs sm:tracking-[0.15em]">
                   {shownInvoice.itemLabel}
                 </div>
-                <div className="mt-1 text-sm font-medium text-foreground">
+                <div className="mt-0.5 text-[12px] font-medium leading-tight text-foreground sm:mt-1 sm:text-sm">
                   {scenario.id === "create"
                     ? "IT služby"
                     : "Konzultace · webový vývoj"}
                 </div>
-                <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
+                <div className="mt-2 grid grid-cols-3 gap-1.5 text-xs sm:mt-3 sm:gap-3">
                   <Field
                     label={shownInvoice.qtyLabel}
                     value={shownInvoice.qty}
@@ -385,7 +385,7 @@ export function AiDemo() {
               </div>
 
               {/* Totals */}
-              <div className="space-y-1.5 rounded-xl border border-border bg-background p-4 text-sm">
+              <div className="space-y-1 rounded-xl border border-border bg-background p-2.5 text-[12px] sm:space-y-1.5 sm:p-4 sm:text-sm">
                 <Row label="Mezisoučet" value={shownInvoice.subtotal} />
                 {shownInvoice.discountLabel && (
                   <Row
@@ -397,21 +397,21 @@ export function AiDemo() {
                   />
                 )}
                 <Row label="DPH 21 %" value={shownInvoice.vat} />
-                <div className="my-2 h-px bg-border" />
+                <div className="my-1.5 h-px bg-border sm:my-2" />
                 <div
                   key={`total-${flashKey}`}
-                  className={`flex items-baseline justify-between ${
+                  className={`flex items-baseline justify-between gap-1 ${
                     phase === "applied" ? "animate-in fade-in slide-in-from-bottom-1" : ""
                   }`}
                 >
-                  <span className="text-sm font-semibold text-foreground">Celkem k úhradě</span>
-                  <span className="text-xl font-extrabold tracking-tight text-foreground">
+                  <span className="text-[11px] font-semibold leading-tight text-foreground sm:text-sm">Celkem</span>
+                  <span className="text-base font-extrabold tracking-tight text-foreground sm:text-xl">
                     {shownInvoice.total}
                   </span>
                 </div>
               </div>
 
-              <p className="text-center text-xs text-muted-foreground">
+              <p className="hidden text-center text-xs text-muted-foreground sm:block">
                 ⏱ Od zprávy k hotové faktuře — méně než vteřina.
               </p>
             </div>
@@ -435,12 +435,12 @@ function Field({
 }) {
   return (
     <div>
-      <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+      <div className="text-[9px] font-semibold uppercase leading-tight tracking-[0.1em] text-muted-foreground sm:text-[10px] sm:tracking-[0.12em]">
         {label}
       </div>
       <div
         key={flash ? `f-${flashKey}` : undefined}
-        className={`mt-0.5 inline-block rounded px-1.5 py-0.5 text-sm font-semibold text-foreground ${
+        className={`mt-0.5 inline-block rounded px-1 py-0.5 text-[11px] font-semibold leading-tight text-foreground sm:px-1.5 sm:text-sm ${
           flash ? "animate-in fade-in zoom-in-95 bg-coral/15 text-coral" : ""
         }`}
       >
