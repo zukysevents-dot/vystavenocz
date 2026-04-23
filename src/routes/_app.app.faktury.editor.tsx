@@ -712,15 +712,15 @@ function InvoiceEditorPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex min-h-[calc(100vh-3.5rem)] flex-col md:h-screen md:min-h-0">
       {/* Toolbar */}
-      <div className="flex items-center justify-between border-b border-border bg-card px-6 py-3">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 border-b border-border bg-card px-3 py-3 sm:px-6 md:flex-row md:items-center md:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
           <Button variant="ghost" size="sm" asChild>
-            <Link to="/app/faktury"><ArrowLeft className="h-4 w-4" /> Zpět</Link>
+            <Link to="/app/faktury"><ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">Zpět</span></Link>
           </Button>
-          <div>
-            <div className="text-sm font-semibold">
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-semibold">
               {documentType === "credit_note"
                 ? (editingId ? "Úprava dobropisu" : "Nový dobropis")
                 : (editingId ? "Úprava faktury" : "Nová faktura")}
@@ -732,7 +732,7 @@ function InvoiceEditorPage() {
                 </span>
               )}
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="truncate text-xs text-muted-foreground">
               {selectedClient?.name || "vyberte odběratele"} · {formatCZK(totals.total)}
               {(loadedStatus === null || loadedStatus === "draft") && (
                 <span className="ml-2 text-[11px]">
