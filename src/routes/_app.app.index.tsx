@@ -173,7 +173,7 @@ function DashboardPage() {
       setClientsCount(clientRes.count ?? 0);
       setLoading(false);
     })();
-  }, [user]);
+  }, [user?.id]);
 
   const stats = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);

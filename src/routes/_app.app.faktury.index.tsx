@@ -101,7 +101,7 @@ function InvoicesListPage() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [user]);
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user?.id]);
 
   // U dobropisu dotáhneme číslo původní faktury — chceme ho zobrazit v PDF
   // ("k faktuře FA-…"). Pro běžné faktury vrátíme null bez síťového volání.

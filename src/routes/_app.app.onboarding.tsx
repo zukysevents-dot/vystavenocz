@@ -51,7 +51,7 @@ function OnboardingPage() {
       }
       setLoading(false);
     })();
-  }, [user]);
+  }, [user?.id]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
