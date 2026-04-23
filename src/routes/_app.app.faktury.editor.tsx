@@ -108,6 +108,7 @@ function addDaysISO(days: number) {
 function InvoiceEditorPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const sendFn = useServerFn(sendInvoiceEmail);
   const search = useSearch({ from: "/_app/app/faktury/editor" });
   const editingId = search.id;
   const creditForId = search.creditFor;
