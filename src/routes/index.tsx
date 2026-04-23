@@ -32,11 +32,11 @@ function Index() {
   return (
     <PageShell>
       <Hero />
+      <AiDemo />
       <InvoiceFlow />
       <WhatsNew />
       <RapidUpdates />
       <Legislativa />
-      <AiDemo />
       <Cta />
     </PageShell>
   );
