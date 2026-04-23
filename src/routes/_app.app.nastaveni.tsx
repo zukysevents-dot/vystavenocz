@@ -412,6 +412,30 @@ function SettingsPage() {
               <span className="font-mono">info@{SENDER_DOMAIN}</span>, <span className="font-mono">no-reply@{SENDER_DOMAIN}</span>).
               Schránka existovat nemusí — odpovědi klientů jdou na váš e-mail ({user?.email}).
             </p>
+            <div className="flex flex-col gap-2 rounded-lg border border-dashed border-border bg-muted/20 p-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-xs text-muted-foreground">
+                Pošleme krátký testovací e-mail na <span className="font-mono text-foreground">{user?.email}</span>,
+                ať si ověříte, že DNS funguje a faktury dorazí bez bounce.
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onSendTestEmail}
+                disabled={sendingTest}
+                className="shrink-0"
+              >
+                {sendingTest ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Odesílám…
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4" /> Poslat testovací e-mail
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
 
           <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-muted/30 p-4">
