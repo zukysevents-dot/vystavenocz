@@ -748,12 +748,12 @@ function InvoiceEditorPage() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => setShowPreview((v) => !v)}>
+        <div className="-mx-3 flex items-center gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:px-0 sm:pb-0 md:flex-shrink-0">
+          <Button variant="ghost" size="sm" className="hidden lg:inline-flex" onClick={() => setShowPreview((v) => !v)}>
             {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             {showPreview ? "Skrýt náhled" : "Náhled"}
           </Button>
-          <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={downloadingPdf}>
+          <Button variant="outline" size="sm" className="shrink-0" onClick={handleDownloadPdf} disabled={downloadingPdf}>
             {downloadingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             PDF
           </Button>
