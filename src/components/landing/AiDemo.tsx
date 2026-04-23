@@ -239,7 +239,7 @@ export function AiDemo() {
           </div>
         </div>
 
-        <div className="mx-auto mt-12 grid max-w-5xl grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+        <div className="mx-auto mt-12 grid max-w-5xl grid-cols-1 gap-4 md:grid-cols-2 md:gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
           {/* Chat panel */}
           <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
             <div className="flex items-center justify-between border-b border-border bg-surface-soft px-3 py-2 sm:px-5 sm:py-3">
