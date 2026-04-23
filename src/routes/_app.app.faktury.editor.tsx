@@ -84,6 +84,7 @@ type ProfileRow = {
   next_invoice_seq: number;
   credit_note_prefix: string | null;
   next_credit_note_seq: number;
+  auto_send_invoice_email?: boolean;
 };
 
 const newItem = (): InvoiceItemDraft => ({
