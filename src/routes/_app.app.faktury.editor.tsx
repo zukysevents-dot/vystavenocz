@@ -884,9 +884,9 @@ function InvoiceEditorPage() {
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 flex-col md:flex-row md:overflow-hidden">
         {/* Form */}
-        <div className="w-full overflow-auto border-r border-border bg-background p-6 lg:w-1/2">
+        <div className="w-full bg-background p-4 sm:p-6 md:overflow-auto md:border-r md:border-border lg:w-1/2">
           {isCancelled && (
             <div className="mb-4 flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
               <Lock className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
