@@ -35,11 +35,11 @@ function TermsPage() {
           <h2 className="text-2xl font-bold">1. Úvodní ustanovení</h2>
           <p className="mt-3 text-muted-foreground">
             Tyto obchodní podmínky (dále jen <strong>„Podmínky"</strong>) upravují vzájemná
-            práva a povinnosti mezi provozovatelem služby Vystaveno.cz, společností{" "}
-            <strong>Vystaveno s.r.o.</strong>, IČO: 24991686, DIČ: CZ24991686, se sídlem
-            Praha, Česká republika, zapsanou v obchodním rejstříku vedeném Městským soudem
-            v Praze (dále jen <strong>„Provozovatel"</strong>), a osobou, která využívá službu
-            Vystaveno (dále jen <strong>„Uživatel"</strong>).
+            práva a povinnosti mezi provozovatelem služby Vystaveno.cz,{" "}
+            <strong>[Jméno a příjmení]</strong>, IČO: 24991686, se sídlem [adresa],
+            Česká republika, podnikající fyzickou osobou zapsanou v živnostenském rejstříku
+            (dále jen <strong>„Provozovatel"</strong>), a osobou, která využívá službu
+            Vystaveno (dále jen <strong>„Uživatel"</strong>). Provozovatel není plátcem DPH.
           </p>
           <p className="mt-3 text-muted-foreground">
             Registrací a aktivním používáním služby Uživatel potvrzuje, že se s těmito
@@ -171,7 +171,7 @@ function TermsPage() {
 
         <section className="rounded-2xl border border-border bg-surface-soft p-6 text-sm text-muted-foreground">
           <p>
-            <strong>Kontakt:</strong> Vystaveno s.r.o., IČO 24991686, e-mail{" "}
+            <strong>Kontakt:</strong> [Jméno a příjmení], IČO 24991686, e-mail{" "}
             <a href="mailto:podpora@vystaveno.cz" className="text-primary underline">
               podpora@vystaveno.cz
             </a>

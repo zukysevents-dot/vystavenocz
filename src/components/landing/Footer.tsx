@@ -81,7 +81,7 @@ export function Footer() {
           <p className="text-xs text-muted-foreground">
             © {new Date().getFullYear()} Vystaveno.cz. Všechna práva vyhrazena.
           </p>
-          <p className="text-xs text-muted-foreground">IČO: 24991686 · DIČ: CZ24991686</p>
+          <p className="text-xs text-muted-foreground">IČO: 24991686 · Neplátce DPH</p>
         </div>
       </div>
     </footer>
