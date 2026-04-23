@@ -212,18 +212,3 @@ export function SendInvoiceDialog({ open, onOpenChange, context, onSent }: Props
     </Dialog>
   );
 }
-
-function formatAmount(n: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat("cs-CZ", { style: "currency", currency }).format(n);
-  } catch {
-    return `${n} ${currency}`;
-  }
-}
-function formatDate(s: string): string {
-  try {
-    return new Date(s).toLocaleDateString("cs-CZ");
-  } catch {
-    return s;
-  }
-}
