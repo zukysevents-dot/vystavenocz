@@ -21,6 +21,7 @@ import {
 import { formatCZK, formatDate } from "@/lib/invoice";
 import { InvoiceDocument } from "@/components/app/InvoiceDocument";
 import { downloadInvoicePdf } from "@/lib/invoice-pdf";
+import { invoiceToPdfProps } from "@/lib/pdf/invoice-to-pdf-props";
 import { SendInvoiceDialog, type SendInvoiceContext } from "@/components/app/SendInvoiceDialog";
 import { PaywallDialog } from "@/components/payments/PaywallDialog";
 import { useSubscription } from "@/hooks/use-subscription";
