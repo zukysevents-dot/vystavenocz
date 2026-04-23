@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Switch } from "@/components/ui/switch";
 import { InvoiceDocument } from "@/components/app/InvoiceDocument";
 import { downloadInvoicePdf, renderInvoicePdfBlob } from "@/lib/invoice-pdf";
+import type { InvoicePdfProps } from "@/lib/pdf/InvoicePdfDoc";
 import { SendInvoiceDialog, type SendInvoiceContext } from "@/components/app/SendInvoiceDialog";
 import { useServerFn } from "@tanstack/react-start";
 import { sendInvoiceEmail } from "@/lib/email/send-invoice.functions";
@@ -573,7 +574,21 @@ function InvoiceEditorPage() {
           try {
             setShowPreview(true);
             await new Promise((r) => setTimeout(r, 250));
-            const blob = await renderInvoicePdfBlob("invoice-document");
+            const autoPdfProps: InvoicePdfProps = {
+              supplier: supplierSnapshot,
+              client: clientSnapshot,
+              items,
+              invoiceNumber,
+              issueDate,
+              dueDate,
+              taxableDate,
+              variableSymbol: variableSymbol || undefined,
+              notes: notes || undefined,
+              paymentMethod,
+              currency: "CZK",
+              documentType,
+            };
+            const blob = await renderInvoicePdfBlob(autoPdfProps);
             const path = `${user.id}/${invoiceId}.pdf`;
             const { error: upErr } = await supabase.storage
               .from("invoices")
@@ -628,13 +643,27 @@ function InvoiceEditorPage() {
     }
   };
 
+  const buildPdfProps = (): InvoicePdfProps => ({
+    supplier: supplierSnapshot,
+    client: clientSnapshot,
+    items,
+    invoiceNumber,
+    issueDate,
+    dueDate,
+    taxableDate,
+    variableSymbol: variableSymbol || undefined,
+    notes: notes || undefined,
+    paymentMethod,
+    currency: "CZK",
+    documentType,
+    showFooter: pdfShowFooter,
+    showVatBreakdown: pdfShowVatBreakdown,
+  });
+
   const handleDownloadPdf = async () => {
     setDownloadingPdf(true);
     try {
-      // ensure preview is visible
-      setShowPreview(true);
-      await new Promise((r) => setTimeout(r, 150));
-      await downloadInvoicePdf("invoice-document", `${invoiceNumber || "faktura"}.pdf`);
+      await downloadInvoicePdf(buildPdfProps(), `${invoiceNumber || "faktura"}.pdf`);
       toast.success("PDF staženo.");
     } catch (e) {
       console.error(e);
@@ -668,7 +697,7 @@ function InvoiceEditorPage() {
         total: totals.total,
         currency: "CZK",
         dueDate,
-        pdfElementId: "invoice-document",
+        pdfProps: buildPdfProps(),
       });
       setSendOpen(true);
     } finally {

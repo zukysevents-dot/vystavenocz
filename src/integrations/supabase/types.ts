@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          created_at: string
+          description: string | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           city: string | null
@@ -228,6 +258,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_status: string
+          anonymized_at: string | null
           auto_send_invoice_email: boolean
           bank_account: string | null
           city: string | null
@@ -258,6 +290,8 @@ export type Database = {
           zip: string | null
         }
         Insert: {
+          account_status?: string
+          anonymized_at?: string | null
           auto_send_invoice_email?: boolean
           bank_account?: string | null
           city?: string | null
@@ -288,6 +322,8 @@ export type Database = {
           zip?: string | null
         }
         Update: {
+          account_status?: string
+          anonymized_at?: string | null
           auto_send_invoice_email?: boolean
           bank_account?: string | null
           city?: string | null
@@ -393,6 +429,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      anonymize_account: { Args: { _user_id: string }; Returns: undefined }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean
@@ -407,6 +444,15 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      log_audit_event: {
+        Args: {
+          _description?: string
+          _event_type: string
+          _ip_address?: string
+          _metadata?: Json
+        }
+        Returns: string
       }
     }
     Enums: {

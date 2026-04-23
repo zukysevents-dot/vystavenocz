@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { sendInvoiceEmail } from "@/lib/email/send-invoice.functions";
 import { renderInvoicePdfBlob } from "@/lib/invoice-pdf";
+import type { InvoicePdfProps } from "@/lib/pdf/InvoicePdfDoc";
 import {
   Dialog,
   DialogContent,
@@ -28,8 +29,10 @@ export type SendInvoiceContext = {
   total?: number;
   currency?: string;
   dueDate?: string;
-  /** Element ID s vyrenderovaným <InvoiceDocument/> připraveným pro html2canvas. */
-  pdfElementId: string;
+  /** Props pro vektorové PDF generování (@react-pdf/renderer). Zpětně kompatibilní. */
+  pdfProps?: InvoicePdfProps;
+  /** @deprecated Zbytek z DOM-based renderu — bude odstraněno. */
+  pdfElementId?: string;
 };
 
 type Props = {
@@ -65,8 +68,12 @@ export function SendInvoiceDialog({ open, onOpenChange, context, onSent }: Props
     }
     setSending(true);
     try {
-      // 1) Vygeneruj PDF z DOM
-      const blob = await renderInvoicePdfBlob(context.pdfElementId);
+      // 1) Vygeneruj PDF (vektorové, s českou diakritikou).
+      // Pokud volající ještě neposlal pdfProps, padneme s jasnou chybou.
+      if (!context.pdfProps) {
+        throw new Error("Interní chyba: chybí pdfProps pro generování PDF.");
+      }
+      const blob = await renderInvoicePdfBlob(context.pdfProps);
 
       // 2) Nahraj do Storage pod {user_id}/{invoice_id}.pdf
       const { data: userData, error: userErr } = await supabase.auth.getUser();

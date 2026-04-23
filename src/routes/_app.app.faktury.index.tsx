@@ -21,6 +21,7 @@ import {
 import { formatCZK, formatDate } from "@/lib/invoice";
 import { InvoiceDocument } from "@/components/app/InvoiceDocument";
 import { downloadInvoicePdf } from "@/lib/invoice-pdf";
+import { invoiceToPdfProps } from "@/lib/pdf/invoice-to-pdf-props";
 import { SendInvoiceDialog, type SendInvoiceContext } from "@/components/app/SendInvoiceDialog";
 import { PaywallDialog } from "@/components/payments/PaywallDialog";
 import { useSubscription } from "@/hooks/use-subscription";
@@ -198,9 +199,8 @@ function InvoicesListPage() {
         items: items as NonNullable<typeof pdfPayload>["items"],
         originalInvoiceNumber,
       });
-      // wait for next paint
-      await new Promise((r) => setTimeout(r, 200));
-      await downloadInvoicePdf("invoice-document", `${inv.invoice_number}.pdf`);
+      const pdfProps = invoiceToPdfProps(inv as never, items as never, originalInvoiceNumber);
+      await downloadInvoicePdf(pdfProps, `${inv.invoice_number}.pdf`);
       toast.success("PDF staženo.");
     } catch (e) {
       console.error(e);
@@ -239,7 +239,7 @@ function InvoicesListPage() {
         total: Number(inv.total),
         currency: inv.currency,
         dueDate: inv.due_date,
-        pdfElementId: "invoice-document",
+        pdfProps: invoiceToPdfProps(inv as never, items as never, await fetchOriginalNumber(inv)),
       });
       setSendOpen(true);
     } catch (e) {
