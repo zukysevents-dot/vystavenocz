@@ -435,12 +435,12 @@ function Field({
 }) {
   return (
     <div>
-      <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+      <div className="text-[9px] font-semibold uppercase leading-tight tracking-[0.1em] text-muted-foreground sm:text-[10px] sm:tracking-[0.12em]">
         {label}
       </div>
       <div
         key={flash ? `f-${flashKey}` : undefined}
-        className={`mt-0.5 inline-block rounded px-1.5 py-0.5 text-sm font-semibold text-foreground ${
+        className={`mt-0.5 inline-block rounded px-1 py-0.5 text-[11px] font-semibold leading-tight text-foreground sm:px-1.5 sm:text-sm ${
           flash ? "animate-in fade-in zoom-in-95 bg-coral/15 text-coral" : ""
         }`}
       >
