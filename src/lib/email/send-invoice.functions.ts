@@ -26,18 +26,13 @@ export const sendInvoiceEmail = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
 
     // 0) Server-side paywall check — uživatel musí mít aktivní trial nebo placené předplatné
-    const stripeEnv =
-      (process.env.VITE_STRIPE_ENVIRONMENT as string | undefined) === "live"
-        ? "live"
-        : "sandbox";
-    const { data: hasAccess, error: accessErr } = await supabase.rpc("has_paid_access", {
-      user_uuid: userId,
-      check_env: stripeEnv,
-    });
-    if (accessErr) {
-      throw new Error("Nepodařilo se ověřit předplatné: " + accessErr.message);
-    }
-    if (!hasAccess) {
+    // Zkontrolujeme obě prostředí (sandbox i live), aby check fungoval bez ohledu
+    // na to, jak je nasazeno, a uživatel s aktivním předplatným v kterémkoli prostředí prošel.
+    const [{ data: liveAccess }, { data: sandboxAccess }] = await Promise.all([
+      supabase.rpc("has_paid_access", { user_uuid: userId, check_env: "live" }),
+      supabase.rpc("has_paid_access", { user_uuid: userId, check_env: "sandbox" }),
+    ]);
+    if (!liveAccess && !sandboxAccess) {
       throw new Error("Pro odesílání faktur e-mailem je potřeba aktivní předplatné.");
     }
 
