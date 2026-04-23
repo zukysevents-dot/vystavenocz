@@ -72,20 +72,20 @@ export function Pricing() {
                 </span>
                 <div className="pb-2">
                   <p className="text-lg font-semibold text-foreground">Kč</p>
-                  <p className="text-xs text-muted-foreground">měsíčně bez DPH</p>
+                  <p className="text-xs text-muted-foreground">měsíčně</p>
                 </div>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
                 {yearly
-                  ? "Účtováno ročně 1 200 Kč. Ušetříte 708 Kč."
-                  : "Účtováno měsíčně. Přechod na roční tarif kdykoliv."}
+                  ? "Účtováno ročně 1 200 Kč. Ušetříte 708 Kč oproti měsíčnímu tarifu."
+                  : "Účtováno měsíčně. Roční tarif vyjde na 100 Kč/měsíc — ušetříte 708 Kč ročně."}
               </p>
 
               <Button variant="coral" size="lg" className="mt-6 w-full" asChild>
-                <a href="/registrace">Vyzkoušet 14 dní zdarma</a>
+                <a href="/registrace">Začít 14denní zkušební verzi</a>
               </Button>
               <p className="mt-2 text-center text-xs text-muted-foreground">
-                Bez platební karty. Zrušení jedním kliknutím.
+                Bez platební karty · Zrušení jedním kliknutím · Neplátce DPH (cena je konečná)
               </p>
 
               <ul className="mt-8 grid gap-3 sm:grid-cols-2">
@@ -103,7 +103,7 @@ export function Pricing() {
         </div>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          Fakturujete méně než 5× měsíčně? Napište nám, máme i tarif Start zdarma.
+          Méně než 5 faktur měsíčně? Napište nám na patrik@vystaveno.cz — domluvíme se.
         </p>
       </div>
     </section>
