@@ -643,13 +643,27 @@ function InvoiceEditorPage() {
     }
   };
 
+  const buildPdfProps = (): InvoicePdfProps => ({
+    supplier: supplierSnapshot,
+    client: clientSnapshot,
+    items,
+    invoiceNumber,
+    issueDate,
+    dueDate,
+    taxableDate,
+    variableSymbol: variableSymbol || undefined,
+    notes: notes || undefined,
+    paymentMethod,
+    currency: "CZK",
+    documentType,
+    showFooter: pdfShowFooter,
+    showVatBreakdown: pdfShowVatBreakdown,
+  });
+
   const handleDownloadPdf = async () => {
     setDownloadingPdf(true);
     try {
-      // ensure preview is visible
-      setShowPreview(true);
-      await new Promise((r) => setTimeout(r, 150));
-      await downloadInvoicePdf("invoice-document", `${invoiceNumber || "faktura"}.pdf`);
+      await downloadInvoicePdf(buildPdfProps(), `${invoiceNumber || "faktura"}.pdf`);
       toast.success("PDF staženo.");
     } catch (e) {
       console.error(e);
@@ -683,7 +697,7 @@ function InvoiceEditorPage() {
         total: totals.total,
         currency: "CZK",
         dueDate,
-        pdfElementId: "invoice-document",
+        pdfProps: buildPdfProps(),
       });
       setSendOpen(true);
     } finally {
