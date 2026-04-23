@@ -79,7 +79,7 @@ export function Footer() {
 
         <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 sm:flex-row">
           <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} Fakturio.cz. Všechna práva vyhrazena.
+            © {new Date().getFullYear()} Vystaveno.cz. Všechna práva vyhrazena.
           </p>
           <p className="text-xs text-muted-foreground">IČO: 12345678 · DIČ: CZ12345678</p>
         </div>

@@ -7,13 +7,13 @@ import { ShieldCheck, Lock, Clock, Heart, Sparkles, AlertTriangle } from "lucide
 export const Route = createFileRoute("/nase-sliby")({
   head: () => ({
     meta: [
-      { title: "Naše sliby — Fakturio.cz" },
+      { title: "Naše sliby — Vystaveno.cz" },
       {
         name: "description",
         content:
           "Akční cena do 1. 6. Po registraci máte 12 měsíců garantovanou cenu. Žádné skryté poplatky, zrušení jedním kliknutím.",
       },
-      { property: "og:title", content: "Naše sliby — Fakturio.cz" },
+      { property: "og:title", content: "Naše sliby — Vystaveno.cz" },
       {
         property: "og:description",
         content:

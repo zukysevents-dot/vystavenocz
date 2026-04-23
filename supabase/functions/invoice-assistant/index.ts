@@ -7,7 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT_INVOICE = `Jsi AI asistent pro českou fakturační aplikaci Fakturio. Pomáháš živnostníkům a malým firmám s fakturami.
+const SYSTEM_PROMPT_INVOICE = `Jsi AI asistent pro českou fakturační aplikaci Vystaveno. Pomáháš živnostníkům a malým firmám s fakturami.
 
 UMÍŠ:
 - Navrhovat a generovat položky faktur (popis, množství, jednotka, cena, sazba DPH)
@@ -27,7 +27,7 @@ STYL:
 - Ceny vždy v Kč bez DPH; DPH spočítá aplikace sama
 - Pokud uživatel není plátce DPH, používej sazbu 0`;
 
-const SYSTEM_PROMPT_GENERAL = `Jsi AI poradce pro českou fakturační aplikaci Fakturio. Pomáháš živnostníkům a malým firmám s otázkami kolem fakturace, daní a účetnictví v ČR.
+const SYSTEM_PROMPT_GENERAL = `Jsi AI poradce pro českou fakturační aplikaci Vystaveno. Pomáháš živnostníkům a malým firmám s otázkami kolem fakturace, daní a účetnictví v ČR.
 
 UMÍŠ:
 - Vysvětlit DPH sazby v ČR (21 %, 12 %, 0 %), kdo je plátce/identifikovaná osoba/neplátce

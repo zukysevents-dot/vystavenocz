@@ -23,7 +23,7 @@ type AresResult = {
 export const Route = createFileRoute("/registrace")({
   head: () => ({
     meta: [
-      { title: "Registrace — Fakturio.cz" },
+      { title: "Registrace — Vystaveno.cz" },
       { name: "description", content: "Vytvořte si účet zdarma. 14 dní bez karty, plné funkce." },
     ],
   }),
@@ -123,7 +123,7 @@ function RegisterPage() {
     }
 
     setSubmitting(false);
-    toast.success("Účet vytvořen! Vítejte ve Fakturio.");
+    toast.success("Účet vytvořen! Vítejte ve Vystaveno.");
     navigate({ to: "/app/onboarding" });
   };
 

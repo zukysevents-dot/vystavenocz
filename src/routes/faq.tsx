@@ -8,13 +8,13 @@ import { faqs } from "@/lib/faq-data";
 export const Route = createFileRoute("/faq")({
   head: () => ({
     meta: [
-      { title: "Časté otázky — Fakturio.cz" },
+      { title: "Časté otázky — Vystaveno.cz" },
       {
         name: "description",
         content:
           "Co se vás nejčastěji ptáme — DPH, QR platby, AI asistent, neplátci DPH i zkušebka.",
       },
-      { property: "og:title", content: "Časté otázky — Fakturio.cz" },
+      { property: "og:title", content: "Časté otázky — Vystaveno.cz" },
       {
         property: "og:description",
         content:

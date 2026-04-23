@@ -11,7 +11,7 @@ export function Logo({ variant = "full", className = "" }: LogoProps) {
     return (
       <img
         src={logo}
-        alt="Fakturio.cz"
+        alt="Vystaveno.cz"
         width={36}
         height={36}
         className={`h-9 w-9 ${className}`}
@@ -22,7 +22,7 @@ export function Logo({ variant = "full", className = "" }: LogoProps) {
     <Link to="/" className={`flex items-center gap-2 ${className}`}>
       <img src={logo} alt="" width={36} height={36} className="h-9 w-9" />
       <span className="text-lg font-bold tracking-tight text-foreground">
-        Fakturio<span className="text-primary">.cz</span>
+        Vystaveno<span className="text-primary">.cz</span>
       </span>
     </Link>
   );

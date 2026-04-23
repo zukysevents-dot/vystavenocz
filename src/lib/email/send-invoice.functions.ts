@@ -59,7 +59,7 @@ export const sendInvoiceEmail = createServerFn({ method: "POST" })
     const fromName =
       profile?.company_name?.trim() ||
       profile?.full_name?.trim() ||
-      "Fakturio";
+      "Vystaveno";
 
     const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
     const RESEND_API_KEY = process.env.RESEND_API_KEY;

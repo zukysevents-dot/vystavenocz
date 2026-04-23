@@ -26,7 +26,7 @@ import {
 } from "recharts";
 
 export const Route = createFileRoute("/_app/app/")({
-  head: () => ({ meta: [{ title: "Přehled — Fakturio" }] }),
+  head: () => ({ meta: [{ title: "Přehled — Vystaveno" }] }),
   component: DashboardPage,
 });
 
@@ -276,7 +276,7 @@ function DashboardPage() {
     rows.push(["Čekající platby", stats.pendingAmount]);
     rows.push(["Po splatnosti", stats.overdueAmount]);
     rows.push(["Počet faktur", stats.totalCount]);
-    const fname = `fakturio-statistiky-${periodRange.label.replace(/\s+/g, "-")}.csv`;
+    const fname = `vystaveno-statistiky-${periodRange.label.replace(/\s+/g, "-")}.csv`;
     downloadCsv(fname, rows);
   }
 

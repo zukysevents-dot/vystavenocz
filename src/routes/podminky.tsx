@@ -5,16 +5,16 @@ import { PageHeader } from "@/components/landing/PageHeader";
 export const Route = createFileRoute("/podminky")({
   head: () => ({
     meta: [
-      { title: "Obchodní podmínky — Fakturio" },
+      { title: "Obchodní podmínky — Vystaveno" },
       {
         name: "description",
         content:
-          "Obchodní podmínky služby Fakturio.cz pro vystavování faktur online. Práva, povinnosti, předplatné a reklamace.",
+          "Obchodní podmínky služby Vystaveno.cz pro vystavování faktur online. Práva, povinnosti, předplatné a reklamace.",
       },
-      { property: "og:title", content: "Obchodní podmínky — Fakturio" },
+      { property: "og:title", content: "Obchodní podmínky — Vystaveno" },
       {
         property: "og:description",
-        content: "Obchodní podmínky služby Fakturio.cz pro vystavování faktur online.",
+        content: "Obchodní podmínky služby Vystaveno.cz pro vystavování faktur online.",
       },
     ],
   }),
@@ -35,11 +35,11 @@ function TermsPage() {
           <h2 className="text-2xl font-bold">1. Úvodní ustanovení</h2>
           <p className="mt-3 text-muted-foreground">
             Tyto obchodní podmínky (dále jen <strong>„Podmínky"</strong>) upravují vzájemná
-            práva a povinnosti mezi provozovatelem služby Fakturio.cz, společností{" "}
-            <strong>Fakturio s.r.o.</strong>, IČO: 12345678, DIČ: CZ12345678, se sídlem
+            práva a povinnosti mezi provozovatelem služby Vystaveno.cz, společností{" "}
+            <strong>Vystaveno s.r.o.</strong>, IČO: 12345678, DIČ: CZ12345678, se sídlem
             Praha, Česká republika, zapsanou v obchodním rejstříku vedeném Městským soudem
             v Praze (dále jen <strong>„Provozovatel"</strong>), a osobou, která využívá službu
-            Fakturio (dále jen <strong>„Uživatel"</strong>).
+            Vystaveno (dále jen <strong>„Uživatel"</strong>).
           </p>
           <p className="mt-3 text-muted-foreground">
             Registrací a aktivním používáním služby Uživatel potvrzuje, že se s těmito
@@ -50,7 +50,7 @@ function TermsPage() {
         <section>
           <h2 className="text-2xl font-bold">2. Předmět služby</h2>
           <p className="mt-3 text-muted-foreground">
-            Fakturio je webová aplikace pro vystavování, evidenci a správu faktur,
+            Vystaveno je webová aplikace pro vystavování, evidenci a správu faktur,
             zálohových faktur a dalších účetních dokladů určená především pro OSVČ,
             živnostníky a malé firmy v České republice. Služba zahrnuje:
           </p>
@@ -85,7 +85,7 @@ function TermsPage() {
         <section>
           <h2 className="text-2xl font-bold">5. Předplatné a platební podmínky</h2>
           <p className="mt-3 text-muted-foreground">
-            Tarif <strong>Fakturio Pro</strong> je dostupný v měsíční (159 Kč/měs bez DPH)
+            Tarif <strong>Vystaveno Pro</strong> je dostupný v měsíční (159 Kč/měs bez DPH)
             nebo roční variantě (1 200 Kč/rok bez DPH, tj. 100 Kč/měs). Ceny jsou uvedeny
             bez DPH; daňové doklady jsou vystavovány elektronicky.
           </p>
@@ -171,9 +171,9 @@ function TermsPage() {
 
         <section className="rounded-2xl border border-border bg-surface-soft p-6 text-sm text-muted-foreground">
           <p>
-            <strong>Kontakt:</strong> Fakturio s.r.o., IČO 12345678, e-mail{" "}
-            <a href="mailto:podpora@fakturio.cz" className="text-primary underline">
-              podpora@fakturio.cz
+            <strong>Kontakt:</strong> Vystaveno s.r.o., IČO 12345678, e-mail{" "}
+            <a href="mailto:podpora@vystaveno.cz" className="text-primary underline">
+              podpora@vystaveno.cz
             </a>
           </p>
         </section>

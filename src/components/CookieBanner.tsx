@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { applyAnalyticsConsent } from "@/lib/analytics";
 
-const STORAGE_KEY = "fakturio.cookieConsent.v1";
+const STORAGE_KEY = "vystaveno.cookieConsent.v1";
 
 type Consent = {
   necessary: true;
@@ -31,13 +31,13 @@ function saveConsent(analytics: boolean) {
     decidedAt: new Date().toISOString(),
   };
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(consent));
-  window.dispatchEvent(new CustomEvent("fakturio:cookie-consent", { detail: consent }));
+  window.dispatchEvent(new CustomEvent("vystaveno:cookie-consent", { detail: consent }));
 }
 
 export function openCookieSettings() {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(STORAGE_KEY);
-  window.dispatchEvent(new CustomEvent("fakturio:cookie-consent-reset"));
+  window.dispatchEvent(new CustomEvent("vystaveno:cookie-consent-reset"));
 }
 
 export function CookieBanner() {
@@ -51,8 +51,8 @@ export function CookieBanner() {
       if (!existing) setAnalyticsOn(false); // GDPR: opt-in default
     };
     check();
-    window.addEventListener("fakturio:cookie-consent-reset", check);
-    return () => window.removeEventListener("fakturio:cookie-consent-reset", check);
+    window.addEventListener("vystaveno:cookie-consent-reset", check);
+    return () => window.removeEventListener("vystaveno:cookie-consent-reset", check);
   }, []);
 
   if (!visible) return null;
@@ -90,7 +90,7 @@ export function CookieBanner() {
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <h2 id="cookie-banner-title" className="text-sm font-semibold text-foreground">
-                Soukromí na Fakturio
+                Soukromí na Vystaveno
               </h2>
               <button
                 type="button"

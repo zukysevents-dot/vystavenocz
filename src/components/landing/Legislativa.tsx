@@ -4,7 +4,7 @@ const points = [
   {
     icon: Calculator,
     title: "Automatický výpočet DPH",
-    desc: "Sazby 21 %, 12 % i 0 % počítáme za vás. Stačí vybrat režim plátce, identifikované osoby nebo neplátce a Fakturio doplní rozpis daňového základu i sumu DPH.",
+    desc: "Sazby 21 %, 12 % i 0 % počítáme za vás. Stačí vybrat režim plátce, identifikované osoby nebo neplátce a Vystaveno doplní rozpis daňového základu i sumu DPH.",
   },
   {
     icon: FileCheck2,
@@ -35,7 +35,7 @@ export function Legislativa() {
             Postaráme se o náležitosti, vy o byznys
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Fakturio drží český standard — od správně počítaného DPH 21 % až po IČO, DIČ a všechny
+            Vystaveno drží český standard — od správně počítaného DPH 21 % až po IČO, DIČ a všechny
             povinné údaje na daňovém dokladu.
           </p>
         </div>
@@ -58,7 +58,7 @@ export function Legislativa() {
         </div>
 
         <p className="mx-auto mt-8 max-w-2xl text-center text-xs text-muted-foreground">
-          Fakturio není účetní ani daňový poradce. Pomáháme s formou a výpočty — odpovědnost za
+          Vystaveno není účetní ani daňový poradce. Pomáháme s formou a výpočty — odpovědnost za
           obsah faktury vždy zůstává na vystaviteli.
         </p>
       </div>

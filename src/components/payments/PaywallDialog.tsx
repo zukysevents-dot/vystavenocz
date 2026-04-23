@@ -29,13 +29,13 @@ export function PaywallDialog({ open, onOpenChange, reason }: Props) {
           </DialogTitle>
           <DialogDescription className="text-center">
             {reason ||
-              "Pro vystavení faktury aktivujte tarif Fakturio Pro. Vaše data zůstávají uložená."}
+              "Pro vystavení faktury aktivujte tarif Vystaveno Pro. Vaše data zůstávají uložená."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="rounded-2xl border border-border bg-surface-soft p-4">
           <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Sparkles className="h-4 w-4 text-coral" /> Fakturio Pro
+            <Sparkles className="h-4 w-4 text-coral" /> Vystaveno Pro
           </div>
           <p className="mt-1 text-2xl font-bold text-foreground">
             100 Kč <span className="text-sm font-normal text-muted-foreground">/ měsíc</span>

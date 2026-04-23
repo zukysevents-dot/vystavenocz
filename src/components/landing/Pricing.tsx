@@ -54,7 +54,7 @@ export function Pricing() {
             <div className="border-b border-border bg-surface-soft px-8 py-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-xl font-bold text-foreground">Fakturio Pro</h3>
+                  <h3 className="text-xl font-bold text-foreground">Vystaveno Pro</h3>
                   <p className="text-sm text-muted-foreground">
                     Pro OSVČ i firmy. Vše bez omezení.
                   </p>

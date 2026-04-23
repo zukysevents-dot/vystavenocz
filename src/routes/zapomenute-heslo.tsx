@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/zapomenute-heslo")({
-  head: () => ({ meta: [{ title: "Zapomenuté heslo — Fakturio.cz" }] }),
+  head: () => ({ meta: [{ title: "Zapomenuté heslo — Vystaveno.cz" }] }),
   component: ForgotPasswordPage,
 });
 

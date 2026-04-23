@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_app/app/onboarding")({
-  head: () => ({ meta: [{ title: "Nastavení firmy — Fakturio" }] }),
+  head: () => ({ meta: [{ title: "Nastavení firmy — Vystaveno" }] }),
   component: OnboardingPage,
 });
 

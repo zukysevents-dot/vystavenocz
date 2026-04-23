@@ -29,7 +29,7 @@ import { toast } from "sonner";
 import { Plus, Search, Loader2, Pencil, Trash2, Users, Check, Building2 } from "lucide-react";
 
 export const Route = createFileRoute("/_app/app/klienti")({
-  head: () => ({ meta: [{ title: "Klienti — Fakturio" }] }),
+  head: () => ({ meta: [{ title: "Klienti — Vystaveno" }] }),
   component: ClientsPage,
 });
 

@@ -21,7 +21,7 @@ export function InvoicePreview() {
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                   Dodavatel
                 </p>
-                <p className="text-sm font-semibold text-slate-900">Fakturio.cz s.r.o.</p>
+                <p className="text-sm font-semibold text-slate-900">Vystaveno.cz s.r.o.</p>
               </div>
             </div>
             <div className="text-right">

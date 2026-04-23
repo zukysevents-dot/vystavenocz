@@ -2,7 +2,7 @@ export type FaqEntry = { q: string; a: string };
 
 export const faqs: FaqEntry[] = [
   {
-    q: "Jsou faktury z Fakturio.cz plnohodnotné podle českého práva?",
+    q: "Jsou faktury z Vystaveno.cz plnohodnotné podle českého práva?",
     a: "Ano. Každá faktura obsahuje všechny zákonné náležitosti dle §29 zákona o DPH a §11 zákona o účetnictví — IČO, DIČ, číslo faktury, DUZP, datum vystavení a splatnosti, sazbu a výši DPH, identifikaci dodavatele i odběratele.",
   },
   {
@@ -18,7 +18,7 @@ export const faqs: FaqEntry[] = [
     a: "Samozřejmě. Při registraci si zvolíte režim — neplátce DPH, plátce DPH, identifikovaná osoba. Šablona faktury se přizpůsobí. Přechod mezi režimy je kdykoliv jedním kliknutím.",
   },
   {
-    q: "Umí Fakturio dobropisy (opravné daňové doklady)?",
+    q: "Umí Vystaveno dobropisy (opravné daňové doklady)?",
     a: "Ano. U každé vystavené faktury najdete v menu akci „Vytvořit dobropis“ — otevře se editor s předvyplněným klientem, odkazem na původní fakturu a položkami se zápornými množstvími. Dobropisy mají vlastní číselnou řadu s prefixem OD- (např. OD-2026-0001), takže v účetnictví je odlišíte na první pohled. V seznamu faktur jsou označené badgem „Dobropis“.",
   },
   {

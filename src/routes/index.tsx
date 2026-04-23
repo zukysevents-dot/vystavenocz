@@ -11,13 +11,13 @@ import { Cta } from "@/components/landing/Cta";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Fakturio.cz — Tvorba a správa faktur pro OSVČ a firmy" },
+      { title: "Vystaveno.cz — Tvorba a správa faktur pro OSVČ a firmy" },
       {
         name: "description",
         content:
           "Vystavujte, posílejte a spravujte faktury na jednom místě. Automatické DPH 21 %, QR platby, IČO/DIČ z ARESu, přehled stavů. AI asistent jako bonus. Od 100 Kč měsíčně.",
       },
-      { property: "og:title", content: "Fakturio.cz — Česká fakturace s QR platbami a přehledem" },
+      { property: "og:title", content: "Vystaveno.cz — Česká fakturace s QR platbami a přehledem" },
       {
         property: "og:description",
         content:

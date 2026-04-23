@@ -7,13 +7,13 @@ import { Cta } from "@/components/landing/Cta";
 export const Route = createFileRoute("/srovnani")({
   head: () => ({
     meta: [
-      { title: "Srovnání: Fakturio.cz, Fakturoid, iDoklad a Vyfakturuj" },
+      { title: "Srovnání: Vystaveno.cz, Fakturoid, iDoklad a Vyfakturuj" },
       {
         name: "description",
         content:
-          "Co umí Fakturio navíc oproti Fakturoidu, iDokladu a Vyfakturuj? Srovnání cen i funkcí přehledně na jedné stránce.",
+          "Co umí Vystaveno navíc oproti Fakturoidu, iDokladu a Vyfakturuj? Srovnání cen i funkcí přehledně na jedné stránce.",
       },
-      { property: "og:title", content: "Fakturio vs Fakturoid, iDoklad, Vyfakturuj" },
+      { property: "og:title", content: "Vystaveno vs Fakturoid, iDoklad, Vyfakturuj" },
       {
         property: "og:description",
         content:
@@ -30,7 +30,7 @@ function SrovnaniPage() {
       <PageHeader
         eyebrow="Srovnání"
         title="Stejné funkce, polovina ceny."
-        subtitle="Postavili jsme Fakturio vedle Fakturoidu, iDokladu a Vyfakturuj. Posuďte sami."
+        subtitle="Postavili jsme Vystaveno vedle Fakturoidu, iDokladu a Vyfakturuj. Posuďte sami."
       />
       <Comparison />
       <Cta />

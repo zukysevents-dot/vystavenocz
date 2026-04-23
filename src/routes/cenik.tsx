@@ -7,13 +7,13 @@ import { Faq } from "@/components/landing/Faq";
 export const Route = createFileRoute("/cenik")({
   head: () => ({
     meta: [
-      { title: "Ceník — Fakturio.cz od 100 Kč měsíčně" },
+      { title: "Ceník — Vystaveno.cz od 100 Kč měsíčně" },
       {
         name: "description",
         content:
           "Stovka měsíčně a máte všechno: neomezeně faktur, AI asistent, QR platby, cizí měny. Bez skrytých limitů.",
       },
-      { property: "og:title", content: "Ceník Fakturio.cz — od 100 Kč měsíčně" },
+      { property: "og:title", content: "Ceník Vystaveno.cz — od 100 Kč měsíčně" },
       {
         property: "og:description",
         content:

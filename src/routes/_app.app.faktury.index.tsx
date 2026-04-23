@@ -26,7 +26,7 @@ import { PaywallDialog } from "@/components/payments/PaywallDialog";
 import { useSubscription } from "@/hooks/use-subscription";
 
 export const Route = createFileRoute("/_app/app/faktury/")({
-  head: () => ({ meta: [{ title: "Faktury — Fakturio" }] }),
+  head: () => ({ meta: [{ title: "Faktury — Vystaveno" }] }),
   component: InvoicesListPage,
 });
 
@@ -446,7 +446,7 @@ function InvoicesListPage() {
       <PaywallDialog
         open={paywallOpen}
         onOpenChange={setPaywallOpen}
-        reason="Vystavení faktury vyžaduje aktivní předplatné Fakturio Pro."
+        reason="Vystavení faktury vyžaduje aktivní předplatné Vystaveno Pro."
       />
 
       <AlertDialog open={!!deletingId} onOpenChange={(o) => !o && setDeletingId(null)}>

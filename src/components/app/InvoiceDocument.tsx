@@ -39,7 +39,7 @@ export type InvoiceDocumentProps = {
   documentType?: "invoice" | "credit_note";
   /** Číslo původní faktury, ke které dobropis patří (jen pro credit_note). */
   originalInvoiceNumber?: string | null;
-  /** Zobrazit patičku „Vystaveno v aplikaci Fakturio". Default true. */
+  /** Zobrazit patičku „Vystaveno v aplikaci Vystaveno". Default true. */
   showFooter?: boolean;
   /** Zobrazit detailní rozpis DPH po sazbách. Default true (jen pro plátce). */
   showVatBreakdown?: boolean;
@@ -360,7 +360,7 @@ export function InvoiceDocument(props: InvoiceDocumentProps) {
 
       {showFooter && (
         <div style={{ marginTop: "32px", paddingTop: "16px", borderTop: "1px solid #e2e8f0", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>
-          Vystaveno v aplikaci Fakturio · fakturio.cz
+          Vystaveno v aplikaci Vystaveno · vystaveno.cz
         </div>
       )}
     </div>

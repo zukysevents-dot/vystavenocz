@@ -10,7 +10,7 @@
  *
  * Required env vars (build-time, all public/safe to expose):
  *   VITE_GA_MEASUREMENT_ID  e.g. "G-XXXXXXXXXX"
- *   VITE_PLAUSIBLE_DOMAIN   e.g. "fakturio.cz"
+ *   VITE_PLAUSIBLE_DOMAIN   e.g. "vystaveno.cz"
  */
 
 const GA_SCRIPT_ID = "ga-gtag-loader";
