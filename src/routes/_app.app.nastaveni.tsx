@@ -44,6 +44,7 @@ type Form = {
   credit_note_prefix: string;
   next_credit_note_seq: number;
   auto_send_invoice_email: boolean;
+  invoice_sender_local_part: string;
 };
 
 const defaults: Form = {
@@ -66,7 +67,11 @@ const defaults: Form = {
   credit_note_prefix: "OD",
   next_credit_note_seq: 1,
   auto_send_invoice_email: false,
+  invoice_sender_local_part: "faktury",
 };
+
+const SENDER_DOMAIN = "vystaveno.cz";
+const LOCAL_PART_REGEX = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/;
 
 function SettingsPage() {
   const { user } = useAuth();
@@ -104,6 +109,8 @@ function SettingsPage() {
           credit_note_prefix: data.credit_note_prefix ?? "OD",
           next_credit_note_seq: data.next_credit_note_seq ?? 1,
           auto_send_invoice_email: (data as { auto_send_invoice_email?: boolean }).auto_send_invoice_email ?? false,
+          invoice_sender_local_part:
+            (data as { invoice_sender_local_part?: string | null }).invoice_sender_local_part ?? "faktury",
         });
       }
       setLoading(false);
