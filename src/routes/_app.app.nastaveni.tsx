@@ -81,8 +81,34 @@ function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const ares = useAres();
+  const sendTestFn = useServerFn(sendTestInvoiceEmail);
+
+  const onSendTestEmail = async () => {
+    if (!user) return;
+    const localPart = form.invoice_sender_local_part.trim().toLowerCase();
+    if (!LOCAL_PART_REGEX.test(localPart)) {
+      toast.error("Nejdřív vyplňte platného odesílatele a uložte nastavení.");
+      return;
+    }
+    setSendingTest(true);
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      if (!token) throw new Error("Chybí přihlašovací token.");
+      const result = await sendTestFn({ headers: { Authorization: `Bearer ${token}` } });
+      toast.success("Testovací e-mail odeslán", {
+        description: `Z ${localPart}@${SENDER_DOMAIN} → ${result.to}. Zkontrolujte schránku (i spam).`,
+        duration: 8000,
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Odeslání selhalo.");
+    } finally {
+      setSendingTest(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
