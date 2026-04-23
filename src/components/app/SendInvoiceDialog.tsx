@@ -29,8 +29,10 @@ export type SendInvoiceContext = {
   total?: number;
   currency?: string;
   dueDate?: string;
-  /** Props pro vektorové PDF generování (@react-pdf/renderer). */
-  pdfProps: InvoicePdfProps;
+  /** Props pro vektorové PDF generování (@react-pdf/renderer). Zpětně kompatibilní. */
+  pdfProps?: InvoicePdfProps;
+  /** @deprecated Zbytek z DOM-based renderu — bude odstraněno. */
+  pdfElementId?: string;
 };
 
 type Props = {
@@ -66,7 +68,11 @@ export function SendInvoiceDialog({ open, onOpenChange, context, onSent }: Props
     }
     setSending(true);
     try {
-      // 1) Vygeneruj PDF (vektorové, s českou diakritikou)
+      // 1) Vygeneruj PDF (vektorové, s českou diakritikou).
+      // Pokud volající ještě neposlal pdfProps, padneme s jasnou chybou.
+      if (!context.pdfProps) {
+        throw new Error("Interní chyba: chybí pdfProps pro generování PDF.");
+      }
       const blob = await renderInvoicePdfBlob(context.pdfProps);
 
       // 2) Nahraj do Storage pod {user_id}/{invoice_id}.pdf
