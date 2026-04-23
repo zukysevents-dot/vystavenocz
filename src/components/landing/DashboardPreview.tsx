@@ -65,6 +65,22 @@ export function DashboardPreview() {
             </div>
           </div>
 
+          {/* Platební symboly */}
+          <div className="mx-5 mt-2 flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px]">
+            <div>
+              <p className="text-slate-500">Var. symbol</p>
+              <p className="font-semibold text-slate-900">20260042</p>
+            </div>
+            <div>
+              <p className="text-slate-500">Konst. symbol</p>
+              <p className="font-semibold text-slate-900">0308</p>
+            </div>
+            <div>
+              <p className="text-slate-500">Spec. symbol</p>
+              <p className="font-semibold text-slate-900">—</p>
+            </div>
+          </div>
+
           {/* Položky */}
           <div className="mx-5 mt-3 overflow-hidden rounded-xl border border-slate-200">
             <div className="grid grid-cols-12 gap-1 border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wider text-slate-500">
