@@ -1,9 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import QRCode from "qrcode";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { buildSpayd, czAccountToIban, formatCZK, formatDate } from "@/lib/invoice";
+import { renderInvoiceEmailHtml } from "@/lib/email/invoice-email-template";
 
 const RESEND_GATEWAY = "https://connector-gateway.lovable.dev/resend";
+const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 dní
 
 const inputSchema = z.object({
   invoiceId: z.string().uuid(),
@@ -11,7 +15,7 @@ const inputSchema = z.object({
   to: z.string().email(),
   cc: z.string().email().optional().or(z.literal("")),
   subject: z.string().min(1).max(300),
-  message: z.string().min(1).max(5000),
+  personalNote: z.string().max(2000).optional().or(z.literal("")),
   filename: z.string().min(1).max(200),
 });
 
@@ -21,10 +25,12 @@ export const sendInvoiceEmail = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // Ověř že faktura patří uživateli
+    // 1) Načti fakturu se všemi potřebnými daty
     const { data: invoice, error: invErr } = await supabase
       .from("invoices")
-      .select("id, invoice_number, user_id")
+      .select(
+        "id, invoice_number, user_id, total, currency, due_date, issue_date, variable_symbol, client_snapshot, supplier_snapshot",
+      )
       .eq("id", data.invoiceId)
       .single();
 
@@ -32,12 +38,12 @@ export const sendInvoiceEmail = createServerFn({ method: "POST" })
       throw new Error("Faktura nenalezena.");
     }
 
-    // Ověř že PDF cesta začíná na user_id (RLS-like check)
+    // 2) Bezpečnostní check: PDF cesta musí začínat user_id
     if (!data.pdfPath.startsWith(`${userId}/`)) {
       throw new Error("Neplatná cesta k PDF.");
     }
 
-    // Stáhni PDF přes service role (bucket je privátní)
+    // 3) Stáhni PDF (bucket je privátní)
     const { data: fileBlob, error: dlErr } = await supabaseAdmin.storage
       .from("invoices")
       .download(data.pdfPath);
@@ -47,48 +53,135 @@ export const sendInvoiceEmail = createServerFn({ method: "POST" })
     }
 
     const arrayBuffer = await fileBlob.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString("base64");
+    const pdfBase64 = Buffer.from(arrayBuffer).toString("base64");
 
-    // Profil odesílatele pro from name
+    // 4) Vytvoř signed URL pro veřejné zobrazení/stažení faktury (30 dní)
+    const { data: signed, error: signErr } = await supabaseAdmin.storage
+      .from("invoices")
+      .createSignedUrl(data.pdfPath, SIGNED_URL_TTL_SECONDS, {
+        download: `${invoice.invoice_number}.pdf`,
+      });
+
+    const invoiceUrl = signErr ? null : signed?.signedUrl ?? null;
+
+    // 5) Profil odesílatele
     const { data: profile } = await supabase
       .from("profiles")
-      .select("company_name, full_name, email, invoice_sender_local_part")
+      .select(
+        "company_name, full_name, email, invoice_color, invoice_sender_local_part, logo_url, bank_account, iban, swift",
+      )
       .eq("id", userId)
       .single();
 
     const fromName =
-      profile?.company_name?.trim() ||
-      profile?.full_name?.trim() ||
-      "Vystaveno";
+      profile?.company_name?.trim() || profile?.full_name?.trim() || "Vystaveno";
 
+    // 6) Sestav QR platbu (SPAYD → PNG dataURL → cid attachment)
+    const supplierSnap =
+      (invoice.supplier_snapshot as Record<string, unknown>) ?? {};
+    const iban =
+      (typeof supplierSnap.iban === "string" && supplierSnap.iban) ||
+      profile?.iban ||
+      (profile?.bank_account ? czAccountToIban(profile.bank_account) : null) ||
+      (typeof supplierSnap.bank_account === "string"
+        ? czAccountToIban(supplierSnap.bank_account)
+        : null);
+
+    let qrCid: string | null = null;
+    let qrAttachment: { filename: string; content: string; content_id: string } | null = null;
+
+    if (iban && Number(invoice.total) > 0) {
+      const spayd = buildSpayd({
+        iban,
+        amount: Number(invoice.total),
+        currency: invoice.currency || "CZK",
+        variableSymbol: invoice.variable_symbol || undefined,
+        message: `Faktura ${invoice.invoice_number}`,
+        swift: profile?.swift || (typeof supplierSnap.swift === "string" ? supplierSnap.swift : null),
+      });
+      try {
+        const qrDataUrl = await QRCode.toDataURL(spayd, {
+          errorCorrectionLevel: "M",
+          margin: 2,
+          width: 320,
+          color: { dark: "#0f172a", light: "#ffffff" },
+        });
+        const base64 = qrDataUrl.split(",")[1];
+        qrCid = "qr-platba.png";
+        qrAttachment = {
+          filename: "qr-platba.png",
+          content: base64,
+          content_id: qrCid,
+        };
+      } catch (e) {
+        console.warn("QR kód se nepodařilo vygenerovat:", e);
+      }
+    }
+
+    // 7) Vyrenderuj HTML šablonu
+    const clientSnap = (invoice.client_snapshot as Record<string, unknown>) ?? {};
+    const clientName = typeof clientSnap.name === "string" ? clientSnap.name : null;
+
+    const html = renderInvoiceEmailHtml({
+      brandColor: profile?.invoice_color || "#0fbfb6",
+      logoUrl: profile?.logo_url || null,
+      supplierName: fromName,
+      clientName,
+      invoiceNumber: invoice.invoice_number,
+      issueDate: formatDate(invoice.issue_date),
+      dueDate: formatDate(invoice.due_date),
+      total: formatCZK(Number(invoice.total), invoice.currency || "CZK"),
+      variableSymbol: invoice.variable_symbol,
+      personalNote: data.personalNote?.trim() || null,
+      invoiceUrl,
+      qrCid,
+      replyToEmail: profile?.email || null,
+    });
+
+    // 8) Sestav text fallback
+    const text = buildPlainText({
+      clientName,
+      invoiceNumber: invoice.invoice_number,
+      total: formatCZK(Number(invoice.total), invoice.currency || "CZK"),
+      dueDate: formatDate(invoice.due_date),
+      variableSymbol: invoice.variable_symbol,
+      personalNote: data.personalNote?.trim() || null,
+      supplierName: fromName,
+      invoiceUrl,
+    });
+
+    // 9) Pošli přes Resend
     const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY není nakonfigurován.");
     if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY není nakonfigurován.");
 
-    // Sestav odesílatele z profilu uživatele. Doména musí být ověřena v Resendu.
     const localPartRaw = profile?.invoice_sender_local_part?.trim().toLowerCase() || "faktury";
     const localPart = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/.test(localPartRaw)
       ? localPartRaw
       : "faktury";
     const fromAddress = `${fromName} <${localPart}@vystaveno.cz>`;
 
-    const replyTo = profile?.email || undefined;
+    const attachments: Array<Record<string, unknown>> = [
+      { filename: data.filename, content: pdfBase64 },
+    ];
+    if (qrAttachment) {
+      attachments.push({
+        filename: qrAttachment.filename,
+        content: qrAttachment.content,
+        content_id: qrAttachment.content_id,
+      });
+    }
 
     const body: Record<string, unknown> = {
       from: fromAddress,
       to: [data.to],
       subject: data.subject,
-      text: data.message,
-      html: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; white-space: pre-wrap; line-height: 1.6; color: #1a1a1a;">${escapeHtml(data.message)}</div>`,
-      attachments: [
-        {
-          filename: data.filename,
-          content: base64,
-        },
-      ],
+      text,
+      html,
+      attachments,
     };
-    if (replyTo) body.reply_to = replyTo;
+    if (profile?.email) body.reply_to = profile.email;
     if (data.cc && data.cc.length > 0) body.cc = [data.cc];
 
     const res = await fetch(`${RESEND_GATEWAY}/emails`, {
@@ -107,23 +200,30 @@ export const sendInvoiceEmail = createServerFn({ method: "POST" })
       throw new Error(`Odeslání selhalo [${res.status}]: ${msg}`);
     }
 
-    // Pokud je faktura draft, zkus ji vystavit
-    if (invoice) {
-      await supabase
-        .from("invoices")
-        .update({ status: "issued" })
-        .eq("id", data.invoiceId)
-        .eq("status", "draft");
-    }
-
     return { ok: true, id: (result as { id?: string }).id };
   });
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+function buildPlainText(opts: {
+  clientName: string | null;
+  invoiceNumber: string;
+  total: string;
+  dueDate: string;
+  variableSymbol: string | null;
+  personalNote: string | null;
+  supplierName: string;
+  invoiceUrl: string | null;
+}): string {
+  const greeting = opts.clientName ? `Dobrý den, ${opts.clientName},` : "Dobrý den,";
+  const note = opts.personalNote ? `\n${opts.personalNote}\n` : "";
+  const link = opts.invoiceUrl ? `\n\nZobrazit fakturu online:\n${opts.invoiceUrl}` : "";
+  const vs = opts.variableSymbol ? `\nVariabilní symbol: ${opts.variableSymbol}` : "";
+  return `${greeting}
+${note}
+v příloze najdete fakturu č. ${opts.invoiceNumber}.
+
+Částka k úhradě: ${opts.total}
+Splatnost: ${opts.dueDate}${vs}${link}
+
+S pozdravem
+${opts.supplierName}`;
 }
