@@ -14,8 +14,10 @@ import {
 } from "@/components/ui/select";
 import { useAres } from "@/hooks/use-ares";
 import { toast } from "sonner";
-import { Loader2, Search, Upload, Image as ImageIcon, Trash2, Mail } from "lucide-react";
+import { Loader2, Search, Upload, Image as ImageIcon, Trash2, Mail, Send } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { useServerFn } from "@tanstack/react-start";
+import { sendTestInvoiceEmail } from "@/lib/email/send-test.functions";
 
 export const Route = createFileRoute("/_app/app/nastaveni")({
   head: () => ({ meta: [{ title: "Nastavení — Vystaveno" }] }),
@@ -79,8 +81,34 @@ function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const ares = useAres();
+  const sendTestFn = useServerFn(sendTestInvoiceEmail);
+
+  const onSendTestEmail = async () => {
+    if (!user) return;
+    const localPart = form.invoice_sender_local_part.trim().toLowerCase();
+    if (!LOCAL_PART_REGEX.test(localPart)) {
+      toast.error("Nejdřív vyplňte platného odesílatele a uložte nastavení.");
+      return;
+    }
+    setSendingTest(true);
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      if (!token) throw new Error("Chybí přihlašovací token.");
+      const result = await sendTestFn({ headers: { Authorization: `Bearer ${token}` } });
+      toast.success("Testovací e-mail odeslán", {
+        description: `Z ${localPart}@${SENDER_DOMAIN} → ${result.to}. Zkontrolujte schránku (i spam).`,
+        duration: 8000,
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Odeslání selhalo.");
+    } finally {
+      setSendingTest(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -384,6 +412,30 @@ function SettingsPage() {
               <span className="font-mono">info@{SENDER_DOMAIN}</span>, <span className="font-mono">no-reply@{SENDER_DOMAIN}</span>).
               Schránka existovat nemusí — odpovědi klientů jdou na váš e-mail ({user?.email}).
             </p>
+            <div className="flex flex-col gap-2 rounded-lg border border-dashed border-border bg-muted/20 p-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-xs text-muted-foreground">
+                Pošleme krátký testovací e-mail na <span className="font-mono text-foreground">{user?.email}</span>,
+                ať si ověříte, že DNS funguje a faktury dorazí bez bounce.
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onSendTestEmail}
+                disabled={sendingTest}
+                className="shrink-0"
+              >
+                {sendingTest ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Odesílám…
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4" /> Poslat testovací e-mail
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
 
           <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-muted/30 p-4">
