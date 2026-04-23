@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const links = [
   { to: "/funkce", label: "Funkce" },
@@ -35,6 +36,7 @@ export function Navbar() {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
+          <ThemeToggle size="sm" />
           <Button variant="ghost" size="sm" asChild>
             <a href="/prihlaseni">Přihlásit se</a>
           </Button>
@@ -43,13 +45,16 @@ export function Navbar() {
           </Button>
         </div>
 
-        <button
-          className="inline-flex h-10 w-10 items-center justify-center rounded-md text-foreground md:hidden"
-          onClick={() => setOpen((o) => !o)}
-          aria-label="Menu"
-        >
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+        <div className="flex items-center gap-1 md:hidden">
+          <ThemeToggle size="sm" />
+          <button
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md text-foreground"
+            onClick={() => setOpen((o) => !o)}
+            aria-label="Menu"
+          >
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
 
       {open && (

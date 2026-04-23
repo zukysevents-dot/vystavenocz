@@ -1,6 +1,7 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { Toaster } from "sonner";
 import { CookieBanner, getCookieConsent } from "@/components/CookieBanner";
 import { applyAnalyticsConsent } from "@/lib/analytics";
@@ -76,6 +77,11 @@ function RootShell({ children }: { children: React.ReactNode }) {
     <html lang="cs">
       <head>
         <HeadContent />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var k='vystaveno-theme';var s=localStorage.getItem(k);var t=s==='light'||s==='dark'?s:(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');var r=document.documentElement;if(t==='dark')r.classList.add('dark');r.style.colorScheme=t;}catch(e){document.documentElement.classList.add('dark');}})();`,
+          }}
+        />
       </head>
       <body>
         {children}
@@ -92,10 +98,17 @@ function RootComponent() {
   }, []);
 
   return (
-    <AuthProvider>
-      <Outlet />
-      <Toaster richColors position="top-center" theme="dark" />
-      <CookieBanner />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <Outlet />
+        <ThemedToaster />
+        <CookieBanner />
+      </AuthProvider>
+    </ThemeProvider>
   );
+}
+
+function ThemedToaster() {
+  const { theme } = useTheme();
+  return <Toaster richColors position="top-center" theme={theme} />;
 }
