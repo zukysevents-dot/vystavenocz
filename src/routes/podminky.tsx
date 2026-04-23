@@ -36,7 +36,7 @@ function TermsPage() {
           <p className="mt-3 text-muted-foreground">
             Tyto obchodní podmínky (dále jen <strong>„Podmínky"</strong>) upravují vzájemná
             práva a povinnosti mezi provozovatelem služby Vystaveno.cz, společností{" "}
-            <strong>Vystaveno s.r.o.</strong>, IČO: 12345678, DIČ: CZ12345678, se sídlem
+            <strong>Vystaveno s.r.o.</strong>, IČO: 24991686, DIČ: CZ24991686, se sídlem
             Praha, Česká republika, zapsanou v obchodním rejstříku vedeném Městským soudem
             v Praze (dále jen <strong>„Provozovatel"</strong>), a osobou, která využívá službu
             Vystaveno (dále jen <strong>„Uživatel"</strong>).
