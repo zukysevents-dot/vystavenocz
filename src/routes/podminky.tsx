@@ -85,9 +85,9 @@ function TermsPage() {
         <section>
           <h2 className="text-2xl font-bold">5. Předplatné a platební podmínky</h2>
           <p className="mt-3 text-muted-foreground">
-            Tarif <strong>Vystaveno Pro</strong> je dostupný v měsíční (159 Kč/měs bez DPH)
-            nebo roční variantě (1 200 Kč/rok bez DPH, tj. 100 Kč/měs). Ceny jsou uvedeny
-            bez DPH; daňové doklady jsou vystavovány elektronicky.
+            Tarif <strong>Vystaveno Pro</strong> je dostupný v měsíční (159 Kč/měs)
+            nebo roční variantě (1 200 Kč/rok, tj. 100 Kč/měs). Provozovatel není plátcem DPH,
+            uvedené ceny jsou konečné. Doklady o platbě jsou vystavovány elektronicky.
           </p>
           <p className="mt-3 text-muted-foreground">
             Platby jsou zpracovávány platebním poskytovatelem <strong>Stripe Payments
