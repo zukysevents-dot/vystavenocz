@@ -1,7 +1,7 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { Toaster } from "sonner";
 import { CookieBanner, getCookieConsent } from "@/components/CookieBanner";
 import { applyAnalyticsConsent } from "@/lib/analytics";
@@ -101,9 +101,14 @@ function RootComponent() {
     <ThemeProvider>
       <AuthProvider>
         <Outlet />
-        <Toaster richColors position="top-center" />
+        <ThemedToaster />
         <CookieBanner />
       </AuthProvider>
     </ThemeProvider>
   );
+}
+
+function ThemedToaster() {
+  const { theme } = useTheme();
+  return <Toaster richColors position="top-center" theme={theme} />;
 }
