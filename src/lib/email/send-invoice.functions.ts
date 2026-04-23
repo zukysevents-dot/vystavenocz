@@ -25,6 +25,22 @@ export const sendInvoiceEmail = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
+    // 0) Server-side paywall check — uživatel musí mít aktivní trial nebo placené předplatné
+    const stripeEnv =
+      (process.env.VITE_STRIPE_ENVIRONMENT as string | undefined) === "live"
+        ? "live"
+        : "sandbox";
+    const { data: hasAccess, error: accessErr } = await supabase.rpc("has_paid_access", {
+      user_uuid: userId,
+      check_env: stripeEnv,
+    });
+    if (accessErr) {
+      throw new Error("Nepodařilo se ověřit předplatné: " + accessErr.message);
+    }
+    if (!hasAccess) {
+      throw new Error("Pro odesílání faktur e-mailem je potřeba aktivní předplatné.");
+    }
+
     // 1) Načti fakturu se všemi potřebnými daty
     const { data: invoice, error: invErr } = await supabase
       .from("invoices")
