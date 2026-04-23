@@ -108,7 +108,7 @@ function SettingsPage() {
       }
       setLoading(false);
     })();
-  }, [user]);
+  }, [user?.id]);
 
   const fillFromAres = async () => {
     const result = await ares.lookup(form.ico);
