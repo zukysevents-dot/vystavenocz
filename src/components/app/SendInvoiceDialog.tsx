@@ -44,7 +44,7 @@ export function SendInvoiceDialog({ open, onOpenChange, context, onSent }: Props
   const [to, setTo] = useState("");
   const [cc, setCc] = useState("");
   const [subject, setSubject] = useState("");
-  const [message, setMessage] = useState("");
+  const [personalNote, setPersonalNote] = useState("");
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
@@ -53,15 +53,7 @@ export function SendInvoiceDialog({ open, onOpenChange, context, onSent }: Props
     setCc("");
     const supplier = context.supplierName ?? "";
     setSubject(`Faktura ${context.invoiceNumber}${supplier ? ` od ${supplier}` : ""}`);
-    const greeting = context.recipientName ? `Dobrý den, ${context.recipientName},` : "Dobrý den,";
-    const amountLine =
-      context.total != null
-        ? `\nČástka k úhradě: ${formatAmount(context.total, context.currency ?? "CZK")}`
-        : "";
-    const dueLine = context.dueDate ? `\nSplatnost: ${formatDate(context.dueDate)}` : "";
-    setMessage(
-      `${greeting}\n\nv příloze Vám zasílám fakturu č. ${context.invoiceNumber}.${amountLine}${dueLine}\n\nV případě dotazů mě neváhejte kontaktovat.\n\nS pozdravem${supplier ? `\n${supplier}` : ""}`,
-    );
+    setPersonalNote("");
   }, [context, open]);
 
   if (!context) return null;
@@ -98,7 +90,7 @@ export function SendInvoiceDialog({ open, onOpenChange, context, onSent }: Props
           to: to.trim(),
           cc: cc.trim() || undefined,
           subject: subject.trim(),
-          message: message.trim(),
+          personalNote: personalNote.trim() || undefined,
           filename: `${context.invoiceNumber}.pdf`,
         },
         headers: { Authorization: `Bearer ${token}` },
@@ -179,15 +171,19 @@ export function SendInvoiceDialog({ open, onOpenChange, context, onSent }: Props
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="send-message">Zpráva</Label>
+            <Label htmlFor="send-message">Osobní vzkaz <span className="font-normal text-muted-foreground">(volitelné)</span></Label>
             <Textarea
               id="send-message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={8}
+              value={personalNote}
+              onChange={(e) => setPersonalNote(e.target.value)}
+              rows={4}
               disabled={sending}
               className="font-sans"
+              placeholder="Např. Děkujeme za spolupráci v tomto měsíci…"
             />
+            <p className="text-xs text-muted-foreground">
+              Pozdrav, shrnutí faktury (částka, splatnost), QR platba a odkaz se přidají automaticky.
+            </p>
           </div>
 
           <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
@@ -215,19 +211,4 @@ export function SendInvoiceDialog({ open, onOpenChange, context, onSent }: Props
       </DialogContent>
     </Dialog>
   );
-}
-
-function formatAmount(n: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat("cs-CZ", { style: "currency", currency }).format(n);
-  } catch {
-    return `${n} ${currency}`;
-  }
-}
-function formatDate(s: string): string {
-  try {
-    return new Date(s).toLocaleDateString("cs-CZ");
-  } catch {
-    return s;
-  }
 }
