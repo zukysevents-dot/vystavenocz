@@ -171,15 +171,19 @@ export function SendInvoiceDialog({ open, onOpenChange, context, onSent }: Props
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="send-message">Zpráva</Label>
+            <Label htmlFor="send-message">Osobní vzkaz <span className="font-normal text-muted-foreground">(volitelné)</span></Label>
             <Textarea
               id="send-message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={8}
+              value={personalNote}
+              onChange={(e) => setPersonalNote(e.target.value)}
+              rows={4}
               disabled={sending}
               className="font-sans"
+              placeholder="Např. Děkujeme za spolupráci v tomto měsíci…"
             />
+            <p className="text-xs text-muted-foreground">
+              Pozdrav, shrnutí faktury (částka, splatnost), QR platba a odkaz se přidají automaticky.
+            </p>
           </div>
 
           <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
