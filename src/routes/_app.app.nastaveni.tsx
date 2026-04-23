@@ -363,6 +363,29 @@ function SettingsPage() {
         </Section>
 
         <Section title="Automatické odesílání e-mailem">
+          <div className="space-y-2">
+            <Label htmlFor="invoice_sender_local_part">Odesílatel e-mailů</Label>
+            <div className="flex items-center gap-0 overflow-hidden rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring">
+              <Input
+                id="invoice_sender_local_part"
+                value={form.invoice_sender_local_part}
+                onChange={(e) =>
+                  setForm({ ...form, invoice_sender_local_part: e.target.value.toLowerCase() })
+                }
+                placeholder="faktury"
+                className="rounded-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+              <span className="select-none whitespace-nowrap border-l border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
+                @{SENDER_DOMAIN}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Z této adresy budou klientům chodit faktury (např. <span className="font-mono">faktury@{SENDER_DOMAIN}</span>,{" "}
+              <span className="font-mono">info@{SENDER_DOMAIN}</span>, <span className="font-mono">no-reply@{SENDER_DOMAIN}</span>).
+              Schránka existovat nemusí — odpovědi klientů jdou na váš e-mail ({user?.email}).
+            </p>
+          </div>
+
           <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-muted/30 p-4">
             <div className="flex items-start gap-3">
               <Mail className="mt-0.5 h-5 w-5 text-primary" />
