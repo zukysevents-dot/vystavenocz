@@ -228,6 +228,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          auto_send_invoice_email: boolean
           bank_account: string | null
           city: string | null
           company_name: string | null
@@ -256,6 +257,7 @@ export type Database = {
           zip: string | null
         }
         Insert: {
+          auto_send_invoice_email?: boolean
           bank_account?: string | null
           city?: string | null
           company_name?: string | null
@@ -284,6 +286,7 @@ export type Database = {
           zip?: string | null
         }
         Update: {
+          auto_send_invoice_email?: boolean
           bank_account?: string | null
           city?: string | null
           company_name?: string | null

@@ -14,8 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { InvoiceDocument } from "@/components/app/InvoiceDocument";
-import { downloadInvoicePdf } from "@/lib/invoice-pdf";
+import { downloadInvoicePdf, renderInvoicePdfBlob } from "@/lib/invoice-pdf";
 import { SendInvoiceDialog, type SendInvoiceContext } from "@/components/app/SendInvoiceDialog";
+import { useServerFn } from "@tanstack/react-start";
+import { sendInvoiceEmail } from "@/lib/email/send-invoice.functions";
 import { PaywallDialog } from "@/components/payments/PaywallDialog";
 import { useSubscription } from "@/hooks/use-subscription";
 import {
@@ -82,6 +84,7 @@ type ProfileRow = {
   next_invoice_seq: number;
   credit_note_prefix: string | null;
   next_credit_note_seq: number;
+  auto_send_invoice_email?: boolean;
 };
 
 const newItem = (): InvoiceItemDraft => ({
@@ -105,6 +108,7 @@ function addDaysISO(days: number) {
 function InvoiceEditorPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const sendFn = useServerFn(sendInvoiceEmail);
   const search = useSearch({ from: "/_app/app/faktury/editor" });
   const editingId = search.id;
   const creditForId = search.creditFor;
@@ -559,6 +563,50 @@ function InvoiceEditorPage() {
         toast.success(status === "draft" ? "Uloženo jako koncept." : "Faktura vystavena.");
         skipBlockerRef.current = true;
         setDirty(false);
+        // Auto-send: pokud je v profilu zapnuto a klient má e-mail, pošli rovnou.
+        if (
+          status === "issued" &&
+          profile?.auto_send_invoice_email &&
+          selectedClient?.email &&
+          invoiceId
+        ) {
+          try {
+            setShowPreview(true);
+            await new Promise((r) => setTimeout(r, 250));
+            const blob = await renderInvoicePdfBlob("invoice-document");
+            const path = `${user.id}/${invoiceId}.pdf`;
+            const { error: upErr } = await supabase.storage
+              .from("invoices")
+              .upload(path, blob, { upsert: true, contentType: "application/pdf" });
+            if (upErr) throw new Error(upErr.message);
+            const { data: sess } = await supabase.auth.getSession();
+            const token = sess.session?.access_token;
+            if (!token) throw new Error("Chybí přihlašovací token.");
+            const supplierName =
+              supplierSnapshot.company_name ?? supplierSnapshot.full_name ?? "Vystaveno";
+            const greeting = selectedClient.name
+              ? `Dobrý den, ${selectedClient.name},`
+              : "Dobrý den,";
+            await sendFn({
+              data: {
+                invoiceId,
+                pdfPath: path,
+                to: selectedClient.email,
+                subject: `Faktura ${invoiceNumber} od ${supplierName}`,
+                message: `${greeting}\n\nv příloze Vám zasílám fakturu č. ${invoiceNumber}.\nČástka k úhradě: ${formatCZK(totals.total)}\nSplatnost: ${new Date(dueDate).toLocaleDateString("cs-CZ")}\n\nS pozdravem\n${supplierName}`,
+                filename: `${invoiceNumber}.pdf`,
+              },
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            toast.success(`E-mail odeslán na ${selectedClient.email}.`, { duration: 6000 });
+          } catch (e) {
+            console.error("Auto-send selhal:", e);
+            toast.error(
+              "Faktura byla vystavena, ale automatické odeslání selhalo: " +
+                (e instanceof Error ? e.message : "neznámá chyba"),
+            );
+          }
+        }
         navigate({ to: "/app/faktury" });
       } else {
         // Tichý save (autosave) — jen označit jako čisté a zaznamenat čas.

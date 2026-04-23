@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/select";
 import { useAres } from "@/hooks/use-ares";
 import { toast } from "sonner";
-import { Loader2, Search, Upload, Image as ImageIcon, Trash2 } from "lucide-react";
+import { Loader2, Search, Upload, Image as ImageIcon, Trash2, Mail } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/_app/app/nastaveni")({
   head: () => ({ meta: [{ title: "Nastavení — Vystaveno" }] }),
@@ -42,6 +43,7 @@ type Form = {
   next_invoice_seq: number;
   credit_note_prefix: string;
   next_credit_note_seq: number;
+  auto_send_invoice_email: boolean;
 };
 
 const defaults: Form = {
@@ -63,6 +65,7 @@ const defaults: Form = {
   next_invoice_seq: 1,
   credit_note_prefix: "OD",
   next_credit_note_seq: 1,
+  auto_send_invoice_email: false,
 };
 
 function SettingsPage() {
@@ -100,6 +103,7 @@ function SettingsPage() {
           next_invoice_seq: data.next_invoice_seq ?? 1,
           credit_note_prefix: data.credit_note_prefix ?? "OD",
           next_credit_note_seq: data.next_credit_note_seq ?? 1,
+          auto_send_invoice_email: (data as { auto_send_invoice_email?: boolean }).auto_send_invoice_email ?? false,
         });
       }
       setLoading(false);
@@ -341,6 +345,28 @@ function SettingsPage() {
             </span>
             .
           </p>
+        </Section>
+
+        <Section title="Automatické odesílání e-mailem">
+          <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-muted/30 p-4">
+            <div className="flex items-start gap-3">
+              <Mail className="mt-0.5 h-5 w-5 text-primary" />
+              <div className="space-y-1">
+                <Label htmlFor="auto_send" className="text-sm font-medium">
+                  Po vystavení automaticky odeslat klientovi
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Když fakturu vystavíte, systém ji rovnou pošle e-mailem klientovi (pokud má vyplněný e-mail).
+                  PDF se přiloží do zprávy. Odpovědi přijdou na váš e-mail.
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="auto_send"
+              checked={form.auto_send_invoice_email}
+              onCheckedChange={(v) => setForm({ ...form, auto_send_invoice_email: v })}
+            />
+          </div>
         </Section>
 
         <Section title="Číslování dobropisů">
