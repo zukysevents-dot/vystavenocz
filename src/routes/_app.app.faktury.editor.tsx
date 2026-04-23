@@ -840,6 +840,7 @@ function InvoiceEditorPage() {
               <Button
                 variant="outline"
                 size="sm"
+                className="shrink-0"
                 onClick={handleSendEmail}
                 disabled={preparingSend || saving}
                 title={hasAccess ? "Odeslat fakturu e-mailem" : "Vyžaduje aktivní předplatné"}
@@ -853,12 +854,13 @@ function InvoiceEditorPage() {
                 )}
                 E-mail
               </Button>
-              <Button variant="outline" size="sm" onClick={() => save("draft")} disabled={saving}>
+              <Button variant="outline" size="sm" className="shrink-0" onClick={() => save("draft")} disabled={saving}>
                 <Save className="h-4 w-4" /> Koncept
               </Button>
               <Button
                 variant="coral"
                 size="sm"
+                className="shrink-0"
                 onClick={() => save("issued")}
                 disabled={saving}
                 title={hasAccess ? "Vystavit fakturu" : "Vyžaduje aktivní předplatné"}
