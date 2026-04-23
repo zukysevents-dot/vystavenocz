@@ -166,11 +166,19 @@ function SettingsPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    const localPart = form.invoice_sender_local_part.trim().toLowerCase();
+    if (!LOCAL_PART_REGEX.test(localPart)) {
+      toast.error(
+        "Odesílatel může obsahovat jen malá písmena, číslice, tečku, pomlčku nebo podtržítko (např. faktury, info, no-reply).",
+      );
+      return;
+    }
     setSubmitting(true);
     const { error } = await supabase
       .from("profiles")
       .update({
         ...form,
+        invoice_sender_local_part: localPart,
         ico: form.ico || null,
         dic: form.dic || null,
         street: form.street || null,
