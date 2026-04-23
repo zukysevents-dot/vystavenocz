@@ -247,13 +247,13 @@ export function AiDemo() {
               </span>
             </div>
 
-            <div className="flex min-h-[220px] flex-col gap-2.5 p-3 text-[13px] sm:min-h-[280px] sm:gap-4 sm:p-5 sm:text-sm">
+            <div className="flex min-h-[260px] flex-col gap-2.5 p-3 text-[13px] sm:min-h-[280px] sm:gap-4 sm:p-5 sm:text-sm">
               {/* Previous assistant reply for context */}
               <div className="flex items-start gap-1.5 sm:gap-2.5">
                 <div className="hidden h-7 w-7 flex-none items-center justify-center rounded-full border border-coral/20 bg-coral/10 text-coral sm:flex">
                   <Sparkles className="h-3.5 w-3.5" />
                 </div>
-                <div className="rounded-2xl rounded-tl-sm border border-border bg-background px-2.5 py-1.5 text-foreground/90 sm:px-3.5 sm:py-2">
+                <div className="max-w-[95%] break-words rounded-2xl rounded-tl-sm border border-border bg-background px-2.5 py-1.5 leading-snug text-foreground/90 sm:max-w-[85%] sm:px-3.5 sm:py-2">
                   {scenario.id === "create"
                     ? "Co potřebujete vystavit? Stačí říct česky."
                     : "Tady je vaše faktura. Co mám upravit?"}
@@ -262,7 +262,7 @@ export function AiDemo() {
 
               {/* User typing */}
               <div className="flex items-start justify-end gap-1.5 sm:gap-2.5">
-                <div className="max-w-[95%] rounded-2xl rounded-tr-sm bg-coral px-2.5 py-1.5 text-coral-foreground shadow-soft sm:max-w-[85%] sm:px-3.5 sm:py-2">
+                <div className="max-w-[85%] break-words rounded-2xl rounded-tr-sm bg-coral px-2.5 py-1.5 leading-snug text-coral-foreground shadow-soft sm:max-w-[80%] sm:px-3.5 sm:py-2">
                   {typed || "\u00A0"}
                   {phase === "typing" && (
                     <span className="ml-0.5 inline-block h-3.5 w-[2px] animate-pulse bg-coral-foreground/80 align-middle" />
@@ -279,7 +279,7 @@ export function AiDemo() {
                   <div className="hidden h-7 w-7 flex-none items-center justify-center rounded-full border border-coral/20 bg-coral/10 text-coral sm:flex">
                     <Sparkles className="h-3.5 w-3.5" />
                   </div>
-                  <div className="rounded-2xl rounded-tl-sm border border-border bg-background px-2.5 py-1.5 text-foreground/90 sm:px-3.5 sm:py-2">
+                  <div className="max-w-[95%] break-words rounded-2xl rounded-tl-sm border border-border bg-background px-2.5 py-1.5 leading-snug text-foreground/90 sm:max-w-[85%] sm:px-3.5 sm:py-2">
                     {phase === "sent" ? (
                       <span className="inline-flex items-center gap-1 text-muted-foreground">
                         <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:-0.2s]" />
