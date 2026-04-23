@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/select";
 import { useAres } from "@/hooks/use-ares";
 import { toast } from "sonner";
-import { Loader2, Search, Upload, Image as ImageIcon, Trash2 } from "lucide-react";
+import { Loader2, Search, Upload, Image as ImageIcon, Trash2, Mail } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/_app/app/nastaveni")({
   head: () => ({ meta: [{ title: "Nastavení — Vystaveno" }] }),
@@ -42,6 +43,7 @@ type Form = {
   next_invoice_seq: number;
   credit_note_prefix: string;
   next_credit_note_seq: number;
+  auto_send_invoice_email: boolean;
 };
 
 const defaults: Form = {
@@ -63,6 +65,7 @@ const defaults: Form = {
   next_invoice_seq: 1,
   credit_note_prefix: "OD",
   next_credit_note_seq: 1,
+  auto_send_invoice_email: false,
 };
 
 function SettingsPage() {
