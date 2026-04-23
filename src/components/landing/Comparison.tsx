@@ -126,7 +126,7 @@ export function Comparison() {
                     Funkce
                   </th>
                   <th className="bg-coral/10 px-5 py-4 text-center text-xs font-bold uppercase tracking-wider text-coral">
-                    Fakturio.cz
+                    Vystaveno.cz
                   </th>
                   <th className="px-5 py-4 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Fakturoid

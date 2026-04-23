@@ -5,16 +5,16 @@ import { PageHeader } from "@/components/landing/PageHeader";
 export const Route = createFileRoute("/gdpr")({
   head: () => ({
     meta: [
-      { title: "Ochrana osobních údajů (GDPR) — Fakturio" },
+      { title: "Ochrana osobních údajů (GDPR) — Vystaveno" },
       {
         name: "description",
         content:
-          "Jak Fakturio.cz zpracovává osobní údaje uživatelů a jejich klientů v souladu s GDPR. Účely, doba uchování, práva subjektu údajů.",
+          "Jak Vystaveno.cz zpracovává osobní údaje uživatelů a jejich klientů v souladu s GDPR. Účely, doba uchování, práva subjektu údajů.",
       },
-      { property: "og:title", content: "Ochrana osobních údajů — Fakturio" },
+      { property: "og:title", content: "Ochrana osobních údajů — Vystaveno" },
       {
         property: "og:description",
-        content: "Jak Fakturio.cz zpracovává osobní údaje v souladu s GDPR.",
+        content: "Jak Vystaveno.cz zpracovává osobní údaje v souladu s GDPR.",
       },
     ],
   }),
@@ -34,11 +34,11 @@ function GdprPage() {
         <section>
           <h2 className="text-2xl font-bold">1. Správce osobních údajů</h2>
           <p className="mt-3 text-muted-foreground">
-            Správcem osobních údajů je společnost <strong>Fakturio s.r.o.</strong>, IČO
+            Správcem osobních údajů je společnost <strong>Vystaveno s.r.o.</strong>, IČO
             12345678, se sídlem Praha, Česká republika, zapsaná v obchodním rejstříku
             vedeném Městským soudem v Praze. Kontaktní e-mail:{" "}
-            <a href="mailto:gdpr@fakturio.cz" className="text-primary underline">
-              gdpr@fakturio.cz
+            <a href="mailto:gdpr@vystaveno.cz" className="text-primary underline">
+              gdpr@vystaveno.cz
             </a>
             .
           </p>
@@ -62,7 +62,7 @@ function GdprPage() {
             <li>obsah faktur, položek a interních poznámek.</li>
           </ul>
           <p className="mt-3 text-muted-foreground">
-            Ve vztahu k údajům klientů Uživatele vystupuje Fakturio v roli{" "}
+            Ve vztahu k údajům klientů Uživatele vystupuje Vystaveno v roli{" "}
             <strong>zpracovatele</strong>; správcem je Uživatel sám.
           </p>
         </section>
@@ -158,8 +158,8 @@ function GdprPage() {
           </ul>
           <p className="mt-3 text-muted-foreground">
             Žádosti vyřizujeme do 30 dnů. Kontakt:{" "}
-            <a href="mailto:gdpr@fakturio.cz" className="text-primary underline">
-              gdpr@fakturio.cz
+            <a href="mailto:gdpr@vystaveno.cz" className="text-primary underline">
+              gdpr@vystaveno.cz
             </a>
             .
           </p>
@@ -189,8 +189,8 @@ function GdprPage() {
           <p>
             <strong>Pověřenec pro ochranu osobních údajů:</strong> aktuálně není ustanoven
             (nepovinné dle čl. 37 GDPR). Pro dotazy ke zpracování pište na{" "}
-            <a href="mailto:gdpr@fakturio.cz" className="text-primary underline">
-              gdpr@fakturio.cz
+            <a href="mailto:gdpr@vystaveno.cz" className="text-primary underline">
+              gdpr@vystaveno.cz
             </a>
             .
           </p>

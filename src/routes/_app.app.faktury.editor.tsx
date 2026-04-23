@@ -43,7 +43,7 @@ const searchSchema = z.object({
 });
 
 export const Route = createFileRoute("/_app/app/faktury/editor")({
-  head: () => ({ meta: [{ title: "Editor faktury — Fakturio" }] }),
+  head: () => ({ meta: [{ title: "Editor faktury — Vystaveno" }] }),
   validateSearch: searchSchema,
   component: InvoiceEditorPage,
 });
@@ -733,7 +733,7 @@ function InvoiceEditorPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-0.5">
                     <Label htmlFor="pdf-footer" className="text-sm">
-                      Patička „Vystaveno v Fakturio"
+                      Patička „Vystaveno v Vystaveno"
                     </Label>
                     <p className="text-xs text-muted-foreground">
                       Diskrétní text v patičce dokumentu.
@@ -1086,7 +1086,7 @@ function InvoiceEditorPage() {
       <PaywallDialog
         open={paywallOpen}
         onOpenChange={setPaywallOpen}
-        reason="Bezplatná zkušební doba skončila. Pro vystavení faktury aktivujte tarif Fakturio Pro. Koncept můžete uložit i bez předplatného."
+        reason="Bezplatná zkušební doba skončila. Pro vystavení faktury aktivujte tarif Vystaveno Pro. Koncept můžete uložit i bez předplatného."
       />
       <SendInvoiceDialog
         open={sendOpen}

@@ -164,7 +164,7 @@ export function RapidUpdates() {
 
         <div className="mt-12 flex flex-col items-center gap-3">
           <Button variant="coral" size="lg" asChild>
-            <a href="mailto:napady@fakturio.cz?subject=N%C3%A1vrh%20na%20vylep%C5%A1en%C3%AD%20Fakturio">
+            <a href="mailto:napady@vystaveno.cz?subject=N%C3%A1vrh%20na%20vylep%C5%A1en%C3%AD%20Vystaveno">
               <Mail className="h-4 w-4" />
               Navrhnout vylepšení
             </a>

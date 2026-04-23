@@ -34,14 +34,14 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Fakturio.cz — Fakturace, která vám ušetří hodiny týdně" },
+      { title: "Vystaveno.cz — Fakturace, která vám ušetří hodiny týdně" },
       {
         name: "description",
         content:
           "Moderní česká fakturace pro OSVČ a firmy. Faktury s IČO, DIČ, DPH 21 %, QR platbou a AI asistentem v češtině. 14 dní zdarma bez karty.",
       },
-      { name: "author", content: "Fakturio.cz" },
-      { property: "og:title", content: "Fakturio.cz — Fakturace s AI a QR platbami" },
+      { name: "author", content: "Vystaveno.cz" },
+      { property: "og:title", content: "Vystaveno.cz — Fakturace s AI a QR platbami" },
       {
         property: "og:description",
         content:

@@ -8,7 +8,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 const searchSchema = z.object({ session_id: z.string().optional() });
 
 export const Route = createFileRoute("/_app/app/predplatne/dekujeme")({
-  head: () => ({ meta: [{ title: "Děkujeme — Fakturio" }] }),
+  head: () => ({ meta: [{ title: "Děkujeme — Vystaveno" }] }),
   validateSearch: searchSchema,
   component: ThankYouPage,
 });
@@ -35,7 +35,7 @@ function ThankYouPage() {
           </div>
           <h1 className="mt-6 text-3xl font-bold text-foreground">Děkujeme za předplatné!</h1>
           <p className="mt-3 text-muted-foreground">
-            Fakturio Pro je aktivní. Můžete vystavovat faktury bez jakýchkoliv omezení.
+            Vystaveno Pro je aktivní. Můžete vystavovat faktury bez jakýchkoliv omezení.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button asChild variant="coral" size="lg">

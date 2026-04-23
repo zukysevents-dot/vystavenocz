@@ -7,13 +7,13 @@ import { Check, Clock, ShieldCheck, TrendingUp } from "lucide-react";
 export const Route = createFileRoute("/akce")({
   head: () => ({
     meta: [
-      { title: "Akce do 1. 6. — Fakturio.cz za 100 Kč měsíčně" },
+      { title: "Akce do 1. 6. — Vystaveno.cz za 100 Kč měsíčně" },
       {
         name: "description",
         content:
           "Zaregistrujte se do 1. 6. a získejte cenu 100 Kč/měsíc (1 200 Kč ročně) zamčenou na 12 měsíců. Po 1. 6. nový ceník 269 Kč/měs, 2 000 Kč/rok.",
       },
-      { property: "og:title", content: "Akce do 1. 6. — Fakturio.cz za 100 Kč měsíčně" },
+      { property: "og:title", content: "Akce do 1. 6. — Vystaveno.cz za 100 Kč měsíčně" },
       {
         property: "og:description",
         content:
@@ -27,7 +27,7 @@ export const Route = createFileRoute("/akce")({
 const benefits = [
   "Cena 100 Kč/měs (1 200 Kč ročně) nebo 159 Kč při měsíčním placení",
   "Garance ceny po dobu 12 měsíců od registrace",
-  "Plný přístup ke všem funkcím Fakturio Pro",
+  "Plný přístup ke všem funkcím Vystaveno Pro",
   "14 dní na vyzkoušení zdarma, bez platební karty",
   "Zrušení jedním kliknutím v nastavení",
 ];

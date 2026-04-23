@@ -91,8 +91,8 @@ type Props = {
   storageKey?: string;
 };
 
-const STORAGE_PREFIX = "fakturio:assistant:";
-const MODE_STORAGE_KEY = "fakturio:assistant:mode";
+const STORAGE_PREFIX = "vystaveno:assistant:";
+const MODE_STORAGE_KEY = "vystaveno:assistant:mode";
 const GENERAL_STORAGE_KEY = "global";
 
 function loadHistory(key?: string): ChatMsg[] {
@@ -192,7 +192,7 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
     } catch { /* ignore */ }
   };
 
-  const MIC_CONSENT_KEY = "fakturio:assistant:mic-consent";
+  const MIC_CONSENT_KEY = "vystaveno:assistant:mic-consent";
 
   const toggleDictation = () => {
     if (!speechSupported) {
@@ -756,7 +756,7 @@ export function InvoiceAssistant({ open, onOpenChange, context, onApplyPatch, st
               <ul className="list-disc space-y-1 pl-5">
                 <li>Prohlížeč si vyžádá přístup k <strong>mikrofonu</strong>.</li>
                 <li>Tvůj hlas převádí na text <strong>samotný prohlížeč</strong> (lokálně, neposílá se nikam).</li>
-                <li>Až klikneš na Odeslat (nebo se v hands-free režimu odešle samo), text půjde do <strong>AI asistenta Fakturio</strong> a může upravit fakturu.</li>
+                <li>Až klikneš na Odeslat (nebo se v hands-free režimu odešle samo), text půjde do <strong>AI asistenta Vystaveno</strong> a může upravit fakturu.</li>
                 <li>Tato hláška se ti už nezobrazí — můžeš ji obnovit smazáním cookies / dat stránky.</li>
               </ul>
             </div>

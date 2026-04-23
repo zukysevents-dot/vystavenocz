@@ -7,13 +7,13 @@ import { Cta } from "@/components/landing/Cta";
 export const Route = createFileRoute("/funkce")({
   head: () => ({
     meta: [
-      { title: "Funkce — Fakturio.cz" },
+      { title: "Funkce — Vystaveno.cz" },
       {
         name: "description",
         content:
           "AI asistent v češtině, QR platby na každé faktuře, opakované faktury, cizí měny i automatické DPH. Vše v jedné ceně.",
       },
-      { property: "og:title", content: "Funkce — Fakturio.cz" },
+      { property: "og:title", content: "Funkce — Vystaveno.cz" },
       {
         property: "og:description",
         content:

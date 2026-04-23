@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { Loader2, Search, Upload, Image as ImageIcon, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_app/app/nastaveni")({
-  head: () => ({ meta: [{ title: "Nastavení — Fakturio" }] }),
+  head: () => ({ meta: [{ title: "Nastavení — Vystaveno" }] }),
   component: SettingsPage,
 });
 

@@ -12,8 +12,8 @@ import { Loader2 } from "lucide-react";
 export const Route = createFileRoute("/prihlaseni")({
   head: () => ({
     meta: [
-      { title: "Přihlášení — Fakturio.cz" },
-      { name: "description", content: "Přihlaste se do svého účtu Fakturio." },
+      { title: "Přihlášení — Vystaveno.cz" },
+      { name: "description", content: "Přihlaste se do svého účtu Vystaveno." },
     ],
   }),
   component: LoginPage,
@@ -53,7 +53,7 @@ function LoginPage() {
         </div>
         <div className="rounded-2xl border border-border bg-card p-8 shadow-card">
           <h1 className="text-2xl font-bold tracking-tight">Přihlášení</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Vítejte zpět ve Fakturio.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Vítejte zpět ve Vystaveno.</p>
 
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
             <div className="space-y-2">
@@ -78,8 +78,8 @@ function LoginPage() {
               className="w-full"
               disabled={submitting}
               onClick={() => {
-                setEmail("demo@fakturio.cz");
-                setPassword("FakturioDemo-2026-Pwd!");
+                setEmail("demo@vystaveno.cz");
+                setPassword("VystavenoDemo-2026-Pwd!");
                 toast.info("Demo údaje vyplněny — klikněte na Přihlásit se.");
               }}
             >

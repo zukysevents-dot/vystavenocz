@@ -11,7 +11,7 @@ import { StripeEmbeddedCheckout } from "@/components/payments/StripeEmbeddedChec
 import { PaymentTestModeBanner } from "@/components/payments/PaymentTestModeBanner";
 
 export const Route = createFileRoute("/_app/app/predplatne/")({
-  head: () => ({ meta: [{ title: "Předplatné — Fakturio" }] }),
+  head: () => ({ meta: [{ title: "Předplatné — Vystaveno" }] }),
   component: PredplatnePage,
 });
 
@@ -33,7 +33,7 @@ function PredplatnePage() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [openingPortal, setOpeningPortal] = useState(false);
 
-  const priceId = yearly ? "fakturio_pro_yearly" : "fakturio_pro_monthly";
+  const priceId = yearly ? "vystaveno_pro_yearly" : "vystaveno_pro_monthly";
 
   const handlePortal = async () => {
     setOpeningPortal(true);
@@ -61,7 +61,7 @@ function PredplatnePage() {
         <div className="mt-4">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Předplatné</h1>
           <p className="mt-2 text-muted-foreground">
-            Spravujte tarif Fakturio Pro a fakturační údaje.
+            Spravujte tarif Vystaveno Pro a fakturační údaje.
           </p>
         </div>
 
@@ -151,7 +151,7 @@ function PredplatnePage() {
           <div className="border-b border-border bg-surface-soft px-8 py-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-bold text-foreground">Fakturio Pro</h3>
+                <h3 className="text-xl font-bold text-foreground">Vystaveno Pro</h3>
                 <p className="text-sm text-muted-foreground">Vše bez omezení.</p>
               </div>
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-coral/10 text-coral">
@@ -177,7 +177,7 @@ function PredplatnePage() {
             </p>
 
             <Button variant="coral" size="lg" className="mt-6 w-full" onClick={onSubscribe}>
-              Aktivovat Fakturio Pro
+              Aktivovat Vystaveno Pro
             </Button>
 
             <ul className="mt-8 grid gap-3 sm:grid-cols-2">
@@ -217,7 +217,7 @@ function ActiveSubscriptionCard({
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-xl font-bold text-foreground">Fakturio Pro</h3>
+              <h3 className="text-xl font-bold text-foreground">Vystaveno Pro</h3>
               <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold text-success">
                 Aktivní
               </span>
