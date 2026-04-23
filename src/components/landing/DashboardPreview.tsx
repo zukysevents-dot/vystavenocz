@@ -35,17 +35,17 @@ export function DashboardPreview() {
               <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">
                 Dodavatel
               </p>
-              <p className="mt-1 text-xs font-bold text-slate-900">Patrik Zukal</p>
-              <p className="text-[10px] text-slate-500">IČO: 24991686</p>
-              <p className="text-[10px] text-slate-500">Žďár n. Sázavou</p>
+              <p className="mt-1 text-xs font-bold text-slate-900">Alza.cz a.s.</p>
+              <p className="text-[10px] text-slate-500">IČO: 27082440</p>
+              <p className="text-[10px] text-slate-500">Praha 7 — Holešovice</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-3">
               <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">
                 Odběratel
               </p>
-              <p className="mt-1 text-xs font-bold text-slate-900">Kavárna U Lípy s.r.o.</p>
-              <p className="text-[10px] text-slate-500">IČO: 04123456</p>
-              <p className="text-[10px] text-slate-500">Brno</p>
+              <p className="mt-1 text-xs font-bold text-slate-900">Kofola ČeskoSlovensko a.s.</p>
+              <p className="text-[10px] text-slate-500">IČO: 24261980</p>
+              <p className="text-[10px] text-slate-500">Ostrava</p>
             </div>
           </div>
 
