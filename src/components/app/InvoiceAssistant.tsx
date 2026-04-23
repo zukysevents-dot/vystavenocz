@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { InvoiceItemDraft, VatRate } from "@/lib/invoice";
+import { supabase } from "@/integrations/supabase/client";
 
 export type InvoiceContext = {
   invoice_number: string;
