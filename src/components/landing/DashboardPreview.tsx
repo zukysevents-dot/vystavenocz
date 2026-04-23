@@ -136,8 +136,8 @@ export function DashboardPreview() {
           <Sparkles className="h-3.5 w-3.5" /> Hotovo za 30 sekund
         </span>
       </div>
-      <div className="absolute -left-2 top-1/4 -rotate-6 rounded-full border border-coral/30 bg-background/95 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-coral shadow-soft backdrop-blur sm:-left-6">
-        QR · Bez DPH · ARES
+      <div className="absolute -left-2 -top-3 -rotate-6 rounded-full border border-coral/30 bg-background/95 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-coral shadow-soft backdrop-blur sm:-left-6">
+        QR · ARES · ISDOC
       </div>
     </div>
   );
