@@ -24,8 +24,9 @@ import {
   type SupplierSnapshot,
 } from "@/lib/invoice";
 
-// Registrace Inter fontu s latin-ext (plná česká diakritika).
-// Použijeme Google Fonts statické TTF — react-pdf je stáhne při generování (cachováno).
+// Registrace Inter fontu (verze v20 z Google Fonts) — TTF obsahuje plnou
+// latin-ext sadu (2849 glyfů) včetně ě š č ř ž ť ň ů Ů a symbolů € № ‰ • – —.
+// Předchozí v13 URL pro semibold vracela 404 — proto pevně držíme v20.
 let fontRegistered = false;
 function ensureFontRegistered() {
   if (fontRegistered) return;
@@ -34,15 +35,15 @@ function ensureFontRegistered() {
       family: "Inter",
       fonts: [
         {
-          src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7.ttf",
+          src: "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf",
           fontWeight: 400,
         },
         {
-          src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMa25L7SUc.ttf",
+          src: "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf",
           fontWeight: 600,
         },
         {
-          src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMa1xL7SUc.ttf",
+          src: "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf",
           fontWeight: 700,
         },
       ],
