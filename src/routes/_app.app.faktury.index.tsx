@@ -295,8 +295,8 @@ function InvoicesListPage() {
           )}
         </div>
       ) : (
-        <div className="mt-6 overflow-hidden rounded-xl border border-border bg-card">
-          <table className="w-full text-sm">
+        <div className="mt-6 overflow-x-auto rounded-xl border border-border bg-card">
+          <table className="w-full min-w-[640px] text-sm">
             <thead className="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-4 py-3 text-left">Číslo</th>
