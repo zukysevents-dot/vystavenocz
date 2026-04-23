@@ -44,7 +44,7 @@ export function SendInvoiceDialog({ open, onOpenChange, context, onSent }: Props
   const [to, setTo] = useState("");
   const [cc, setCc] = useState("");
   const [subject, setSubject] = useState("");
-  const [message, setMessage] = useState("");
+  const [personalNote, setPersonalNote] = useState("");
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
@@ -53,15 +53,7 @@ export function SendInvoiceDialog({ open, onOpenChange, context, onSent }: Props
     setCc("");
     const supplier = context.supplierName ?? "";
     setSubject(`Faktura ${context.invoiceNumber}${supplier ? ` od ${supplier}` : ""}`);
-    const greeting = context.recipientName ? `Dobrý den, ${context.recipientName},` : "Dobrý den,";
-    const amountLine =
-      context.total != null
-        ? `\nČástka k úhradě: ${formatAmount(context.total, context.currency ?? "CZK")}`
-        : "";
-    const dueLine = context.dueDate ? `\nSplatnost: ${formatDate(context.dueDate)}` : "";
-    setMessage(
-      `${greeting}\n\nv příloze Vám zasílám fakturu č. ${context.invoiceNumber}.${amountLine}${dueLine}\n\nV případě dotazů mě neváhejte kontaktovat.\n\nS pozdravem${supplier ? `\n${supplier}` : ""}`,
-    );
+    setPersonalNote("");
   }, [context, open]);
 
   if (!context) return null;
@@ -98,7 +90,7 @@ export function SendInvoiceDialog({ open, onOpenChange, context, onSent }: Props
           to: to.trim(),
           cc: cc.trim() || undefined,
           subject: subject.trim(),
-          message: message.trim(),
+          personalNote: personalNote.trim() || undefined,
           filename: `${context.invoiceNumber}.pdf`,
         },
         headers: { Authorization: `Bearer ${token}` },
