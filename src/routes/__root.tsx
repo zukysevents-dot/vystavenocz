@@ -41,7 +41,7 @@ export const Route = createRootRoute({
           "Moderní česká fakturace pro OSVČ a firmy. Faktury s IČO, DIČ, DPH 21 %, QR platbou a AI asistentem v češtině. 14 dní zdarma bez karty.",
       },
       { name: "author", content: "Vystaveno.cz" },
-      { property: "og:title", content: "Vystaveno.cz — Fakturace s AI a QR platbami" },
+      { property: "og:title", content: "Vystaveno.cz — Fakturace, která vám ušetří hodiny týdně" },
       {
         property: "og:description",
         content:
@@ -49,6 +49,12 @@ export const Route = createRootRoute({
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Vystaveno.cz — Fakturace, která vám ušetří hodiny týdně" },
+      { name: "description", content: "Vystaveno.cz: Chytrá fakturační aplikace pro české podnikatele." },
+      { property: "og:description", content: "Vystaveno.cz: Chytrá fakturační aplikace pro české podnikatele." },
+      { name: "twitter:description", content: "Vystaveno.cz: Chytrá fakturační aplikace pro české podnikatele." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/9Q9Y4oL0HBR78WMyBC2sTscsL3b2/social-images/social-1776945491708-vystaveno-logo-Cgf8lq5p.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/9Q9Y4oL0HBR78WMyBC2sTscsL3b2/social-images/social-1776945491708-vystaveno-logo-Cgf8lq5p.webp" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
