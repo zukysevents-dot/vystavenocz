@@ -54,11 +54,13 @@ export const Route = createRootRoute({
       { name: "description", content: "Vystaveno.cz: Chytrá fakturační aplikace pro české podnikatele." },
       { property: "og:description", content: "Vystaveno.cz: Chytrá fakturační aplikace pro české podnikatele." },
       { name: "twitter:description", content: "Vystaveno.cz: Chytrá fakturační aplikace pro české podnikatele." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/9Q9Y4oL0HBR78WMyBC2sTscsL3b2/social-images/social-1776945491708-vystaveno-logo-Cgf8lq5p.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/9Q9Y4oL0HBR78WMyBC2sTscsL3b2/social-images/social-1776945491708-vystaveno-logo-Cgf8lq5p.webp" },
+      { property: "og:image", content: "https://vystaveno.cz/og-image.png" },
+      { name: "twitter:image", content: "https://vystaveno.cz/og-image.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
