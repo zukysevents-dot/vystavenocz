@@ -47,7 +47,16 @@ Deno.serve(async (req) => {
     const data = await aresRes.json();
     const sidlo = data?.sidlo ?? {};
 
-    const result = {
+    const result: {
+      ico: string;
+      dic: string | null;
+      company_name: string | null;
+      legal_form: string | null;
+      street: string | null;
+      city: string | null;
+      zip: string | null;
+      country: string;
+    } = {
       ico: data?.ico ?? paddedIco,
       dic: data?.dic ?? null,
       company_name: data?.obchodniJmeno ?? null,
