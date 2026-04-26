@@ -8,6 +8,7 @@ import { PricingTeaser } from "@/components/landing/PricingTeaser";
 import { Testimonials } from "@/components/landing/Testimonials";
 import { FaqHome } from "@/components/landing/FaqHome";
 import { Cta } from "@/components/landing/Cta";
+import { InlineCta } from "@/components/landing/InlineCta";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -34,10 +35,18 @@ function Index() {
     <PageShell>
       <Hero />
       <ForWhom />
-      <HowItWorks />
-      <HighlightFeatures />
-      <PricingTeaser />
+      {/* Social proof co nejvýše — dodává důvěru ještě před vysvětlováním funkcí. */}
       <Testimonials />
+      <HowItWorks />
+      {/* CTA hned po vysvětlení AI/3-krokového flow — uživatel teď chápe value. */}
+      <InlineCta title="Zní to jednoduše? Zkus to na vlastní faktuře." />
+      <HighlightFeatures />
+      {/* CTA po sekci funkcí — typické místo, kde uživatel rozhoduje. */}
+      <InlineCta
+        title="Máš všechno, co potřebuješ. Otestuj to zdarma."
+        hint="Žádná karta · plný přístup 14 dní"
+      />
+      <PricingTeaser />
       <FaqHome />
       <Cta />
     </PageShell>
