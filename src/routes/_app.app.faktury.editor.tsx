@@ -745,20 +745,9 @@ function InvoiceEditorPage() {
     );
   }
 
-  // Pokud editujeme existující fakturu/dobropis, povolíme přístup i bez klientů
-  // (uživatel mohl mezitím všechny klienty smazat — fakturu by jinak nešlo
-  // ani otevřít, stáhnout PDF nebo stornovat).
-  if (clients.length === 0 && !editingId) {
-    return (
-      <div className="mx-auto max-w-2xl p-8 text-center">
-        <h1 className="text-2xl font-bold">Nejprve přidejte klienta</h1>
-        <p className="mt-2 text-muted-foreground">Pro vystavení faktury potřebujete alespoň jednoho odběratele.</p>
-        <Button asChild className="mt-4" variant="coral">
-          <Link to="/app/klienti">Přidat klienta</Link>
-        </Button>
-      </div>
-    );
-  }
+  // Pozn.: Uživatel nemusí mít žádné klienty v seznamu — odběratele může zadat
+  // přímo v editoru přes „+ Nový z ARES" (QuickClientDialog), případně dokonce
+  // ad-hoc bez uložení. Blokační stránka tedy odpadá.
 
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)] flex-col md:h-screen md:min-h-0">
