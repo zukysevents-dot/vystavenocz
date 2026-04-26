@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate, useSearch, useBlocker } from "@tans
 import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { ArrowLeft, Plus, Trash2, Save, Download, Loader2, Eye, EyeOff, Mail, Lock, Settings2 } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +18,7 @@ import { InvoiceDocument } from "@/components/app/InvoiceDocument";
 import { downloadInvoicePdf, renderInvoicePdfBlob } from "@/lib/invoice-pdf";
 import type { InvoicePdfProps } from "@/lib/pdf/InvoicePdfDoc";
 import { SendInvoiceDialog, type SendInvoiceContext } from "@/components/app/SendInvoiceDialog";
+import { QuickClientDialog, type QuickClient } from "@/components/app/QuickClientDialog";
 import { useServerFn } from "@tanstack/react-start";
 import { sendInvoiceEmail } from "@/lib/email/send-invoice.functions";
 import { PaywallDialog } from "@/components/payments/PaywallDialog";
