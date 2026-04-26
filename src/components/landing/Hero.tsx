@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Check, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Sparkles, ShieldCheck, MapPin, Zap } from "lucide-react";
 import { DashboardPreview } from "./DashboardPreview";
 
 export function Hero() {
@@ -62,6 +62,22 @@ export function Hero() {
           <p className="mt-4 text-xs text-muted-foreground">
             14 dní zdarma bez karty. Po zkušební době od 100 Kč/měsíc.
           </p>
+
+          {/* Mikro social proof — důvěryhodné signály bez vymyšlených čísel */}
+          <ul className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+            <li className="flex items-center gap-1.5">
+              <ShieldCheck className="h-3.5 w-3.5 text-coral" />
+              Plně dle českého zákona
+            </li>
+            <li className="flex items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5 text-coral" />
+              Vyrobeno v Česku
+            </li>
+            <li className="flex items-center gap-1.5">
+              <Zap className="h-3.5 w-3.5 text-coral" />
+              Spuštění za 60 sekund
+            </li>
+          </ul>
         </div>
 
         <div className="flex items-center justify-center">
