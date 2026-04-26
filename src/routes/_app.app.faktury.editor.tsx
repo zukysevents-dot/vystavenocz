@@ -395,10 +395,8 @@ function InvoiceEditorPage() {
   }, [profile]);
 
   const clientSnapshot: ClientSnapshot = useMemo(() => {
-    if (!selectedClient) {
-      return { name: "— Vyberte odběratele —" };
-    }
-    return {
+    if (selectedClient) {
+      return {
       name: selectedClient.name,
       ico: selectedClient.ico,
       dic: selectedClient.dic,
@@ -408,7 +406,21 @@ function InvoiceEditorPage() {
       country: selectedClient.country,
       email: selectedClient.email,
     };
-  }, [selectedClient]);
+    }
+    if (adHocClient) {
+      return {
+        name: adHocClient.name,
+        ico: adHocClient.ico,
+        dic: adHocClient.dic,
+        street: adHocClient.street,
+        city: adHocClient.city,
+        zip: adHocClient.zip,
+        country: adHocClient.country,
+        email: adHocClient.email,
+      };
+    }
+    return { name: "— Vyberte odběratele —" };
+  }, [selectedClient, adHocClient]);
 
   const totals = useMemo(
     () => calcTotals(items, profile?.vat_mode === "payer"),
