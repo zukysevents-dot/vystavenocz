@@ -1243,6 +1243,30 @@ function InvoiceEditorPage() {
         }}
         context={sendCtx}
       />
+      <QuickClientDialog
+        open={quickOpen}
+        onOpenChange={setQuickOpen}
+        onConfirm={(client, savedId) => {
+          setAdHocClient(client);
+          setSelectedClientId("");
+          if (savedId) {
+            // refresh seznamu — nově uložený klient se objeví v selectu i jinde
+            void (async () => {
+              if (!user) return;
+              const { data } = await supabase
+                .from("clients")
+                .select("*")
+                .eq("user_id", user.id)
+                .order("name");
+              if (data) {
+                setClients(data as ClientRow[]);
+                setSelectedClientId(savedId);
+                setAdHocClient(null);
+              }
+            })();
+          }
+        }}
+      />
     </div>
   );
 }
