@@ -948,14 +948,64 @@ function InvoiceEditorPage() {
                 <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
               </Field>
               <Field label="Odběratel">
-                <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                  <SelectTrigger><SelectValue placeholder="Vyberte klienta" /></SelectTrigger>
-                  <SelectContent>
-                    {clients.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-stretch gap-2">
+                  <div className="min-w-0 flex-1">
+                    <Select
+                      value={selectedClientId}
+                      onValueChange={(v) => {
+                        setSelectedClientId(v);
+                        if (v) setAdHocClient(null);
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={adHocClient ? adHocClient.name || "—" : "Vyberte klienta"}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clients.length === 0 && (
+                          <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                            Zatím žádní klienti — použijte tlačítko vpravo.
+                          </div>
+                        )}
+                        {clients.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    title="Nový odběratel z ARES"
+                    aria-label="Nový odběratel z ARES"
+                    onClick={() => setQuickOpen(true)}
+                  >
+                    <UserPlus className="h-4 w-4" />
+                  </Button>
+                </div>
+                {adHocClient && !selectedClientId && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Použit ad-hoc odběratel: <span className="font-medium text-foreground">{adHocClient.name}</span>
+                    {" · "}
+                    <button
+                      type="button"
+                      className="underline hover:text-foreground"
+                      onClick={() => setQuickOpen(true)}
+                    >
+                      upravit
+                    </button>
+                    {" / "}
+                    <button
+                      type="button"
+                      className="underline hover:text-foreground"
+                      onClick={() => setAdHocClient(null)}
+                    >
+                      zrušit
+                    </button>
+                  </p>
+                )}
               </Field>
               <Field label="Datum vystavení">
                 <Input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
