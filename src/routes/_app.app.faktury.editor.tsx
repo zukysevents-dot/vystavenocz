@@ -135,6 +135,10 @@ function InvoiceEditorPage() {
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
+  // Ad-hoc odběratel zadaný přímo v editoru (přes QuickClientDialog).
+  // Pokud je nastavený a neni vybraný klient ze seznamu, použije se on.
+  const [adHocClient, setAdHocClient] = useState<QuickClient | null>(null);
+  const [quickOpen, setQuickOpen] = useState(false);
 
   // Typ dokladu (faktura / dobropis) + vazba na původní fakturu při dobropisu.
   const [documentType, setDocumentType] = useState<"invoice" | "credit_note">("invoice");
