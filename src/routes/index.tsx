@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageShell } from "@/components/landing/PageShell";
 import { Hero } from "@/components/landing/Hero";
-import { ForWhom } from "@/components/landing/ForWhom";
-import { HowItWorks } from "@/components/landing/HowItWorks";
+import { TrustBar } from "@/components/landing/TrustBar";
+import { AiDemo } from "@/components/landing/AiDemo";
+import { LifecycleStrip } from "@/components/landing/LifecycleStrip";
 import { HighlightFeatures } from "@/components/landing/HighlightFeatures";
-import { PricingTeaser } from "@/components/landing/PricingTeaser";
 import { Testimonials } from "@/components/landing/Testimonials";
-import { FaqHome } from "@/components/landing/FaqHome";
+import { RapidUpdatesShort } from "@/components/landing/RapidUpdatesShort";
 import { Cta } from "@/components/landing/Cta";
 import { InlineCta } from "@/components/landing/InlineCta";
 
@@ -34,20 +34,25 @@ function Index() {
   return (
     <PageShell>
       <Hero />
-      <ForWhom />
-      {/* Social proof co nejvýše — dodává důvěru ještě před vysvětlováním funkcí. */}
-      <Testimonials />
-      <HowItWorks />
-      {/* CTA hned po vysvětlení AI/3-krokového flow — uživatel teď chápe value. */}
+      {/* Trust bar hned pod Hero — důvěryhodné mikrosignály ještě před scrollováním. */}
+      <TrustBar />
+      {/* AI sekce jako hlavní wow moment — živá ukázka schopností. */}
+      <AiDemo />
+      {/* CTA po AI sekci — uživatel právě viděl value, pojď ho registrovat. */}
       <InlineCta title="Zní to jednoduše? Zkus to na vlastní faktuře." />
+      {/* Lifecycle — krátké připomenutí, že pokrýváme celý život faktury. */}
+      <LifecycleStrip />
+      {/* Hlavní funkce v krátké podobě (3 karty). */}
       <HighlightFeatures />
-      {/* CTA po sekci funkcí — typické místo, kde uživatel rozhoduje. */}
+      {/* CTA po funkcích — klasické rozhodovací místo. */}
       <InlineCta
         title="Máš všechno, co potřebuješ. Otestuj to zdarma."
         hint="Žádná karta · plný přístup 14 dní"
       />
-      <PricingTeaser />
-      <FaqHome />
+      {/* Social proof před závěrečným CTA. */}
+      <Testimonials />
+      {/* Krátký důkaz, že produkt rychle vylepšujeme — bez dlouhého vysvětlování. */}
+      <RapidUpdatesShort />
       <Cta />
     </PageShell>
   );

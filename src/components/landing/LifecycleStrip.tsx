@@ -48,7 +48,7 @@ export function LifecycleStrip() {
             >
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-coral/20 bg-coral/10 text-coral">
-                  <s.icon className="h-4.5 w-4.5" />
+                  <s.icon className="h-5 w-5" />
                 </div>
                 <span className="text-xs font-bold tracking-[0.18em] text-muted-foreground/50">
                   0{i + 1}
