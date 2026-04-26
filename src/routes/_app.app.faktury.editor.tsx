@@ -292,12 +292,14 @@ function InvoiceEditorPage() {
 
   // Adjust due date when client changes
   useEffect(() => {
-    if (!selectedClientId) return;
-    const c = clients.find((x) => x.id === selectedClientId);
-    if (c && !editingId) {
-      setDueDate(addDaysISO(c.default_payment_days));
+    if (editingId) return;
+    if (selectedClientId) {
+      const c = clients.find((x) => x.id === selectedClientId);
+      if (c) setDueDate(addDaysISO(c.default_payment_days));
+    } else if (adHocClient?.default_payment_days) {
+      setDueDate(addDaysISO(adHocClient.default_payment_days));
     }
-  }, [selectedClientId, clients, editingId]);
+  }, [selectedClientId, clients, editingId, adHocClient]);
 
   // Mark form dirty whenever any tracked field changes (after initial load).
   useEffect(() => {
