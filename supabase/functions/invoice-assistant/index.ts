@@ -136,6 +136,29 @@ Deno.serve(async (req) => {
       });
     }
 
+    // --- Denní limit dotazů (ochrana před vyčerpáním AI kreditů jedním uživatelem) ---
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const DAILY_LIMIT = 100;
+    if (SUPABASE_SERVICE_ROLE_KEY) {
+      const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { data: usage, error: usageErr } = await adminClient.rpc("increment_ai_usage", {
+        _user_id: userData.user.id,
+        _daily_limit: DAILY_LIMIT,
+      });
+      if (usageErr) {
+        console.error("increment_ai_usage error:", usageErr);
+      } else if (usage && usage[0]?.limit_exceeded) {
+        return new Response(
+          JSON.stringify({
+            error: `Dosáhli jste denního limitu ${DAILY_LIMIT} dotazů na AI asistenta. Zkuste to prosím zítra.`,
+          }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     const { messages, invoice_context, mode, image_data_url } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY není nakonfigurován");
