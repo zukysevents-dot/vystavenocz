@@ -48,9 +48,7 @@ export function Pricing() {
 
         {/* Card */}
         <div className="relative mx-auto mt-10 max-w-xl">
-          <div className="absolute -inset-4 -z-10 rounded-[2rem] bg-gradient-to-br from-primary/20 via-mint/15 to-coral/15 blur-2xl" />
-
-          <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-glow">
+          <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-card">
             <div className="border-b border-border bg-surface-soft px-8 py-6">
               <div className="flex items-center justify-between">
                 <div>

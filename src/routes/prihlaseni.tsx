@@ -107,20 +107,6 @@ function LoginPage() {
               )}
               Přihlásit se přes Google
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              className="w-full"
-              disabled={submitting}
-              onClick={() => {
-                setEmail("demo@vystaveno.cz");
-                setPassword("VystavenoDemo-2026-Pwd!");
-                toast.info("Demo údaje vyplněny — klikněte na Přihlásit se.");
-              }}
-            >
-              Vyzkoušet demo
-            </Button>
           </form>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
