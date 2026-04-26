@@ -452,7 +452,7 @@ function InvoiceEditorPage() {
     // Ostrá validace platí jen pro vystavení faktury. Koncept lze uložit
     // i s neúplnými údaji — ať uživatel nepřijde o rozdělanou práci.
     if (status === "issued") {
-      if (!selectedClient) {
+      if (!selectedClient && !adHocClient) {
         if (!silent) toast.error("Vyberte odběratele.");
         return null;
       }
