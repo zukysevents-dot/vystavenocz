@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate, useSearch, useBlocker } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
-import { ArrowLeft, Plus, Trash2, Save, Download, Loader2, Eye, EyeOff, Mail, Lock, Settings2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Download, Loader2, Eye, EyeOff, Mail, Lock, Settings2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,7 @@ import { InvoiceDocument } from "@/components/app/InvoiceDocument";
 import { downloadInvoicePdf, renderInvoicePdfBlob } from "@/lib/invoice-pdf";
 import type { InvoicePdfProps } from "@/lib/pdf/InvoicePdfDoc";
 import { SendInvoiceDialog, type SendInvoiceContext } from "@/components/app/SendInvoiceDialog";
+import { QuickClientDialog, type QuickClient } from "@/components/app/QuickClientDialog";
 import { useServerFn } from "@tanstack/react-start";
 import { sendInvoiceEmail } from "@/lib/email/send-invoice.functions";
 import { PaywallDialog } from "@/components/payments/PaywallDialog";
@@ -133,6 +134,10 @@ function InvoiceEditorPage() {
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
+  // Ad-hoc odběratel zadaný přímo v editoru (přes QuickClientDialog).
+  // Pokud je nastavený a neni vybraný klient ze seznamu, použije se on.
+  const [adHocClient, setAdHocClient] = useState<QuickClient | null>(null);
+  const [quickOpen, setQuickOpen] = useState(false);
 
   // Typ dokladu (faktura / dobropis) + vazba na původní fakturu při dobropisu.
   const [documentType, setDocumentType] = useState<"invoice" | "credit_note">("invoice");
@@ -286,12 +291,14 @@ function InvoiceEditorPage() {
 
   // Adjust due date when client changes
   useEffect(() => {
-    if (!selectedClientId) return;
-    const c = clients.find((x) => x.id === selectedClientId);
-    if (c && !editingId) {
-      setDueDate(addDaysISO(c.default_payment_days));
+    if (editingId) return;
+    if (selectedClientId) {
+      const c = clients.find((x) => x.id === selectedClientId);
+      if (c) setDueDate(addDaysISO(c.default_payment_days));
+    } else if (adHocClient?.default_payment_days) {
+      setDueDate(addDaysISO(adHocClient.default_payment_days));
     }
-  }, [selectedClientId, clients, editingId]);
+  }, [selectedClientId, clients, editingId, adHocClient]);
 
   // Mark form dirty whenever any tracked field changes (after initial load).
   useEffect(() => {
@@ -387,10 +394,8 @@ function InvoiceEditorPage() {
   }, [profile]);
 
   const clientSnapshot: ClientSnapshot = useMemo(() => {
-    if (!selectedClient) {
-      return { name: "— Vyberte odběratele —" };
-    }
-    return {
+    if (selectedClient) {
+      return {
       name: selectedClient.name,
       ico: selectedClient.ico,
       dic: selectedClient.dic,
@@ -400,7 +405,21 @@ function InvoiceEditorPage() {
       country: selectedClient.country,
       email: selectedClient.email,
     };
-  }, [selectedClient]);
+    }
+    if (adHocClient) {
+      return {
+        name: adHocClient.name,
+        ico: adHocClient.ico,
+        dic: adHocClient.dic,
+        street: adHocClient.street,
+        city: adHocClient.city,
+        zip: adHocClient.zip,
+        country: adHocClient.country,
+        email: adHocClient.email,
+      };
+    }
+    return { name: "— Vyberte odběratele —" };
+  }, [selectedClient, adHocClient]);
 
   const totals = useMemo(
     () => calcTotals(items, profile?.vat_mode === "payer"),
@@ -432,7 +451,7 @@ function InvoiceEditorPage() {
     // Ostrá validace platí jen pro vystavení faktury. Koncept lze uložit
     // i s neúplnými údaji — ať uživatel nepřijde o rozdělanou práci.
     if (status === "issued") {
-      if (!selectedClient) {
+      if (!selectedClient && !adHocClient) {
         if (!silent) toast.error("Vyberte odběratele.");
         return null;
       }
@@ -725,20 +744,9 @@ function InvoiceEditorPage() {
     );
   }
 
-  // Pokud editujeme existující fakturu/dobropis, povolíme přístup i bez klientů
-  // (uživatel mohl mezitím všechny klienty smazat — fakturu by jinak nešlo
-  // ani otevřít, stáhnout PDF nebo stornovat).
-  if (clients.length === 0 && !editingId) {
-    return (
-      <div className="mx-auto max-w-2xl p-8 text-center">
-        <h1 className="text-2xl font-bold">Nejprve přidejte klienta</h1>
-        <p className="mt-2 text-muted-foreground">Pro vystavení faktury potřebujete alespoň jednoho odběratele.</p>
-        <Button asChild className="mt-4" variant="coral">
-          <Link to="/app/klienti">Přidat klienta</Link>
-        </Button>
-      </div>
-    );
-  }
+  // Pozn.: Uživatel nemusí mít žádné klienty v seznamu — odběratele může zadat
+  // přímo v editoru přes „+ Nový z ARES" (QuickClientDialog), případně dokonce
+  // ad-hoc bez uložení. Blokační stránka tedy odpadá.
 
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)] flex-col md:h-screen md:min-h-0">
@@ -939,14 +947,64 @@ function InvoiceEditorPage() {
                 <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
               </Field>
               <Field label="Odběratel">
-                <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                  <SelectTrigger><SelectValue placeholder="Vyberte klienta" /></SelectTrigger>
-                  <SelectContent>
-                    {clients.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-stretch gap-2">
+                  <div className="min-w-0 flex-1">
+                    <Select
+                      value={selectedClientId}
+                      onValueChange={(v) => {
+                        setSelectedClientId(v);
+                        if (v) setAdHocClient(null);
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={adHocClient ? adHocClient.name || "—" : "Vyberte klienta"}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clients.length === 0 && (
+                          <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                            Zatím žádní klienti — použijte tlačítko vpravo.
+                          </div>
+                        )}
+                        {clients.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    title="Nový odběratel z ARES"
+                    aria-label="Nový odběratel z ARES"
+                    onClick={() => setQuickOpen(true)}
+                  >
+                    <UserPlus className="h-4 w-4" />
+                  </Button>
+                </div>
+                {adHocClient && !selectedClientId && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Použit ad-hoc odběratel: <span className="font-medium text-foreground">{adHocClient.name}</span>
+                    {" · "}
+                    <button
+                      type="button"
+                      className="underline hover:text-foreground"
+                      onClick={() => setQuickOpen(true)}
+                    >
+                      upravit
+                    </button>
+                    {" / "}
+                    <button
+                      type="button"
+                      className="underline hover:text-foreground"
+                      onClick={() => setAdHocClient(null)}
+                    >
+                      zrušit
+                    </button>
+                  </p>
+                )}
               </Field>
               <Field label="Datum vystavení">
                 <Input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
@@ -1183,6 +1241,30 @@ function InvoiceEditorPage() {
           if (!o) setSendCtx(null);
         }}
         context={sendCtx}
+      />
+      <QuickClientDialog
+        open={quickOpen}
+        onOpenChange={setQuickOpen}
+        onConfirm={(client, savedId) => {
+          setAdHocClient(client);
+          setSelectedClientId("");
+          if (savedId) {
+            // refresh seznamu — nově uložený klient se objeví v selectu i jinde
+            void (async () => {
+              if (!user) return;
+              const { data } = await supabase
+                .from("clients")
+                .select("*")
+                .eq("user_id", user.id)
+                .order("name");
+              if (data) {
+                setClients(data as ClientRow[]);
+                setSelectedClientId(savedId);
+                setAdHocClient(null);
+              }
+            })();
+          }
+        }}
       />
     </div>
   );
