@@ -1,8 +1,7 @@
 import { createFileRoute, Link, useNavigate, useSearch, useBlocker } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
-import { ArrowLeft, Plus, Trash2, Save, Download, Loader2, Eye, EyeOff, Mail, Lock, Settings2 } from "lucide-react";
-import { UserPlus } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Download, Loader2, Eye, EyeOff, Mail, Lock, Settings2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
