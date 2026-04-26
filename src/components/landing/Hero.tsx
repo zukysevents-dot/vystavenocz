@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Check, FileText, QrCode, Sparkles, ShieldCheck } from "lucide-react";
+import { ArrowRight, Check, Sparkles } from "lucide-react";
 import { DashboardPreview } from "./DashboardPreview";
 
 export function Hero() {
@@ -22,53 +22,46 @@ export function Hero() {
           </div>
 
           <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-[3.75rem]">
-            Vystavte fakturu{" "}
-            <span className="text-gradient-primary">za 30 sekund.</span>
-            <br className="hidden sm:block" />
-            Bez papírů, bez chyb, bez stresu.
+            Vystav fakturu{" "}
+            <span className="text-coral">za 30 sekund.</span>
           </h1>
 
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Česká fakturace pro OSVČ a malé firmy. AI asistent v češtině, QR platby,
-            IČO/DIČ z ARESu, automatické upomínky. <span className="font-semibold text-foreground">Od 100 Kč měsíčně</span> —
-            bez skrytých limitů, neomezeně faktur i klientů.
+            Bez papírů, bez chyb, bez stresu. Česká fakturace pro OSVČ,
+            freelancery a řemeslníky.
           </p>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button size="lg" variant="coral" className="group" asChild>
-              <a href="/registrace">
-                Začít zdarma — bez karty
-                <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
-              </a>
-            </Button>
-            <Button size="lg" variant="outline" asChild>
-              <a href="/cenik">Zobrazit ceník</a>
-            </Button>
-          </div>
-
-          <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-            {["14 dní zdarma bez karty", "Zrušení kdykoliv", "Česká podpora"].map((b) => (
-              <li key={b} className="flex items-center gap-1.5">
-                <Check className="h-4 w-4 text-success" />
-                {b}
+          <ul className="mt-7 space-y-2.5 text-[15px] text-foreground/90">
+            {[
+              "AI asistent ti fakturu sestaví nebo upraví na povel — česky",
+              "QR platby, ARES, automatické DPH a upomínky v ceně",
+              "Neomezené faktury i klienti — bez skrytých limitů",
+              "Funguje na počítači i na mobilu",
+            ].map((b) => (
+              <li key={b} className="flex items-start gap-2.5">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-coral/15 text-coral">
+                  <Check className="h-3 w-3" />
+                </span>
+                <span>{b}</span>
               </li>
             ))}
           </ul>
 
-          <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 border-t border-border pt-5 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5">
-              <FileText className="h-3.5 w-3.5 text-coral" />
-              Faktury · dobropisy · zálohy
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <QrCode className="h-3.5 w-3.5 text-coral" />
-              QR platby všech bank
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <ShieldCheck className="h-3.5 w-3.5 text-coral" />
-              Plně dle českého zákona
-            </span>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <Button size="lg" variant="coral" className="group" asChild>
+              <a href="/registrace">
+                Začít zdarma
+                <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
+              </a>
+            </Button>
+            <Button size="lg" variant="outline" asChild>
+              <a href="/funkce">Podívat se na funkce</a>
+            </Button>
           </div>
+
+          <p className="mt-4 text-xs text-muted-foreground">
+            14 dní zdarma bez karty. Po zkušební době od 100 Kč/měsíc.
+          </p>
         </div>
 
         <div className="flex items-center justify-center">
