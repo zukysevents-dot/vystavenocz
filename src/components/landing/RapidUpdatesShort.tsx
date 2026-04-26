@@ -23,7 +23,7 @@ export function RapidUpdatesShort() {
 
         <div className="mt-6 flex justify-center">
           <Button variant="outline" size="lg" asChild>
-            <a href="mailto:napady@vystaveno.cz?subject=N%C3%A1vrh%20na%20vylep%C5%A1en%C3%AD%20Vystaveno">
+            <a href="mailto:zukys.events@gmail.com?subject=N%C3%A1vrh%20na%20vylep%C5%A1en%C3%AD%20Vystaveno">
               <Mail className="h-4 w-4" />
               Navrhnout vylepšení
             </a>
