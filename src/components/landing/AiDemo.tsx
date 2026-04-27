@@ -342,7 +342,7 @@ export function AiDemo() {
               )}
             </div>
 
-            <div className="space-y-2.5 p-3 sm:space-y-4 sm:p-5">
+            <div className="min-h-[420px] space-y-2.5 p-3 sm:min-h-[460px] sm:space-y-4 sm:p-5">
               {/* Client */}
               <div
                 key={`client-${flashKey}-${shownInvoice.client}`}
