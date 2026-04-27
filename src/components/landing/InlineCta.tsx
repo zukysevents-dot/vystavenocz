@@ -17,7 +17,7 @@ export function InlineCta({ title, hint = "14 dní zdarma · bez karty" }: Props
   return (
     <section className="bg-background py-10 sm:py-12">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-border bg-card px-6 py-5 text-center shadow-sm sm:flex-row sm:text-left">
+        <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-border bg-card px-6 py-5 text-center sm:flex-row sm:text-left">
           <div className="min-w-0">
             <p className="text-base font-semibold text-foreground sm:text-lg">
               {title}

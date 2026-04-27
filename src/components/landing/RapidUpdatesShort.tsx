@@ -10,11 +10,11 @@ export function RapidUpdatesShort() {
   return (
     <section className="bg-surface-soft py-14 sm:py-16">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-center">
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-coral/30 bg-coral/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-coral">
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
           <Clock className="h-3.5 w-3.5" />
           Stavíme to s vámi
         </div>
-        <h2 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
+        <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
           Co napíšete, to brzo uvidíte
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed text-muted-foreground">

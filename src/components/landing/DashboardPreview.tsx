@@ -1,5 +1,5 @@
 import { Logo } from "./Logo";
-import { Check, QrCode, Sparkles, FileText, ShieldCheck } from "lucide-react";
+import { Check, QrCode, FileText, ShieldCheck } from "lucide-react";
 
 /**
  * Stylizovaná ukázka vystavené faktury v reálné aplikaci.
@@ -8,11 +8,11 @@ import { Check, QrCode, Sparkles, FileText, ShieldCheck } from "lucide-react";
 export function DashboardPreview() {
   return (
     <div className="relative mx-auto w-full max-w-md">
-      {/* dekorativní glow za panelem */}
-      <div className="absolute -inset-8 -z-10 rounded-[3rem] bg-gradient-to-br from-coral/30 via-coral/15 to-transparent blur-3xl" />
+      {/* Jemný stín místo barevného glow — působí čistěji a profesionálněji. */}
+      <div className="absolute -inset-6 -z-10 rounded-[2.5rem] bg-foreground/[0.03] blur-2xl" />
 
-      <div className="rotate-1 transition-transform duration-500 hover:rotate-0">
-        <div className="overflow-hidden rounded-2xl bg-white text-slate-900 shadow-glow ring-1 ring-white/20">
+      <div>
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-card">
           {/* Hlavička appky */}
           <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-3">
             <div className="flex items-center gap-2">
@@ -144,16 +144,6 @@ export function DashboardPreview() {
             </span>
           </div>
         </div>
-      </div>
-
-      {/* Plovoucí badge */}
-      <div className="absolute -bottom-4 -right-2 rotate-3 rounded-full bg-coral px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-coral-foreground shadow-glow sm:-right-6">
-        <span className="inline-flex items-center gap-1.5">
-          <Sparkles className="h-3.5 w-3.5" /> Hotovo za 30 sekund
-        </span>
-      </div>
-      <div className="absolute -left-2 -top-3 -rotate-6 rounded-full border border-coral/30 bg-background/95 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-coral shadow-soft backdrop-blur sm:-left-6">
-        QR · ARES · ISDOC
       </div>
     </div>
   );

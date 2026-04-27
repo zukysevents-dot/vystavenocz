@@ -77,10 +77,10 @@ export function Roadmap() {
     <section className="bg-surface-soft py-16 sm:py-20">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-coral">
+          <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
             Roadmapa
           </p>
-          <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Co už umíme a co chystáme
           </h2>
           <p className="mt-4 text-base text-muted-foreground sm:text-lg">
@@ -96,7 +96,7 @@ export function Roadmap() {
             return (
               <li
                 key={item.title}
-                className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-card"
+                className="flex flex-col rounded-2xl border border-border bg-card p-5"
               >
                 <div className="flex items-center justify-between gap-3">
                   <span

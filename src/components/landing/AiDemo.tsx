@@ -210,11 +210,11 @@ export function AiDemo() {
     <section className="relative overflow-hidden bg-surface py-16 sm:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-coral/30 bg-coral/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-coral">
-            <Sparkles className="h-3.5 w-3.5" />
-            AI asistent · živá ukázka
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
+            <Sparkles className="h-3.5 w-3.5 text-coral" />
+            AI asistent — živá ukázka
           </div>
-          <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Napište, co chcete — faktura se vystaví sama
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
