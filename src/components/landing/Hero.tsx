@@ -8,7 +8,7 @@ export function Hero() {
       <div className="absolute inset-0 bg-mesh opacity-25" aria-hidden />
       <div className="relative mx-auto grid max-w-7xl gap-14 px-4 pb-24 pt-16 sm:px-6 sm:pb-28 sm:pt-20 lg:grid-cols-2 lg:gap-12 lg:px-8 lg:pb-36 lg:pt-28">
         <div className="flex flex-col justify-center">
-          <div className="mb-7 inline-flex w-fit items-center rounded-full border border-border bg-card/70 px-3.5 py-1.5 text-xs font-medium text-foreground/85 backdrop-blur-sm">
+          <div className="mb-9 inline-flex w-fit items-center rounded-full border border-border bg-card/70 px-3.5 py-1.5 text-xs font-medium text-foreground/85 backdrop-blur-sm sm:mb-10">
             Vše co Fakturoid Plus za polovinu
           </div>
 
@@ -17,7 +17,7 @@ export function Hero() {
             <span className="text-coral">za 30 sekund.</span>
           </h1>
 
-          <p className="mt-7 max-w-xl text-lg leading-[1.65] text-muted-foreground">
+          <p className="mt-7 max-w-xl text-[15px] leading-[1.65] text-muted-foreground sm:text-base">
             Vše co umí Fakturoid nebo iDoklad — AI asistent, QR platby, ARES,
             opakované faktury i upomínky. Jen za <span className="font-semibold text-foreground">100 Kč/měsíc</span> místo 200+.
           </p>
