@@ -5,68 +5,71 @@ import { DashboardPreview } from "./DashboardPreview";
 export function Hero() {
   return (
     <section className="relative overflow-hidden bg-hero">
-      <div className="absolute inset-0 bg-mesh opacity-40" aria-hidden />
-      <div className="relative mx-auto grid max-w-7xl gap-12 px-4 pb-20 pt-12 sm:px-6 lg:grid-cols-2 lg:gap-8 lg:px-8 lg:pb-28 lg:pt-20">
+      <div className="absolute inset-0 bg-mesh opacity-25" aria-hidden />
+      <div className="relative mx-auto grid max-w-7xl gap-14 px-4 pb-24 pt-16 sm:px-6 sm:pb-28 sm:pt-20 lg:grid-cols-2 lg:gap-12 lg:px-8 lg:pb-36 lg:pt-28">
         <div className="flex flex-col justify-center">
-          <div className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur">
-            <span className="h-1.5 w-1.5 rounded-full bg-coral" />
-            <span className="text-foreground">Vše co Fakturoid Plus za polovinu</span>
+          <div className="mb-7 inline-flex w-fit items-center gap-2 rounded-full border border-border/80 bg-card/60 px-3.5 py-1.5 text-xs font-medium text-foreground/80 backdrop-blur-sm">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Vše co Fakturoid Plus
+            </span>
+            <span className="h-3 w-px bg-border" />
+            <span>za polovinu</span>
           </div>
 
-          <h1 className="text-4xl font-bold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]">
+          <h1 className="text-[2.5rem] font-bold leading-[1.05] tracking-[-0.02em] text-foreground sm:text-[3.25rem] lg:text-[4rem]">
             Vystav fakturu{" "}
             <span className="text-coral">za 30 sekund.</span>
           </h1>
 
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
+          <p className="mt-7 max-w-xl text-lg leading-[1.65] text-muted-foreground">
             Vše co umí Fakturoid nebo iDoklad — AI asistent, QR platby, ARES,
             opakované faktury i upomínky. Jen za <span className="font-semibold text-foreground">100 Kč/měsíc</span> místo 200+.
           </p>
 
-          <ul className="mt-7 space-y-2.5 text-[15px] text-foreground/90">
+          <ul className="mt-9 space-y-4 text-[15px] text-foreground/90">
             {[
               "AI asistent v češtině — sestaví fakturu na povel (nikdo jiný nemá)",
               "Opakované faktury a upomínky v základu — u konkurence jen v Premium",
               "Neomezené faktury i klienti — bez skrytých limitů a příplatků",
               "Mobile-first — funguje stejně dobře v terénu jako na PC",
             ].map((b) => (
-              <li key={b} className="flex items-start gap-2.5">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-coral/15 text-coral">
-                  <Check className="h-3 w-3" />
+              <li key={b} className="flex items-start gap-3">
+                <span className="mt-[3px] flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-coral/10 text-coral ring-1 ring-inset ring-coral/20">
+                  <Check className="h-3 w-3" strokeWidth={2.25} />
                 </span>
-                <span>{b}</span>
+                <span className="leading-[1.55]">{b}</span>
               </li>
             ))}
           </ul>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button size="lg" variant="coral" className="group" asChild>
+          <div className="mt-10 flex w-full flex-col gap-3 sm:flex-row sm:items-center">
+            <Button size="lg" variant="coral" className="group w-full sm:w-auto" asChild>
               <a href="/registrace">
                 Začít zdarma
                 <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
               </a>
             </Button>
-            <Button size="lg" variant="outline" asChild>
+            <Button size="lg" variant="outline" className="w-full sm:w-auto" asChild>
               <a href="/funkce">Podívat se na funkce</a>
             </Button>
           </div>
 
-          <p className="mt-4 text-xs text-muted-foreground">
+          <p className="mt-5 text-xs text-muted-foreground/90">
             14 dní zdarma bez karty. Po zkušební době od 100 Kč/měsíc.
           </p>
 
           {/* Mikro social proof — důvěryhodné signály bez vymyšlených čísel */}
-          <ul className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+          <ul className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2.5 border-t border-border/60 pt-6 text-xs text-muted-foreground">
             <li className="flex items-center gap-1.5">
-              <ShieldCheck className="h-3.5 w-3.5 text-coral" />
+              <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground/70" strokeWidth={1.75} />
               Plně dle českého zákona
             </li>
             <li className="flex items-center gap-1.5">
-              <MapPin className="h-3.5 w-3.5 text-coral" />
+              <MapPin className="h-3.5 w-3.5 text-muted-foreground/70" strokeWidth={1.75} />
               Vyrobeno v Česku
             </li>
             <li className="flex items-center gap-1.5">
-              <Zap className="h-3.5 w-3.5 text-coral" />
+              <Zap className="h-3.5 w-3.5 text-muted-foreground/70" strokeWidth={1.75} />
               Spuštění za 60 sekund
             </li>
           </ul>
