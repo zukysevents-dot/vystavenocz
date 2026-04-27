@@ -32,7 +32,7 @@ export function LifecycleStrip() {
     <section className="bg-background py-16 sm:py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Celý život faktury na jednom místě
           </h2>
           <p className="mt-3 text-base text-muted-foreground sm:text-lg">
@@ -44,13 +44,13 @@ export function LifecycleStrip() {
           {stages.map((s, i) => (
             <li
               key={s.title}
-              className="relative rounded-2xl border border-border bg-card p-5 shadow-sm"
+              className="relative rounded-2xl border border-border bg-card p-5"
             >
               <div className="mb-3 flex items-center justify-between">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-coral/20 bg-coral/10 text-coral">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-soft text-foreground">
                   <s.icon className="h-5 w-5" />
                 </div>
-                <span className="text-xs font-bold tracking-[0.18em] text-muted-foreground/50">
+                <span className="text-xs font-medium tabular-nums text-muted-foreground/60">
                   0{i + 1}
                 </span>
               </div>
