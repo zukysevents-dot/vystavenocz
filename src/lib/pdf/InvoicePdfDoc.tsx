@@ -121,7 +121,7 @@ export function InvoicePdfDocument(props: InvoicePdfProps) {
     supplier.iban?.replace(/\s/g, "") ||
     (supplier.bank_account ? czAccountToIban(supplier.bank_account) : null);
 
-  const accent = supplier.invoice_color || "#0fbfb6";
+  const accent = supplier.invoice_color || "#1f2937";
   const styles = makeStyles(accent);
 
   const ks = constantSymbol?.trim() || "";

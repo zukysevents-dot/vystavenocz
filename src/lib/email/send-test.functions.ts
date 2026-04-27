@@ -32,7 +32,7 @@ export const sendTestInvoiceEmail = createServerFn({ method: "POST" })
     const localPartRaw = profile.invoice_sender_local_part?.trim().toLowerCase() || "faktury";
     const localPart = LOCAL_PART_REGEX.test(localPartRaw) ? localPartRaw : "faktury";
     const fromAddress = `${fromName} <${localPart}@vystaveno.cz>`;
-    const brand = /^#[0-9a-fA-F]{6}$/.test(profile.invoice_color || "") ? profile.invoice_color! : "#0fbfb6";
+    const brand = /^#[0-9a-fA-F]{6}$/.test(profile.invoice_color || "") ? profile.invoice_color! : "#1f2937";
     const now = new Date().toLocaleString("cs-CZ", { dateStyle: "long", timeStyle: "short" });
 
     const html = `<!DOCTYPE html>

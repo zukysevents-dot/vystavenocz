@@ -64,7 +64,7 @@ const defaults: Form = {
   iban: "",
   swift: "",
   invoice_number_prefix: "FA",
-  invoice_color: "#0fbfb6",
+  invoice_color: "#1f2937",
   logo_url: null,
   next_invoice_seq: 1,
   credit_note_prefix: "OD",
