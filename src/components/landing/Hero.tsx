@@ -12,7 +12,7 @@ export function Hero() {
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-coral/15 text-coral">
               <Sparkles className="h-3 w-3" />
             </span>
-            <span className="text-foreground">Česká fakturace s AI · od 100 Kč/měsíc</span>
+            <span className="text-foreground">Vše co Fakturoid Plus · za polovinu</span>
             <span className="hidden h-3 w-px bg-border sm:inline-block" />
             <span className="hidden items-center gap-1 text-coral sm:inline-flex">
               <span className="text-[10px] font-semibold uppercase tracking-[0.12em]">
@@ -27,16 +27,16 @@ export function Hero() {
           </h1>
 
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Bez papírů, bez chyb, bez stresu. Česká fakturace pro OSVČ,
-            freelancery a řemeslníky.
+            Vše co umí Fakturoid nebo iDoklad — AI asistent, QR platby, ARES,
+            opakované faktury i upomínky. Jen za <span className="font-semibold text-foreground">100 Kč/měsíc</span> místo 200+.
           </p>
 
           <ul className="mt-7 space-y-2.5 text-[15px] text-foreground/90">
             {[
-              "AI asistent ti fakturu sestaví nebo upraví na povel — česky",
-              "QR platby, ARES, automatické DPH a upomínky v ceně",
-              "Neomezené faktury i klienti — bez skrytých limitů",
-              "Funguje na počítači i na mobilu",
+              "AI asistent v češtině — sestaví fakturu na povel (nikdo jiný nemá)",
+              "Opakované faktury a upomínky v základu — u konkurence jen v Premium",
+              "Neomezené faktury i klienti — bez skrytých limitů a příplatků",
+              "Mobile-first — funguje stejně dobře v terénu jako na PC",
             ].map((b) => (
               <li key={b} className="flex items-start gap-2.5">
                 <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-coral/15 text-coral">
