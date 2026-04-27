@@ -45,11 +45,11 @@ const promiseItems = [
 ];
 
 const expectItems = [
-  "Napojení na české banky (Fio, ČSOB, Raiffeisen…)",
+  "Hlubší integrace s externími systémy (banky, účto)",
   "Propojení s účetními systémy (Pohoda, Money S3)",
   "Větší změny ve struktuře dat a fakturačních řadách",
   "Funkce s právním přesahem (kontrolní hlášení, B2B EU)",
-  "Mobilní aplikace pro iOS a Android",
+  "Funkce vyžadující regulaci nebo licencování (PSD2, eIDAS)",
 ];
 
 export function RapidUpdates() {

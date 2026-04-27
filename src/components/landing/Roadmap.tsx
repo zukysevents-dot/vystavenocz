@@ -14,28 +14,43 @@ const items: { title: string; desc: string; status: Status; when?: string }[] = 
     status: "done",
   },
   {
+    title: "Načítání z ARESu",
+    desc: "Stačí zadat IČO a údaje firmy se doplní samy.",
+    status: "done",
+  },
+  {
+    title: "QR platby a export do účetnictví",
+    desc: "Každá faktura má QR kód. Export do ISDOC a XML pro účetní.",
+    status: "done",
+  },
+  {
+    title: "Instalace na mobil (PWA)",
+    desc: "Přidej Vystaveno na plochu telefonu — funguje jako appka.",
+    status: "done",
+  },
+  {
     title: "Cenové nabídky",
     desc: "Vystav nabídku, klient ji potvrdí, jedním klikem se promění ve fakturu.",
     status: "soon",
     when: "Q2 2026",
   },
   {
-    title: "Nativní mobilní aplikace",
-    desc: "iOS a Android s offline režimem a fotkováním účtenek.",
+    title: "Skladové položky a katalog",
+    desc: "Ulož si produkty a služby — stačí pak vybrat ze seznamu.",
     status: "soon",
+    when: "Q2 2026",
+  },
+  {
+    title: "Veřejné API a webhooky",
+    desc: "Napojení na e-shopy, CRM a vlastní automatizace.",
+    status: "planned",
     when: "Q3 2026",
   },
   {
-    title: "Veřejné API",
-    desc: "Napojení na e-shopy, CRM a vlastní automatizace.",
+    title: "Ruční párování plateb",
+    desc: "Nahraj výpis z banky (CSV) a přiřaď platby k fakturám.",
     status: "planned",
-    when: "Q4 2026",
-  },
-  {
-    title: "Napojení na bankovní účet",
-    desc: "Automatické párování plateb s fakturami.",
-    status: "planned",
-    when: "Q4 2026",
+    when: "Q3 2026",
   },
 ];
 
