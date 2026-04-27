@@ -147,13 +147,9 @@ export function InvoicePdfDocument(props: InvoicePdfProps) {
         {/* HLAVIČKA */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            {supplier.logo_url ? (
+            {supplier.logo_url && (
               // eslint-disable-next-line jsx-a11y/alt-text
               <Image src={supplier.logo_url} style={styles.logo} />
-            ) : (
-              <Text style={styles.brandText}>
-                {supplier.company_name || supplier.full_name || "—"}
-              </Text>
             )}
           </View>
           <View style={styles.headerRight}>
