@@ -14,15 +14,15 @@ const items = [
  */
 export function TrustBar() {
   return (
-    <section className="border-y border-border/60 bg-surface-soft py-4 sm:py-5">
+    <section className="border-y border-border/60 bg-surface py-5 sm:py-6">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <ul className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2.5 text-xs font-medium text-muted-foreground sm:gap-x-10 sm:text-sm">
+        <ul className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs font-medium text-muted-foreground sm:gap-x-12 sm:text-sm">
           {items.map((it) => (
             <li key={it.label} className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full border border-coral/20 bg-coral/10 text-coral">
-                <it.icon className="h-3.5 w-3.5" />
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-card text-foreground/70 ring-1 ring-inset ring-border">
+                <it.icon className="h-3.5 w-3.5" strokeWidth={1.75} />
               </span>
-              <span className="text-foreground/80">{it.label}</span>
+              <span className="text-foreground/85">{it.label}</span>
             </li>
           ))}
         </ul>
