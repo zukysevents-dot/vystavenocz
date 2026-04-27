@@ -7,6 +7,7 @@ import { LifecycleStrip } from "@/components/landing/LifecycleStrip";
 import { HighlightFeatures } from "@/components/landing/HighlightFeatures";
 import { Testimonials } from "@/components/landing/Testimonials";
 import { RapidUpdatesShort } from "@/components/landing/RapidUpdatesShort";
+import { Roadmap } from "@/components/landing/Roadmap";
 import { Cta } from "@/components/landing/Cta";
 import { InlineCta } from "@/components/landing/InlineCta";
 
@@ -53,6 +54,8 @@ function Index() {
       <Testimonials />
       {/* Krátký důkaz, že produkt rychle vylepšujeme — bez dlouhého vysvětlování. */}
       <RapidUpdatesShort />
+      {/* Roadmapa — řeší námitku "chybí mi feature X" a buduje důvěru, že produkt poroste. */}
+      <Roadmap />
       <Cta />
     </PageShell>
   );
