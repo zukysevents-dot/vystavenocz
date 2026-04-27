@@ -151,12 +151,8 @@ export function InvoiceDocument(props: InvoiceDocumentProps) {
       {/* Hlavička */}
       <div className="flex items-start justify-between" style={{ borderBottom: `3px solid ${accentColor}`, paddingBottom: "16px" }}>
         <div>
-          {supplier.logo_url ? (
+          {supplier.logo_url && (
             <img src={supplier.logo_url} alt="logo" style={{ maxHeight: "56px", maxWidth: "180px", objectFit: "contain" }} crossOrigin="anonymous" />
-          ) : (
-            <div style={{ fontSize: "20px", fontWeight: 700, color: accentColor }}>
-              {supplier.company_name || supplier.full_name || "—"}
-            </div>
           )}
         </div>
         <div style={{ textAlign: "right" }}>
