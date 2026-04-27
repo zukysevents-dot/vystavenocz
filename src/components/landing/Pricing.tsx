@@ -12,7 +12,7 @@ const features = [
   "Cizí měny + kurz ČNB",
   "Automatické upomínky",
   "Export do účetnictví (ISDOC, XML)",
-  "Česká podpora e-mailem i telefonem",
+  "Česká podpora e-mailem (odpověď do 24 h)",
 ];
 
 export function Pricing() {
