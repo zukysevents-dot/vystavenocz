@@ -312,6 +312,7 @@ export type Database = {
           subscription_until: string | null
           swift: string | null
           trial_ends_at: string
+          trial_reminder_sent_at: string | null
           updated_at: string
           vat_mode: Database["public"]["Enums"]["vat_mode"]
           zip: string | null
@@ -344,6 +345,7 @@ export type Database = {
           subscription_until?: string | null
           swift?: string | null
           trial_ends_at?: string
+          trial_reminder_sent_at?: string | null
           updated_at?: string
           vat_mode?: Database["public"]["Enums"]["vat_mode"]
           zip?: string | null
@@ -376,6 +378,7 @@ export type Database = {
           subscription_until?: string | null
           swift?: string | null
           trial_ends_at?: string
+          trial_reminder_sent_at?: string | null
           updated_at?: string
           vat_mode?: Database["public"]["Enums"]["vat_mode"]
           zip?: string | null
