@@ -8,12 +8,8 @@ export function Hero() {
       <div className="absolute inset-0 bg-mesh opacity-25" aria-hidden />
       <div className="relative mx-auto grid max-w-7xl gap-14 px-4 pb-24 pt-16 sm:px-6 sm:pb-28 sm:pt-20 lg:grid-cols-2 lg:gap-12 lg:px-8 lg:pb-36 lg:pt-28">
         <div className="flex flex-col justify-center">
-          <div className="mb-7 inline-flex w-fit items-center gap-2 rounded-full border border-border/80 bg-card/60 px-3.5 py-1.5 text-xs font-medium text-foreground/80 backdrop-blur-sm">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Vše co Fakturoid Plus
-            </span>
-            <span className="h-3 w-px bg-border" />
-            <span>za polovinu</span>
+          <div className="mb-7 inline-flex w-fit items-center rounded-full border border-border bg-card/70 px-3.5 py-1.5 text-xs font-medium text-foreground/85 backdrop-blur-sm">
+            Vše co Fakturoid Plus za polovinu
           </div>
 
           <h1 className="text-[2.5rem] font-bold leading-[1.05] tracking-[-0.02em] text-foreground sm:text-[3.25rem] lg:text-[4rem]">
@@ -34,9 +30,10 @@ export function Hero() {
               "Mobile-first — funguje stejně dobře v terénu jako na PC",
             ].map((b) => (
               <li key={b} className="flex items-start gap-3">
-                <span className="mt-[3px] flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-coral/10 text-coral ring-1 ring-inset ring-coral/20">
-                  <Check className="h-3 w-3" strokeWidth={2.25} />
-                </span>
+                <Check
+                  className="mt-[5px] h-4 w-4 shrink-0 text-coral"
+                  strokeWidth={1.5}
+                />
                 <span className="leading-[1.55]">{b}</span>
               </li>
             ))}
