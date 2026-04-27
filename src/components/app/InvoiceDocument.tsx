@@ -107,7 +107,7 @@ export function InvoiceDocument(props: InvoiceDocumentProps) {
       .catch(() => setQrDataUrl(null));
   }, [iban, totals.total, currency, vs, invoiceNumber, supplier.swift, paymentMethod]);
 
-  const accentColor = supplier.invoice_color || "#0fbfb6";
+  const accentColor = supplier.invoice_color || "#1f2937";
 
   return (
     <div
