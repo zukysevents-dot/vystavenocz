@@ -23,7 +23,7 @@ export function Testimonials() {
     <section className="bg-background py-16 sm:py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Pár vět od lidí jako ty
           </h2>
         </div>
@@ -32,9 +32,9 @@ export function Testimonials() {
           {items.map((t) => (
             <figure
               key={t.name}
-              className="flex flex-col rounded-2xl border border-border bg-card p-6 shadow-sm"
+              className="flex flex-col rounded-2xl border border-border bg-card p-6"
             >
-              <Quote className="h-5 w-5 text-coral/70" aria-hidden />
+              <Quote className="h-5 w-5 text-muted-foreground/50" aria-hidden />
               <blockquote className="mt-3 text-base leading-relaxed text-foreground">
                 „{t.quote}"
               </blockquote>
