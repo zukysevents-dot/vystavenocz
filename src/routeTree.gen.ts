@@ -29,6 +29,7 @@ import { Route as AppAppNastaveniRouteImport } from './routes/_app.app.nastaveni
 import { Route as AppAppKlientiRouteImport } from './routes/_app.app.klienti'
 import { Route as AppAppPredplatneIndexRouteImport } from './routes/_app.app.predplatne.index'
 import { Route as AppAppFakturyIndexRouteImport } from './routes/_app.app.faktury.index'
+import { Route as ApiPublicHooksTrialReminderRouteImport } from './routes/api.public.hooks.trial-reminder'
 import { Route as AppAppPredplatneDekujemeRouteImport } from './routes/_app.app.predplatne.dekujeme'
 import { Route as AppAppFakturyEditorRouteImport } from './routes/_app.app.faktury.editor'
 
@@ -131,6 +132,12 @@ const AppAppFakturyIndexRoute = AppAppFakturyIndexRouteImport.update({
   path: '/app/faktury/',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiPublicHooksTrialReminderRoute =
+  ApiPublicHooksTrialReminderRouteImport.update({
+    id: '/api/public/hooks/trial-reminder',
+    path: '/api/public/hooks/trial-reminder',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AppAppPredplatneDekujemeRoute =
   AppAppPredplatneDekujemeRouteImport.update({
     id: '/app/predplatne/dekujeme',
@@ -163,6 +170,7 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AppAppIndexRoute
   '/app/faktury/editor': typeof AppAppFakturyEditorRoute
   '/app/predplatne/dekujeme': typeof AppAppPredplatneDekujemeRoute
+  '/api/public/hooks/trial-reminder': typeof ApiPublicHooksTrialReminderRoute
   '/app/faktury/': typeof AppAppFakturyIndexRoute
   '/app/predplatne/': typeof AppAppPredplatneIndexRoute
 }
@@ -186,6 +194,7 @@ export interface FileRoutesByTo {
   '/app': typeof AppAppIndexRoute
   '/app/faktury/editor': typeof AppAppFakturyEditorRoute
   '/app/predplatne/dekujeme': typeof AppAppPredplatneDekujemeRoute
+  '/api/public/hooks/trial-reminder': typeof ApiPublicHooksTrialReminderRoute
   '/app/faktury': typeof AppAppFakturyIndexRoute
   '/app/predplatne': typeof AppAppPredplatneIndexRoute
 }
@@ -211,6 +220,7 @@ export interface FileRoutesById {
   '/_app/app/': typeof AppAppIndexRoute
   '/_app/app/faktury/editor': typeof AppAppFakturyEditorRoute
   '/_app/app/predplatne/dekujeme': typeof AppAppPredplatneDekujemeRoute
+  '/api/public/hooks/trial-reminder': typeof ApiPublicHooksTrialReminderRoute
   '/_app/app/faktury/': typeof AppAppFakturyIndexRoute
   '/_app/app/predplatne/': typeof AppAppPredplatneIndexRoute
 }
@@ -236,6 +246,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/app/faktury/editor'
     | '/app/predplatne/dekujeme'
+    | '/api/public/hooks/trial-reminder'
     | '/app/faktury/'
     | '/app/predplatne/'
   fileRoutesByTo: FileRoutesByTo
@@ -259,6 +270,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/app/faktury/editor'
     | '/app/predplatne/dekujeme'
+    | '/api/public/hooks/trial-reminder'
     | '/app/faktury'
     | '/app/predplatne'
   id:
@@ -283,6 +295,7 @@ export interface FileRouteTypes {
     | '/_app/app/'
     | '/_app/app/faktury/editor'
     | '/_app/app/predplatne/dekujeme'
+    | '/api/public/hooks/trial-reminder'
     | '/_app/app/faktury/'
     | '/_app/app/predplatne/'
   fileRoutesById: FileRoutesById
@@ -302,6 +315,7 @@ export interface RootRouteChildren {
   ResetHeslaRoute: typeof ResetHeslaRoute
   SrovnaniRoute: typeof SrovnaniRoute
   ZapomenuteHesloRoute: typeof ZapomenuteHesloRoute
+  ApiPublicHooksTrialReminderRoute: typeof ApiPublicHooksTrialReminderRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -446,6 +460,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAppFakturyIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/public/hooks/trial-reminder': {
+      id: '/api/public/hooks/trial-reminder'
+      path: '/api/public/hooks/trial-reminder'
+      fullPath: '/api/public/hooks/trial-reminder'
+      preLoaderRoute: typeof ApiPublicHooksTrialReminderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/app/predplatne/dekujeme': {
       id: '/_app/app/predplatne/dekujeme'
       path: '/app/predplatne/dekujeme'
@@ -502,6 +523,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetHeslaRoute: ResetHeslaRoute,
   SrovnaniRoute: SrovnaniRoute,
   ZapomenuteHesloRoute: ZapomenuteHesloRoute,
+  ApiPublicHooksTrialReminderRoute: ApiPublicHooksTrialReminderRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
