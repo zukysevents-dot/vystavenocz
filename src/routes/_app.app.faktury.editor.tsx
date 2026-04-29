@@ -917,6 +917,30 @@ function InvoiceEditorPage() {
               <Button variant="outline" size="sm" className="shrink-0" onClick={() => save("draft")} disabled={saving}>
                 <Save className="h-4 w-4" /> Koncept
               </Button>
+              {editingId && (loadedStatus === "issued" || loadedStatus === "overdue") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => openFollowup("reminder")}
+                  disabled={saving}
+                  title="Poslat upomínku klientovi"
+                >
+                  <AlertTriangle className="h-4 w-4 text-amber-600" /> Upomínka
+                </Button>
+              )}
+              {editingId && loadedStatus === "paid" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => openFollowup("thank-you")}
+                  disabled={saving}
+                  title="Poděkovat klientovi za platbu"
+                >
+                  <PartyPopper className="h-4 w-4 text-emerald-600" /> Poděkovat
+                </Button>
+              )}
               <Button
                 variant="coral"
                 size="sm"
@@ -1264,6 +1288,15 @@ function InvoiceEditorPage() {
           if (!o) setSendCtx(null);
         }}
         context={sendCtx}
+      />
+      <FollowupEmailDialog
+        open={followupOpen}
+        onOpenChange={(o) => {
+          setFollowupOpen(o);
+          if (!o) setFollowupCtx(null);
+        }}
+        kind={followupKind}
+        context={followupCtx}
       />
       <QuickClientDialog
         open={quickOpen}
