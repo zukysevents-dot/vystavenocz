@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Logo } from "@/components/landing/Logo";
 import { toast } from "sonner";
 import { Loader2, Search, Check } from "lucide-react";
+import { trackEvent, getAttribution } from "@/lib/analytics";
 
 type AresResult = {
   ico: string;
@@ -55,6 +56,7 @@ function RegisterPage() {
       return;
     }
     setGoogleLoading(true);
+    trackEvent("sign_up_started", { method: "google" });
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin + "/app/onboarding",
     });
@@ -143,6 +145,7 @@ function RegisterPage() {
     }
 
     setSubmitting(false);
+    trackEvent("sign_up", { method: "email", ...(getAttribution() ?? {}) });
     toast.success("Účet vytvořen! Vítejte ve Vystaveno.");
     navigate({ to: "/app/onboarding" });
   };
