@@ -64,8 +64,8 @@ export const Route = createRootRoute({
       { rel: "manifest", href: "/manifest.json" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      // Non-blocking webfont load: prefetch + async stylesheet (přepneme na "all" po načtení).
-      // Tím přestane Inter CSS blokovat first paint; text se vykreslí ve fallback fontu a swapne.
+      // Preload webfont CSS jako style — sníží render-blocking dobu, prohlížeč začne fetchnout dřív.
+      // `display=swap` v URL zajistí, že text je viditelný ve fallback fontu během načítání Interu.
       {
         rel: "preload",
         as: "style",
@@ -74,10 +74,6 @@ export const Route = createRootRoute({
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap",
-        media: "print",
-        // Po načtení se přehodí na all → aplikuje se. Standardní async-CSS pattern.
-        // (atribut onLoad jako string projde přes head linky beze změny.)
-        onLoad: "this.media='all'",
       },
     ],
   }),
