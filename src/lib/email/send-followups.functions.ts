@@ -309,18 +309,43 @@ export const sendInvoiceReminder = createServerFn({ method: "POST" })
         ]
       : undefined;
 
-    const result = await sendViaResend({
-      fromAddress: ctx.fromAddress,
-      to: data.to,
-      cc: data.cc || undefined,
-      replyTo: ctx.profile?.email || null,
-      subject: data.subject,
-      text,
-      html,
-      attachments,
-    });
-
-    return { ok: true, id: result.id };
+    try {
+      const result = await sendViaResend({
+        fromAddress: ctx.fromAddress,
+        to: data.to,
+        cc: data.cc || undefined,
+        replyTo: ctx.profile?.email || null,
+        subject: data.subject,
+        text,
+        html,
+        attachments,
+      });
+      await logEmail({
+        invoiceId: data.invoiceId,
+        userId,
+        kind: "reminder",
+        level: data.level,
+        recipient: data.to,
+        cc: data.cc || null,
+        subject: data.subject,
+        resendId: result.id || null,
+        status: "sent",
+      });
+      return { ok: true, id: result.id };
+    } catch (err) {
+      await logEmail({
+        invoiceId: data.invoiceId,
+        userId,
+        kind: "reminder",
+        level: data.level,
+        recipient: data.to,
+        cc: data.cc || null,
+        subject: data.subject,
+        status: "failed",
+        errorMessage: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
   });
 
 // ───────────────────────── THANK YOU ─────────────────────────
@@ -373,15 +398,38 @@ export const sendInvoiceThankYou = createServerFn({ method: "POST" })
     const html = renderThankYouEmailHtml(sharedData);
     const text = buildThankYouPlainText(sharedData);
 
-    const result = await sendViaResend({
-      fromAddress: ctx.fromAddress,
-      to: data.to,
-      cc: data.cc || undefined,
-      replyTo: ctx.profile?.email || null,
-      subject: data.subject,
-      text,
-      html,
-    });
-
-    return { ok: true, id: result.id };
+    try {
+      const result = await sendViaResend({
+        fromAddress: ctx.fromAddress,
+        to: data.to,
+        cc: data.cc || undefined,
+        replyTo: ctx.profile?.email || null,
+        subject: data.subject,
+        text,
+        html,
+      });
+      await logEmail({
+        invoiceId: data.invoiceId,
+        userId,
+        kind: "thank_you",
+        recipient: data.to,
+        cc: data.cc || null,
+        subject: data.subject,
+        resendId: result.id || null,
+        status: "sent",
+      });
+      return { ok: true, id: result.id };
+    } catch (err) {
+      await logEmail({
+        invoiceId: data.invoiceId,
+        userId,
+        kind: "thank_you",
+        recipient: data.to,
+        cc: data.cc || null,
+        subject: data.subject,
+        status: "failed",
+        errorMessage: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
   });
