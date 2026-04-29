@@ -25,9 +25,9 @@ export function Hero() {
           <ul className="mt-9 space-y-4 text-[15px] text-foreground/90">
             {[
               "AI asistent v češtině — sestaví fakturu na povel (nikdo jiný nemá)",
-              "Opakované faktury a upomínky v základu — u konkurence jen v Premium",
-              "Neomezené faktury i klienti — bez skrytých limitů a příplatků",
-              "Mobile-first — funguje stejně dobře v terénu jako na PC",
+              "Opakované faktury a upomínky v základu — jinde jen v Premium",
+              "Neomezené faktury i klienti — bez skrytých limitů",
+              "Bez smlouvy — zrušíš kdykoliv jedním klikem",
             ].map((b) => (
               <li key={b} className="flex items-start gap-3">
                 <Check
@@ -52,7 +52,7 @@ export function Hero() {
           </div>
 
           <p className="mt-5 text-xs text-muted-foreground/90">
-            14 dní zdarma bez karty. Po zkušební době od 100 Kč/měsíc.
+            Karta nepotřebná.
           </p>
 
           {/* Mikro social proof — důvěryhodné signály bez vymyšlených čísel */}
