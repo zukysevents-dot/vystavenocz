@@ -12,12 +12,12 @@ export function Hero() {
             Vše co Fakturoid Plus za polovinu
           </div>
 
-          <h1 className="text-[2.5rem] font-bold leading-[1.05] tracking-[-0.02em] text-foreground sm:text-[3.25rem] lg:text-[4rem]">
+          <h1 className="text-[2.85rem] font-bold leading-[1.05] tracking-[-0.02em] text-foreground sm:text-[3.5rem] lg:text-[4.25rem]">
             Vystav fakturu{" "}
             <span className="text-coral">za 30 sekund.</span>
           </h1>
 
-          <p className="mt-7 max-w-xl text-[15px] leading-[1.65] text-muted-foreground sm:text-base">
+          <p className="mt-7 max-w-xl text-base leading-[1.65] text-muted-foreground sm:text-lg">
             Vše co umí Fakturoid nebo iDoklad — AI asistent, QR platby, ARES,
             opakované faktury i upomínky. Jen za <span className="font-semibold text-foreground">100 Kč/měsíc</span> místo 200+.
           </p>
@@ -40,13 +40,13 @@ export function Hero() {
           </ul>
 
           <div className="mt-10 flex w-full flex-col gap-3 sm:flex-row sm:items-center">
-            <Button size="lg" variant="coral" className="group w-full sm:w-auto" asChild>
+            <Button size="xl" variant="coral" className="group w-full text-base sm:w-auto" asChild>
               <a href="/registrace">
-                Začít zdarma
+                Začít zdarma za 30 sekund
                 <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
               </a>
             </Button>
-            <Button size="lg" variant="outline" className="w-full sm:w-auto" asChild>
+            <Button size="xl" variant="outline" className="w-full sm:w-auto" asChild>
               <a href="/funkce">Podívat se na funkce</a>
             </Button>
           </div>

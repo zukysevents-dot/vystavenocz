@@ -1,5 +1,6 @@
 import { Navbar } from "@/components/landing/Navbar";
 import { Footer } from "@/components/landing/Footer";
+import { StickyMobileCta } from "@/components/landing/StickyMobileCta";
 
 interface PageShellProps {
   children: React.ReactNode;
@@ -11,6 +12,7 @@ export function PageShell({ children }: PageShellProps) {
       <Navbar />
       <main className="flex-1">{children}</main>
       <Footer />
+      <StickyMobileCta />
     </div>
   );
 }
