@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate, useSearch, useBlocker } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
-import { ArrowLeft, Plus, Trash2, Save, Download, Loader2, Eye, EyeOff, Mail, Lock, Settings2, UserPlus } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Download, Loader2, Eye, EyeOff, Mail, Lock, Settings2, UserPlus, AlertTriangle, PartyPopper } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,7 @@ import { InvoiceDocument } from "@/components/app/InvoiceDocument";
 import { downloadInvoicePdf, renderInvoicePdfBlob } from "@/lib/invoice-pdf";
 import type { InvoicePdfProps } from "@/lib/pdf/InvoicePdfDoc";
 import { SendInvoiceDialog, type SendInvoiceContext } from "@/components/app/SendInvoiceDialog";
+import { FollowupEmailDialog, type FollowupContext, type FollowupKind } from "@/components/app/FollowupEmailDialog";
 import { QuickClientDialog, type QuickClient } from "@/components/app/QuickClientDialog";
 import { useServerFn } from "@tanstack/react-start";
 import { sendInvoiceEmail } from "@/lib/email/send-invoice.functions";
@@ -128,6 +129,9 @@ function InvoiceEditorPage() {
   const [sendOpen, setSendOpen] = useState(false);
   const [sendCtx, setSendCtx] = useState<SendInvoiceContext | null>(null);
   const [preparingSend, setPreparingSend] = useState(false);
+  const [followupOpen, setFollowupOpen] = useState(false);
+  const [followupKind, setFollowupKind] = useState<FollowupKind>("reminder");
+  const [followupCtx, setFollowupCtx] = useState<FollowupContext | null>(null);
   const { hasAccess } = useSubscription();
 
 
