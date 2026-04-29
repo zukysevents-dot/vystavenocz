@@ -4,7 +4,7 @@ import QRCode from "qrcode";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { buildSpayd, czAccountToIban, formatCZK, formatDate } from "@/lib/invoice";
-import { renderInvoiceEmailHtml } from "@/lib/email/invoice-email-template";
+import { renderInvoiceEmailHtml, buildInvoicePlainText } from "@/lib/email/templates";
 
 const RESEND_GATEWAY = "https://connector-gateway.lovable.dev/resend";
 const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 dní
