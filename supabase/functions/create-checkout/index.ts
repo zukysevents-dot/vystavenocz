@@ -5,7 +5,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { priceId, customerEmail, userId, returnUrl, environment } = await req.json();
+    const { priceId, customerEmail, userId, returnUrl, environment, gaClientId, attribution } = await req.json();
     if (!priceId || typeof priceId !== "string" || !/^[a-zA-Z0-9_-]+$/.test(priceId)) {
       return new Response(JSON.stringify({ error: "Invalid priceId" }), {
         status: 400,
@@ -26,6 +26,17 @@ serve(async (req) => {
     const stripePrice = prices.data[0];
     const isRecurring = stripePrice.type === "recurring";
 
+    // Attribution metadata for server-side GA4 purchase event (Measurement Protocol).
+    // Stripe metadata values must be strings ≤500 chars, max 50 keys.
+    const attributionMeta: Record<string, string> = {};
+    if (gaClientId && typeof gaClientId === "string") attributionMeta.ga_client_id = gaClientId.slice(0, 500);
+    if (attribution && typeof attribution === "object") {
+      for (const k of ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "gclid"]) {
+        const v = (attribution as Record<string, unknown>)[k];
+        if (typeof v === "string" && v) attributionMeta[k] = v.slice(0, 500);
+      }
+    }
+
     const session = await stripe.checkout.sessions.create({
       line_items: [{ price: stripePrice.id, quantity: 1 }],
       mode: isRecurring ? "subscription" : "payment",
@@ -36,8 +47,8 @@ serve(async (req) => {
         `${req.headers.get("origin") ?? "https://vystaveno.cz"}/app/predplatne/dekujeme?session_id={CHECKOUT_SESSION_ID}`,
       ...(customerEmail && { customer_email: customerEmail }),
       ...(userId && {
-        metadata: { userId },
-        ...(isRecurring && { subscription_data: { metadata: { userId } } }),
+        metadata: { userId, ...attributionMeta },
+        ...(isRecurring && { subscription_data: { metadata: { userId, ...attributionMeta } } }),
       }),
     });
 
