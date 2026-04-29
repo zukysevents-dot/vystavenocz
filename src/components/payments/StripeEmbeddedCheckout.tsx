@@ -1,6 +1,7 @@
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { supabase } from "@/integrations/supabase/client";
+import { getAttribution, getGaClientId } from "@/lib/analytics";
 
 interface Props {
   priceId: string;
@@ -18,6 +19,8 @@ export function StripeEmbeddedCheckout({ priceId, customerEmail, userId, returnU
         userId,
         returnUrl,
         environment: getStripeEnvironment(),
+        gaClientId: getGaClientId(),
+        attribution: getAttribution(),
       },
     });
     if (error || !data?.clientSecret) {
