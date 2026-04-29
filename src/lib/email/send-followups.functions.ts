@@ -27,6 +27,36 @@ import {
 const RESEND_GATEWAY = "https://connector-gateway.lovable.dev/resend";
 const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 30;
 
+async function logEmail(args: {
+  invoiceId: string;
+  userId: string;
+  kind: "reminder" | "thank_you";
+  level?: number | null;
+  recipient: string;
+  cc?: string | null;
+  subject: string;
+  resendId?: string | null;
+  status: "sent" | "failed";
+  errorMessage?: string | null;
+}) {
+  try {
+    await supabaseAdmin.from("email_send_log").insert({
+      invoice_id: args.invoiceId,
+      user_id: args.userId,
+      kind: args.kind,
+      level: args.level ?? null,
+      recipient: args.recipient,
+      cc: args.cc ?? null,
+      subject: args.subject,
+      resend_id: args.resendId ?? null,
+      status: args.status,
+      error_message: args.errorMessage ?? null,
+    });
+  } catch (e) {
+    console.warn("Nepodařilo se zalogovat e-mail:", e);
+  }
+}
+
 // ───────────────────────── společné typy a helpery ─────────────────────────
 
 type LoadedContext = {
