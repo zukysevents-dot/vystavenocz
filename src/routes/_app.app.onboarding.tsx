@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { trackEvent, getAttribution } from "@/lib/analytics";
 
 export const Route = createFileRoute("/_app/app/onboarding")({
   head: () => ({ meta: [{ title: "Nastavení firmy — Vystaveno" }] }),
@@ -33,6 +34,18 @@ function OnboardingPage() {
 
   useEffect(() => {
     if (!user) return;
+    // Fire GA4 sign_up event once per new user (within 5 min of account creation).
+    try {
+      const created = user.created_at ? new Date(user.created_at).getTime() : 0;
+      const fresh = created && Date.now() - created < 5 * 60 * 1000;
+      const flagKey = `vystaveno.signup_tracked.${user.id}`;
+      if (fresh && typeof window !== "undefined" && !window.localStorage.getItem(flagKey)) {
+        trackEvent("sign_up", { method: user.app_metadata?.provider ?? "email", ...(getAttribution() ?? {}) });
+        window.localStorage.setItem(flagKey, "1");
+      }
+    } catch {
+      // ignore
+    }
     (async () => {
       const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
       if (data) {

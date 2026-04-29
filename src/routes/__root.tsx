@@ -1,10 +1,10 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { Toaster } from "sonner";
 import { CookieBanner, getCookieConsent } from "@/components/CookieBanner";
-import { applyAnalyticsConsent } from "@/lib/analytics";
+import { applyAnalyticsConsent, captureAttribution, trackPageView } from "@/lib/analytics";
 
 import appCss from "../styles.css?url";
 
@@ -96,6 +96,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   useEffect(() => {
+    captureAttribution();
     const consent = getCookieConsent();
     if (consent?.analytics) applyAnalyticsConsent(true);
   }, []);
@@ -103,12 +104,21 @@ function RootComponent() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <PageViewTracker />
         <Outlet />
         <ThemedToaster />
         <CookieBanner />
       </AuthProvider>
     </ThemeProvider>
   );
+}
+
+function PageViewTracker() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  useEffect(() => {
+    trackPageView(pathname);
+  }, [pathname]);
+  return null;
 }
 
 function ThemedToaster() {
