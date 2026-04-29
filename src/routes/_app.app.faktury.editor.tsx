@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate, useSearch, useBlocker } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
-import { ArrowLeft, Plus, Trash2, Save, Download, Loader2, Eye, EyeOff, Mail, Lock, Settings2, UserPlus } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Download, Loader2, Eye, EyeOff, Mail, Lock, Settings2, UserPlus, AlertTriangle, PartyPopper } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,7 @@ import { InvoiceDocument } from "@/components/app/InvoiceDocument";
 import { downloadInvoicePdf, renderInvoicePdfBlob } from "@/lib/invoice-pdf";
 import type { InvoicePdfProps } from "@/lib/pdf/InvoicePdfDoc";
 import { SendInvoiceDialog, type SendInvoiceContext } from "@/components/app/SendInvoiceDialog";
+import { FollowupEmailDialog, type FollowupContext, type FollowupKind } from "@/components/app/FollowupEmailDialog";
 import { QuickClientDialog, type QuickClient } from "@/components/app/QuickClientDialog";
 import { useServerFn } from "@tanstack/react-start";
 import { sendInvoiceEmail } from "@/lib/email/send-invoice.functions";
@@ -128,6 +129,9 @@ function InvoiceEditorPage() {
   const [sendOpen, setSendOpen] = useState(false);
   const [sendCtx, setSendCtx] = useState<SendInvoiceContext | null>(null);
   const [preparingSend, setPreparingSend] = useState(false);
+  const [followupOpen, setFollowupOpen] = useState(false);
+  const [followupKind, setFollowupKind] = useState<FollowupKind>("reminder");
+  const [followupCtx, setFollowupCtx] = useState<FollowupContext | null>(null);
   const { hasAccess } = useSubscription();
 
 
@@ -724,6 +728,25 @@ function InvoiceEditorPage() {
     }
   };
 
+  const openFollowup = (kind: FollowupKind) => {
+    if (!editingId) {
+      toast.error("Nejdřív fakturu uložte a vystavte.");
+      return;
+    }
+    if (!hasAccess) {
+      setPaywallOpen(true);
+      return;
+    }
+    setFollowupKind(kind);
+    setFollowupCtx({
+      invoiceId: editingId,
+      invoiceNumber,
+      recipientEmail: selectedClient?.email ?? null,
+      recipientName: selectedClient?.name ?? null,
+    });
+    setFollowupOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -894,6 +917,30 @@ function InvoiceEditorPage() {
               <Button variant="outline" size="sm" className="shrink-0" onClick={() => save("draft")} disabled={saving}>
                 <Save className="h-4 w-4" /> Koncept
               </Button>
+              {editingId && (loadedStatus === "issued" || loadedStatus === "overdue") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => openFollowup("reminder")}
+                  disabled={saving}
+                  title="Poslat upomínku klientovi"
+                >
+                  <AlertTriangle className="h-4 w-4 text-amber-600" /> Upomínka
+                </Button>
+              )}
+              {editingId && loadedStatus === "paid" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => openFollowup("thank-you")}
+                  disabled={saving}
+                  title="Poděkovat klientovi za platbu"
+                >
+                  <PartyPopper className="h-4 w-4 text-emerald-600" /> Poděkovat
+                </Button>
+              )}
               <Button
                 variant="coral"
                 size="sm"
@@ -1241,6 +1288,15 @@ function InvoiceEditorPage() {
           if (!o) setSendCtx(null);
         }}
         context={sendCtx}
+      />
+      <FollowupEmailDialog
+        open={followupOpen}
+        onOpenChange={(o) => {
+          setFollowupOpen(o);
+          if (!o) setFollowupCtx(null);
+        }}
+        kind={followupKind}
+        context={followupCtx}
       />
       <QuickClientDialog
         open={quickOpen}
