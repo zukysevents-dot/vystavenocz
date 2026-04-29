@@ -149,16 +149,21 @@ export const sendInvoiceEmail = createServerFn({ method: "POST" })
       replyToEmail: profile?.email || null,
     });
 
-    // 8) Sestav text fallback
-    const text = buildPlainText({
+    // 8) Sestav text fallback ze stejných dat jako HTML.
+    const text = buildInvoicePlainText({
+      brandColor: profile?.invoice_color || "#0fbfb6",
+      logoUrl: profile?.logo_url || null,
+      supplierName: fromName,
       clientName,
       invoiceNumber: invoice.invoice_number,
-      total: formatCZK(Number(invoice.total), invoice.currency || "CZK"),
+      issueDate: formatDate(invoice.issue_date),
       dueDate: formatDate(invoice.due_date),
+      total: formatCZK(Number(invoice.total), invoice.currency || "CZK"),
       variableSymbol: invoice.variable_symbol,
       personalNote: data.personalNote?.trim() || null,
-      supplierName: fromName,
       invoiceUrl,
+      qrCid,
+      replyToEmail: profile?.email || null,
     });
 
     // 9) Pošli přes Resend
@@ -214,27 +219,3 @@ export const sendInvoiceEmail = createServerFn({ method: "POST" })
     return { ok: true, id: (result as { id?: string }).id };
   });
 
-function buildPlainText(opts: {
-  clientName: string | null;
-  invoiceNumber: string;
-  total: string;
-  dueDate: string;
-  variableSymbol: string | null;
-  personalNote: string | null;
-  supplierName: string;
-  invoiceUrl: string | null;
-}): string {
-  const greeting = opts.clientName ? `Dobrý den, ${opts.clientName},` : "Dobrý den,";
-  const note = opts.personalNote ? `\n${opts.personalNote}\n` : "";
-  const link = opts.invoiceUrl ? `\n\nZobrazit fakturu online:\n${opts.invoiceUrl}` : "";
-  const vs = opts.variableSymbol ? `\nVariabilní symbol: ${opts.variableSymbol}` : "";
-  return `${greeting}
-${note}
-v příloze najdete fakturu č. ${opts.invoiceNumber}.
-
-Částka k úhradě: ${opts.total}
-Splatnost: ${opts.dueDate}${vs}${link}
-
-S pozdravem
-${opts.supplierName}`;
-}
