@@ -9,6 +9,7 @@ const links = [
   { to: "/funkce", label: "Funkce" },
   { to: "/srovnani", label: "Srovnání" },
   { to: "/cenik", label: "Ceník" },
+  { to: "/clanky", label: "Články" },
   { to: "/akce", label: "Akce" },
   { to: "/nase-sliby", label: "Naše sliby" },
   { to: "/faq", label: "FAQ" },

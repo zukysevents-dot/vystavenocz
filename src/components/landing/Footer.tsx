@@ -6,6 +6,7 @@ import { Mail } from "lucide-react";
 const productLinks = [
   { to: "/funkce", label: "Funkce" },
   { to: "/cenik", label: "Ceník" },
+  { to: "/clanky", label: "Články" },
   { to: "/akce", label: "Akce do 1. 6." },
   { to: "/nase-sliby", label: "Naše sliby" },
   { to: "/srovnani", label: "Srovnání" },

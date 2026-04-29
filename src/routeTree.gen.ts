@@ -23,6 +23,8 @@ import { Route as CenikRouteImport } from './routes/cenik'
 import { Route as AkceRouteImport } from './routes/akce'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ClankyIndexRouteImport } from './routes/clanky.index'
+import { Route as ClankySlugRouteImport } from './routes/clanky.$slug'
 import { Route as AppAppIndexRouteImport } from './routes/_app.app.index'
 import { Route as AppAppOnboardingRouteImport } from './routes/_app.app.onboarding'
 import { Route as AppAppNastaveniRouteImport } from './routes/_app.app.nastaveni'
@@ -102,6 +104,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClankyIndexRoute = ClankyIndexRouteImport.update({
+  id: '/clanky/',
+  path: '/clanky/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClankySlugRoute = ClankySlugRouteImport.update({
+  id: '/clanky/$slug',
+  path: '/clanky/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppAppIndexRoute = AppAppIndexRouteImport.update({
   id: '/app/',
   path: '/app/',
@@ -164,6 +176,8 @@ export interface FileRoutesByFullPath {
   '/reset-hesla': typeof ResetHeslaRoute
   '/srovnani': typeof SrovnaniRoute
   '/zapomenute-heslo': typeof ZapomenuteHesloRoute
+  '/clanky/$slug': typeof ClankySlugRoute
+  '/clanky/': typeof ClankyIndexRoute
   '/app/klienti': typeof AppAppKlientiRoute
   '/app/nastaveni': typeof AppAppNastaveniRoute
   '/app/onboarding': typeof AppAppOnboardingRoute
@@ -188,6 +202,8 @@ export interface FileRoutesByTo {
   '/reset-hesla': typeof ResetHeslaRoute
   '/srovnani': typeof SrovnaniRoute
   '/zapomenute-heslo': typeof ZapomenuteHesloRoute
+  '/clanky/$slug': typeof ClankySlugRoute
+  '/clanky': typeof ClankyIndexRoute
   '/app/klienti': typeof AppAppKlientiRoute
   '/app/nastaveni': typeof AppAppNastaveniRoute
   '/app/onboarding': typeof AppAppOnboardingRoute
@@ -214,6 +230,8 @@ export interface FileRoutesById {
   '/reset-hesla': typeof ResetHeslaRoute
   '/srovnani': typeof SrovnaniRoute
   '/zapomenute-heslo': typeof ZapomenuteHesloRoute
+  '/clanky/$slug': typeof ClankySlugRoute
+  '/clanky/': typeof ClankyIndexRoute
   '/_app/app/klienti': typeof AppAppKlientiRoute
   '/_app/app/nastaveni': typeof AppAppNastaveniRoute
   '/_app/app/onboarding': typeof AppAppOnboardingRoute
@@ -240,6 +258,8 @@ export interface FileRouteTypes {
     | '/reset-hesla'
     | '/srovnani'
     | '/zapomenute-heslo'
+    | '/clanky/$slug'
+    | '/clanky/'
     | '/app/klienti'
     | '/app/nastaveni'
     | '/app/onboarding'
@@ -264,6 +284,8 @@ export interface FileRouteTypes {
     | '/reset-hesla'
     | '/srovnani'
     | '/zapomenute-heslo'
+    | '/clanky/$slug'
+    | '/clanky'
     | '/app/klienti'
     | '/app/nastaveni'
     | '/app/onboarding'
@@ -289,6 +311,8 @@ export interface FileRouteTypes {
     | '/reset-hesla'
     | '/srovnani'
     | '/zapomenute-heslo'
+    | '/clanky/$slug'
+    | '/clanky/'
     | '/_app/app/klienti'
     | '/_app/app/nastaveni'
     | '/_app/app/onboarding'
@@ -315,6 +339,8 @@ export interface RootRouteChildren {
   ResetHeslaRoute: typeof ResetHeslaRoute
   SrovnaniRoute: typeof SrovnaniRoute
   ZapomenuteHesloRoute: typeof ZapomenuteHesloRoute
+  ClankySlugRoute: typeof ClankySlugRoute
+  ClankyIndexRoute: typeof ClankyIndexRoute
   ApiPublicHooksTrialReminderRoute: typeof ApiPublicHooksTrialReminderRoute
 }
 
@@ -416,6 +442,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clanky/': {
+      id: '/clanky/'
+      path: '/clanky'
+      fullPath: '/clanky/'
+      preLoaderRoute: typeof ClankyIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clanky/$slug': {
+      id: '/clanky/$slug'
+      path: '/clanky/$slug'
+      fullPath: '/clanky/$slug'
+      preLoaderRoute: typeof ClankySlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/app/': {
@@ -523,6 +563,8 @@ const rootRouteChildren: RootRouteChildren = {
   ResetHeslaRoute: ResetHeslaRoute,
   SrovnaniRoute: SrovnaniRoute,
   ZapomenuteHesloRoute: ZapomenuteHesloRoute,
+  ClankySlugRoute: ClankySlugRoute,
+  ClankyIndexRoute: ClankyIndexRoute,
   ApiPublicHooksTrialReminderRoute: ApiPublicHooksTrialReminderRoute,
 }
 export const routeTree = rootRouteImport
