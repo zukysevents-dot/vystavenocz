@@ -125,6 +125,51 @@ export type Database = {
         }
         Relationships: []
       }
+      email_send_log: {
+        Row: {
+          cc: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          invoice_id: string
+          kind: string
+          level: number | null
+          recipient: string
+          resend_id: string | null
+          status: string
+          subject: string
+          user_id: string
+        }
+        Insert: {
+          cc?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          invoice_id: string
+          kind: string
+          level?: number | null
+          recipient: string
+          resend_id?: string | null
+          status?: string
+          subject: string
+          user_id: string
+        }
+        Update: {
+          cc?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          invoice_id?: string
+          kind?: string
+          level?: number | null
+          recipient?: string
+          resend_id?: string | null
+          status?: string
+          subject?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       invoice_items: {
         Row: {
           created_at: string
