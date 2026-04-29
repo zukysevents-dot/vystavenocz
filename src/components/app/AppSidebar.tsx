@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/landing/Logo";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { InvoiceAssistant, type InvoiceContext } from "@/components/app/InvoiceAssistant";
 
 const nav: { to: "/app" | "/app/faktury" | "/app/klienti" | "/app/predplatne" | "/app/nastaveni"; label: string; icon: typeof LayoutDashboard; exact?: boolean }[] = [
   { to: "/app", label: "Přehled", icon: LayoutDashboard, exact: true },
@@ -28,6 +29,23 @@ export function AppSidebar() {
   const { user, signOut } = useAuth();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+
+  // Prázdný kontext — asistent v sidebaru funguje v general režimu (bez konkrétní faktury).
+  const emptyContext: InvoiceContext = {
+    invoice_number: "",
+    client_name: "",
+    vat_payer: false,
+    issue_date: "",
+    taxable_date: "",
+    due_date: "",
+    payment_method: "",
+    variable_symbol: "",
+    notes: "",
+    template_color: "",
+    available_clients: [],
+    items: [],
+  };
 
   // Zavřít mobilní menu při změně cesty
   useEffect(() => {
@@ -62,12 +80,16 @@ export function AppSidebar() {
 
   const footer = (
     <div className="border-t border-border p-3">
-        <div className="rounded-lg bg-gradient-to-br from-primary-soft to-accent p-3 text-xs">
+        <button
+          type="button"
+          onClick={() => setAiOpen(true)}
+          className="w-full rounded-lg bg-gradient-to-br from-primary-soft to-accent p-3 text-left text-xs transition-all hover:shadow-md"
+        >
           <div className="flex items-center gap-2 font-semibold text-primary">
             <Sparkles className="h-3.5 w-3.5" /> AI asistent
           </div>
-          <p className="mt-1 text-muted-foreground">Brzy: chat pro tvorbu faktur</p>
-        </div>
+          <p className="mt-1 text-muted-foreground">Zeptej se na cokoli o fakturách a DPH</p>
+        </button>
 
         <div className="mt-3 flex items-center gap-2 rounded-lg p-2 text-sm">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
@@ -140,6 +162,15 @@ export function AppSidebar() {
         {navList}
         {footer}
       </aside>
+
+      {/* AI asistent — globální plovoucí chat */}
+      <InvoiceAssistant
+        open={aiOpen}
+        onOpenChange={setAiOpen}
+        context={emptyContext}
+        onApplyPatch={() => { /* no-op v sidebaru — patche se aplikují jen v editoru faktury */ }}
+        storageKey="sidebar"
+      />
     </>
   );
 }
