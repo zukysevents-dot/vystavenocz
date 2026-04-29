@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { PageShell } from "@/components/landing/PageShell";
-import { getArticleBySlug, getArticlesSortedByDate, type ArticleBlock } from "@/lib/articles";
+import { getArticleBySlug, getRelatedArticles, type ArticleBlock } from "@/lib/articles";
 import { Clock, ArrowLeft, ArrowRight, Lightbulb, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -83,8 +83,7 @@ function Block({ block }: { block: ArticleBlock }) {
 
 function ArticleDetail() {
   const { article } = Route.useLoaderData();
-  const all = getArticlesSortedByDate();
-  const related = all.filter((a) => a.slug !== article.slug).slice(0, 3);
+  const related = getRelatedArticles(article.slug, 3);
 
   const formattedDate = new Date(article.publishedAt).toLocaleDateString("cs-CZ", {
     day: "numeric",
