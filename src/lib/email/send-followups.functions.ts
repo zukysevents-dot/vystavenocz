@@ -10,6 +10,7 @@
  * automat, přidáme `last_reminder_sent_at` + `reminders_sent_count`.
  */
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import QRCode from "qrcode";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -61,7 +62,7 @@ type LoadedContext = {
 };
 
 async function loadContextForFollowup(args: {
-  supabase: NonNullable<Parameters<typeof requireSupabaseAuth>[0]>;
+  supabase: SupabaseClient;
   userId: string;
   invoiceId: string;
   needsQR: boolean;
