@@ -13,7 +13,14 @@ export type Article = {
   /** Krátký perex pro listing a meta description (max ~160 znaků). */
   excerpt: string;
   /** Kategorie pro filtraci a tag v listingu. */
-  category: "Začátek podnikání" | "Fakturace" | "DPH a daně" | "Tipy pro OSVČ";
+  category:
+    | "Začátek podnikání"
+    | "Fakturace"
+    | "DPH a daně"
+    | "Tipy pro OSVČ"
+    | "Smlouvy a právo"
+    | "Marketing a klienti"
+    | "Finance a banking";
   /** Odhadovaný čas čtení v minutách. */
   readingMinutes: number;
   /** Datum publikace ISO (YYYY-MM-DD). */
