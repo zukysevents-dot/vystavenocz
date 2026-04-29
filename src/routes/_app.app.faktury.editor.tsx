@@ -728,6 +728,25 @@ function InvoiceEditorPage() {
     }
   };
 
+  const openFollowup = (kind: FollowupKind) => {
+    if (!editingId) {
+      toast.error("Nejdřív fakturu uložte a vystavte.");
+      return;
+    }
+    if (!hasAccess) {
+      setPaywallOpen(true);
+      return;
+    }
+    setFollowupKind(kind);
+    setFollowupCtx({
+      invoiceId: editingId,
+      invoiceNumber,
+      recipientEmail: selectedClient?.email ?? null,
+      recipientName: selectedClient?.name ?? null,
+    });
+    setFollowupOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
