@@ -51,7 +51,7 @@ export function Hero() {
             </Button>
           </div>
 
-          <p className="mt-5 text-xs text-muted-foreground/90">
+          <p className="mt-5 text-sm text-muted-foreground">
             Karta nepotřebná.
           </p>
 
