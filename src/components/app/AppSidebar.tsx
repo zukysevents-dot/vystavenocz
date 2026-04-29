@@ -1,4 +1,4 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   FileText,
@@ -28,6 +28,7 @@ const nav: { to: "/app" | "/app/faktury" | "/app/klienti" | "/app/predplatne" | 
 export function AppSidebar() {
   const { user, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
 
@@ -82,13 +83,16 @@ export function AppSidebar() {
     <div className="border-t border-border p-3">
         <button
           type="button"
-          onClick={() => setAiOpen(true)}
+          onClick={() => {
+            navigate({ to: "/app/faktury/editor" });
+            setAiOpen(true);
+          }}
           className="w-full rounded-lg bg-gradient-to-br from-primary-soft to-accent p-3 text-left text-xs transition-all hover:shadow-md"
         >
           <div className="flex items-center gap-2 font-semibold text-primary">
             <Sparkles className="h-3.5 w-3.5" /> AI asistent
           </div>
-          <p className="mt-1 text-muted-foreground">Zeptej se na cokoli o fakturách a DPH</p>
+          <p className="mt-1 text-muted-foreground">Vytvoř novou fakturu pomocí AI</p>
         </button>
 
         <div className="mt-3 flex items-center gap-2 rounded-lg p-2 text-sm">
