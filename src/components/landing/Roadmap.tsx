@@ -124,8 +124,8 @@ export function Roadmap() {
 
         <p className="mx-auto mt-8 max-w-xl text-center text-xs text-muted-foreground">
           Chybí ti něco konkrétního? Napiš nám na{" "}
-          <a href="mailto:zukys.events@gmail.com" className="font-medium text-foreground underline">
-            zukys.events@gmail.com
+          <a href="mailto:patrik@vystaveno.cz" className="font-medium text-foreground underline">
+            patrik@vystaveno.cz
           </a>{" "}
           — funkce přidáváme podle poptávky.
         </p>

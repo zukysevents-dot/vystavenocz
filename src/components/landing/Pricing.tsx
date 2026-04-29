@@ -101,7 +101,7 @@ export function Pricing() {
         </div>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          Méně než 5 faktur měsíčně? Napište nám na zukys.events@gmail.com — domluvíme se.
+          Méně než 5 faktur měsíčně? Napište nám na patrik@vystaveno.cz — domluvíme se.
         </p>
       </div>
     </section>
