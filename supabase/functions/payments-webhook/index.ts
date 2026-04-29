@@ -7,6 +7,59 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
+// GA4 Measurement Protocol — fires server-side `purchase` event so attribution
+// works even when the browser closes after checkout. Requires both:
+//   GA_MEASUREMENT_ID  (e.g. "G-77KM55J70P")
+//   GA_API_SECRET      (created in GA4 Admin → Data Streams → Measurement Protocol API secrets)
+// If either is missing, we silently skip — no purchase event reaches GA4.
+async function sendGa4Purchase(params: {
+  clientId: string;
+  transactionId: string;
+  value: number;
+  currency: string;
+  itemId?: string;
+  userId?: string;
+  attribution?: Record<string, string>;
+}) {
+  const measurementId = Deno.env.get("GA_MEASUREMENT_ID") || "G-77KM55J70P";
+  const apiSecret = Deno.env.get("GA_API_SECRET");
+  if (!measurementId || !apiSecret) {
+    console.log("GA4 MP skipped (missing GA_MEASUREMENT_ID or GA_API_SECRET)");
+    return;
+  }
+  const url = `https://www.google-analytics.com/mp/collect?measurement_id=${measurementId}&api_secret=${apiSecret}`;
+  const body = {
+    client_id: params.clientId,
+    ...(params.userId && { user_id: params.userId }),
+    events: [
+      {
+        name: "purchase",
+        params: {
+          transaction_id: params.transactionId,
+          value: params.value,
+          currency: params.currency,
+          ...(params.attribution ?? {}),
+          items: [
+            {
+              item_id: params.itemId ?? "subscription",
+              item_name: "Vystaveno předplatné",
+              price: params.value,
+              quantity: 1,
+            },
+          ],
+        },
+      },
+    ],
+  };
+  try {
+    const res = await fetch(url, { method: "POST", body: JSON.stringify(body) });
+    if (!res.ok) console.error("GA4 MP error:", res.status, await res.text());
+    else console.log("GA4 purchase sent:", params.transactionId);
+  } catch (e) {
+    console.error("GA4 MP fetch failed:", e);
+  }
+}
+
 serve(async (req) => {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
 
@@ -153,6 +206,39 @@ async function handleInvoicePaid(invoice: any, env: StripeEnv) {
     .eq("id", sub.user_id);
 
   console.log("Subscription renewed:", subscriptionId, "user:", sub.user_id);
+
+  // Fire GA4 purchase event only on the FIRST invoice (billing_reason = subscription_create).
+  // Renewals are not tracked as conversions to avoid inflating campaign data.
+  if (invoice.billing_reason === "subscription_create") {
+    try {
+      // Pull metadata (ga_client_id, utm_*) from the subscription set in create-checkout.
+      const { createStripeClient } = await import("../_shared/stripe.ts");
+      const stripe = createStripeClient(env);
+      const subFull = await stripe.subscriptions.retrieve(subscriptionId);
+      const meta = (subFull.metadata ?? {}) as Record<string, string>;
+      const clientId = meta.ga_client_id;
+      if (clientId) {
+        const attribution: Record<string, string> = {};
+        for (const k of ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "gclid"]) {
+          if (meta[k]) attribution[k] = meta[k];
+        }
+        await sendGa4Purchase({
+          clientId,
+          transactionId: invoice.id,
+          value: (invoice.amount_paid ?? 0) / 100,
+          currency: (invoice.currency ?? "czk").toUpperCase(),
+          itemId: subFull.items?.data?.[0]?.price?.metadata?.lovable_external_id
+            ?? subFull.items?.data?.[0]?.price?.id,
+          userId: sub.user_id,
+          attribution,
+        });
+      } else {
+        console.log("GA4 purchase skipped: no ga_client_id in subscription metadata");
+      }
+    } catch (e) {
+      console.error("GA4 purchase event failed (non-fatal):", e);
+    }
+  }
 }
 
 // Neúspěšná platba — Stripe sám pošle subscription.updated s novým status
