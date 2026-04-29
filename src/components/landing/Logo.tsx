@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import wordmark from "@/assets/vystaveno-logo.png";
-import icon from "@/assets/vystaveno-icon.png";
+import icon from "@/assets/vystaveno-icon-small.png";
 
 interface LogoProps {
   variant?: "full" | "mark";
