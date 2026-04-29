@@ -1356,3 +1356,77 @@ export function getArticleBySlug(slug: string): Article | undefined {
 export function getArticlesSortedByDate(): Article[] {
   return [...articles].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
 }
+
+/**
+ * Stop slova — krátká česká + obecná, aby tokenizace dávala smysluplné klíčové výrazy.
+ */
+const STOP_WORDS = new Set([
+  "a","i","o","u","v","z","k","s","na","do","od","po","pro","při","za","ze","se","si",
+  "je","jsi","js","jsem","jsme","jste","jsou","být","byl","byla","bylo","byli",
+  "to","ten","ta","tu","ty","ti","te","těch","tom","této","tato","tato","tomto",
+  "co","jak","kde","kdy","kdo","proč","který","která","které","jaký","jaká","jaké",
+  "ale","nebo","než","aby","když","pokud","jestli","také","též","ještě","už","jen",
+  "moc","velmi","více","méně","nejvíc","nejvíce","jako","tak","takže","tedy",
+  "můj","tvůj","jeho","její","náš","váš","jejich","sebe","mne","mě","ti","mu","ji","jim",
+  "ne","ano","bez","přes","mezi","podle","kvůli","proti","mimo","krom","kromě",
+  "rok","roce","roku","letech","měsíc","měsíci","den","dní","kč","kompletní","návod","průvodce",
+  "—","–","-","2025","2026"
+]);
+
+function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // strip diacritics for matching
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length >= 4 && !STOP_WORDS.has(w));
+}
+
+function articleKeywords(a: Article): Set<string> {
+  // titulek a excerpt mají největší signál; kategorie přidává tematický kontext
+  const text = `${a.title} ${a.title} ${a.excerpt} ${a.category}`;
+  return new Set(tokenize(text));
+}
+
+/**
+ * Vrátí nejrelevantnější související články pro daný slug.
+ * Skóre = překryv klíčových slov (Jaccard-like) + bonus za stejnou kategorii
+ *        + drobný bonus za blízké datum publikace (čerstvost).
+ * Fallback: pokud nic neskóruje, doplní se nejnovějšími články.
+ */
+export function getRelatedArticles(slug: string, limit = 3): Article[] {
+  const current = getArticleBySlug(slug);
+  if (!current) return [];
+  const currentKeywords = articleKeywords(current);
+  const currentTime = new Date(current.publishedAt).getTime();
+
+  const scored = articles
+    .filter((a) => a.slug !== slug)
+    .map((a) => {
+      const kws = articleKeywords(a);
+      let overlap = 0;
+      for (const k of kws) if (currentKeywords.has(k)) overlap++;
+      const union = new Set([...kws, ...currentKeywords]).size || 1;
+      const jaccard = overlap / union;
+      const categoryBonus = a.category === current.category ? 0.15 : 0;
+      // freshness bonus 0–0.05 podle blízkosti data (max ~365 dnů)
+      const dayDiff = Math.abs(currentTime - new Date(a.publishedAt).getTime()) / 86400000;
+      const freshness = Math.max(0, 0.05 * (1 - Math.min(dayDiff, 365) / 365));
+      return { article: a, score: jaccard + categoryBonus + freshness, overlap };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  const top = scored.filter((s) => s.overlap > 0 || s.article.category === current.category);
+  const result = top.slice(0, limit).map((s) => s.article);
+
+  if (result.length < limit) {
+    const fillers = getArticlesSortedByDate().filter(
+      (a) => a.slug !== slug && !result.includes(a)
+    );
+    while (result.length < limit && fillers.length) {
+      result.push(fillers.shift()!);
+    }
+  }
+  return result;
+}
