@@ -18,6 +18,7 @@ import { downloadInvoicePdf, renderInvoicePdfBlob } from "@/lib/invoice-pdf";
 import type { InvoicePdfProps } from "@/lib/pdf/InvoicePdfDoc";
 import { SendInvoiceDialog, type SendInvoiceContext } from "@/components/app/SendInvoiceDialog";
 import { FollowupEmailDialog, type FollowupContext, type FollowupKind } from "@/components/app/FollowupEmailDialog";
+import { InvoiceCommunicationPanel } from "@/components/app/InvoiceCommunicationPanel";
 import { QuickClientDialog, type QuickClient } from "@/components/app/QuickClientDialog";
 import { useServerFn } from "@tanstack/react-start";
 import { sendInvoiceEmail } from "@/lib/email/send-invoice.functions";
@@ -1163,6 +1164,7 @@ function InvoiceEditorPage() {
               <span className="text-2xl font-bold text-primary">{formatCZK(totals.total)}</span>
             </div>
           </div>
+          {editingId && <InvoiceCommunicationPanel invoiceId={editingId} />}
           </fieldset>
         </div>
 

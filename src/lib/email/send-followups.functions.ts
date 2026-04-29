@@ -27,6 +27,36 @@ import {
 const RESEND_GATEWAY = "https://connector-gateway.lovable.dev/resend";
 const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 30;
 
+async function logEmail(args: {
+  invoiceId: string;
+  userId: string;
+  kind: "reminder" | "thank_you";
+  level?: number | null;
+  recipient: string;
+  cc?: string | null;
+  subject: string;
+  resendId?: string | null;
+  status: "sent" | "failed";
+  errorMessage?: string | null;
+}) {
+  try {
+    await supabaseAdmin.from("email_send_log").insert({
+      invoice_id: args.invoiceId,
+      user_id: args.userId,
+      kind: args.kind,
+      level: args.level ?? null,
+      recipient: args.recipient,
+      cc: args.cc ?? null,
+      subject: args.subject,
+      resend_id: args.resendId ?? null,
+      status: args.status,
+      error_message: args.errorMessage ?? null,
+    });
+  } catch (e) {
+    console.warn("Nepodařilo se zalogovat e-mail:", e);
+  }
+}
+
 // ───────────────────────── společné typy a helpery ─────────────────────────
 
 type LoadedContext = {
@@ -279,18 +309,43 @@ export const sendInvoiceReminder = createServerFn({ method: "POST" })
         ]
       : undefined;
 
-    const result = await sendViaResend({
-      fromAddress: ctx.fromAddress,
-      to: data.to,
-      cc: data.cc || undefined,
-      replyTo: ctx.profile?.email || null,
-      subject: data.subject,
-      text,
-      html,
-      attachments,
-    });
-
-    return { ok: true, id: result.id };
+    try {
+      const result = await sendViaResend({
+        fromAddress: ctx.fromAddress,
+        to: data.to,
+        cc: data.cc || undefined,
+        replyTo: ctx.profile?.email || null,
+        subject: data.subject,
+        text,
+        html,
+        attachments,
+      });
+      await logEmail({
+        invoiceId: data.invoiceId,
+        userId,
+        kind: "reminder",
+        level: data.level,
+        recipient: data.to,
+        cc: data.cc || null,
+        subject: data.subject,
+        resendId: result.id || null,
+        status: "sent",
+      });
+      return { ok: true, id: result.id };
+    } catch (err) {
+      await logEmail({
+        invoiceId: data.invoiceId,
+        userId,
+        kind: "reminder",
+        level: data.level,
+        recipient: data.to,
+        cc: data.cc || null,
+        subject: data.subject,
+        status: "failed",
+        errorMessage: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
   });
 
 // ───────────────────────── THANK YOU ─────────────────────────
@@ -343,15 +398,38 @@ export const sendInvoiceThankYou = createServerFn({ method: "POST" })
     const html = renderThankYouEmailHtml(sharedData);
     const text = buildThankYouPlainText(sharedData);
 
-    const result = await sendViaResend({
-      fromAddress: ctx.fromAddress,
-      to: data.to,
-      cc: data.cc || undefined,
-      replyTo: ctx.profile?.email || null,
-      subject: data.subject,
-      text,
-      html,
-    });
-
-    return { ok: true, id: result.id };
+    try {
+      const result = await sendViaResend({
+        fromAddress: ctx.fromAddress,
+        to: data.to,
+        cc: data.cc || undefined,
+        replyTo: ctx.profile?.email || null,
+        subject: data.subject,
+        text,
+        html,
+      });
+      await logEmail({
+        invoiceId: data.invoiceId,
+        userId,
+        kind: "thank_you",
+        recipient: data.to,
+        cc: data.cc || null,
+        subject: data.subject,
+        resendId: result.id || null,
+        status: "sent",
+      });
+      return { ok: true, id: result.id };
+    } catch (err) {
+      await logEmail({
+        invoiceId: data.invoiceId,
+        userId,
+        kind: "thank_you",
+        recipient: data.to,
+        cc: data.cc || null,
+        subject: data.subject,
+        status: "failed",
+        errorMessage: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
   });
