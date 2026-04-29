@@ -213,7 +213,34 @@ export const sendInvoiceEmail = createServerFn({ method: "POST" })
     const result = await res.json().catch(() => ({}));
     if (!res.ok) {
       const msg = (result as { message?: string }).message || res.statusText;
+      try {
+        await supabaseAdmin.from("email_send_log").insert({
+          invoice_id: data.invoiceId,
+          user_id: userId,
+          kind: "invoice",
+          recipient: data.to,
+          cc: data.cc || null,
+          subject: data.subject,
+          status: "failed",
+          error_message: msg,
+        });
+      } catch {}
       throw new Error(`Odeslání selhalo [${res.status}]: ${msg}`);
+    }
+
+    try {
+      await supabaseAdmin.from("email_send_log").insert({
+        invoice_id: data.invoiceId,
+        user_id: userId,
+        kind: "invoice",
+        recipient: data.to,
+        cc: data.cc || null,
+        subject: data.subject,
+        resend_id: (result as { id?: string }).id || null,
+        status: "sent",
+      });
+    } catch (e) {
+      console.warn("Nepodařilo se zalogovat e-mail:", e);
     }
 
     return { ok: true, id: (result as { id?: string }).id };
