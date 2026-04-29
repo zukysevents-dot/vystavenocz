@@ -174,8 +174,8 @@ function TermsPage() {
           <p>
             <strong>Kontakt:</strong> Patrik Zukal, Brodská 1914/40, 591 01 Žďár nad Sázavou,
             IČO 24991686, e-mail{" "}
-            <a href="mailto:podpora@vystaveno.cz" className="text-primary underline">
-              podpora@vystaveno.cz
+            <a href="mailto:patrik@vystaveno.cz" className="text-primary underline">
+              patrik@vystaveno.cz
             </a>
           </p>
         </section>

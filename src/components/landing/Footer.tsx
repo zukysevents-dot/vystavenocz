@@ -43,11 +43,11 @@ export function Footer() {
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               <li>
                 <a
-                  href="mailto:zukys.events@gmail.com"
+                  href="mailto:patrik@vystaveno.cz"
                   className="inline-flex items-center gap-1.5 hover:text-foreground"
                 >
                   <Mail className="h-3.5 w-3.5" />
-                  zukys.events@gmail.com
+                  patrik@vystaveno.cz
                 </a>
               </li>
               <li>

@@ -37,8 +37,8 @@ function GdprPage() {
             Správcem osobních údajů je <strong>Patrik Zukal</strong>, IČO
             24991686, se sídlem Brodská 1914/40, 591 01 Žďár nad Sázavou, Česká republika,
             podnikající fyzická osoba zapsaná v živnostenském rejstříku. Kontaktní e-mail:{" "}
-            <a href="mailto:gdpr@vystaveno.cz" className="text-primary underline">
-              gdpr@vystaveno.cz
+            <a href="mailto:patrik@vystaveno.cz" className="text-primary underline">
+              patrik@vystaveno.cz
             </a>
             .
           </p>
@@ -158,8 +158,8 @@ function GdprPage() {
           </ul>
           <p className="mt-3 text-muted-foreground">
             Žádosti vyřizujeme do 30 dnů. Kontakt:{" "}
-            <a href="mailto:gdpr@vystaveno.cz" className="text-primary underline">
-              gdpr@vystaveno.cz
+            <a href="mailto:patrik@vystaveno.cz" className="text-primary underline">
+              patrik@vystaveno.cz
             </a>
             .
           </p>
@@ -189,8 +189,8 @@ function GdprPage() {
           <p>
             <strong>Pověřenec pro ochranu osobních údajů:</strong> aktuálně není ustanoven
             (nepovinné dle čl. 37 GDPR). Pro dotazy ke zpracování pište na{" "}
-            <a href="mailto:gdpr@vystaveno.cz" className="text-primary underline">
-              gdpr@vystaveno.cz
+            <a href="mailto:patrik@vystaveno.cz" className="text-primary underline">
+              patrik@vystaveno.cz
             </a>
             .
           </p>
