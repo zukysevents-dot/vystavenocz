@@ -75,6 +75,41 @@ export const Route = createRootRoute({
       { rel: "apple-touch-icon", sizes: "256x256", href: "/apple-touch-icon-256.png" },
       { rel: "apple-touch-icon", sizes: "384x384", href: "/apple-touch-icon-384.png" },
       { rel: "manifest", href: "/manifest.json" },
+      // iOS splash screens (apple-touch-startup-image) — zobrazí se při otevření PWA z domovské obrazovky.
+      // Media queries vybírají správný obrázek podle device-width, device-height, pixel ratio a orientace.
+      // iPhone 15 Pro Max / 14 Pro Max (430x932 @3x)
+      { rel: "apple-touch-startup-image", href: "/splash-iphone-15-pro-max-portrait.png", media: "(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" },
+      { rel: "apple-touch-startup-image", href: "/splash-iphone-15-pro-max-landscape.png", media: "(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" },
+      // iPhone 15 Pro / 14 Pro (393x852 @3x)
+      { rel: "apple-touch-startup-image", href: "/splash-iphone-15-pro-portrait.png", media: "(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" },
+      { rel: "apple-touch-startup-image", href: "/splash-iphone-15-pro-landscape.png", media: "(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" },
+      // iPhone 13/14 Pro / 13 / 12 (390x844 @3x)
+      { rel: "apple-touch-startup-image", href: "/splash-iphone-13-pro-portrait.png", media: "(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" },
+      { rel: "apple-touch-startup-image", href: "/splash-iphone-13-pro-landscape.png", media: "(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" },
+      // iPhone 12/13 Pro Max (428x926 @3x)
+      { rel: "apple-touch-startup-image", href: "/splash-iphone-12-pro-max-portrait.png", media: "(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" },
+      { rel: "apple-touch-startup-image", href: "/splash-iphone-12-pro-max-landscape.png", media: "(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" },
+      // iPhone X / XS / 11 Pro (375x812 @3x)
+      { rel: "apple-touch-startup-image", href: "/splash-iphone-x-portrait.png", media: "(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" },
+      { rel: "apple-touch-startup-image", href: "/splash-iphone-x-landscape.png", media: "(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" },
+      // iPhone XR / 11 (414x896 @2x)
+      { rel: "apple-touch-startup-image", href: "/splash-iphone-xr-portrait.png", media: "(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" },
+      { rel: "apple-touch-startup-image", href: "/splash-iphone-xr-landscape.png", media: "(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" },
+      // iPhone 8 / SE 2-3 (375x667 @2x)
+      { rel: "apple-touch-startup-image", href: "/splash-iphone-8-portrait.png", media: "(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" },
+      { rel: "apple-touch-startup-image", href: "/splash-iphone-8-landscape.png", media: "(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" },
+      // iPhone 8 Plus (414x736 @3x)
+      { rel: "apple-touch-startup-image", href: "/splash-iphone-8-plus-portrait.png", media: "(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" },
+      { rel: "apple-touch-startup-image", href: "/splash-iphone-8-plus-landscape.png", media: "(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" },
+      // iPad 10.9" / Air 4-5 (820x1180 @2x)
+      { rel: "apple-touch-startup-image", href: "/splash-ipad-10-9-portrait.png", media: "(device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" },
+      { rel: "apple-touch-startup-image", href: "/splash-ipad-10-9-landscape.png", media: "(device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" },
+      // iPad Pro 11" (834x1194 @2x)
+      { rel: "apple-touch-startup-image", href: "/splash-ipad-pro-11-portrait.png", media: "(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" },
+      { rel: "apple-touch-startup-image", href: "/splash-ipad-pro-11-landscape.png", media: "(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" },
+      // iPad Pro 12.9" (1024x1366 @2x)
+      { rel: "apple-touch-startup-image", href: "/splash-ipad-pro-12-9-portrait.png", media: "(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" },
+      { rel: "apple-touch-startup-image", href: "/splash-ipad-pro-12-9-landscape.png", media: "(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       // Preload webfont CSS jako style — sníží render-blocking dobu, prohlížeč začne fetchnout dřív.
