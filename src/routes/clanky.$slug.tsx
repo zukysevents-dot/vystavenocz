@@ -3,6 +3,12 @@ import { PageShell } from "@/components/landing/PageShell";
 import { getArticleBySlug, getRelatedArticles, type ArticleBlock, type ArticleSection } from "@/lib/articles";
 import { Clock, ArrowLeft, ArrowRight, Lightbulb, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/clanky/$slug")({
   loader: ({ params }) => {
@@ -150,6 +156,34 @@ function ArticleDetail() {
               </div>
             </section>
           ))}
+
+          {article.faq && article.faq.length > 0 && (
+            <section className="mt-12">
+              <h2 className="mb-5 text-2xl font-bold tracking-tight text-foreground">
+                Časté otázky
+              </h2>
+              <Accordion
+                type="single"
+                collapsible
+                className="overflow-hidden rounded-2xl border border-border bg-card"
+              >
+                {article.faq.map((f, i) => (
+                  <AccordionItem
+                    key={f.q}
+                    value={`faq-${i}`}
+                    className="border-b border-border last:border-b-0"
+                  >
+                    <AccordionTrigger className="px-5 py-4 text-left text-[15px] font-semibold text-foreground hover:no-underline">
+                      {f.q}
+                    </AccordionTrigger>
+                    <AccordionContent className="px-5 pb-5 text-sm leading-relaxed text-muted-foreground">
+                      {f.a}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </section>
+          )}
 
           {/* CTA — využít to, že čtenář dočetl */}
           <div className="mt-12 rounded-2xl border border-border bg-card p-8 text-center">
