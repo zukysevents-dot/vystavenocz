@@ -13,6 +13,22 @@ export const Route = createFileRoute("/clanky/$slug")({
   head: ({ loaderData }) => {
     const a = loaderData?.article;
     if (!a) return { meta: [{ title: "Článek nenalezen — Vystaveno.cz" }] };
+    const scripts = a.faq && a.faq.length > 0
+      ? [
+          {
+            type: "application/ld+json",
+            children: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              mainEntity: a.faq.map((f) => ({
+                "@type": "Question",
+                name: f.q,
+                acceptedAnswer: { "@type": "Answer", text: f.a },
+              })),
+            }),
+          },
+        ]
+      : undefined;
     return {
       meta: [
         { title: `${a.title} — Vystaveno.cz` },
@@ -21,6 +37,7 @@ export const Route = createFileRoute("/clanky/$slug")({
         { property: "og:description", content: a.excerpt },
         { property: "og:type", content: "article" },
       ],
+      scripts,
     };
   },
   notFoundComponent: () => (
