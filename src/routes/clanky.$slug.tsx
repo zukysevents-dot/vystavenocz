@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { PageShell } from "@/components/landing/PageShell";
-import { getArticleBySlug, getRelatedArticles, type ArticleBlock } from "@/lib/articles";
+import { getArticleBySlug, getRelatedArticles, type ArticleBlock, type ArticleSection } from "@/lib/articles";
 import { Clock, ArrowLeft, ArrowRight, Lightbulb, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -121,13 +121,13 @@ function ArticleDetail() {
         </header>
 
         <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-          {article.sections.map((section) => (
+          {article.sections.map((section: ArticleSection) => (
             <section key={section.heading} className="mb-10 last:mb-0">
               <h2 className="mb-5 text-2xl font-bold tracking-tight text-foreground">
                 {section.heading}
               </h2>
               <div className="space-y-4">
-                {section.blocks.map((block, i) => (
+                {section.blocks.map((block: ArticleBlock, i: number) => (
                   <Block key={i} block={block} />
                 ))}
               </div>
