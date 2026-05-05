@@ -27,6 +27,8 @@ export type Article = {
   publishedAt: string;
   /** Strukturovaný obsah — sekce s nadpisem h2 a odstavci/seznamy. */
   sections: ArticleSection[];
+  /** Volitelné FAQ na konci článku — generuje i FAQPage JSON-LD pro SEO. */
+  faq?: { q: string; a: string }[];
 };
 
 export type ArticleSection = {
@@ -1345,9 +1347,291 @@ export const articles: Article[] = [
           },
         ],
       },
-    ],
-  },
- ];
+     ],
+   },
+   // ===== CORNERSTONE ČLÁNEK =====
+   {
+     slug: "kompletni-pruvodce-vystavenim-faktury-2026",
+     title: "Kompletní průvodce vystavením faktury v ČR 2026",
+     excerpt:
+       "Vše, co potřebuješ vědět o fakturaci v Česku v roce 2026: povinné náležitosti, neplátce vs. plátce DPH, QR platby, elektronické faktury, zálohy, dobropisy a nejčastější chyby.",
+     category: "Fakturace",
+     readingMinutes: 15,
+     publishedAt: "2026-05-05",
+     sections: [
+       {
+         heading: "Co je faktura a kdo ji musí vystavit",
+         blocks: [
+           {
+             type: "p",
+             text: "Faktura je účetní (a u plátců DPH daňový) doklad, kterým podnikatel potvrzuje dodávku zboží nebo služby a vyzývá odběratele k zaplacení. V Česku ji vystavuje každá OSVČ a každá firma — ať už je plátce DPH, nebo ne.",
+           },
+           {
+             type: "p",
+             text: "Právní rámec tvoří hlavně zákon o účetnictví (563/1991 Sb.), zákon o DPH (235/2004 Sb.) a živnostenský zákon. Pro koncové spotřebitele (B2C) navíc občanský zákoník a EET v omezené míře (od 2023 zrušeno pro většinu OSVČ).",
+           },
+           {
+             type: "callout",
+             variant: "tip",
+             text: "Tento průvodce je psaný pro rok 2026 — limity DPH, sazby i lhůty odpovídají aktuální legislativě k 1. 1. 2026.",
+           },
+         ],
+       },
+       {
+         heading: "Povinné náležitosti faktury (neplátce DPH)",
+         blocks: [
+           {
+             type: "p",
+             text: "Pokud nejsi plátce DPH, vystavuješ účetní doklad. Musí obsahovat:",
+           },
+           {
+             type: "ul",
+             items: [
+               "Označení dokladu (např. „Faktura č. 2026-0001“) — pořadové číslo musí být jednoznačné a v souvislé řadě.",
+               "Identifikaci dodavatele: jméno/název, adresu sídla, IČO.",
+               "Identifikaci odběratele: jméno/název, adresu, IČO (a DIČ, pokud je má).",
+               "Datum vystavení dokladu.",
+               "Předmět plnění — co konkrétně fakturuješ (služba, zboží, množství, cena).",
+               "Celkovou peněžní částku k úhradě.",
+               "Označení vystavitele (jméno) — vlastnoruční podpis ani razítko nejsou povinné.",
+             ],
+           },
+         ],
+       },
+       {
+         heading: "Náležitosti navíc pro plátce DPH",
+         blocks: [
+           {
+             type: "p",
+             text: "Pokud jsi plátce DPH (nebo identifikovaná osoba), vystavuješ daňový doklad podle §29 zákona o DPH. Kromě výše uvedeného musí obsahovat:",
+           },
+           {
+             type: "ul",
+             items: [
+               "DIČ dodavatele i odběratele (pokud má).",
+               "Datum uskutečnění zdanitelného plnění (DUZP).",
+               "Jednotkovou cenu bez DPH a případnou slevu.",
+               "Základ daně zvlášť pro každou sazbu DPH (21 %, 12 %, 0 %).",
+               "Sazbu daně a výši DPH v Kč (i u faktur v cizí měně).",
+               "Označení zvláštního režimu, pokud se uplatňuje („přenesená daňová povinnost“, „osvobozeno od daně“, „zvláštní režim — cestovní služba“ apod.).",
+             ],
+           },
+           {
+             type: "callout",
+             variant: "warn",
+             text: "Faktura plátce DPH musí být vystavena nejpozději do 15 dnů od dne uskutečnění plnění (nebo přijetí zálohy). U pravidelných plnění se lhůta počítá od konce kalendářního měsíce.",
+           },
+         ],
+       },
+       {
+         heading: "Číslování faktur — co povoluje zákon",
+         blocks: [
+           {
+             type: "p",
+             text: "Číselná řada musí být souvislá a jednoznačná. To znamená, že nesmíš vynechávat čísla a každá faktura musí mít unikátní označení. Můžeš ale používat libovolný formát, který má smysl pro tvoje účetnictví:",
+           },
+           {
+             type: "ul",
+             items: [
+               "Roční řada s prefixem: 2026-0001, 2026-0002 (nejčastější).",
+               "Plynulá řada bez resetu: 1234, 1235, 1236.",
+               "Oddělené řady pro různé typy dokladů: F-2026-001 (faktury), OD-2026-001 (dobropisy), Z-2026-001 (zálohové).",
+             ],
+           },
+           {
+             type: "callout",
+             variant: "tip",
+             text: "Doporučení: dobropisy a zálohové faktury měj v oddělené řadě s vlastním prefixem. Účetní to ocení a v rejstříku to vypadá profesionálněji. Vystaveno.cz to dělá automaticky.",
+           },
+         ],
+       },
+       {
+         heading: "Splatnost faktury — co je standard",
+         blocks: [
+           {
+             type: "p",
+             text: "Mezi podnikateli je zákonná maximální splatnost 60 dnů od doručení faktury (§1963 občanského zákoníku), u veřejných zadavatelů 30 dnů. V praxi se používá 7, 14 nebo 30 dnů — domluvíš se s klientem ve smlouvě nebo ji uvedeš přímo na faktuře.",
+           },
+           {
+             type: "p",
+             text: "Pokud klient nezaplatí včas, máš ze zákona nárok na úrok z prodlení (repo sazba ČNB + 8 procentních bodů ročně) a na náklady spojené s vymáháním (1 200 Kč paušál podle nařízení vlády 351/2013 Sb.).",
+           },
+         ],
+       },
+       {
+         heading: "Zálohové faktury, proforma a daňový doklad",
+         blocks: [
+           {
+             type: "p",
+             text: "Pojmy se často pletou. Tady je rozdíl:",
+           },
+           {
+             type: "ul",
+             items: [
+               "Proforma faktura (zálohová) — výzva k platbě před dodáním. Není to účetní doklad, jen výzva. Klient ji zaplatí.",
+               "Daňový doklad k přijaté platbě (DDPP) — vystaví plátce DPH do 15 dnů od přijetí zálohy. Slouží odběrateli k odpočtu DPH.",
+               "Konečná faktura — vystaví se po dodání plnění. Odečte se v ní již zaplacená záloha, doplatí se zbytek.",
+             ],
+           },
+           {
+             type: "callout",
+             variant: "warn",
+             text: "Pokud nejsi plátce DPH, daňový doklad k záloze nevystavuješ — stačí proforma a po dodání konečná faktura.",
+           },
+         ],
+       },
+       {
+         heading: "Dobropis (opravný daňový doklad)",
+         blocks: [
+           {
+             type: "p",
+             text: "Dobropis vystavíš, když potřebuješ snížit nebo stornovat dříve vystavenou fakturu — typicky reklamace, sleva po vystavení, vrácení zboží nebo chyba v částce. Položky a DPH jsou se záporným znaménkem a doklad odkazuje na původní fakturu.",
+           },
+           {
+             type: "p",
+             text: "U plátců DPH se nazývá „opravný daňový doklad“ (§42 zákona o DPH) a musí být vystaven do 15 dnů ode dne, kdy nastaly důvody pro opravu. Odběratel ho musí potvrdit (písemně, datovou schránkou nebo prokazatelně e-mailem).",
+           },
+         ],
+       },
+       {
+         heading: "QR platba — proč ji vždy přidávat",
+         blocks: [
+           {
+             type: "p",
+             text: "QR Platba podle českého standardu SPAYD obsahuje číslo účtu, částku, variabilní symbol a zprávu pro příjemce. Klient ji načte mobilním bankovnictvím a stačí potvrdit — žádné přepisování čísel, žádné chyby ve VS.",
+           },
+           {
+             type: "p",
+             text: "Z dat fakturačních platforem vychází, že faktury s QR kódem se v průměru platí o 3–5 dní dříve. U OSVČ s desítkami klientů to znamená výrazně lepší cashflow a méně času stráveného urgováním.",
+           },
+           {
+             type: "callout",
+             variant: "tip",
+             text: "Vystaveno.cz generuje QR kód automaticky pro každou fakturu, jakmile máš v profilu uložený bankovní účet. Funguje se všemi českými bankami.",
+           },
+         ],
+       },
+       {
+         heading: "Elektronická faktura, ISDOC a archivace",
+         blocks: [
+           {
+             type: "p",
+             text: "Elektronická faktura (PDF nebo strukturovaný formát ISDOC) je v Česku plně rovnocenná papírové. Stačí, aby zajistila tři věci: věrohodnost původu, neporušenost obsahu a čitelnost po celou dobu archivace.",
+           },
+           {
+             type: "p",
+             text: "Archivační lhůty v ČR:",
+           },
+           {
+             type: "ul",
+             items: [
+               "Účetní doklady: 5 let od konce účetního období (zákon o účetnictví).",
+               "Daňové doklady (plátci DPH): 10 let od konce roku, ve kterém došlo k plnění.",
+               "Mzdové doklady a doklady k důchodovému pojištění: 30 let.",
+             ],
+           },
+           {
+             type: "p",
+             text: "ISDOC je český standard strukturované faktury (XML), který umí načíst většina českých účetních programů — Pohoda, Money S3, Helios, iDoklad i Fakturoid. Vystaveno.cz exportuje ISDOC i CSV jedním kliknutím.",
+           },
+         ],
+       },
+       {
+         heading: "Faktura do zahraničí — EU a třetí země",
+         blocks: [
+           {
+             type: "p",
+             text: "Pravidla závisí na tom, zda jsi plátce DPH a kdo je odběratel:",
+           },
+           {
+             type: "ul",
+             items: [
+               "Plátce DPH → plátce v EU (B2B): režim přenesení daňové povinnosti („reverse charge“). Faktura bez DPH, na faktuře musíš uvést DIČ obou stran a poznámku „daň odvede zákazník“. Hlásí se v souhrnném hlášení.",
+               "Plátce DPH → koncový zákazník v EU (B2C): u digitálních služeb a zboží přes 10 000 EUR ročně používáš OSS (One Stop Shop) a daníš sazbou země zákazníka.",
+               "Plátce DPH → třetí země (mimo EU): vývoz osvobozen od DPH, na faktuře poznámka „osvobozeno od daně podle §66 zákona o DPH“.",
+               "Neplátce DPH → kdokoli v zahraničí: vystavíš normální fakturu bez DPH s poznámkou „neplátce DPH“. Pozor: pokud přijmeš službu z EU od plátce, automaticky se stáváš identifikovanou osobou.",
+             ],
+           },
+           {
+             type: "callout",
+             variant: "warn",
+             text: "Identifikovaná osoba je častý zádrhel. Stačí, že si jako neplátce DPH koupíš službu Google Ads, Meta nebo Apple App Store — automaticky vzniká povinnost registrace do 15 dnů. Hlídej si to.",
+           },
+         ],
+       },
+       {
+         heading: "Nejčastější chyby a jak se jim vyhnout",
+         blocks: [
+           {
+             type: "ol",
+             items: [
+               "Chybějící DUZP u plátce DPH — bez něj faktura není platný daňový doklad a klient ti DPH nemůže nárokovat.",
+               "Špatný variabilní symbol nebo chybějící QR kód — platba dorazí, ale nezná se její identifikace, takže ji budeš párovat ručně.",
+               "Vynechané číslo v řadě — finanční úřad to při kontrole označí jako vážnou chybu v účetnictví.",
+               "Faktura bez data splatnosti — klient si může počkat až do zákonných 30 dnů od doručení.",
+               "Sloučené sazby DPH na jednom řádku — každá sazba musí mít svůj řádek a vlastní výpočet daně.",
+               "Chybějící poznámka u reverse charge nebo osvobozeného plnění — bez ní hrozí dodatečné doměření DPH.",
+               "Posílání PDF faktury bez QR kódu a bez podpisu v e-mailu — působí amatérsky a klient platí později.",
+             ],
+           },
+         ],
+       },
+       {
+         heading: "Jak vystavit fakturu za 30 sekund",
+         blocks: [
+           {
+             type: "p",
+             text: "Ruční psaní faktur ve Wordu nebo Excelu je v roce 2026 zbytečnost — riskuješ chyby v číslování, špatný výpočet DPH a klient nedostane QR kód. Moderní fakturační nástroj jako Vystaveno.cz ti vystaví fakturu za pár vteřin:",
+           },
+           {
+             type: "ol",
+             items: [
+               "Vyber klienta z adresáře (nebo ho přidáš přes IČO — údaje se načtou z ARES).",
+               "Napiš položky (nebo necháš AI asistenta — napíšeš česky „konzultace 5 hodin po 1500 Kč“).",
+               "Vystaveno.cz automaticky doplní DUZP, splatnost, QR kód, DPH a kontroluje zákonné náležitosti.",
+               "Klikneš na „Vystavit“ — faktura se uloží, pošle e-mailem klientovi a uloží do exportu pro účetní.",
+             ],
+           },
+           {
+             type: "callout",
+             variant: "tip",
+             text: "Prvních 14 dní zdarma bez karty. Žádný limit na počet faktur, AI asistent i QR platby v ceně.",
+           },
+         ],
+       },
+     ],
+     faq: [
+       {
+         q: "Musí mít faktura razítko a podpis?",
+         a: "Ne. Razítko nemá v ČR od roku 1989 žádný právní význam a u elektronické faktury stačí jméno vystavitele. Vlastnoruční podpis není povinný ani u papírové faktury vystavené OSVČ.",
+       },
+       {
+         q: "Do kdy musím fakturu vystavit?",
+         a: "Plátce DPH musí daňový doklad vystavit do 15 dnů od dne uskutečnění zdanitelného plnění nebo přijetí zálohy. Neplátce DPH zákonnou lhůtu nemá, ale je rozumné fakturovat průběžně po dodání plnění.",
+       },
+       {
+         q: "Mohu vystavit fakturu zpětně?",
+         a: "Ano, ale s opatrností. Datum vystavení se musí shodovat s realitou (kdy doklad reálně vznikl). Datum uskutečnění plnění (DUZP) může být v minulosti, ale lhůta pro vystavení 15 dnů u plátců DPH platí.",
+       },
+       {
+         q: "Jak dlouho musím faktury archivovat?",
+         a: "Účetní doklady 5 let, daňové doklady (plátci DPH) 10 let od konce roku, ve kterém došlo k plnění. Mzdové doklady 30 let. Elektronická archivace v PDF/ISDOC je plně rovnocenná papírové.",
+       },
+       {
+         q: "Co dělat, když klient nezaplatí?",
+         a: "Po splatnosti pošli upomínku (Vystaveno.cz to umí automaticky). Máš zákonný nárok na úrok z prodlení (repo sazba ČNB + 8 p.b.) a paušální náhradu nákladů 1 200 Kč. Pokud nereaguje, následuje předžalobní výzva a případně soudní vymáhání nebo prodej pohledávky.",
+       },
+       {
+         q: "Jak fakturovat klientovi v EU bez DPH?",
+         a: "Pokud jsi plátce DPH a fakturuješ jinému plátci v EU (B2B), použiješ režim reverse charge — faktura bez DPH s uvedením DIČ obou stran a poznámkou „daň odvede zákazník“. Plnění hlásíš v souhrnném hlášení.",
+       },
+       {
+         q: "Můžu si na fakturu napsat libovolnou splatnost?",
+         a: "Mezi podnikateli platí zákonná maximální splatnost 60 dnů od doručení faktury (§1963 občanského zákoníku). U státních zakázek 30 dnů. Kratší splatnost (7, 14, 30 dnů) je standard a doporučuje se sjednat ve smlouvě.",
+       },
+     ],
+   },
+  ];
 
 export function getArticleBySlug(slug: string): Article | undefined {
   return articles.find((a) => a.slug === slug);

@@ -1,8 +1,14 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { PageShell } from "@/components/landing/PageShell";
-import { getArticleBySlug, getRelatedArticles, type ArticleBlock } from "@/lib/articles";
+import { getArticleBySlug, getRelatedArticles, type ArticleBlock, type ArticleSection } from "@/lib/articles";
 import { Clock, ArrowLeft, ArrowRight, Lightbulb, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/clanky/$slug")({
   loader: ({ params }) => {
@@ -13,6 +19,22 @@ export const Route = createFileRoute("/clanky/$slug")({
   head: ({ loaderData }) => {
     const a = loaderData?.article;
     if (!a) return { meta: [{ title: "Článek nenalezen — Vystaveno.cz" }] };
+    const scripts = a.faq && a.faq.length > 0
+      ? [
+          {
+            type: "application/ld+json",
+            children: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              mainEntity: a.faq.map((f) => ({
+                "@type": "Question",
+                name: f.q,
+                acceptedAnswer: { "@type": "Answer", text: f.a },
+              })),
+            }),
+          },
+        ]
+      : undefined;
     return {
       meta: [
         { title: `${a.title} — Vystaveno.cz` },
@@ -21,6 +43,7 @@ export const Route = createFileRoute("/clanky/$slug")({
         { property: "og:description", content: a.excerpt },
         { property: "og:type", content: "article" },
       ],
+      scripts,
     };
   },
   notFoundComponent: () => (
@@ -121,18 +144,46 @@ function ArticleDetail() {
         </header>
 
         <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-          {article.sections.map((section) => (
+          {article.sections.map((section: ArticleSection) => (
             <section key={section.heading} className="mb-10 last:mb-0">
               <h2 className="mb-5 text-2xl font-bold tracking-tight text-foreground">
                 {section.heading}
               </h2>
               <div className="space-y-4">
-                {section.blocks.map((block, i) => (
+                {section.blocks.map((block: ArticleBlock, i: number) => (
                   <Block key={i} block={block} />
                 ))}
               </div>
             </section>
           ))}
+
+          {article.faq && article.faq.length > 0 && (
+            <section className="mt-12">
+              <h2 className="mb-5 text-2xl font-bold tracking-tight text-foreground">
+                Časté otázky
+              </h2>
+              <Accordion
+                type="single"
+                collapsible
+                className="overflow-hidden rounded-2xl border border-border bg-card"
+              >
+                {article.faq.map((f: { q: string; a: string }, i: number) => (
+                  <AccordionItem
+                    key={f.q}
+                    value={`faq-${i}`}
+                    className="border-b border-border last:border-b-0"
+                  >
+                    <AccordionTrigger className="px-5 py-4 text-left text-[15px] font-semibold text-foreground hover:no-underline">
+                      {f.q}
+                    </AccordionTrigger>
+                    <AccordionContent className="px-5 pb-5 text-sm leading-relaxed text-muted-foreground">
+                      {f.a}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </section>
+          )}
 
           {/* CTA — využít to, že čtenář dočetl */}
           <div className="mt-12 rounded-2xl border border-border bg-card p-8 text-center">
