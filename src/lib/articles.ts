@@ -27,6 +27,8 @@ export type Article = {
   publishedAt: string;
   /** Strukturovaný obsah — sekce s nadpisem h2 a odstavci/seznamy. */
   sections: ArticleSection[];
+  /** Volitelné FAQ na konci článku — generuje i FAQPage JSON-LD pro SEO. */
+  faq?: { q: string; a: string }[];
 };
 
 export type ArticleSection = {
