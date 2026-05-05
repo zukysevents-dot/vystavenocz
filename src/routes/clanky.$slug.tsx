@@ -167,7 +167,7 @@ function ArticleDetail() {
                 collapsible
                 className="overflow-hidden rounded-2xl border border-border bg-card"
               >
-                {article.faq.map((f, i) => (
+                {article.faq.map((f: { q: string; a: string }, i: number) => (
                   <AccordionItem
                     key={f.q}
                     value={`faq-${i}`}
