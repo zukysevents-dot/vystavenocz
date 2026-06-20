@@ -212,3 +212,16 @@
     box-shadow: var(--shadow-glow);
   }
 }
+
+/* unovis grafy (F1-21) — napojení na design tokeny, ať respektují light/dark. */
+.vis-chart {
+  --vis-font-family: var(--font-sans);
+  --vis-axis-tick-label-color: var(--muted-foreground);
+  --vis-axis-tick-label-font-size: 11px;
+  --vis-axis-grid-color: var(--border);
+  --vis-axis-tick-color: var(--border);
+  --vis-axis-domain-color: var(--border);
+  --vis-tooltip-background-color: var(--popover);
+  --vis-tooltip-text-color: var(--popover-foreground);
+  --vis-tooltip-border-color: var(--border);
+}

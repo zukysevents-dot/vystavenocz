@@ -134,6 +134,7 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from '@/components/ui/command'
+import { BarChart, LineChart } from '@/components/ui/chart'
 
 const inputValue = ref('')
 const textareaValue = ref('')
@@ -174,6 +175,16 @@ function onKeydown(e: KeyboardEvent) {
 onMounted(() => document.addEventListener('keydown', onKeydown))
 onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 
+// F1-21: mock data pro grafy
+const revenue = [
+  { month: 'Led', value: 42 },
+  { month: 'Úno', value: 55 },
+  { month: 'Bře', value: 38 },
+  { month: 'Dub', value: 71 },
+  { month: 'Kvě', value: 64 },
+  { month: 'Čvn', value: 88 },
+]
+
 // --- Ukázkový validovaný formulář (vee-validate + zod) ---
 const formSchema = toTypedSchema(
   z.object({
@@ -204,7 +215,7 @@ function onReset() {
     <header>
       <h1 class="text-2xl font-semibold tracking-tight">UI Kit</h1>
       <p class="mt-1 text-sm text-muted-foreground">
-        F1-14…17 · primitiva, formuláře, datum, overlay (dev-only přehled)
+        F1-14…21 · primitiva, formuláře, datum, overlay, data, grafy (dev-only přehled)
       </p>
     </header>
 
@@ -658,6 +669,43 @@ function onReset() {
           </CommandGroup>
         </CommandList>
       </CommandDialog>
+    </section>
+
+    <Separator />
+
+    <!-- Grafy pro dashboard (F1-21) -->
+    <section class="space-y-4">
+      <h2 class="text-sm font-medium text-muted-foreground">Grafy pro dashboard (F1-21)</h2>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Tržby</CardTitle>
+            <CardDescription>Posledních 6 měsíců (tis. Kč)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <BarChart
+              :data="revenue"
+              :x="(_d, i) => i"
+              :y="(d) => d.value"
+              :x-tick-format="(i) => revenue[i]?.month ?? ''"
+            />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Vystavené faktury</CardTitle>
+            <CardDescription>Počet za posledních 6 měsíců</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LineChart
+              :data="revenue"
+              :x="(_d, i) => i"
+              :y="(d) => d.value"
+              :x-tick-format="(i) => revenue[i]?.month ?? ''"
+            />
+          </CardContent>
+        </Card>
+      </div>
     </section>
 
     <Separator />
