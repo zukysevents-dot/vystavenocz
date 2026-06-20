@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Mail } from 'lucide-vue-next'
 import SiteLogo from '@/components/SiteLogo.vue'
+import { openCookieSettings } from '@/lib/cookie-consent'
 
 const productLinks = [
   { to: '/funkce', label: 'Funkce' },
@@ -59,7 +60,11 @@ const year = computed(() => new Date().getFullYear())
                 GDPR a ochrana soukromí
               </RouterLink>
             </li>
-            <!-- TODO F2-30: „Nastavení cookies" tlačítko (openCookieSettings) až bude CookieBanner. -->
+            <li>
+              <button type="button" class="hover:text-foreground" @click="openCookieSettings">
+                Nastavení cookies
+              </button>
+            </li>
           </ul>
         </div>
       </div>

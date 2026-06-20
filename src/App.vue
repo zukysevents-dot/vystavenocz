@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import PublicLayout from '@/layouts/PublicLayout.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
+import CookieBanner from '@/components/CookieBanner.vue'
 import { useTheme } from '@/composables/useTheme'
 
 // Inicializace tématu (aplikuje .dark dřív, než se vykreslí obsah).
@@ -17,4 +18,5 @@ const layout = computed(() => layouts[route.meta.layout ?? 'public'])
   <component :is="layout">
     <RouterView />
   </component>
+  <CookieBanner />
 </template>
