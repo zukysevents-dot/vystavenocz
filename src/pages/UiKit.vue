@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { type DateValue } from '@internationalized/date'
 import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
@@ -122,6 +122,18 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
+import { Toaster, toast } from '@/components/ui/sonner'
+import {
+  Command,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+  CommandShortcut,
+} from '@/components/ui/command'
 
 const inputValue = ref('')
 const textareaValue = ref('')
@@ -139,6 +151,28 @@ const invoices = [
   { id: '2024-002', client: 'Beta OSVČ', paid: false, amount: '3 200' },
   { id: '2024-003', client: 'Gama a.s.', paid: true, amount: '47 900' },
 ]
+
+// F1-20: toast + command palette
+const commandOpen = ref(false)
+function notifySuccess() {
+  toast.success('Faktura uložena', {
+    description: 'Faktura 2024-004 byla úspěšně vytvořena.',
+  })
+}
+function notifyAction() {
+  toast('Faktura odeslána klientovi', {
+    description: 'Klient dostane e-mail s odkazem.',
+    action: { label: 'Zpět', onClick: () => toast('Odeslání zrušeno') },
+  })
+}
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+    e.preventDefault()
+    commandOpen.value = !commandOpen.value
+  }
+}
+onMounted(() => document.addEventListener('keydown', onKeydown))
+onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 
 // --- Ukázkový validovaný formulář (vee-validate + zod) ---
 const formSchema = toTypedSchema(
@@ -574,6 +608,60 @@ function onReset() {
 
     <Separator />
 
+    <!-- Notifikace (toast) + Command palette (F1-20) -->
+    <section class="space-y-4">
+      <h2 class="text-sm font-medium text-muted-foreground">
+        Notifikace + Command palette (F1-20)
+      </h2>
+      <div class="flex flex-wrap gap-3">
+        <Button variant="outline" @click="notifySuccess">Toast (úspěch)</Button>
+        <Button variant="outline" @click="notifyAction">Toast s akcí</Button>
+        <Button variant="outline" @click="commandOpen = true">
+          Command palette
+          <kbd class="ml-2 rounded border bg-muted px-1.5 text-[10px]">⌘K</kbd>
+        </Button>
+      </div>
+
+      <!-- Inline command -->
+      <Command class="max-w-md rounded-lg border shadow-sm">
+        <CommandInput placeholder="Hledej příkaz nebo akci…" />
+        <CommandList>
+          <CommandEmpty>Nic nenalezeno.</CommandEmpty>
+          <CommandGroup heading="Návrhy">
+            <CommandItem value="nova-faktura">
+              Nová faktura
+              <CommandShortcut>⌘N</CommandShortcut>
+            </CommandItem>
+            <CommandItem value="klienti">Klienti</CommandItem>
+            <CommandItem value="nastaveni">
+              Nastavení
+              <CommandShortcut>⌘,</CommandShortcut>
+            </CommandItem>
+          </CommandGroup>
+          <CommandSeparator />
+          <CommandGroup heading="Akce">
+            <CommandItem value="export">Exportovat data</CommandItem>
+            <CommandItem value="odhlasit">Odhlásit se</CommandItem>
+          </CommandGroup>
+        </CommandList>
+      </Command>
+
+      <!-- Command v dialogu (⌘K) -->
+      <CommandDialog v-model:open="commandOpen">
+        <CommandInput placeholder="Napiš příkaz…" />
+        <CommandList>
+          <CommandEmpty>Nic nenalezeno.</CommandEmpty>
+          <CommandGroup heading="Rychlé akce">
+            <CommandItem value="dialog-faktura">Nová faktura</CommandItem>
+            <CommandItem value="dialog-klient">Nový klient</CommandItem>
+            <CommandItem value="dialog-nastaveni">Nastavení</CommandItem>
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
+    </section>
+
+    <Separator />
+
     <!-- Validovaný formulář -->
     <section class="space-y-4">
       <h2 class="text-sm font-medium text-muted-foreground">
@@ -655,5 +743,8 @@ function onReset() {
 Odesláno: {{ submitted }}</pre
       >
     </section>
+
+    <!-- Toaster (jednou na stránce; v reálné appce půjde do App.vue / layoutu) -->
+    <Toaster />
   </div>
 </template>
