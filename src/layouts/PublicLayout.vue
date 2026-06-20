@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 </script>
 
 <!-- Minimální rám pro veřejné stránky. Reálné Navbar/Footer přijdou ve F2-22. -->
@@ -14,6 +15,7 @@ import { RouterLink } from 'vue-router'
           <RouterLink to="/funkce" class="hover:text-foreground">Funkce</RouterLink>
           <RouterLink to="/cenik" class="hover:text-foreground">Ceník</RouterLink>
           <RouterLink to="/prihlaseni" class="hover:text-foreground">Přihlášení</RouterLink>
+          <ThemeToggle />
         </div>
       </nav>
     </header>

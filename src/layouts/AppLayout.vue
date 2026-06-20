@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 </script>
 
 <!-- Minimální rám pro /app/*. Reálný AppSidebar/topbar přijde ve F4-37. -->
@@ -26,8 +27,7 @@ import { RouterLink } from 'vue-router'
     <div class="flex min-w-0 flex-1 flex-col">
       <header class="flex h-14 items-center justify-between border-b border-border px-4">
         <span class="text-sm text-muted-foreground">Aplikace</span>
-        <!-- místo pro ThemeToggle (F0-09) + uživatelské menu -->
-        <span></span>
+        <ThemeToggle />
       </header>
       <main class="flex-1 p-6">
         <slot />
