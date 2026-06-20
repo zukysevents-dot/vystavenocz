@@ -77,3 +77,17 @@ export function buildInvoiceNumber(
     .replace('{year}', year)
     .replace('{seq}', seqStr)
 }
+
+/** Formátuje částku jako české koruny (např. „12 100,00 Kč"). */
+export function formatCZK(n: number): string {
+  return new Intl.NumberFormat('cs-CZ', {
+    style: 'currency',
+    currency: 'CZK',
+    maximumFractionDigits: 2,
+  }).format(n)
+}
+
+/** Formátuje ISO datum do českého formátu (např. „20. 6. 2026"). */
+export function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('cs-CZ')
+}

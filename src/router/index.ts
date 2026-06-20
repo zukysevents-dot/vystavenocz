@@ -119,7 +119,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/app/faktury',
     name: 'app-faktury',
-    component: PagePlaceholder,
+    component: () => import('@/pages/FakturyPage.vue'),
     meta: { title: 'Faktury', layout: 'app', requiresAuth: true },
   },
   {
