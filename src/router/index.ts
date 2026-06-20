@@ -30,7 +30,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/cenik',
     name: 'cenik',
-    component: PagePlaceholder,
+    component: () => import('@/pages/CenikPage.vue'),
     meta: { title: 'Ceník', layout: 'public' },
   },
   {
