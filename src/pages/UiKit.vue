@@ -84,6 +84,18 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from '@/components/ui/drawer'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const inputValue = ref('')
 const textareaValue = ref('')
@@ -368,6 +380,64 @@ function onReset() {
             </DrawerFooter>
           </DrawerContent>
         </Drawer>
+      </div>
+    </section>
+
+    <Separator />
+
+    <!-- Overlay 2: Tooltip / DropdownMenu / HoverCard (F1-18) -->
+    <section class="space-y-4">
+      <h2 class="text-sm font-medium text-muted-foreground">
+        Overlay 2: Tooltip · DropdownMenu · HoverCard (F1-18)
+      </h2>
+      <div class="flex flex-wrap items-center gap-3">
+        <!-- Tooltip -->
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button variant="outline">Tooltip</Button>
+            </TooltipTrigger>
+            <TooltipContent>Nápověda k tlačítku</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        <!-- DropdownMenu -->
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <Button variant="outline">DropdownMenu</Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent class="w-48">
+            <DropdownMenuLabel>Můj účet</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuItem>
+                Profil
+                <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
+              </DropdownMenuItem>
+              <DropdownMenuItem>Nastavení</DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>Odhlásit se</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <!-- HoverCard -->
+        <HoverCard>
+          <HoverCardTrigger as-child>
+            <Button variant="link">@vystaveno</Button>
+          </HoverCardTrigger>
+          <HoverCardContent>
+            <div class="flex gap-3">
+              <Avatar>
+                <AvatarFallback>VY</AvatarFallback>
+              </Avatar>
+              <div class="space-y-1">
+                <p class="text-sm font-semibold">Vystaveno.cz</p>
+                <p class="text-sm text-muted-foreground">Fakturace pro OSVČ a malé firmy.</p>
+              </div>
+            </div>
+          </HoverCardContent>
+        </HoverCard>
       </div>
     </section>
 
