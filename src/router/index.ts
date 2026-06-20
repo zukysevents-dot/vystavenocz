@@ -131,7 +131,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/app/klienti',
     name: 'app-klienti',
-    component: PagePlaceholder,
+    component: () => import('@/pages/KlientiPage.vue'),
     meta: { title: 'Klienti', layout: 'app', requiresAuth: true },
   },
   {
