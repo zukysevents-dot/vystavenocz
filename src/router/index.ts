@@ -36,7 +36,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/faq',
     name: 'faq',
-    component: PagePlaceholder,
+    component: () => import('@/pages/FaqPage.vue'),
     meta: { title: 'FAQ', layout: 'public' },
   },
   {
