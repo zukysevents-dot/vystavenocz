@@ -45,6 +45,45 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet'
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/components/ui/drawer'
 
 const inputValue = ref('')
 const textareaValue = ref('')
@@ -86,7 +125,7 @@ function onReset() {
     <header>
       <h1 class="text-2xl font-semibold tracking-tight">UI Kit</h1>
       <p class="mt-1 text-sm text-muted-foreground">
-        F1-14 / F1-15 · primitiva + formulářové prvky (dev-only přehled)
+        F1-14…17 · primitiva, formuláře, datum, overlay (dev-only přehled)
       </p>
     </header>
 
@@ -240,6 +279,95 @@ function onReset() {
           <Label>Calendar (inline)</Label>
           <Calendar v-model="dueDate" locale="cs-CZ" weekday-format="short" />
         </div>
+      </div>
+    </section>
+
+    <Separator />
+
+    <!-- Overlay: Dialog / AlertDialog / Sheet / Drawer (F1-17) -->
+    <section class="space-y-4">
+      <h2 class="text-sm font-medium text-muted-foreground">
+        Overlay: Dialog · AlertDialog · Sheet · Drawer (F1-17)
+      </h2>
+      <div class="flex flex-wrap gap-3">
+        <!-- Dialog -->
+        <Dialog>
+          <DialogTrigger as-child>
+            <Button variant="outline">Dialog</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Upravit profil</DialogTitle>
+              <DialogDescription>
+                Změň údaje a ulož. Zavři přes ESC, X nebo klikem mimo.
+              </DialogDescription>
+            </DialogHeader>
+            <div class="grid gap-1.5">
+              <Label for="dlg-name">Jméno</Label>
+              <Input id="dlg-name" placeholder="Jan Novák" />
+            </div>
+            <DialogFooter>
+              <DialogClose as-child>
+                <Button variant="outline">Zrušit</Button>
+              </DialogClose>
+              <DialogClose as-child>
+                <Button>Uložit</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <!-- AlertDialog -->
+        <AlertDialog>
+          <AlertDialogTrigger as-child>
+            <Button variant="destructive">AlertDialog</Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Opravdu smazat fakturu?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tahle akce je nevratná. Faktura bude trvale odstraněna.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Zrušit</AlertDialogCancel>
+              <AlertDialogAction>Smazat</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <!-- Sheet -->
+        <Sheet>
+          <SheetTrigger as-child>
+            <Button variant="outline">Sheet</Button>
+          </SheetTrigger>
+          <SheetContent>
+            <SheetHeader>
+              <SheetTitle>Postranní panel</SheetTitle>
+              <SheetDescription>
+                Vyjede zprava. Zavři přes ESC, X nebo klikem mimo.
+              </SheetDescription>
+            </SheetHeader>
+          </SheetContent>
+        </Sheet>
+
+        <!-- Drawer -->
+        <Drawer>
+          <DrawerTrigger as-child>
+            <Button variant="outline">Drawer</Button>
+          </DrawerTrigger>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>Spodní panel</DrawerTitle>
+              <DrawerDescription>Vysune se zdola (vaul) a lze ho stáhnout.</DrawerDescription>
+            </DrawerHeader>
+            <DrawerFooter>
+              <DrawerClose as-child>
+                <Button variant="outline">Zavřít</Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
       </div>
     </section>
 
