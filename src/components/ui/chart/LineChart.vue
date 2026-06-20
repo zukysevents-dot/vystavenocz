@@ -12,6 +12,7 @@ const props = withDefaults(
     color?: string
     showArea?: boolean
     xTickFormat?: (v: number, i: number) => string
+    ariaLabel?: string
     class?: HTMLAttributes['class']
   }>(),
   {
@@ -23,7 +24,11 @@ const props = withDefaults(
 </script>
 
 <template>
-  <div :class="cn('vis-chart', props.class)">
+  <div
+    :class="cn('vis-chart', props.class)"
+    :role="ariaLabel ? 'img' : undefined"
+    :aria-label="ariaLabel"
+  >
     <VisXYContainer :data="data" :height="height">
       <VisArea v-if="showArea" :x="x" :y="y" :color="color" :opacity="0.12" />
       <VisLine :x="x" :y="y" :color="color" />

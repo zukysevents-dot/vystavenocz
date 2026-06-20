@@ -11,6 +11,7 @@ const props = withDefaults(
     height?: number
     color?: string | string[]
     xTickFormat?: (v: number, i: number) => string
+    ariaLabel?: string
     class?: HTMLAttributes['class']
   }>(),
   {
@@ -21,7 +22,11 @@ const props = withDefaults(
 </script>
 
 <template>
-  <div :class="cn('vis-chart', props.class)">
+  <div
+    :class="cn('vis-chart', props.class)"
+    :role="ariaLabel ? 'img' : undefined"
+    :aria-label="ariaLabel"
+  >
     <VisXYContainer :data="data" :height="height">
       <VisGroupedBar :x="x" :y="y" :color="color" :rounded-corners="6" />
       <VisAxis

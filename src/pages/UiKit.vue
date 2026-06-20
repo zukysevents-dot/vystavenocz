@@ -688,6 +688,7 @@ function onReset() {
               :x="(_d, i) => i"
               :y="(d) => d.value"
               :x-tick-format="(i) => revenue[i]?.month ?? ''"
+              aria-label="Graf tržeb za posledních 6 měsíců v tisících korun"
             />
           </CardContent>
         </Card>
@@ -702,6 +703,7 @@ function onReset() {
               :x="(_d, i) => i"
               :y="(d) => d.value"
               :x-tick-format="(i) => revenue[i]?.month ?? ''"
+              aria-label="Graf počtu vystavených faktur za posledních 6 měsíců"
             />
           </CardContent>
         </Card>

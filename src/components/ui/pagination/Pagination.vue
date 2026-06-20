@@ -33,24 +33,31 @@ const props = defineProps<{
   >
     <PaginationList v-slot="{ items }" class="flex items-center gap-1">
       <PaginationPrev as-child>
-        <Button variant="outline" size="icon" class="h-9 w-9">
+        <Button variant="outline" size="icon" class="h-9 w-9" aria-label="Předchozí stránka">
           <ChevronLeft class="h-4 w-4" />
         </Button>
       </PaginationPrev>
 
       <template v-for="(item, index) in items">
-        <PaginationListItem v-if="item.type === 'page'" :key="index" :value="item.value" as-child>
+        <PaginationListItem
+          v-if="item.type === 'page'"
+          :key="`page-${item.value}`"
+          :value="item.value"
+          as-child
+        >
           <Button
             :variant="item.value === page ? 'default' : 'outline'"
             size="icon"
             class="h-9 w-9"
+            :aria-label="`Stránka ${item.value}`"
+            :aria-current="item.value === page ? 'page' : undefined"
           >
             {{ item.value }}
           </Button>
         </PaginationListItem>
         <PaginationEllipsis
           v-else
-          :key="item.type"
+          :key="`ellipsis-${index}`"
           :index="index"
           class="flex h-9 w-9 items-center justify-center text-sm"
         >
@@ -59,7 +66,7 @@ const props = defineProps<{
       </template>
 
       <PaginationNext as-child>
-        <Button variant="outline" size="icon" class="h-9 w-9">
+        <Button variant="outline" size="icon" class="h-9 w-9" aria-label="Další stránka">
           <ChevronRight class="h-4 w-4" />
         </Button>
       </PaginationNext>

@@ -28,6 +28,7 @@ const { filterState } = useCommand()
   <div class="flex h-9 items-center gap-2 border-b px-3">
     <Search class="size-4 shrink-0 opacity-50" />
     <ListboxFilter
+      aria-label="Hledat"
       v-bind="{ ...forwardedProps, ...$attrs }"
       v-model="filterState.search"
       auto-focus
