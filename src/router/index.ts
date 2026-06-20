@@ -167,6 +167,16 @@ const routes: RouteRecordRaw[] = [
   },
 ]
 
+// Dev-only přehled UI primitiv (F1-14). V produkčním buildu se route nepřidá.
+if (import.meta.env.DEV) {
+  routes.splice(routes.length - 1, 0, {
+    path: '/ui-kit',
+    name: 'ui-kit',
+    component: () => import('@/pages/UiKit.vue'),
+    meta: { title: 'UI Kit', layout: 'public' },
+  })
+}
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
