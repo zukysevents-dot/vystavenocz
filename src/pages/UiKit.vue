@@ -96,6 +96,32 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
+import { Pagination } from '@/components/ui/pagination'
+import { Progress } from '@/components/ui/progress'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
 
 const inputValue = ref('')
 const textareaValue = ref('')
@@ -106,6 +132,13 @@ const volume = ref([50])
 const align = ref('center')
 const otp = ref<string[]>([])
 const dueDate = ref<DateValue>()
+const currentPage = ref(1)
+const progress = ref(60)
+const invoices = [
+  { id: '2024-001', client: 'Alfa s.r.o.', paid: true, amount: '12 500' },
+  { id: '2024-002', client: 'Beta OSVČ', paid: false, amount: '3 200' },
+  { id: '2024-003', client: 'Gama a.s.', paid: true, amount: '47 900' },
+]
 
 // --- Ukázkový validovaný formulář (vee-validate + zod) ---
 const formSchema = toTypedSchema(
@@ -438,6 +471,104 @@ function onReset() {
             </div>
           </HoverCardContent>
         </HoverCard>
+      </div>
+    </section>
+
+    <Separator />
+
+    <!-- Data UI (F1-19) -->
+    <section class="space-y-6">
+      <h2 class="text-sm font-medium text-muted-foreground">
+        Data UI: Table · Pagination · Tabs · Accordion · Progress · Breadcrumb (F1-19)
+      </h2>
+
+      <!-- Breadcrumb -->
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem><BreadcrumbLink href="#">Aplikace</BreadcrumbLink></BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem><BreadcrumbLink href="#">Faktury</BreadcrumbLink></BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem><BreadcrumbPage>2024-001</BreadcrumbPage></BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <!-- Table + Pagination -->
+      <div class="space-y-3">
+        <Table>
+          <TableCaption>Poslední faktury</TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Číslo</TableHead>
+              <TableHead>Klient</TableHead>
+              <TableHead>Stav</TableHead>
+              <TableHead class="text-right">Částka</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow v-for="inv in invoices" :key="inv.id">
+              <TableCell class="font-medium">{{ inv.id }}</TableCell>
+              <TableCell>{{ inv.client }}</TableCell>
+              <TableCell>
+                <Badge :variant="inv.paid ? 'secondary' : 'destructive'">
+                  {{ inv.paid ? 'Zaplaceno' : 'Po splatnosti' }}
+                </Badge>
+              </TableCell>
+              <TableCell class="text-right">{{ inv.amount }} Kč</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+        <Pagination v-model="currentPage" :total="48" :items-per-page="10" />
+        <p class="text-center text-xs text-muted-foreground">Stránka {{ currentPage }} / 5</p>
+      </div>
+
+      <!-- Tabs -->
+      <Tabs default-value="prehled" class="max-w-md">
+        <TabsList>
+          <TabsTrigger value="prehled">Přehled</TabsTrigger>
+          <TabsTrigger value="polozky">Položky</TabsTrigger>
+          <TabsTrigger value="historie">Historie</TabsTrigger>
+        </TabsList>
+        <TabsContent value="prehled" class="text-sm text-muted-foreground">
+          Souhrnné informace o faktuře.
+        </TabsContent>
+        <TabsContent value="polozky" class="text-sm text-muted-foreground">
+          Seznam fakturovaných položek.
+        </TabsContent>
+        <TabsContent value="historie" class="text-sm text-muted-foreground">
+          Historie změn a odeslání.
+        </TabsContent>
+      </Tabs>
+
+      <!-- Accordion + Progress -->
+      <div class="grid gap-8 sm:grid-cols-2">
+        <Accordion type="single" collapsible class="max-w-sm">
+          <AccordionItem value="a">
+            <AccordionTrigger>Jak vystavím fakturu?</AccordionTrigger>
+            <AccordionContent class="text-muted-foreground">
+              Klikni na „Nová faktura", vyplň údaje a ulož.
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="b">
+            <AccordionTrigger>Můžu fakturu upravit?</AccordionTrigger>
+            <AccordionContent class="text-muted-foreground">
+              Ano, dokud nebyla odeslaná klientovi.
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+
+        <div class="space-y-2">
+          <Label>Vyplněnost profilu: {{ progress }} %</Label>
+          <Progress :model-value="progress" class="max-w-xs" />
+          <div class="flex gap-2 pt-1">
+            <Button size="sm" variant="outline" @click="progress = Math.max(0, progress - 10)">
+              −10
+            </Button>
+            <Button size="sm" variant="outline" @click="progress = Math.min(100, progress + 10)">
+              +10
+            </Button>
+          </div>
+        </div>
       </div>
     </section>
 
