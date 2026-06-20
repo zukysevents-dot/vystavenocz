@@ -1,11 +1,12 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 // Typování route meta (rozšíří se v dalších taskech — guards F0-35, SEO F2-31).
 declare module 'vue-router' {
   interface RouteMeta {
     title?: string
     requiresAuth?: boolean
-    layout?: 'public' | 'app'
+    layout?: 'public' | 'app' | 'auth'
   }
 }
 
@@ -82,33 +83,33 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Podmínky', layout: 'public' },
   },
 
-  // --- Auth (PublicLayout) ---
+  // --- Auth (AuthLayout — fullscreen, bez navbaru/footeru) ---
   {
     path: '/prihlaseni',
     name: 'prihlaseni',
-    component: PagePlaceholder,
-    meta: { title: 'Přihlášení', layout: 'public' },
+    component: () => import('@/pages/PrihlaseniPage.vue'),
+    meta: { title: 'Přihlášení', layout: 'auth' },
   },
   {
     path: '/registrace',
     name: 'registrace',
-    component: PagePlaceholder,
-    meta: { title: 'Registrace', layout: 'public' },
+    component: () => import('@/pages/RegistracePage.vue'),
+    meta: { title: 'Registrace', layout: 'auth' },
   },
   {
     path: '/zapomenute-heslo',
     name: 'zapomenute-heslo',
-    component: PagePlaceholder,
-    meta: { title: 'Zapomenuté heslo', layout: 'public' },
+    component: () => import('@/pages/ZapomenuteHesloPage.vue'),
+    meta: { title: 'Zapomenuté heslo', layout: 'auth' },
   },
   {
     path: '/reset-hesla',
     name: 'reset-hesla',
-    component: PagePlaceholder,
-    meta: { title: 'Reset hesla', layout: 'public' },
+    component: () => import('@/pages/ResetHeslaPage.vue'),
+    meta: { title: 'Reset hesla', layout: 'auth' },
   },
 
-  // --- App (AppLayout, chráněné — guard přijde v F0-35) ---
+  // --- App (AppLayout, chráněné route guardem níže) ---
   {
     path: '/app',
     name: 'app',
@@ -183,6 +184,19 @@ const router = createRouter({
   scrollBehavior() {
     return { top: 0 }
   },
+})
+
+// Route guard (mock auth): chrání /app routy a odklání přihlášené pryč z auth stránek.
+router.beforeEach((to) => {
+  const auth = useAuthStore()
+  auth.init()
+  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+    return { name: 'prihlaseni', query: { redirect: to.fullPath } }
+  }
+  if (auth.isAuthenticated && (to.name === 'prihlaseni' || to.name === 'registrace')) {
+    return { name: 'app' }
+  }
+  return true
 })
 
 export default router

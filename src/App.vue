@@ -4,7 +4,9 @@ import { useRoute } from 'vue-router'
 import { useHead } from '@unhead/vue'
 import PublicLayout from '@/layouts/PublicLayout.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
+import AuthLayout from '@/layouts/AuthLayout.vue'
 import CookieBanner from '@/components/CookieBanner.vue'
+import { Toaster } from '@/components/ui/sonner'
 import { useTheme } from '@/composables/useTheme'
 import { defaultSeo, seoByRouteName, siteName } from '@/lib/seo'
 
@@ -12,7 +14,7 @@ import { defaultSeo, seoByRouteName, siteName } from '@/lib/seo'
 useTheme()
 
 const route = useRoute()
-const layouts = { public: PublicLayout, app: AppLayout } as const
+const layouts = { public: PublicLayout, app: AppLayout, auth: AuthLayout } as const
 const layout = computed(() => layouts[route.meta.layout ?? 'public'])
 
 // SEO meta — reaktivně podle aktuální routy (fallback na default).
@@ -38,4 +40,5 @@ useHead({
     <RouterView />
   </component>
   <CookieBanner />
+  <Toaster />
 </template>
