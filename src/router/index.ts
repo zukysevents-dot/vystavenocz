@@ -42,7 +42,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/srovnani',
     name: 'srovnani',
-    component: PagePlaceholder,
+    component: () => import('@/pages/SrovnaniPage.vue'),
     meta: { title: 'Srovnání', layout: 'public' },
   },
   {
