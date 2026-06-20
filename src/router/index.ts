@@ -24,7 +24,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/funkce',
     name: 'funkce',
-    component: PagePlaceholder,
+    component: () => import('@/pages/FunkcePage.vue'),
     meta: { title: 'Funkce', layout: 'public' },
   },
   {
