@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { type DateValue } from '@internationalized/date'
 import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import * as z from 'zod'
@@ -27,6 +28,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Slider } from '@/components/ui/slider'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { PinInput, PinInputInput } from '@/components/ui/pin-input'
+import { Calendar } from '@/components/ui/calendar'
+import { DatePicker } from '@/components/ui/date-picker'
 import {
   Select,
   SelectContent,
@@ -51,6 +54,7 @@ const notify = ref(false)
 const volume = ref([50])
 const align = ref('center')
 const otp = ref<string[]>([])
+const dueDate = ref<DateValue>()
 
 // --- Ukázkový validovaný formulář (vee-validate + zod) ---
 const formSchema = toTypedSchema(
@@ -216,6 +220,25 @@ function onReset() {
           <PinInput v-model="otp" otp>
             <PinInputInput v-for="i in 6" :key="i" :index="i - 1" />
           </PinInput>
+        </div>
+      </div>
+    </section>
+
+    <Separator />
+
+    <!-- Datum: Calendar + DatePicker (F1-16) -->
+    <section class="space-y-4">
+      <h2 class="text-sm font-medium text-muted-foreground">
+        Datum: Calendar + DatePicker (F1-16)
+      </h2>
+      <div class="flex flex-wrap items-start gap-8">
+        <div class="space-y-2">
+          <Label>DatePicker (splatnost)</Label>
+          <DatePicker v-model="dueDate" placeholder="Vyber datum splatnosti" />
+        </div>
+        <div class="space-y-2">
+          <Label>Calendar (inline)</Label>
+          <Calendar v-model="dueDate" locale="cs-CZ" weekday-format="short" />
         </div>
       </div>
     </section>
