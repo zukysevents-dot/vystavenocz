@@ -13,5 +13,15 @@ export default defineConfigWithVueTs(
   globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**']),
   pluginVue.configs['flat/essential'],
   vueTsConfigs.recommended,
+
+  // shadcn-vue UI primitiva jsou záměrně jednoslovná (Button, Card, Input…).
+  {
+    name: 'app/shadcn-ui',
+    files: ['src/components/ui/**/*.vue'],
+    rules: {
+      'vue/multi-word-component-names': 'off',
+    },
+  },
+
   skipFormatting,
 )
