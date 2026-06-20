@@ -38,7 +38,7 @@ function onSubmit() {
   submitting.value = false
   if (res.ok) {
     toast.success('Účet vytvořen. Vítejte!')
-    router.push('/app')
+    router.push('/app/onboarding')
   } else {
     error.value = res.error
     toast.error(res.error)

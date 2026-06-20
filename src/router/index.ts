@@ -143,7 +143,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/app/onboarding',
     name: 'app-onboarding',
-    component: PagePlaceholder,
+    component: () => import('@/pages/OnboardingPage.vue'),
     meta: { title: 'Onboarding', layout: 'app', requiresAuth: true },
   },
   {
