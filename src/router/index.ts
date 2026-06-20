@@ -48,7 +48,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/akce',
     name: 'akce',
-    component: PagePlaceholder,
+    component: () => import('@/pages/AkcePage.vue'),
     meta: { title: 'Akce', layout: 'public' },
   },
   {
@@ -66,19 +66,19 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/nase-sliby',
     name: 'nase-sliby',
-    component: PagePlaceholder,
+    component: () => import('@/pages/NaseSlibyPage.vue'),
     meta: { title: 'Naše sliby', layout: 'public' },
   },
   {
     path: '/gdpr',
     name: 'gdpr',
-    component: PagePlaceholder,
+    component: () => import('@/pages/GdprPage.vue'),
     meta: { title: 'GDPR', layout: 'public' },
   },
   {
     path: '/podminky',
     name: 'podminky',
-    component: PagePlaceholder,
+    component: () => import('@/pages/PodminkyPage.vue'),
     meta: { title: 'Podmínky', layout: 'public' },
   },
 
