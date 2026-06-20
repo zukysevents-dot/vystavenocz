@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { toTypedSchema } from '@vee-validate/zod'
+import { useForm } from 'vee-validate'
+import * as z from 'zod'
 import { Plus } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,9 +21,60 @@ import {
   CardContent,
   CardFooter,
 } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Slider } from '@/components/ui/slider'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { PinInput, PinInputInput } from '@/components/ui/pin-input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 
 const inputValue = ref('')
 const textareaValue = ref('')
+
+// Standalone ovládací prvky (interaktivní ukázky).
+const notify = ref(false)
+const volume = ref([50])
+const align = ref('center')
+const otp = ref<string[]>([])
+
+// --- Ukázkový validovaný formulář (vee-validate + zod) ---
+const formSchema = toTypedSchema(
+  z.object({
+    email: z.string().min(1, 'Zadej e-mail').email('Neplatný e-mail'),
+    plan: z.string().min(1, 'Vyber plán'),
+    role: z.enum(['osvc', 'sro'], { required_error: 'Vyber typ podnikání' }),
+    terms: z.boolean().refine((v) => v === true, 'Musíš souhlasit s podmínkami'),
+  }),
+)
+
+const { handleSubmit, handleReset } = useForm({
+  validationSchema: formSchema,
+  initialValues: { email: '', plan: '', terms: false },
+})
+
+const submitted = ref<string | null>(null)
+const onSubmit = handleSubmit((values) => {
+  submitted.value = JSON.stringify(values, null, 2)
+})
+function onReset() {
+  handleReset()
+  submitted.value = null
+}
 </script>
 
 <template>
@@ -28,7 +82,7 @@ const textareaValue = ref('')
     <header>
       <h1 class="text-2xl font-semibold tracking-tight">UI Kit</h1>
       <p class="mt-1 text-sm text-muted-foreground">
-        F1-14 · základní primitiva (dev-only přehled)
+        F1-14 / F1-15 · primitiva + formulářové prvky (dev-only přehled)
       </p>
     </header>
 
@@ -42,11 +96,6 @@ const textareaValue = ref('')
         <Button variant="outline">Outline</Button>
         <Button variant="ghost">Ghost</Button>
         <Button variant="link">Link</Button>
-      </div>
-      <div class="flex flex-wrap items-center gap-3">
-        <Button size="sm">Small</Button>
-        <Button size="default">Default</Button>
-        <Button size="lg">Large</Button>
         <Button size="icon" aria-label="Přidat"><Plus /></Button>
         <Button disabled>Disabled</Button>
       </div>
@@ -75,10 +124,6 @@ const textareaValue = ref('')
           <Label for="demo-note">Poznámka</Label>
           <Textarea id="demo-note" v-model="textareaValue" placeholder="Napiš něco…" />
         </div>
-        <div class="grid gap-1.5">
-          <Label for="demo-disabled">Zakázané pole</Label>
-          <Input id="demo-disabled" disabled placeholder="Nedostupné" />
-        </div>
       </div>
     </section>
 
@@ -100,57 +145,163 @@ const textareaValue = ref('')
       </Card>
     </section>
 
-    <!-- Separator -->
-    <section class="space-y-3">
-      <h2 class="text-sm font-medium text-muted-foreground">Separator</h2>
-      <div class="max-w-sm">
+    <!-- Separator · Avatar · AspectRatio · Skeleton -->
+    <section class="grid gap-8 sm:grid-cols-2">
+      <div class="space-y-3">
+        <h2 class="text-sm font-medium text-muted-foreground">Separator</h2>
         <p class="text-sm">Nad oddělovačem</p>
         <Separator class="my-3" />
         <p class="text-sm">Pod oddělovačem</p>
-        <div class="mt-4 flex h-5 items-center gap-3 text-sm">
-          <span>Vlevo</span>
-          <Separator orientation="vertical" />
-          <span>Vpravo</span>
+      </div>
+      <div class="space-y-3">
+        <h2 class="text-sm font-medium text-muted-foreground">Avatar</h2>
+        <div class="flex items-center gap-4">
+          <Avatar>
+            <AvatarImage src="https://github.com/vuejs.png" alt="Vue" />
+            <AvatarFallback>VU</AvatarFallback>
+          </Avatar>
+          <Avatar>
+            <AvatarFallback>JN</AvatarFallback>
+          </Avatar>
         </div>
       </div>
-    </section>
-
-    <!-- Avatar -->
-    <section class="space-y-3">
-      <h2 class="text-sm font-medium text-muted-foreground">Avatar</h2>
-      <div class="flex items-center gap-4">
-        <Avatar>
-          <AvatarImage src="https://github.com/vuejs.png" alt="Vue" />
-          <AvatarFallback>VU</AvatarFallback>
-        </Avatar>
-        <Avatar>
-          <AvatarFallback>JN</AvatarFallback>
-        </Avatar>
-      </div>
-    </section>
-
-    <!-- AspectRatio -->
-    <section class="space-y-3">
-      <h2 class="text-sm font-medium text-muted-foreground">AspectRatio (16:9)</h2>
-      <div class="max-w-sm">
+      <div class="space-y-3">
+        <h2 class="text-sm font-medium text-muted-foreground">AspectRatio (16:9)</h2>
         <AspectRatio :ratio="16 / 9" class="overflow-hidden rounded-md bg-muted">
           <div class="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
             16 / 9
           </div>
         </AspectRatio>
       </div>
-    </section>
-
-    <!-- Skeleton -->
-    <section class="space-y-3">
-      <h2 class="text-sm font-medium text-muted-foreground">Skeleton</h2>
-      <div class="flex items-center gap-4">
-        <Skeleton class="h-10 w-10 rounded-full" />
-        <div class="space-y-2">
-          <Skeleton class="h-4 w-[200px]" />
-          <Skeleton class="h-4 w-[160px]" />
+      <div class="space-y-3">
+        <h2 class="text-sm font-medium text-muted-foreground">Skeleton</h2>
+        <div class="flex items-center gap-4">
+          <Skeleton class="h-10 w-10 rounded-full" />
+          <div class="space-y-2">
+            <Skeleton class="h-4 w-[160px]" />
+            <Skeleton class="h-4 w-[120px]" />
+          </div>
         </div>
       </div>
+    </section>
+
+    <Separator />
+
+    <!-- Standalone formulářové prvky -->
+    <section class="space-y-5">
+      <h2 class="text-sm font-medium text-muted-foreground">Formulářové prvky (F1-15)</h2>
+
+      <div class="grid gap-6 sm:grid-cols-2">
+        <div class="flex items-center gap-2">
+          <Switch id="notify" v-model="notify" />
+          <Label for="notify">Posílat upozornění {{ notify ? '(zapnuto)' : '' }}</Label>
+        </div>
+
+        <div class="space-y-2">
+          <Label>Hlasitost: {{ volume[0] }}</Label>
+          <Slider v-model="volume" :max="100" :step="1" class="max-w-xs" />
+        </div>
+
+        <div class="space-y-2">
+          <Label>Zarovnání</Label>
+          <ToggleGroup v-model="align" type="single" variant="outline">
+            <ToggleGroupItem value="left">Vlevo</ToggleGroupItem>
+            <ToggleGroupItem value="center">Na střed</ToggleGroupItem>
+            <ToggleGroupItem value="right">Vpravo</ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+
+        <div class="space-y-2">
+          <Label>Ověřovací kód</Label>
+          <PinInput v-model="otp" otp>
+            <PinInputInput v-for="i in 6" :key="i" :index="i - 1" />
+          </PinInput>
+        </div>
+      </div>
+    </section>
+
+    <Separator />
+
+    <!-- Validovaný formulář -->
+    <section class="space-y-4">
+      <h2 class="text-sm font-medium text-muted-foreground">
+        Validovaný formulář (vee-validate + zod)
+      </h2>
+
+      <form class="grid max-w-sm gap-5" @submit="onSubmit">
+        <FormField v-slot="{ componentField }" name="email">
+          <FormItem>
+            <FormLabel>E-mail</FormLabel>
+            <FormControl>
+              <Input type="email" placeholder="jan@firma.cz" v-bind="componentField" />
+            </FormControl>
+            <FormDescription>Na tuhle adresu pošleme fakturu.</FormDescription>
+            <FormMessage />
+          </FormItem>
+        </FormField>
+
+        <FormField v-slot="{ componentField }" name="plan">
+          <FormItem>
+            <FormLabel>Plán</FormLabel>
+            <Select v-bind="componentField">
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Vyber plán" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="free">Free</SelectItem>
+                <SelectItem value="pro">Pro</SelectItem>
+                <SelectItem value="business">Business</SelectItem>
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        </FormField>
+
+        <FormField v-slot="{ componentField }" name="role">
+          <FormItem>
+            <FormLabel>Typ podnikání</FormLabel>
+            <FormControl>
+              <RadioGroup v-bind="componentField">
+                <div class="flex items-center gap-2">
+                  <RadioGroupItem id="role-osvc" value="osvc" />
+                  <Label for="role-osvc" class="font-normal">OSVČ</Label>
+                </div>
+                <div class="flex items-center gap-2">
+                  <RadioGroupItem id="role-sro" value="sro" />
+                  <Label for="role-sro" class="font-normal">s.r.o.</Label>
+                </div>
+              </RadioGroup>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        </FormField>
+
+        <FormField v-slot="{ value, handleChange }" name="terms">
+          <FormItem class="flex flex-row items-start gap-2 space-y-0">
+            <FormControl>
+              <Checkbox :model-value="value" @update:model-value="handleChange" />
+            </FormControl>
+            <div class="space-y-1 leading-none">
+              <FormLabel class="font-normal">Souhlasím s podmínkami</FormLabel>
+              <FormMessage />
+            </div>
+          </FormItem>
+        </FormField>
+
+        <div class="flex gap-2">
+          <Button type="submit">Odeslat</Button>
+          <Button type="button" variant="outline" @click="onReset">Reset</Button>
+        </div>
+      </form>
+
+      <pre
+        v-if="submitted"
+        class="max-w-sm overflow-auto rounded-md border bg-muted/50 p-3 text-xs text-muted-foreground"
+      >
+Odesláno: {{ submitted }}</pre
+      >
     </section>
   </div>
 </template>
