@@ -5,6 +5,7 @@ declare module 'vue-router' {
   interface RouteMeta {
     title?: string
     requiresAuth?: boolean
+    layout?: 'public' | 'app'
   }
 }
 
@@ -13,103 +14,148 @@ declare module 'vue-router' {
 const PagePlaceholder = () => import('@/components/PagePlaceholder.vue')
 
 const routes: RouteRecordRaw[] = [
-  // --- Veřejné ---
-  { path: '/', name: 'home', component: PagePlaceholder, meta: { title: 'Domů' } },
-  { path: '/funkce', name: 'funkce', component: PagePlaceholder, meta: { title: 'Funkce' } },
-  { path: '/cenik', name: 'cenik', component: PagePlaceholder, meta: { title: 'Ceník' } },
-  { path: '/faq', name: 'faq', component: PagePlaceholder, meta: { title: 'FAQ' } },
-  { path: '/srovnani', name: 'srovnani', component: PagePlaceholder, meta: { title: 'Srovnání' } },
-  { path: '/akce', name: 'akce', component: PagePlaceholder, meta: { title: 'Akce' } },
-  { path: '/clanky', name: 'clanky', component: PagePlaceholder, meta: { title: 'Články' } },
+  // --- Veřejné (PublicLayout) ---
+  {
+    path: '/',
+    name: 'home',
+    component: PagePlaceholder,
+    meta: { title: 'Domů', layout: 'public' },
+  },
+  {
+    path: '/funkce',
+    name: 'funkce',
+    component: PagePlaceholder,
+    meta: { title: 'Funkce', layout: 'public' },
+  },
+  {
+    path: '/cenik',
+    name: 'cenik',
+    component: PagePlaceholder,
+    meta: { title: 'Ceník', layout: 'public' },
+  },
+  {
+    path: '/faq',
+    name: 'faq',
+    component: PagePlaceholder,
+    meta: { title: 'FAQ', layout: 'public' },
+  },
+  {
+    path: '/srovnani',
+    name: 'srovnani',
+    component: PagePlaceholder,
+    meta: { title: 'Srovnání', layout: 'public' },
+  },
+  {
+    path: '/akce',
+    name: 'akce',
+    component: PagePlaceholder,
+    meta: { title: 'Akce', layout: 'public' },
+  },
+  {
+    path: '/clanky',
+    name: 'clanky',
+    component: PagePlaceholder,
+    meta: { title: 'Články', layout: 'public' },
+  },
   {
     path: '/clanky/:slug',
     name: 'clanek',
     component: PagePlaceholder,
-    meta: { title: 'Článek' },
+    meta: { title: 'Článek', layout: 'public' },
   },
   {
     path: '/nase-sliby',
     name: 'nase-sliby',
     component: PagePlaceholder,
-    meta: { title: 'Naše sliby' },
+    meta: { title: 'Naše sliby', layout: 'public' },
   },
-  { path: '/gdpr', name: 'gdpr', component: PagePlaceholder, meta: { title: 'GDPR' } },
-  { path: '/podminky', name: 'podminky', component: PagePlaceholder, meta: { title: 'Podmínky' } },
+  {
+    path: '/gdpr',
+    name: 'gdpr',
+    component: PagePlaceholder,
+    meta: { title: 'GDPR', layout: 'public' },
+  },
+  {
+    path: '/podminky',
+    name: 'podminky',
+    component: PagePlaceholder,
+    meta: { title: 'Podmínky', layout: 'public' },
+  },
 
-  // --- Auth ---
+  // --- Auth (PublicLayout) ---
   {
     path: '/prihlaseni',
     name: 'prihlaseni',
     component: PagePlaceholder,
-    meta: { title: 'Přihlášení' },
+    meta: { title: 'Přihlášení', layout: 'public' },
   },
   {
     path: '/registrace',
     name: 'registrace',
     component: PagePlaceholder,
-    meta: { title: 'Registrace' },
+    meta: { title: 'Registrace', layout: 'public' },
   },
   {
     path: '/zapomenute-heslo',
     name: 'zapomenute-heslo',
     component: PagePlaceholder,
-    meta: { title: 'Zapomenuté heslo' },
+    meta: { title: 'Zapomenuté heslo', layout: 'public' },
   },
   {
     path: '/reset-hesla',
     name: 'reset-hesla',
     component: PagePlaceholder,
-    meta: { title: 'Reset hesla' },
+    meta: { title: 'Reset hesla', layout: 'public' },
   },
 
-  // --- App (chráněné, guard přijde v F0-35) ---
+  // --- App (AppLayout, chráněné — guard přijde v F0-35) ---
   {
     path: '/app',
     name: 'app',
     component: PagePlaceholder,
-    meta: { title: 'Přehled', requiresAuth: true },
+    meta: { title: 'Přehled', layout: 'app', requiresAuth: true },
   },
   {
     path: '/app/faktury',
     name: 'app-faktury',
     component: PagePlaceholder,
-    meta: { title: 'Faktury', requiresAuth: true },
+    meta: { title: 'Faktury', layout: 'app', requiresAuth: true },
   },
   {
     path: '/app/faktury/editor',
     name: 'app-faktury-editor',
     component: PagePlaceholder,
-    meta: { title: 'Editor faktury', requiresAuth: true },
+    meta: { title: 'Editor faktury', layout: 'app', requiresAuth: true },
   },
   {
     path: '/app/klienti',
     name: 'app-klienti',
     component: PagePlaceholder,
-    meta: { title: 'Klienti', requiresAuth: true },
+    meta: { title: 'Klienti', layout: 'app', requiresAuth: true },
   },
   {
     path: '/app/nastaveni',
     name: 'app-nastaveni',
     component: PagePlaceholder,
-    meta: { title: 'Nastavení', requiresAuth: true },
+    meta: { title: 'Nastavení', layout: 'app', requiresAuth: true },
   },
   {
     path: '/app/onboarding',
     name: 'app-onboarding',
     component: PagePlaceholder,
-    meta: { title: 'Onboarding', requiresAuth: true },
+    meta: { title: 'Onboarding', layout: 'app', requiresAuth: true },
   },
   {
     path: '/app/predplatne',
     name: 'app-predplatne',
     component: PagePlaceholder,
-    meta: { title: 'Předplatné', requiresAuth: true },
+    meta: { title: 'Předplatné', layout: 'app', requiresAuth: true },
   },
   {
     path: '/app/predplatne/dekujeme',
     name: 'app-predplatne-dekujeme',
     component: PagePlaceholder,
-    meta: { title: 'Děkujeme', requiresAuth: true },
+    meta: { title: 'Děkujeme', layout: 'app', requiresAuth: true },
   },
 
   // --- 404 ---
@@ -117,7 +163,7 @@ const routes: RouteRecordRaw[] = [
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: PagePlaceholder,
-    meta: { title: 'Stránka nenalezena' },
+    meta: { title: 'Stránka nenalezena', layout: 'public' },
   },
 ]
 
