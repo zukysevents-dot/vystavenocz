@@ -54,13 +54,13 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/clanky',
     name: 'clanky',
-    component: PagePlaceholder,
+    component: () => import('@/pages/ClankyPage.vue'),
     meta: { title: 'Články', layout: 'public' },
   },
   {
     path: '/clanky/:slug',
     name: 'clanek',
-    component: PagePlaceholder,
+    component: () => import('@/pages/ClanekDetailPage.vue'),
     meta: { title: 'Článek', layout: 'public' },
   },
   {
