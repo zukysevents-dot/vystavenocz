@@ -18,7 +18,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'home',
-    component: PagePlaceholder,
+    component: () => import('@/pages/HomePage.vue'),
     meta: { title: 'Domů', layout: 'public' },
   },
   {
