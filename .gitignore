@@ -30,6 +30,7 @@ dist-ssr
 
 # Local dev tooling / Claude Code (not part of the app)
 .claude/
+.playwright-mcp/
 .mcp.json
 globalize-mcp.mjs
 set-figma-token.cmd
