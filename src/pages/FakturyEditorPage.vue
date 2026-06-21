@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, Save, Loader2, UserPlus, Plus, Trash2 } from 'lucide-vue-next'
+import { ArrowLeft, Save, Loader2, UserPlus, Plus, Trash2, Eye, EyeOff } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import QuickClientDialog, { type QuickClient } from '@/components/app/QuickClientDialog.vue'
+import InvoiceDocument from '@/components/app/InvoiceDocument.vue'
 import { useClients } from '@/composables/useClients'
 import { useInvoices, type InvoiceInput } from '@/composables/useInvoices'
 import { useCompanyStore } from '@/stores/company'
@@ -50,6 +51,7 @@ const paymentMethods = [
 const loading = ref(true)
 const saving = ref(false)
 const quickOpen = ref(false)
+const showPreview = ref(true)
 
 const editingId = ref<string | null>(null)
 
@@ -96,6 +98,8 @@ function normalizedItems(): ItemDraft[] {
 }
 
 const totals = computed(() => calcTotals(normalizedItems(), vatPayer.value))
+// Položky s číselně sjednocenými hodnotami pro náhled (bez NaN při rozeditovaném poli).
+const previewItems = computed(() => normalizedItems())
 
 function lineTotal(it: ItemDraft): number {
   return calcLine(
@@ -180,7 +184,7 @@ function onQuickConfirm(client: QuickClient, savedClientId: string | null) {
   }
 }
 
-function buildSupplierSnapshot(): SupplierSnapshot {
+const supplierSnapshot = computed<SupplierSnapshot>(() => {
   const c = companyStore.company
   return {
     companyName: c?.companyName ?? null,
@@ -199,9 +203,9 @@ function buildSupplierSnapshot(): SupplierSnapshot {
     logoUrl: c?.logoUrl ?? null,
     invoiceColor: c?.invoiceColor ?? null,
   }
-}
+})
 
-function buildClientSnapshot(): ClientSnapshot {
+const clientSnapshot = computed<ClientSnapshot>(() => {
   if (selectedClientId.value) {
     const c = getClientById(selectedClientId.value)
     if (c) {
@@ -218,7 +222,7 @@ function buildClientSnapshot(): ClientSnapshot {
     }
   }
   return adHocClient.value ?? { name: '' }
-}
+})
 
 async function onSave() {
   saving.value = true
@@ -238,8 +242,8 @@ async function onSave() {
       status: 'draft',
       invoiceNumber: invoiceNumber.value.trim(),
       clientId: selectedClientId.value || null,
-      clientSnapshot: buildClientSnapshot(),
-      supplierSnapshot: buildSupplierSnapshot(),
+      clientSnapshot: clientSnapshot.value,
+      supplierSnapshot: supplierSnapshot.value,
       items: builtItems,
       currency: 'CZK',
       issueDate: issueDate.value,
@@ -283,14 +287,21 @@ async function onSave() {
           <h1 class="text-2xl font-bold tracking-tight">
             {{ editingId ? 'Upravit fakturu' : 'Nová faktura' }}
           </h1>
-          <p class="text-sm text-muted-foreground">Hlavička faktury</p>
+          <p class="text-sm text-muted-foreground">Editor faktury</p>
         </div>
       </div>
-      <Button variant="coral" :disabled="saving || loading" @click="onSave">
-        <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
-        <Save v-else class="h-4 w-4" />
-        Uložit koncept
-      </Button>
+      <div class="flex items-center gap-2">
+        <Button variant="outline" :disabled="loading" @click="showPreview = !showPreview">
+          <EyeOff v-if="showPreview" class="h-4 w-4" />
+          <Eye v-else class="h-4 w-4" />
+          <span class="hidden sm:inline">{{ showPreview ? 'Skrýt náhled' : 'Náhled' }}</span>
+        </Button>
+        <Button variant="coral" :disabled="saving || loading" @click="onSave">
+          <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
+          <Save v-else class="h-4 w-4" />
+          Uložit koncept
+        </Button>
+      </div>
     </div>
 
     <div v-if="loading" class="mt-12 flex justify-center">
@@ -458,6 +469,24 @@ async function onSave() {
             <span class="text-primary">{{ formatCZK(totals.total) }}</span>
           </div>
         </div>
+      </div>
+
+      <!-- Živý náhled faktury -->
+      <div
+        v-if="showPreview"
+        class="overflow-x-auto rounded-xl border border-border bg-muted/30 p-4"
+      >
+        <InvoiceDocument
+          :supplier="supplierSnapshot"
+          :client="clientSnapshot"
+          :items="previewItems"
+          :invoice-number="invoiceNumber"
+          :issue-date="issueDate"
+          :due-date="dueDate"
+          :taxable-date="issueDate"
+          :variable-symbol="variableSymbol"
+          :payment-method="paymentMethod"
+        />
       </div>
     </div>
 
