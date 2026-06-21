@@ -185,6 +185,8 @@ onMounted(async () => {
       c?.nextInvoiceSeq || 1,
     )
     variableSymbol.value = variableSymbolFromInvoiceNumber(invoiceNumber.value)
+    // Výchozí splatnost z profilu firmy (klient s vlastní splatností ji přepíše níže).
+    dueDate.value = addDaysISO(c?.defaultPaymentDays ?? 14)
     const clientIdQ = typeof route.query.clientId === 'string' ? route.query.clientId : null
     if (clientIdQ) selectedClientId.value = clientIdQ
   }

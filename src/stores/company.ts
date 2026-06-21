@@ -26,6 +26,7 @@ function emptyCompany(email: string, fullName: string | null): Company {
     invoiceNumberPrefix: null,
     invoiceNumberFormat: null,
     nextInvoiceSeq: 1,
+    defaultPaymentDays: 14,
   }
 }
 

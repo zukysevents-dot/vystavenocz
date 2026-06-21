@@ -46,6 +46,7 @@ export interface Company {
   invoiceNumberPrefix: string | null
   invoiceNumberFormat: string | null
   nextInvoiceSeq: number
+  defaultPaymentDays: number
 }
 
 export interface InvoiceItem {

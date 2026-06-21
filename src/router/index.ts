@@ -137,7 +137,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/app/nastaveni',
     name: 'app-nastaveni',
-    component: PagePlaceholder,
+    component: () => import('@/pages/NastaveniPage.vue'),
     meta: { title: 'Nastavení', layout: 'app', requiresAuth: true },
   },
   {
