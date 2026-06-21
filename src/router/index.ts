@@ -113,7 +113,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/app',
     name: 'app',
-    component: PagePlaceholder,
+    component: () => import('@/pages/DashboardPage.vue'),
     meta: { title: 'Přehled', layout: 'app', requiresAuth: true },
   },
   {
