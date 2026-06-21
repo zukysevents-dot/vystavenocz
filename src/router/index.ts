@@ -125,7 +125,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/app/faktury/editor',
     name: 'app-faktury-editor',
-    component: PagePlaceholder,
+    component: () => import('@/pages/FakturyEditorPage.vue'),
     meta: { title: 'Editor faktury', layout: 'app', requiresAuth: true },
   },
   {

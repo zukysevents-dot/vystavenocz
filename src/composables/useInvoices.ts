@@ -36,6 +36,20 @@ export function useInvoices() {
     return invoice
   }
 
+  async function update(id: string, input: InvoiceInput, vatPayer = true): Promise<Invoice> {
+    const totals = calcTotals(input.items, vatPayer)
+    const updated = await api.update(id, {
+      ...input,
+      subtotal: totals.subtotal,
+      vatTotal: totals.vatTotal,
+      total: totals.total,
+      updatedAt: new Date().toISOString(),
+    })
+    const idx = store.invoices.findIndex((i) => i.id === id)
+    if (idx !== -1) store.invoices[idx] = updated
+    return updated
+  }
+
   async function remove(id: string): Promise<void> {
     await api.remove(id)
     store.invoices = store.invoices.filter((i) => i.id !== id)
@@ -45,5 +59,5 @@ export function useInvoices() {
     return store.invoices.find((i) => i.id === id) ?? null
   }
 
-  return { invoices, load, create, remove, getById }
+  return { invoices, load, create, update, remove, getById }
 }
