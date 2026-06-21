@@ -103,14 +103,14 @@
   --accent: oklch(0.94 0.012 60);
   --accent-foreground: oklch(0.2 0.01 60);
 
-  /* Dark warm coral — premium B2B SaaS feel (≈ #C85A20) */
-  --coral: oklch(0.585 0.145 42);
+  /* Dark warm coral — premium B2B SaaS feel. Ztmaveno pro WCAG AA (bílý text ≥ 4.5:1). */
+  --coral: oklch(0.55 0.15 42);
   --coral-foreground: oklch(1 0 0);
 
   --mint: oklch(0.78 0.1 165);
   --sun: oklch(0.82 0.13 80);
 
-  --success: oklch(0.62 0.14 155);
+  --success: oklch(0.52 0.14 155);
   --success-foreground: oklch(1 0 0);
 
   --destructive: oklch(0.58 0.22 25);
@@ -118,7 +118,7 @@
 
   --border: oklch(0.2 0.01 60 / 9%);
   --input: oklch(0.2 0.01 60 / 12%);
-  --ring: oklch(0.585 0.145 42);
+  --ring: oklch(0.55 0.15 42);
 }
 
 .dark {

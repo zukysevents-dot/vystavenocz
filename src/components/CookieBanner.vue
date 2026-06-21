@@ -82,7 +82,7 @@ function handleNecessaryOnly() {
           </p>
 
           <div class="mt-3 space-y-2 rounded-xl border border-border bg-surface-soft/60 p-3">
-            <div class="flex items-center justify-between gap-3 opacity-70">
+            <div class="flex items-center justify-between gap-3">
               <div class="min-w-0">
                 <div class="text-xs font-semibold text-foreground">Nezbytné</div>
                 <div class="text-[11px] text-muted-foreground">
