@@ -11,6 +11,8 @@ import {
   Eye,
   EyeOff,
   Download,
+  Mail,
+  CheckCircle2,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,6 +26,7 @@ import {
 } from '@/components/ui/select'
 import QuickClientDialog, { type QuickClient } from '@/components/app/QuickClientDialog.vue'
 import InvoiceDocument from '@/components/app/InvoiceDocument.vue'
+import SendInvoiceDialog from '@/components/app/SendInvoiceDialog.vue'
 import { downloadInvoicePdf } from '@/lib/invoice-pdf'
 import { useClients } from '@/composables/useClients'
 import { useInvoices, type InvoiceInput } from '@/composables/useInvoices'
@@ -36,7 +39,13 @@ import {
   variableSymbolFromInvoiceNumber,
 } from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
-import type { ClientSnapshot, InvoiceItem, SupplierSnapshot, VatRate } from '@/lib/types'
+import type {
+  ClientSnapshot,
+  InvoiceItem,
+  InvoiceStatus,
+  SupplierSnapshot,
+  VatRate,
+} from '@/lib/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -64,10 +73,13 @@ const saving = ref(false)
 const quickOpen = ref(false)
 const showPreview = ref(true)
 const downloadingPdf = ref(false)
+const sendOpen = ref(false)
 // Skrytý off-screen render dokumentu pro zachycení do PDF.
 const pdfDocEl = ref<HTMLElement | null>(null)
 
 const editingId = ref<string | null>(null)
+const status = ref<InvoiceStatus>('draft')
+const paidAt = ref<string | null>(null)
 
 // Stav hlavičky.
 const selectedClientId = ref('')
@@ -138,6 +150,8 @@ onMounted(async () => {
     const inv = getById(id)
     if (inv) {
       editingId.value = id
+      status.value = inv.status
+      paidAt.value = inv.paidAt
       invoiceNumber.value = inv.invoiceNumber
       issueDate.value = inv.issueDate
       dueDate.value = inv.dueDate
@@ -250,52 +264,76 @@ async function onDownloadPdf() {
   }
 }
 
+// Uloží aktuální stav faktury (create nebo update). Bez toastu — řeší volající.
+async function persist(): Promise<void> {
+  // Z konceptových řádků dopočítej součty po řádcích (lib calcLine).
+  const builtItems: InvoiceItem[] = normalizedItems().map((it) => {
+    const line = calcLine(it, vatPayer.value)
+    return {
+      ...it,
+      lineSubtotal: line.lineSubtotal,
+      lineVat: line.lineVat,
+      lineTotal: line.lineTotal,
+    }
+  })
+  const input: InvoiceInput = {
+    documentType: 'invoice',
+    status: status.value,
+    invoiceNumber: invoiceNumber.value.trim(),
+    clientId: selectedClientId.value || null,
+    clientSnapshot: clientSnapshot.value,
+    supplierSnapshot: supplierSnapshot.value,
+    items: builtItems,
+    currency: 'CZK',
+    issueDate: issueDate.value,
+    dueDate: dueDate.value,
+    taxableDate: issueDate.value,
+    paidAt: paidAt.value,
+    variableSymbol:
+      variableSymbol.value.trim() || variableSymbolFromInvoiceNumber(invoiceNumber.value),
+    constantSymbol: null,
+    specificSymbol: null,
+    paymentMethod: paymentMethod.value,
+    notes: null,
+  }
+
+  if (editingId.value) {
+    await update(editingId.value, input, vatPayer.value)
+  } else {
+    const created = await create(input, vatPayer.value)
+    editingId.value = created.id
+    // Posuň pořadové číslo, ať příští faktura nedostane stejné.
+    const c = companyStore.company
+    if (c) companyStore.save({ nextInvoiceSeq: (c.nextInvoiceSeq || 1) + 1 })
+    // Převezmi id do URL, aby další uložení byla update (ne duplicitní faktura).
+    router.replace({ query: { id: created.id } })
+  }
+}
+
 async function onSave() {
   saving.value = true
   try {
-    // Z konceptových řádků dopočítej součty po řádcích (lib calcLine).
-    const builtItems: InvoiceItem[] = normalizedItems().map((it) => {
-      const line = calcLine(it, vatPayer.value)
-      return {
-        ...it,
-        lineSubtotal: line.lineSubtotal,
-        lineVat: line.lineVat,
-        lineTotal: line.lineTotal,
-      }
-    })
-    const input: InvoiceInput = {
-      documentType: 'invoice',
-      status: 'draft',
-      invoiceNumber: invoiceNumber.value.trim(),
-      clientId: selectedClientId.value || null,
-      clientSnapshot: clientSnapshot.value,
-      supplierSnapshot: supplierSnapshot.value,
-      items: builtItems,
-      currency: 'CZK',
-      issueDate: issueDate.value,
-      dueDate: dueDate.value,
-      taxableDate: issueDate.value,
-      paidAt: null,
-      variableSymbol:
-        variableSymbol.value.trim() || variableSymbolFromInvoiceNumber(invoiceNumber.value),
-      constantSymbol: null,
-      specificSymbol: null,
-      paymentMethod: paymentMethod.value,
-      notes: null,
-    }
-
-    if (editingId.value) {
-      await update(editingId.value, input, vatPayer.value)
-    } else {
-      const created = await create(input, vatPayer.value)
-      editingId.value = created.id
-      // Posuň pořadové číslo, ať příští faktura nedostane stejné.
-      const c = companyStore.company
-      if (c) companyStore.save({ nextInvoiceSeq: (c.nextInvoiceSeq || 1) + 1 })
-      // Převezmi id do URL, aby další uložení byla update (ne duplicitní faktura).
-      router.replace({ query: { id: created.id } })
-    }
+    await persist()
     toast.success('Koncept uložen.')
+  } finally {
+    saving.value = false
+  }
+}
+
+// Mock odeslání proběhlo v dialogu — koncept povýšíme na „Vystaveno".
+async function onSent() {
+  if (status.value !== 'draft') return
+  status.value = 'issued'
+  await persist()
+}
+
+async function onMarkPaid() {
+  status.value = 'paid'
+  paidAt.value = new Date().toISOString()
+  saving.value = true
+  try {
+    await persist()
+    toast.success('Faktura označena jako uhrazená.')
   } finally {
     saving.value = false
   }
@@ -316,7 +354,7 @@ async function onSave() {
           <p class="text-sm text-muted-foreground">Editor faktury</p>
         </div>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center justify-end gap-2">
         <Button variant="outline" :disabled="loading" @click="showPreview = !showPreview">
           <EyeOff v-if="showPreview" class="h-4 w-4" />
           <Eye v-else class="h-4 w-4" />
@@ -326,6 +364,24 @@ async function onSave() {
           <Loader2 v-if="downloadingPdf" class="h-4 w-4 animate-spin" />
           <Download v-else class="h-4 w-4" />
           <span class="hidden sm:inline">PDF</span>
+        </Button>
+        <Button
+          v-if="editingId"
+          variant="outline"
+          :disabled="saving || loading"
+          @click="sendOpen = true"
+        >
+          <Mail class="h-4 w-4" />
+          <span class="hidden sm:inline">Odeslat</span>
+        </Button>
+        <Button
+          v-if="editingId && status !== 'paid'"
+          variant="outline"
+          :disabled="saving || loading"
+          @click="onMarkPaid"
+        >
+          <CheckCircle2 class="h-4 w-4 text-success" />
+          <span class="hidden sm:inline">Uhrazeno</span>
         </Button>
         <Button variant="coral" :disabled="saving || loading" @click="onSave">
           <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
@@ -522,6 +578,14 @@ async function onSave() {
     </div>
 
     <QuickClientDialog v-model:open="quickOpen" @confirm="onQuickConfirm" />
+
+    <SendInvoiceDialog
+      v-model:open="sendOpen"
+      :recipient-email="clientSnapshot.email"
+      :invoice-number="invoiceNumber"
+      :supplier-name="supplierSnapshot.companyName"
+      @sent="onSent"
+    />
 
     <!-- Skrytý off-screen render dokumentu pro PDF export (vždy v DOM kvůli QR). -->
     <div ref="pdfDocEl" aria-hidden="true" style="position: fixed; left: -10000px; top: 0">
