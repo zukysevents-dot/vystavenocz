@@ -83,13 +83,14 @@ Silná kritéria úspěchu ti umožní pracovat samostatně v cyklu. Slabá krit
 
 ## 5. Multi-agent pipeline (orchestrace)
 
-U netriviálních úkolů orchestruje hlavní smyčka tyto subagenty (žijí v `.claude/agents/`, lokálně/gitignorováno): `solution-architect`, `qa-tester`, `invoice-code-reviewer`, `debugger` a `orchestrator` (plánovač). Subagent neumí spustit jiného subagenta — řetězení a předávání kontextu řídí hlavní smyčka.
+U netriviálních úkolů orchestruje hlavní smyčka tyto subagenty (žijí v `.claude/agents/`, lokálně/gitignorováno): `solution-architect`, `qa-tester`, `invoice-code-reviewer`, `debugger`, `a11y-specialist` a `orchestrator` (plánovač). Subagent neumí spustit jiného subagenta — řetězení a předávání kontextu řídí hlavní smyčka.
 
 Default routing podle typu tasku:
 
 - **Nový feature** → `solution-architect` (návrh) → implementace → `qa-tester` → `invoice-code-reviewer`
 - **Bug fix** → `debugger` (root cause) → oprava → `qa-tester` → `invoice-code-reviewer`
 - **Refactor** → `invoice-code-reviewer` (stav) → `solution-architect` → implementace → `qa-tester`
+- **A11y / přístupnost** → `a11y-specialist` (kontrast, focus, ARIA, dark mode) → `qa-tester` (axe e2e regrese)
 - **Code review / architektura** → příslušný agent samostatně
 - **Nejasný task** → upřesnit PŘED spuštěním pipeline
 
