@@ -11,6 +11,16 @@ export type InvoiceInput = Omit<
   'id' | 'createdAt' | 'updatedAt' | 'subtotal' | 'vatTotal' | 'total'
 >
 
+/** Číslo faktury už v evidenci existuje — účetní integrita zakazuje duplicitu. */
+export class DuplicateInvoiceNumberError extends Error {
+  readonly invoiceNumber: string
+  constructor(invoiceNumber: string) {
+    super(`Faktura s číslem „${invoiceNumber}" už existuje.`)
+    this.name = 'DuplicateInvoiceNumberError'
+    this.invoiceNumber = invoiceNumber
+  }
+}
+
 export function useInvoices() {
   const store = useInvoicesStore()
   const { invoices } = storeToRefs(store)
@@ -20,6 +30,17 @@ export function useInvoices() {
   }
 
   async function create(input: InvoiceInput, vatPayer = true): Promise<Invoice> {
+    // Unikátnost čísla ověř proti ČERSTVÉMU stavu úložiště (ne in-memory store) —
+    // zachytí i fakturu uloženou v jiném tabu, kde má store vlastní zastaralou kopii.
+    const number = input.invoiceNumber.trim()
+    if (number) {
+      const existing = await api.list()
+      const clash = existing.some(
+        (i) => i.invoiceNumber.trim().toLowerCase() === number.toLowerCase(),
+      )
+      if (clash) throw new DuplicateInvoiceNumberError(number)
+    }
+
     const totals = calcTotals(input.items, vatPayer)
     const now = new Date().toISOString()
     const invoice: Invoice = {

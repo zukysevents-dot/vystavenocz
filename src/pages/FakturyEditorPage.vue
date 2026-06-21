@@ -30,7 +30,11 @@ import SendInvoiceDialog from '@/components/app/SendInvoiceDialog.vue'
 import PaywallDialog from '@/components/app/PaywallDialog.vue'
 import { downloadInvoicePdf } from '@/lib/invoice-pdf'
 import { useClients } from '@/composables/useClients'
-import { useInvoices, type InvoiceInput } from '@/composables/useInvoices'
+import {
+  useInvoices,
+  DuplicateInvoiceNumberError,
+  type InvoiceInput,
+} from '@/composables/useInvoices'
 import { useSubscription } from '@/composables/useSubscription'
 import { useCompanyStore } from '@/stores/company'
 import {
@@ -328,6 +332,12 @@ async function onSave() {
   try {
     await persist()
     toast.success('Koncept uložen.')
+  } catch (e) {
+    if (e instanceof DuplicateInvoiceNumberError) {
+      toast.error('Faktura s tímto číslem už existuje. Změňte číslo faktury.')
+    } else {
+      throw e
+    }
   } finally {
     saving.value = false
   }
