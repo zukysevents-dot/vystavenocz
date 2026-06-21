@@ -3,19 +3,7 @@ import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Check, Sparkles } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-
-const features = [
-  'Neomezený počet faktur',
-  'Neomezený počet klientů',
-  'QR platba na každé faktuře',
-  'AI asistent v češtině',
-  'Opakované faktury',
-  'Vlastní logo a šablony',
-  'Cizí měny + kurz ČNB',
-  'Automatické upomínky',
-  'Export do účetnictví (ISDOC, XML)',
-  'Česká podpora e-mailem (odpověď do 24 h)',
-]
+import { PRO_FEATURES as features, PRO_PRICING } from '@/lib/pricing'
 
 const yearly = ref(true)
 </script>
@@ -44,7 +32,7 @@ const yearly = ref(true)
             <span
               class="rounded-full bg-coral px-2 py-0.5 text-[10px] font-bold text-coral-foreground"
             >
-              −37 %
+              −{{ PRO_PRICING.discountPercent }} %
             </span>
           </button>
         </div>
@@ -70,7 +58,7 @@ const yearly = ref(true)
           <div class="px-8 py-8">
             <div class="flex items-end gap-2">
               <span class="text-6xl font-extrabold tracking-tight text-foreground">
-                {{ yearly ? '100' : '159' }}
+                {{ yearly ? PRO_PRICING.yearlyPricePerMonth : PRO_PRICING.monthlyPrice }}
               </span>
               <div class="pb-2">
                 <p class="text-lg font-semibold text-foreground">Kč</p>
@@ -80,8 +68,8 @@ const yearly = ref(true)
             <p class="mt-2 text-sm text-muted-foreground">
               {{
                 yearly
-                  ? 'Účtováno ročně 1 200 Kč. Ušetříte 708 Kč oproti měsíčnímu tarifu.'
-                  : 'Účtováno měsíčně. Roční tarif vyjde na 100 Kč/měsíc — ušetříte 708 Kč ročně.'
+                  ? `Účtováno ročně ${PRO_PRICING.yearlyTotal.toLocaleString('cs-CZ')} Kč. Ušetříte ${PRO_PRICING.yearlySavings} Kč oproti měsíčnímu tarifu.`
+                  : `Účtováno měsíčně. Roční tarif vyjde na ${PRO_PRICING.yearlyPricePerMonth} Kč/měsíc — ušetříte ${PRO_PRICING.yearlySavings} Kč ročně.`
               }}
             </p>
 

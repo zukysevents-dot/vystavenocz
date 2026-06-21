@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { PRO_PRICING } from '@/lib/pricing'
 
 defineProps<{
   open: boolean
@@ -43,10 +44,12 @@ const emit = defineEmits<{
           <Sparkles class="h-4 w-4 text-coral" /> Vystaveno Pro
         </div>
         <p class="mt-1 text-2xl font-bold text-foreground">
-          100 Kč <span class="text-sm font-normal text-muted-foreground">/ měsíc</span>
+          {{ PRO_PRICING.yearlyPricePerMonth }} Kč
+          <span class="text-sm font-normal text-muted-foreground">/ měsíc</span>
         </p>
         <p class="text-xs text-muted-foreground">
-          Při ročním tarifu (1 200 Kč/rok). Měsíčně 159 Kč. Cena je konečná — neplátce DPH.
+          Při ročním tarifu ({{ PRO_PRICING.yearlyTotal.toLocaleString('cs-CZ') }} Kč/rok). Měsíčně
+          {{ PRO_PRICING.monthlyPrice }} Kč. Cena je konečná — neplátce DPH.
         </p>
       </div>
 
