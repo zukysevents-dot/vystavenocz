@@ -149,13 +149,13 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/app/predplatne',
     name: 'app-predplatne',
-    component: PagePlaceholder,
+    component: () => import('@/pages/PredplatnePage.vue'),
     meta: { title: 'Předplatné', layout: 'app', requiresAuth: true },
   },
   {
     path: '/app/predplatne/dekujeme',
     name: 'app-predplatne-dekujeme',
-    component: PagePlaceholder,
+    component: () => import('@/pages/PredplatneDekujemePage.vue'),
     meta: { title: 'Děkujeme', layout: 'app', requiresAuth: true },
   },
 
