@@ -27,9 +27,11 @@ import {
 import QuickClientDialog, { type QuickClient } from '@/components/app/QuickClientDialog.vue'
 import InvoiceDocument from '@/components/app/InvoiceDocument.vue'
 import SendInvoiceDialog from '@/components/app/SendInvoiceDialog.vue'
+import PaywallDialog from '@/components/app/PaywallDialog.vue'
 import { downloadInvoicePdf } from '@/lib/invoice-pdf'
 import { useClients } from '@/composables/useClients'
 import { useInvoices, type InvoiceInput } from '@/composables/useInvoices'
+import { useSubscription } from '@/composables/useSubscription'
 import { useCompanyStore } from '@/stores/company'
 import {
   buildInvoiceNumber,
@@ -51,6 +53,7 @@ const route = useRoute()
 const router = useRouter()
 const { clients, load: loadClients, getById: getClientById } = useClients()
 const { create, update, getById, load: loadInvoices } = useInvoices()
+const { hasAccess } = useSubscription()
 const companyStore = useCompanyStore()
 
 function todayISO(): string {
@@ -74,6 +77,7 @@ const quickOpen = ref(false)
 const showPreview = ref(true)
 const downloadingPdf = ref(false)
 const sendOpen = ref(false)
+const paywallOpen = ref(false)
 // Skrytý off-screen render dokumentu pro zachycení do PDF.
 const pdfDocEl = ref<HTMLElement | null>(null)
 
@@ -322,6 +326,15 @@ async function onSave() {
   }
 }
 
+// Odeslání faktury je prémiová akce — bez aktivního tarifu ukážeme paywall.
+function onSendClick(): void {
+  if (!hasAccess.value) {
+    paywallOpen.value = true
+    return
+  }
+  sendOpen.value = true
+}
+
 // Mock odeslání proběhlo v dialogu — koncept povýšíme na „Vystaveno".
 async function onSent() {
   if (status.value !== 'draft') return
@@ -371,7 +384,7 @@ async function onMarkPaid() {
           v-if="editingId"
           variant="outline"
           :disabled="saving || loading"
-          @click="sendOpen = true"
+          @click="onSendClick"
         >
           <Mail class="h-4 w-4" />
           <span class="hidden sm:inline">Odeslat</span>
@@ -588,6 +601,8 @@ async function onMarkPaid() {
       :supplier-name="supplierSnapshot.companyName"
       @sent="onSent"
     />
+
+    <PaywallDialog v-model:open="paywallOpen" />
 
     <!-- Skrytý off-screen render dokumentu pro PDF export (vždy v DOM kvůli QR). -->
     <div ref="pdfDocEl" aria-hidden="true" style="position: fixed; left: -10000px; top: 0">

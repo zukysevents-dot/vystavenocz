@@ -15,17 +15,30 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import PaywallDialog from '@/components/app/PaywallDialog.vue'
 import { useInvoices } from '@/composables/useInvoices'
+import { useSubscription } from '@/composables/useSubscription'
 import { formatCZK, formatDate } from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
 import type { InvoiceStatus } from '@/lib/types'
 
 const router = useRouter()
 const { invoices, load, remove } = useInvoices()
+const { hasAccess } = useSubscription()
 
 const loading = ref(true)
 const search = ref('')
 const deleteId = ref<string | null>(null)
+const paywallOpen = ref(false)
+
+// Vystavení nové faktury je prémiová akce — bez aktivního tarifu ukážeme paywall.
+function newInvoice() {
+  if (!hasAccess.value) {
+    paywallOpen.value = true
+    return
+  }
+  router.push('/app/faktury/editor')
+}
 
 onMounted(async () => {
   await load()
@@ -74,8 +87,8 @@ async function onDelete() {
         <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Faktury</h1>
         <p class="mt-1 text-muted-foreground">Spravujte své faktury a sledujte platby.</p>
       </div>
-      <Button variant="coral" class="shrink-0" as-child>
-        <RouterLink to="/app/faktury/editor"> <Plus class="h-4 w-4" /> Nová faktura </RouterLink>
+      <Button variant="coral" class="shrink-0" @click="newInvoice">
+        <Plus class="h-4 w-4" /> Nová faktura
       </Button>
     </div>
 
@@ -105,8 +118,8 @@ async function onDelete() {
             : 'Zkuste změnit hledaný výraz.'
         }}
       </p>
-      <Button v-if="invoices.length === 0" variant="coral" class="mt-4" as-child>
-        <RouterLink to="/app/faktury/editor"> <Plus class="h-4 w-4" /> Nová faktura </RouterLink>
+      <Button v-if="invoices.length === 0" variant="coral" class="mt-4" @click="newInvoice">
+        <Plus class="h-4 w-4" /> Nová faktura
       </Button>
     </div>
 
@@ -179,5 +192,7 @@ async function onDelete() {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    <PaywallDialog v-model:open="paywallOpen" />
   </div>
 </template>
