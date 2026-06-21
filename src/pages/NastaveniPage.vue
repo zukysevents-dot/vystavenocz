@@ -22,6 +22,8 @@ const auth = useAuthStore()
 
 // Max velikost loga (data URL žije v localStorage, držíme ho malé).
 const LOGO_MAX_BYTES = 512 * 1024
+// Povolené formáty loga — SVG záměrně ne (neověřený obsah renderovaný jako obrázek).
+const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp']
 
 const vatModes: { value: VatMode; label: string }[] = [
   { value: 'payer', label: 'Plátce DPH' },
@@ -80,15 +82,25 @@ const numberPreview = computed(() =>
 )
 
 function onLogoChange(e: Event): void {
-  const file = (e.target as HTMLInputElement).files?.[0]
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
   if (!file) return
+  if (!LOGO_TYPES.includes(file.type)) {
+    toast.error('Nepodporovaný formát loga. Použijte PNG, JPG nebo WebP.')
+    input.value = ''
+    return
+  }
   if (file.size > LOGO_MAX_BYTES) {
     toast.error('Logo je příliš velké (max 512 kB). Zvolte menší obrázek.')
+    input.value = ''
     return
   }
   const reader = new FileReader()
   reader.onload = () => {
     form.logoUrl = reader.result as string
+  }
+  reader.onerror = () => {
+    toast.error('Logo se nepodařilo načíst.')
   }
   reader.readAsDataURL(file)
 }
@@ -98,6 +110,8 @@ function removeLogo(): void {
 }
 
 function onSubmit(): void {
+  // Splatnost 0 dní je legitimní (na počkání) — nesmí spadnout do fallbacku přes `|| 14`.
+  const dueDays = Number(form.defaultPaymentDays)
   const payload: Partial<Company> = {
     companyName: form.companyName || null,
     fullName: form.fullName || null,
@@ -114,10 +128,16 @@ function onSubmit(): void {
     invoiceNumberPrefix: form.invoiceNumberPrefix || null,
     invoiceNumberFormat: form.invoiceNumberFormat || null,
     nextInvoiceSeq: Number(form.nextInvoiceSeq) || 1,
-    defaultPaymentDays: Number(form.defaultPaymentDays) || 14,
+    defaultPaymentDays: Number.isFinite(dueDays) && dueDays >= 0 ? Math.floor(dueDays) : 14,
     email: auth.user?.email ?? companyStore.company?.email ?? '',
   }
-  companyStore.save(payload)
+  try {
+    companyStore.save(payload)
+  } catch {
+    // localStorage quota (typicky velké logo jako data URL) — neukládej tiše do ztracena.
+    toast.error('Nastavení se nepodařilo uložit — úložiště je plné. Zmenšete logo.')
+    return
+  }
   toast.success('Nastavení uloženo. Projeví se v nových fakturách.')
 }
 </script>
@@ -240,11 +260,17 @@ function onSubmit(): void {
             >
               <ImageUp class="h-4 w-4" /> Nahrát logo
             </Label>
-            <input id="logo" type="file" accept="image/*" class="sr-only" @change="onLogoChange" />
+            <input
+              id="logo"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              class="sr-only"
+              @change="onLogoChange"
+            />
             <Button v-if="form.logoUrl" type="button" variant="ghost" size="sm" @click="removeLogo">
               <Trash2 class="h-4 w-4 text-destructive" /> Odebrat
             </Button>
-            <p class="text-xs text-muted-foreground">PNG nebo JPG, max 512 kB.</p>
+            <p class="text-xs text-muted-foreground">PNG, JPG nebo WebP, max 512 kB.</p>
           </div>
         </div>
       </div>
