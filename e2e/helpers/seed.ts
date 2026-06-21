@@ -6,6 +6,26 @@ const KEYS = {
   company: 'vystaveno.company.v1',
   subscription: 'vystaveno.subscription.v1',
   invoices: 'vystaveno:invoices',
+  clients: 'vystaveno:clients',
+}
+
+// Jeden klient stačí, aby se vypnul demo seeding (seed.ts seedne jen při 0 klientech) —
+// e2e tak mají deterministická data místo demo faktur.
+const DEFAULT_CLIENT = {
+  id: 'cl_e2e',
+  name: 'E2E Klient',
+  ico: '27604977',
+  dic: 'CZ27604977',
+  email: 'klient@e2e.cz',
+  phone: null,
+  street: 'Klientská 2',
+  city: 'Brno',
+  zip: '60200',
+  country: 'CZ',
+  defaultPaymentDays: 14,
+  notes: null,
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
 }
 
 type SubState = 'trial' | 'pro' | 'expired'
@@ -65,7 +85,7 @@ export async function seedApp(page: Page, opts: SeedOptions = {}): Promise<void>
           }
 
   await page.addInitScript(
-    ({ keys, user, company, subscription, invoices }) => {
+    ({ keys, user, company, subscription, invoices, client }) => {
       // Seed jen jednou za kontext — jinak by se přepsaly změny stavu (např. activatePro)
       // při každé další navigaci, protože addInitScript běží před každým načtením stránky.
       if (localStorage.getItem('__e2e_seeded__')) return
@@ -73,8 +93,9 @@ export async function seedApp(page: Page, opts: SeedOptions = {}): Promise<void>
       localStorage.setItem(keys.company, JSON.stringify(company))
       localStorage.setItem(keys.subscription, JSON.stringify(subscription))
       localStorage.setItem(keys.invoices, JSON.stringify(invoices ?? []))
+      localStorage.setItem(keys.clients, JSON.stringify([client]))
       localStorage.setItem('__e2e_seeded__', '1')
     },
-    { keys: KEYS, user, company, subscription, invoices: opts.invoices },
+    { keys: KEYS, user, company, subscription, invoices: opts.invoices, client: DEFAULT_CLIENT },
   )
 }

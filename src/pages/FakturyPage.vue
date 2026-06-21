@@ -123,54 +123,94 @@ async function onDelete() {
       </Button>
     </div>
 
-    <div v-else class="mt-6 overflow-x-auto rounded-xl border border-border bg-card">
-      <table class="w-full min-w-[640px] text-sm">
-        <thead
-          class="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground"
+    <template v-else>
+      <!-- Mobil: karty místo tabulky -->
+      <div class="mt-6 space-y-3 sm:hidden">
+        <div
+          v-for="inv in filtered"
+          :key="inv.id"
+          class="rounded-xl border border-border bg-card p-4"
         >
-          <tr>
-            <th class="px-4 py-3 text-left">Číslo</th>
-            <th class="px-4 py-3 text-left">Odběratel</th>
-            <th class="px-4 py-3 text-left">Vystaveno</th>
-            <th class="px-4 py-3 text-right">Částka</th>
-            <th class="px-4 py-3 text-center">Stav</th>
-            <th class="px-4 py-3"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="inv in filtered"
-            :key="inv.id"
-            class="border-b border-border last:border-0 hover:bg-muted/30"
-          >
-            <td class="px-4 py-3 font-medium">{{ inv.invoiceNumber }}</td>
-            <td class="px-4 py-3 text-muted-foreground">{{ inv.clientSnapshot?.name || '—' }}</td>
-            <td class="px-4 py-3 text-muted-foreground">{{ formatDate(inv.issueDate) }}</td>
-            <td class="px-4 py-3 text-right font-semibold">{{ formatCZK(inv.total) }}</td>
-            <td class="px-4 py-3 text-center">
-              <Badge :variant="statusMeta(inv.status).variant">
-                {{ statusMeta(inv.status).label }}
-              </Badge>
-            </td>
-            <td class="px-4 py-3 text-right">
-              <div class="flex items-center justify-end gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  title="Upravit"
-                  @click="router.push('/app/faktury/editor?id=' + inv.id)"
-                >
-                  <Pencil class="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" title="Smazat" @click="deleteId = inv.id">
-                  <Trash2 class="h-4 w-4 text-destructive" />
-                </Button>
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <div class="font-semibold">{{ inv.invoiceNumber }}</div>
+              <div class="truncate text-sm text-muted-foreground">
+                {{ inv.clientSnapshot?.name || '—' }}
               </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+            </div>
+            <Badge :variant="statusMeta(inv.status).variant" class="shrink-0">
+              {{ statusMeta(inv.status).label }}
+            </Badge>
+          </div>
+          <div class="mt-3 flex items-center justify-between">
+            <span class="text-sm text-muted-foreground">{{ formatDate(inv.issueDate) }}</span>
+            <span class="font-semibold">{{ formatCZK(inv.total) }}</span>
+          </div>
+          <div class="mt-3 flex justify-end gap-1 border-t border-border pt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              @click="router.push('/app/faktury/editor?id=' + inv.id)"
+            >
+              <Pencil class="h-4 w-4" /> Upravit
+            </Button>
+            <Button variant="ghost" size="sm" @click="deleteId = inv.id">
+              <Trash2 class="h-4 w-4 text-destructive" /> Smazat
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop: tabulka -->
+      <div class="mt-6 hidden overflow-x-auto rounded-xl border border-border bg-card sm:block">
+        <table class="w-full min-w-[640px] text-sm">
+          <thead
+            class="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground"
+          >
+            <tr>
+              <th class="px-4 py-3 text-left">Číslo</th>
+              <th class="px-4 py-3 text-left">Odběratel</th>
+              <th class="px-4 py-3 text-left">Vystaveno</th>
+              <th class="px-4 py-3 text-right">Částka</th>
+              <th class="px-4 py-3 text-center">Stav</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="inv in filtered"
+              :key="inv.id"
+              class="border-b border-border last:border-0 hover:bg-muted/30"
+            >
+              <td class="px-4 py-3 font-medium">{{ inv.invoiceNumber }}</td>
+              <td class="px-4 py-3 text-muted-foreground">{{ inv.clientSnapshot?.name || '—' }}</td>
+              <td class="px-4 py-3 text-muted-foreground">{{ formatDate(inv.issueDate) }}</td>
+              <td class="px-4 py-3 text-right font-semibold">{{ formatCZK(inv.total) }}</td>
+              <td class="px-4 py-3 text-center">
+                <Badge :variant="statusMeta(inv.status).variant">
+                  {{ statusMeta(inv.status).label }}
+                </Badge>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <div class="flex items-center justify-end gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Upravit"
+                    @click="router.push('/app/faktury/editor?id=' + inv.id)"
+                  >
+                    <Pencil class="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" title="Smazat" @click="deleteId = inv.id">
+                    <Trash2 class="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
 
     <!-- Potvrzení smazání -->
     <AlertDialog :open="!!deleteId" @update:open="(o) => !o && (deleteId = null)">
