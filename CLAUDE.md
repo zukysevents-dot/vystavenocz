@@ -62,10 +62,11 @@ Test: Každý změněný řádek by měl jít přímo dohledat k požadavku uži
 
 Definuj kritéria úspěchu. Cyklicky ověřuj, dokud nesedí.
 
-Z úkolů udělej ověřitelné cíle. V tomhle projektu (frontend, zatím bez testů) ověření typicky znamená:
+Z úkolů udělej ověřitelné cíle. V tomhle projektu (frontend) ověření typicky znamená:
 
 - **Build projde čistě:** `npm run build` (včetně typecheck) bez chyb.
 - **Lint projde:** `npm run lint` bez chyb.
+- **Testy projdou:** `npm run test` (vitest unit) a u UI flows `npm run test:e2e` (Playwright).
 - **Vypadá to správně:** stránka naběhne v prohlížeči bez chyb v konzoli.
 
 Když task výslovně přidává testy, pak platí: „napiš test, který stav reprodukuje, a doveď ho k zelené."
@@ -79,6 +80,24 @@ U vícekrokových úkolů sepiš krátký plán:
 ```
 
 Silná kritéria úspěchu ti umožní pracovat samostatně v cyklu. Slabá kritéria („udělej to, ať to funguje") vyžadují neustálé doptávání.
+
+## 5. Multi-agent pipeline (orchestrace)
+
+U netriviálních úkolů orchestruje hlavní smyčka tyto subagenty (žijí v `.claude/agents/`, lokálně/gitignorováno): `solution-architect`, `qa-tester`, `invoice-code-reviewer`, `debugger` a `orchestrator` (plánovač). Subagent neumí spustit jiného subagenta — řetězení a předávání kontextu řídí hlavní smyčka.
+
+Default routing podle typu tasku:
+
+- **Nový feature** → `solution-architect` (návrh) → implementace → `qa-tester` → `invoice-code-reviewer`
+- **Bug fix** → `debugger` (root cause) → oprava → `qa-tester` → `invoice-code-reviewer`
+- **Refactor** → `invoice-code-reviewer` (stav) → `solution-architect` → implementace → `qa-tester`
+- **Code review / architektura** → příslušný agent samostatně
+- **Nejasný task** → upřesnit PŘED spuštěním pipeline
+
+Pravidla:
+
+- Triviální úkoly (drobná oprava, přejmenování, copy, dep bump) pipeline NEspouštějí — selský rozum (viz tradeoff nahoře).
+- Mezi kroky předávej relevantní kontext (nálezy předchozího agenta dalšímu).
+- Po pipeline agreguj výstupy agentů a uveď finální doporučení + stav ověření (build / lint / testy).
 
 ---
 
