@@ -193,6 +193,8 @@ onMounted(async () => {
     dueDate.value = addDaysISO(c?.defaultPaymentDays ?? 14)
     const clientIdQ = typeof route.query.clientId === 'string' ? route.query.clientId : null
     if (clientIdQ) selectedClientId.value = clientIdQ
+    // Nová faktura bez aktivního tarifu — paywall hned při otevření (i přímou URL).
+    if (!hasAccess.value) paywallOpen.value = true
   }
 
   loading.value = false
@@ -317,6 +319,11 @@ async function persist(): Promise<void> {
 }
 
 async function onSave() {
+  // Vytvoření/uložení faktury je prémiová akce — bez tarifu paywall (nelze obejít přímou URL).
+  if (!hasAccess.value) {
+    paywallOpen.value = true
+    return
+  }
   saving.value = true
   try {
     await persist()
@@ -343,6 +350,10 @@ async function onSent() {
 }
 
 async function onMarkPaid() {
+  if (!hasAccess.value) {
+    paywallOpen.value = true
+    return
+  }
   status.value = 'paid'
   paidAt.value = new Date().toISOString()
   saving.value = true
