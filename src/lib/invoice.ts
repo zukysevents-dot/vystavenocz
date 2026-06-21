@@ -87,7 +87,8 @@ export function formatCZK(n: number): string {
   }).format(n)
 }
 
-/** Formátuje ISO datum do českého formátu (např. „20. 6. 2026"). */
+/** Formátuje ISO datum do českého formátu (např. „20. 6. 2026"). Prázdné datum → „—". */
 export function formatDate(iso: string): string {
+  if (!iso) return '—'
   return new Date(iso).toLocaleDateString('cs-CZ')
 }

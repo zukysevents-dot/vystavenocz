@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, FileText, Search, Pencil, Trash2 } from 'lucide-vue-next'
+import { Plus, FileText, Search, Pencil, Trash2, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -23,21 +23,29 @@ import type { InvoiceStatus } from '@/lib/types'
 const router = useRouter()
 const { invoices, load, remove } = useInvoices()
 
+const loading = ref(true)
 const search = ref('')
 const deleteId = ref<string | null>(null)
 
 onMounted(async () => {
   await load()
+  loading.value = false
 })
 
 type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline'
+type StatusMeta = { label: string; variant: BadgeVariant }
 
-const statusLabels: Record<InvoiceStatus, { label: string; variant: BadgeVariant }> = {
+const statusLabels: Record<InvoiceStatus, StatusMeta> = {
   draft: { label: 'Koncept', variant: 'secondary' },
   issued: { label: 'Vystaveno', variant: 'default' },
   paid: { label: 'Zaplaceno', variant: 'outline' },
   overdue: { label: 'Po splatnosti', variant: 'destructive' },
   cancelled: { label: 'Stornováno', variant: 'secondary' },
+}
+
+// Fallback pro neočekávaný status (stará/poškozená data z localStorage), ať render nespadne.
+function statusMeta(status: string): StatusMeta {
+  return statusLabels[status as InvoiceStatus] ?? { label: status || 'Neznámý', variant: 'outline' }
 }
 
 const filtered = computed(() => {
@@ -78,8 +86,12 @@ async function onDelete() {
       </div>
     </div>
 
+    <div v-if="loading" class="mt-12 flex justify-center">
+      <Loader2 class="h-6 w-6 animate-spin text-primary" />
+    </div>
+
     <div
-      v-if="filtered.length === 0"
+      v-else-if="filtered.length === 0"
       class="mt-12 rounded-2xl border border-border bg-card p-12 text-center"
     >
       <FileText class="mx-auto h-12 w-12 text-muted-foreground" />
@@ -123,8 +135,8 @@ async function onDelete() {
             <td class="px-4 py-3 text-muted-foreground">{{ formatDate(inv.issueDate) }}</td>
             <td class="px-4 py-3 text-right font-semibold">{{ formatCZK(inv.total) }}</td>
             <td class="px-4 py-3 text-center">
-              <Badge :variant="statusLabels[inv.status].variant">
-                {{ statusLabels[inv.status].label }}
+              <Badge :variant="statusMeta(inv.status).variant">
+                {{ statusMeta(inv.status).label }}
               </Badge>
             </td>
             <td class="px-4 py-3 text-right">
