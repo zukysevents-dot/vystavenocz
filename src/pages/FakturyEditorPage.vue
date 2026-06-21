@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, Save, Loader2, UserPlus } from 'lucide-vue-next'
+import { ArrowLeft, Save, Loader2, UserPlus, Plus, Trash2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,9 +16,15 @@ import QuickClientDialog, { type QuickClient } from '@/components/app/QuickClien
 import { useClients } from '@/composables/useClients'
 import { useInvoices, type InvoiceInput } from '@/composables/useInvoices'
 import { useCompanyStore } from '@/stores/company'
-import { buildInvoiceNumber, variableSymbolFromInvoiceNumber } from '@/lib/invoice'
+import {
+  buildInvoiceNumber,
+  calcLine,
+  calcTotals,
+  formatCZK,
+  variableSymbolFromInvoiceNumber,
+} from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
-import type { ClientSnapshot, SupplierSnapshot } from '@/lib/types'
+import type { ClientSnapshot, InvoiceItem, SupplierSnapshot, VatRate } from '@/lib/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -56,6 +62,55 @@ const dueDate = ref(addDaysISO(14))
 const variableSymbol = ref('')
 const paymentMethod = ref('bank_transfer')
 
+// Plátce DPH? Neplátce/identifikovaná osoba fakturuje bez DPH.
+const vatPayer = computed(() => companyStore.company?.vatMode === 'payer')
+
+type ItemDraft = Pick<
+  InvoiceItem,
+  'id' | 'description' | 'quantity' | 'unit' | 'unitPrice' | 'vatRate'
+>
+
+function newItem(): ItemDraft {
+  return {
+    id: crypto.randomUUID(),
+    description: '',
+    quantity: 1,
+    unit: 'ks',
+    unitPrice: 0,
+    vatRate: 21,
+  }
+}
+
+const items = ref<ItemDraft[]>([newItem()])
+
+// Číselné inputy můžou být dočasně prázdné — pro výpočty je sjednotíme na čísla.
+function num(n: number): number {
+  return Number(n) || 0
+}
+function normalizedItems(): ItemDraft[] {
+  return items.value.map((it) => ({
+    ...it,
+    quantity: num(it.quantity),
+    unitPrice: num(it.unitPrice),
+  }))
+}
+
+const totals = computed(() => calcTotals(normalizedItems(), vatPayer.value))
+
+function lineTotal(it: ItemDraft): number {
+  return calcLine(
+    { quantity: num(it.quantity), unitPrice: num(it.unitPrice), vatRate: it.vatRate },
+    vatPayer.value,
+  ).lineTotal
+}
+
+function addItem(): void {
+  items.value.push(newItem())
+}
+function removeItem(id: string): void {
+  items.value = items.value.filter((it) => it.id !== id)
+}
+
 onMounted(async () => {
   companyStore.init()
   await Promise.all([loadClients(), loadInvoices()])
@@ -74,6 +129,16 @@ onMounted(async () => {
       if (!selectedClientId.value && inv.clientSnapshot?.name) {
         adHocClient.value = inv.clientSnapshot
       }
+      items.value = inv.items.length
+        ? inv.items.map((it) => ({
+            id: it.id,
+            description: it.description,
+            quantity: it.quantity,
+            unit: it.unit,
+            unitPrice: it.unitPrice,
+            vatRate: it.vatRate,
+          }))
+        : [newItem()]
     } else {
       toast.error('Faktura nenalezena.')
       router.replace('/app/faktury')
@@ -158,7 +223,16 @@ function buildClientSnapshot(): ClientSnapshot {
 async function onSave() {
   saving.value = true
   try {
-    // Položky a součty přijdou ve F6-46 — koncept se zatím ukládá bez položek.
+    // Z konceptových řádků dopočítej součty po řádcích (lib calcLine).
+    const builtItems: InvoiceItem[] = normalizedItems().map((it) => {
+      const line = calcLine(it, vatPayer.value)
+      return {
+        ...it,
+        lineSubtotal: line.lineSubtotal,
+        lineVat: line.lineVat,
+        lineTotal: line.lineTotal,
+      }
+    })
     const input: InvoiceInput = {
       documentType: 'invoice',
       status: 'draft',
@@ -166,7 +240,7 @@ async function onSave() {
       clientId: selectedClientId.value || null,
       clientSnapshot: buildClientSnapshot(),
       supplierSnapshot: buildSupplierSnapshot(),
-      items: [],
+      items: builtItems,
       currency: 'CZK',
       issueDate: issueDate.value,
       dueDate: dueDate.value,
@@ -181,9 +255,9 @@ async function onSave() {
     }
 
     if (editingId.value) {
-      await update(editingId.value, input)
+      await update(editingId.value, input, vatPayer.value)
     } else {
-      const created = await create(input)
+      const created = await create(input, vatPayer.value)
       editingId.value = created.id
       // Posuň pořadové číslo, ať příští faktura nedostane stejné.
       const c = companyStore.company
@@ -291,11 +365,99 @@ async function onSave() {
         </div>
       </div>
 
-      <!-- Položky a součty — F6-46 -->
-      <div
-        class="rounded-xl border border-dashed border-border bg-muted/20 p-6 text-center text-sm text-muted-foreground"
-      >
-        Položky a součty faktury doplní další krok (F6-46).
+      <!-- Položky -->
+      <div class="rounded-xl border border-border bg-card p-6">
+        <div class="flex items-center justify-between gap-2">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Položky
+          </h2>
+          <Button type="button" variant="outline" size="sm" class="shrink-0" @click="addItem">
+            <Plus class="h-4 w-4" /> Přidat položku
+          </Button>
+        </div>
+
+        <div class="mt-4 space-y-3">
+          <div v-for="(it, idx) in items" :key="it.id" class="rounded-lg border border-border p-3">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs text-muted-foreground">#{{ idx + 1 }}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                title="Odebrat položku"
+                :disabled="items.length === 1"
+                @click="removeItem(it.id)"
+              >
+                <Trash2 class="h-4 w-4 text-destructive" />
+              </Button>
+            </div>
+            <Input v-model="it.description" placeholder="Popis položky" class="mt-2" />
+            <div
+              class="mt-2 grid grid-cols-2 gap-2"
+              :class="vatPayer ? 'sm:grid-cols-4' : 'sm:grid-cols-3'"
+            >
+              <div class="space-y-1">
+                <Label class="text-xs text-muted-foreground">Množství</Label>
+                <Input v-model.number="it.quantity" type="number" step="0.01" />
+              </div>
+              <div class="space-y-1">
+                <Label class="text-xs text-muted-foreground">MJ</Label>
+                <Input v-model="it.unit" />
+              </div>
+              <div class="space-y-1">
+                <Label class="text-xs text-muted-foreground">Cena/MJ</Label>
+                <Input v-model.number="it.unitPrice" type="number" step="0.01" />
+              </div>
+              <div v-if="vatPayer" class="space-y-1">
+                <Label class="text-xs text-muted-foreground">DPH %</Label>
+                <Select
+                  :model-value="String(it.vatRate)"
+                  @update:model-value="(v) => (it.vatRate = Number(v) as VatRate)"
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">0 %</SelectItem>
+                    <SelectItem value="12">12 %</SelectItem>
+                    <SelectItem value="21">21 %</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div class="mt-2 text-right text-sm text-muted-foreground">
+              Řádek:
+              <span class="font-medium text-foreground">{{ formatCZK(lineTotal(it)) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Součty -->
+      <div class="rounded-xl border border-border bg-card p-6">
+        <div class="ml-auto max-w-xs space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-muted-foreground">Mezisoučet</span>
+            <span>{{ formatCZK(totals.subtotal) }}</span>
+          </div>
+          <template v-if="vatPayer">
+            <div
+              v-for="(b, rate) in totals.vatBreakdown"
+              :key="rate"
+              class="flex justify-between text-muted-foreground"
+            >
+              <span>DPH {{ rate }} %</span>
+              <span>{{ formatCZK(b.vat) }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-muted-foreground">DPH celkem</span>
+              <span>{{ formatCZK(totals.vatTotal) }}</span>
+            </div>
+          </template>
+          <div class="flex justify-between border-t border-border pt-2 text-base font-bold">
+            <span>Celkem k úhradě</span>
+            <span class="text-primary">{{ formatCZK(totals.total) }}</span>
+          </div>
+        </div>
       </div>
     </div>
 
