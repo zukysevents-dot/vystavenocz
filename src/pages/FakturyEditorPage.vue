@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, Save, Loader2, UserPlus, Plus, Trash2, Eye, EyeOff } from 'lucide-vue-next'
+import {
+  ArrowLeft,
+  Save,
+  Loader2,
+  UserPlus,
+  Plus,
+  Trash2,
+  Eye,
+  EyeOff,
+  Download,
+} from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,6 +24,7 @@ import {
 } from '@/components/ui/select'
 import QuickClientDialog, { type QuickClient } from '@/components/app/QuickClientDialog.vue'
 import InvoiceDocument from '@/components/app/InvoiceDocument.vue'
+import { downloadInvoicePdf } from '@/lib/invoice-pdf'
 import { useClients } from '@/composables/useClients'
 import { useInvoices, type InvoiceInput } from '@/composables/useInvoices'
 import { useCompanyStore } from '@/stores/company'
@@ -52,6 +63,9 @@ const loading = ref(true)
 const saving = ref(false)
 const quickOpen = ref(false)
 const showPreview = ref(true)
+const downloadingPdf = ref(false)
+// Skrytý off-screen render dokumentu pro zachycení do PDF.
+const pdfDocEl = ref<HTMLElement | null>(null)
 
 const editingId = ref<string | null>(null)
 
@@ -224,6 +238,18 @@ const clientSnapshot = computed<ClientSnapshot>(() => {
   return adHocClient.value ?? { name: '' }
 })
 
+async function onDownloadPdf() {
+  if (!pdfDocEl.value) return
+  downloadingPdf.value = true
+  try {
+    await downloadInvoicePdf(pdfDocEl.value, `${invoiceNumber.value.trim() || 'faktura'}.pdf`)
+  } catch {
+    toast.error('PDF se nepodařilo vygenerovat.')
+  } finally {
+    downloadingPdf.value = false
+  }
+}
+
 async function onSave() {
   saving.value = true
   try {
@@ -295,6 +321,11 @@ async function onSave() {
           <EyeOff v-if="showPreview" class="h-4 w-4" />
           <Eye v-else class="h-4 w-4" />
           <span class="hidden sm:inline">{{ showPreview ? 'Skrýt náhled' : 'Náhled' }}</span>
+        </Button>
+        <Button variant="outline" :disabled="downloadingPdf || loading" @click="onDownloadPdf">
+          <Loader2 v-if="downloadingPdf" class="h-4 w-4 animate-spin" />
+          <Download v-else class="h-4 w-4" />
+          <span class="hidden sm:inline">PDF</span>
         </Button>
         <Button variant="coral" :disabled="saving || loading" @click="onSave">
           <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
@@ -491,5 +522,20 @@ async function onSave() {
     </div>
 
     <QuickClientDialog v-model:open="quickOpen" @confirm="onQuickConfirm" />
+
+    <!-- Skrytý off-screen render dokumentu pro PDF export (vždy v DOM kvůli QR). -->
+    <div ref="pdfDocEl" aria-hidden="true" style="position: fixed; left: -10000px; top: 0">
+      <InvoiceDocument
+        :supplier="supplierSnapshot"
+        :client="clientSnapshot"
+        :items="previewItems"
+        :invoice-number="invoiceNumber"
+        :issue-date="issueDate"
+        :due-date="dueDate"
+        :taxable-date="issueDate"
+        :variable-symbol="variableSymbol"
+        :payment-method="paymentMethod"
+      />
+    </div>
   </div>
 </template>

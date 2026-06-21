@@ -92,3 +92,55 @@ export function formatDate(iso: string): string {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('cs-CZ')
 }
+
+/** Převod českého čísla účtu (prefix-number/bank) na IBAN. Nevalidní formát → null. */
+export function czAccountToIban(account: string): string | null {
+  if (!account) return null
+  const cleaned = account.replace(/\s/g, '')
+  const match = cleaned.match(/^(?:(\d{1,6})-)?(\d{1,10})\/(\d{4})$/)
+  if (!match) return null
+  const [, prefix = '', number, bank] = match
+  const bban = `${bank}${prefix.padStart(6, '0')}${number.padStart(10, '0')}` // 20 znaků
+  // mod-97 dle ISO 13616: BBAN + „CZ" jako „1235" + „00"
+  const check = String(98 - mod97(`${bban}123500`)).padStart(2, '0')
+  return `CZ${check}${bban}`
+}
+
+function mod97(num: string): number {
+  let rem = 0
+  for (const c of num) {
+    rem = (rem * 10 + Number(c)) % 97
+  }
+  return rem
+}
+
+/**
+ * SPAYD řetězec (Short Payment Descriptor) — ČBA standard pro QR platby.
+ * Příklad: SPD*1.0*ACC:CZ65...*AM:480.55*CC:CZK*X-VS:20260005
+ */
+export function buildSpayd(opts: {
+  iban: string
+  amount: number
+  currency?: string
+  variableSymbol?: string
+  message?: string
+  swift?: string | null
+}): string {
+  const parts: string[] = [
+    'SPD*1.0',
+    `ACC:${opts.iban.replace(/\s/g, '')}${opts.swift ? '+' + opts.swift : ''}`,
+    `AM:${opts.amount.toFixed(2)}`,
+    `CC:${opts.currency || 'CZK'}`,
+  ]
+  if (opts.variableSymbol) parts.push(`X-VS:${opts.variableSymbol.replace(/\D/g, '')}`)
+  if (opts.message) {
+    const msg = opts.message
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9 .,:_-]/g, '')
+      .slice(0, 60)
+    if (msg) parts.push(`MSG:${msg}`)
+  }
+  return parts.join('*')
+}

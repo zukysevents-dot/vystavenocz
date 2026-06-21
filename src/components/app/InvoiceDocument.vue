@@ -5,10 +5,13 @@
  * Přeneseno ze staré React appky (Prod:src/components/app/InvoiceDocument.tsx).
  * QR platba (SPAYD) přijde s PDF taskem F6-48.
  */
-import { computed } from 'vue'
+import { computed, ref, watchEffect } from 'vue'
+import QRCode from 'qrcode'
 import {
+  buildSpayd,
   calcLine,
   calcTotals,
+  czAccountToIban,
   formatCZK,
   formatDate,
   variableSymbolFromInvoiceNumber,
@@ -48,10 +51,39 @@ const vs = computed(
   () => props.variableSymbol || variableSymbolFromInvoiceNumber(props.invoiceNumber),
 )
 const accent = computed(() => props.supplier.invoiceColor || '#1f2937')
-const iban = computed(() => props.supplier.iban?.replace(/\s/g, '') || null)
+const iban = computed(
+  () =>
+    props.supplier.iban?.replace(/\s/g, '') ||
+    (props.supplier.bankAccount ? czAccountToIban(props.supplier.bankAccount) : null),
+)
 const showPaymentBlock = computed(
   () => props.paymentMethod === 'bank_transfer' && !!(props.supplier.bankAccount || iban.value),
 )
+
+// QR platba (SPAYD) — jen u bankovního převodu s IBANem a kladnou částkou.
+const qrDataUrl = ref<string | null>(null)
+watchEffect(async () => {
+  if (!iban.value || totals.value.total <= 0 || props.paymentMethod !== 'bank_transfer') {
+    qrDataUrl.value = null
+    return
+  }
+  const spayd = buildSpayd({
+    iban: iban.value,
+    amount: totals.value.total,
+    variableSymbol: vs.value,
+    message: props.invoiceNumber,
+    swift: props.supplier.swift,
+  })
+  try {
+    qrDataUrl.value = await QRCode.toDataURL(spayd, {
+      margin: 1,
+      width: 200,
+      errorCorrectionLevel: 'M',
+    })
+  } catch {
+    qrDataUrl.value = null
+  }
+})
 
 const metaCells = computed(() => [
   { label: 'Datum vystavení', value: formatDate(props.issueDate) },
@@ -176,6 +208,10 @@ function lineTotal(it: DocItem): number {
             <div class="muted-note">Způsob úhrady: bankovní převod</div>
           </div>
         </template>
+        <div v-if="qrDataUrl" class="qr">
+          <div class="qr-label">QR platba</div>
+          <img :src="qrDataUrl" alt="QR platba" class="qr-img" />
+        </div>
       </div>
 
       <div class="totals">
@@ -363,6 +399,20 @@ function lineTotal(it: DocItem): number {
   font-weight: 700;
   font-size: 14px;
   color: var(--accent);
+}
+.qr {
+  margin-top: 16px;
+}
+.qr-label {
+  font-size: 10px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+.qr-img {
+  width: 140px;
+  height: 140px;
 }
 .notes {
   margin-top: 24px;
