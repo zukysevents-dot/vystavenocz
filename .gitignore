@@ -10,15 +10,12 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-.output
-.vinxi
-.tanstack/**
-.nitro
 *.local
 
-# Wrangler / Cloudflare
-.wrangler/
-.dev.vars
+# Test artefakty
+coverage
+playwright-report
+test-results
 
 # Editor directories and files
 .vscode/*
@@ -30,3 +27,17 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Env files (commit only .env.example)
+.env
+.env.*
+!.env.example
+
+# Local dev tooling / Claude Code (not part of the app)
+.claude/
+.playwright-mcp/
+.mcp.json
+globalize-mcp.mjs
+set-figma-token.cmd
+setup-claude-mcp.cmd
+NEXT-SESSION.md
