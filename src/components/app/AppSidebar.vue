@@ -34,8 +34,8 @@ function isActive(item: (typeof nav)[number]): boolean {
   return item.exact ? route.path === item.to : route.path.startsWith(item.to)
 }
 
-function signOut() {
-  auth.logout()
+async function signOut() {
+  await auth.logout()
   router.push('/')
 }
 

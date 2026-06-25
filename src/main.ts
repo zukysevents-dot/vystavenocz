@@ -10,9 +10,10 @@ import '@/assets/main.css'
 import App from '@/App.vue'
 import router from '@/router'
 import { seedMockData } from '@/lib/seed'
+import { isApiMode } from '@/lib/http'
 
-// MVP: naseedovat demo data do mock vrstvy (idempotentní). Odstraní se po napojení API.
-void seedMockData()
+// MVP: demo data do mock vrstvy (idempotentní) — jen v mock režimu. Na reálném API se neseeduje.
+if (!isApiMode()) void seedMockData()
 
 const app = createApp(App)
 

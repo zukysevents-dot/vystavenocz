@@ -20,7 +20,7 @@ const agreed = ref(false)
 const submitting = ref(false)
 const error = ref('')
 
-function onSubmit() {
+async function onSubmit() {
   error.value = ''
   if (password.value.length < 8) {
     error.value = 'Heslo musí mít alespoň 8 znaků.'
@@ -34,7 +34,7 @@ function onSubmit() {
     return
   }
   submitting.value = true
-  const res = auth.register(email.value, password.value, fullName.value || null)
+  const res = await auth.register(email.value, password.value, fullName.value || null)
   submitting.value = false
   if (res.ok) {
     toast.success('Účet vytvořen. Vítejte!')
