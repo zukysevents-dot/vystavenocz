@@ -26,7 +26,13 @@ export function useInvoices() {
   const { invoices } = storeToRefs(store)
 
   async function load(): Promise<void> {
-    store.invoices = await api.list()
+    try {
+      store.invoices = await api.list()
+    } catch (e) {
+      // Endpoint faktur ještě nemusí v backendu existovat → prázdný seznam místo pádu appky.
+      console.warn('Načtení faktur selhalo:', e)
+      store.invoices = []
+    }
   }
 
   async function create(input: InvoiceInput, vatPayer = true): Promise<Invoice> {

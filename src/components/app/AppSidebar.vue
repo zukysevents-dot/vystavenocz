@@ -9,6 +9,8 @@ import {
   LogOut,
   Sparkles,
   CreditCard,
+  ShoppingCart,
+  Package,
   Menu,
   X,
 } from 'lucide-vue-next'
@@ -19,6 +21,8 @@ import { useAuthStore } from '@/stores/auth'
 
 const nav = [
   { to: '/app', label: 'Přehled', icon: LayoutDashboard, exact: true },
+  { to: '/app/pokladna', label: 'Pokladna', icon: ShoppingCart },
+  { to: '/app/sklad', label: 'Sklad', icon: Package },
   { to: '/app/faktury', label: 'Faktury', icon: FileText },
   { to: '/app/klienti', label: 'Klienti', icon: Users },
   { to: '/app/predplatne', label: 'Předplatné', icon: CreditCard },

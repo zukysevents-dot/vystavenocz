@@ -130,3 +130,54 @@ export interface User {
   email: string
   fullName: string | null
 }
+
+// --- POS / Katalog (parita s backend vystaveno-api) ---
+
+export interface Product {
+  id: string
+  name: string
+  sku: string
+  ean: string | null
+  salePrice: number // prodejní cena VČETNĚ DPH (retail/pokladna)
+  vatRate: number
+  purchasePrice: number | null
+  minQuantity: number
+}
+
+export type PaymentMethod = 'Cash' | 'Card'
+export type SaleStatus = 'Completed' | 'Cancelled'
+
+export interface SaleItemLine {
+  id: string
+  description: string | null
+  productId: string | null
+  quantity: number
+  unitPrice: number
+  vatRate: number
+  discountPercent: number
+  lineNet: number
+  lineVat: number
+  lineTotal: number
+}
+
+export interface Sale {
+  id: string
+  locationId: string | null
+  paymentMethod: PaymentMethod
+  status: SaleStatus
+  totalNet: number
+  totalVat: number
+  total: number
+  soldAt: string
+  items: SaleItemLine[]
+}
+
+export interface DailySalesSummary {
+  date: string
+  count: number
+  totalNet: number
+  totalVat: number
+  total: number
+  cashTotal: number
+  cardTotal: number
+}

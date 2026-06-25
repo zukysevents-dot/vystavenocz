@@ -12,7 +12,12 @@ export function useClients() {
   const { clients } = storeToRefs(store)
 
   async function load(): Promise<void> {
-    store.clients = await api.list()
+    try {
+      store.clients = await api.list()
+    } catch (e) {
+      console.warn('Načtení klientů selhalo:', e)
+      store.clients = []
+    }
   }
 
   async function create(input: ClientInput): Promise<Client> {
