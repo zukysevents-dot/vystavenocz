@@ -10,17 +10,10 @@ import {
   ArrowLeft,
   Package,
   Ban,
-  Printer,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import SaleReceipt, { type ReceiptLine } from '@/components/SaleReceipt.vue'
+import ReceiptDialog from '@/components/ReceiptDialog.vue'
+import { buildReceipt, type ReceiptInfo } from '@/lib/receipt'
 import { useCompanyStore } from '@/stores/company'
 import { useFloors } from '@/composables/useFloors'
 import { useTables } from '@/composables/useTables'
@@ -41,54 +34,8 @@ const companyStore = useCompanyStore()
 const apiMode = isApiMode()
 
 // Účtenka po zaplacení (náhled + tisk/PDF).
-interface ReceiptInfo {
-  businessName: string
-  address?: string
-  ico?: string
-  dic?: string
-  receiptNumber: string
-  dateTime: string
-  table?: string
-  items: ReceiptLine[]
-  total: number
-  paymentMethod: string
-}
 const receiptOpen = ref(false)
 const receiptData = ref<ReceiptInfo | null>(null)
-
-function buildReceipt(
-  order: Order,
-  tableName: string | undefined,
-  method: PaymentMethod,
-  total: number,
-): ReceiptInfo {
-  const c = companyStore.company
-  const address = [c?.street, [c?.zip, c?.city].filter(Boolean).join(' ')]
-    .filter(Boolean)
-    .join(', ')
-  return {
-    businessName: c?.companyName || c?.fullName || 'Účtenka',
-    address: address || undefined,
-    ico: c?.ico || undefined,
-    dic: c?.dic || undefined,
-    receiptNumber: order.id.slice(0, 8).toUpperCase(),
-    dateTime: new Date().toLocaleString('cs-CZ', {
-      day: 'numeric',
-      month: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }),
-    table: tableName,
-    items: order.items.map((i) => ({ name: i.name, qty: i.quantity, total: i.lineTotal })),
-    total,
-    paymentMethod: method === 'Cash' ? 'Hotově' : 'Kartou',
-  }
-}
-
-function printReceipt() {
-  window.print()
-}
 
 const categories = ref<Category[]>([])
 const selectedCat = ref('')
@@ -233,7 +180,14 @@ async function pay(method: PaymentMethod) {
   busy.value = true
   try {
     const paid = await ordersApi.pay(order.id, method)
-    receiptData.value = buildReceipt(order, tableName, method, paid.total)
+    receiptData.value = buildReceipt({
+      company: companyStore.company,
+      items: order.items.map((i) => ({ name: i.name, qty: i.quantity, total: i.lineTotal })),
+      total: paid.total,
+      method,
+      id: order.id,
+      table: tableName,
+    })
     receiptOpen.value = true // účtenka po zaplacení (náhled + tisk)
     toast.success(`Zaplaceno ${formatCZK(paid.total)} ${method === 'Cash' ? 'hotově' : 'kartou'}.`)
     await refreshOpen()
@@ -521,21 +475,6 @@ const hasNewItems = computed(() =>
     </template>
 
     <!-- Účtenka po zaplacení (náhled + tisk/PDF) -->
-    <Dialog v-model:open="receiptOpen">
-      <DialogContent class="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Účtenka</DialogTitle>
-        </DialogHeader>
-        <div class="max-h-[70vh] overflow-y-auto">
-          <SaleReceipt v-if="receiptData" v-bind="receiptData" />
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" @click="receiptOpen = false">Hotovo</Button>
-          <Button variant="coral" @click="printReceipt">
-            <Printer class="h-4 w-4" /> Vytisknout / PDF
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ReceiptDialog v-model:open="receiptOpen" :receipt="receiptData" />
   </div>
 </template>

@@ -12,21 +12,29 @@ import {
   Package,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import ReceiptDialog from '@/components/ReceiptDialog.vue'
 import { useProducts } from '@/composables/useProducts'
 import { useCategories } from '@/composables/useCategories'
 import { useSales } from '@/composables/useSales'
 import { formatCZK } from '@/lib/invoice'
+import { buildReceipt, type ReceiptInfo } from '@/lib/receipt'
 import { isApiMode } from '@/lib/http'
+import { useCompanyStore } from '@/stores/company'
 import { toast } from '@/components/ui/sonner'
 import type { Category, PaymentMethod, Product } from '@/lib/types'
 
 const { products, load } = useProducts()
 const categoriesApi = useCategories()
 const sales = useSales()
+const companyStore = useCompanyStore()
 
 const loading = ref(true)
 const paying = ref(false)
 const apiMode = isApiMode()
+
+// Účtenka po zaplacení (náhled + tisk/PDF).
+const receiptOpen = ref(false)
+const receiptData = ref<ReceiptInfo | null>(null)
 
 const categories = ref<Category[]>([])
 const selectedCat = ref('')
@@ -48,6 +56,7 @@ const total = computed(() =>
 const itemCount = computed(() => cart.value.reduce((sum, l) => sum + l.quantity, 0))
 
 onMounted(async () => {
+  companyStore.init() // profil firmy (název/adresa) pro hlavičku účtenky
   if (!apiMode) {
     loading.value = false
     return
@@ -86,6 +95,11 @@ async function pay(method: PaymentMethod) {
   if (!cart.value.length || paying.value) return
   paying.value = true
   try {
+    const receiptLines = cart.value.map((l) => ({
+      name: l.product.name,
+      qty: l.quantity,
+      total: l.product.salePrice * l.quantity,
+    }))
     const items = cart.value.map((l) => ({
       productId: l.product.id,
       description: l.product.name,
@@ -94,6 +108,14 @@ async function pay(method: PaymentMethod) {
       vatRate: l.product.vatRate,
     }))
     const sale = await sales.create(method, items)
+    receiptData.value = buildReceipt({
+      company: companyStore.company,
+      items: receiptLines,
+      total: sale.total,
+      method,
+      id: sale.id,
+    })
+    receiptOpen.value = true // účtenka po zaplacení (náhled + tisk)
     toast.success(`Zaplaceno ${formatCZK(sale.total)} ${method === 'Cash' ? 'hotově' : 'kartou'}.`)
     clearCart()
   } catch (e) {
@@ -261,5 +283,8 @@ async function pay(method: PaymentMethod) {
         </div>
       </div>
     </div>
+
+    <!-- Účtenka po zaplacení (náhled + tisk/PDF) -->
+    <ReceiptDialog v-model:open="receiptOpen" :receipt="receiptData" />
   </div>
 </template>
