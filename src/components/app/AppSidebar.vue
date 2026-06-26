@@ -17,6 +17,7 @@ import {
   UtensilsCrossed,
   ChefHat,
   Clock,
+  CalendarDays,
   Menu,
   X,
 } from 'lucide-vue-next'
@@ -34,6 +35,7 @@ const nav = [
   { to: '/app/sklad', label: 'Sklad', icon: Package },
   { to: '/app/zasoby', label: 'Zásoby', icon: Boxes },
   { to: '/app/dochazka', label: 'Docházka', icon: Clock },
+  { to: '/app/rezervace', label: 'Rezervace', icon: CalendarDays },
   { to: '/app/kategorie', label: 'Kategorie', icon: Tags },
   { to: '/app/faktury', label: 'Faktury', icon: FileText },
   { to: '/app/klienti', label: 'Klienti', icon: Users },

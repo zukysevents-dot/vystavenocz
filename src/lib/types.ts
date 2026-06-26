@@ -331,3 +331,38 @@ export interface AttendanceSummary {
   month: number
   items: AttendanceSummaryItem[]
 }
+
+// --- Rezervace (booking) ---
+
+export type ReservationStatus = 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled' | 'NoShow'
+
+export interface Service {
+  id: string
+  name: string
+  durationMinutes: number
+  price: number
+  vatRate: number
+  isActive: boolean
+}
+
+export interface Resource {
+  id: string
+  name: string
+  locationId: string | null
+  isActive: boolean
+}
+
+export interface Reservation {
+  id: string
+  resourceId: string
+  serviceId: string
+  serviceName: string
+  startsAt: string
+  endsAt: string
+  status: ReservationStatus
+  customerName: string
+  customerEmail: string | null
+  customerPhone: string | null
+  note: string | null
+  saleId: string | null
+}
