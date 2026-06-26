@@ -23,9 +23,10 @@ export function useClients() {
   async function create(input: ClientInput): Promise<Client> {
     const now = new Date().toISOString()
     const client: Client = { ...input, id: crypto.randomUUID(), createdAt: now, updatedAt: now }
-    await api.create(client)
-    store.clients.push(client)
-    return client
+    // Ulož entitu z odpovědi — v API režimu má serverové id (klientské UUID server zahodí).
+    const created = await api.create(client)
+    store.clients.push(created)
+    return created
   }
 
   async function update(id: string, patch: Partial<ClientInput>): Promise<Client> {

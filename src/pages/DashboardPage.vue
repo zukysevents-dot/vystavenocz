@@ -211,7 +211,7 @@ function statusMeta(s: string): { label: string; variant: BadgeVariant } {
             @click="router.push('/app/faktury/editor?id=' + inv.id)"
           >
             <span class="min-w-0 flex-1">
-              <span class="block truncate font-medium">{{ inv.invoiceNumber }}</span>
+              <span class="block truncate font-medium">{{ inv.invoiceNumber || 'Koncept' }}</span>
               <span class="block truncate text-xs text-muted-foreground">
                 {{ inv.clientSnapshot?.name || '—' }} · {{ formatDate(inv.issueDate) }}
               </span>

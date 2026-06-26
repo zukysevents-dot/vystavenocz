@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import PaywallDialog from '@/components/app/PaywallDialog.vue'
+import { ApiError } from '@/lib/http'
 import { useInvoices } from '@/composables/useInvoices'
 import { useSubscription } from '@/composables/useSubscription'
 import { formatCZK, formatDate } from '@/lib/invoice'
@@ -66,7 +67,7 @@ const filtered = computed(() => {
   return invoices.value.filter((inv) => {
     if (!q) return true
     return (
-      inv.invoiceNumber.toLowerCase().includes(q) ||
+      (inv.invoiceNumber ?? '').toLowerCase().includes(q) ||
       (inv.clientSnapshot?.name || '').toLowerCase().includes(q)
     )
   })
@@ -74,9 +75,19 @@ const filtered = computed(() => {
 
 async function onDelete() {
   if (!deleteId.value) return
-  await remove(deleteId.value)
-  toast.success('Faktura smazána.')
-  deleteId.value = null
+  try {
+    await remove(deleteId.value)
+    toast.success('Faktura smazána.')
+  } catch (e) {
+    // Vystavenou fakturu server smazat nedovolí (409) — patří ji stornovat, ne mazat.
+    if (e instanceof ApiError && e.status === 409) {
+      toast.error('Vystavenou fakturu nelze smazat — otevřete ji a stornujte.')
+    } else {
+      throw e
+    }
+  } finally {
+    deleteId.value = null
+  }
 }
 </script>
 
@@ -133,7 +144,7 @@ async function onDelete() {
         >
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
-              <div class="font-semibold">{{ inv.invoiceNumber }}</div>
+              <div class="font-semibold">{{ inv.invoiceNumber || 'Koncept' }}</div>
               <div class="truncate text-sm text-muted-foreground">
                 {{ inv.clientSnapshot?.name || '—' }}
               </div>
@@ -182,7 +193,7 @@ async function onDelete() {
               :key="inv.id"
               class="border-b border-border last:border-0 hover:bg-muted/30"
             >
-              <td class="px-4 py-3 font-medium">{{ inv.invoiceNumber }}</td>
+              <td class="px-4 py-3 font-medium">{{ inv.invoiceNumber || 'Koncept' }}</td>
               <td class="px-4 py-3 text-muted-foreground">{{ inv.clientSnapshot?.name || '—' }}</td>
               <td class="px-4 py-3 text-muted-foreground">{{ formatDate(inv.issueDate) }}</td>
               <td class="px-4 py-3 text-right font-semibold">{{ formatCZK(inv.total) }}</td>

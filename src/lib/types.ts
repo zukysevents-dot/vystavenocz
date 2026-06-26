@@ -94,7 +94,7 @@ export interface Invoice {
   id: string
   documentType: DocumentType
   status: InvoiceStatus
-  invoiceNumber: string
+  invoiceNumber: string | null // koncept nemá číslo — přidělí ho server při vystavení (issue)
   clientId: string | null
   clientSnapshot: ClientSnapshot
   supplierSnapshot: SupplierSnapshot
