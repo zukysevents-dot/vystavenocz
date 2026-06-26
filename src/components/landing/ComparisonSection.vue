@@ -4,129 +4,126 @@ import { Check, Minus } from 'lucide-vue-next'
 type Row = {
   label: string
   us: boolean | string
+  dotykacka: boolean | string
+  storyous: boolean | string
   fakturoid: boolean | string
-  idoklad: boolean | string
-  vyfakturuj: boolean | string
 }
 
 const ourFeatures: Row[] = [
-  { label: 'AI asistent v češtině', us: true, fakturoid: false, idoklad: false, vyfakturuj: false },
   {
-    label: 'Autosave konceptů (30 s)',
+    label: 'Pokladna i fakturace v jednom',
     us: true,
+    dotykacka: 'Doplňky',
+    storyous: 'Doplňky',
     fakturoid: false,
-    idoklad: false,
-    vyfakturuj: false,
   },
   {
-    label: 'Vodoznak STORNOVÁNO v PDF',
+    label: 'Faktury s DPH a QR (ČBA standard)',
     us: true,
-    fakturoid: false,
-    idoklad: false,
-    vyfakturuj: false,
-  },
-  {
-    label: 'Cash-flow predikce zdarma',
-    us: true,
-    fakturoid: 'Maximum',
-    idoklad: false,
-    vyfakturuj: false,
-  },
-  {
-    label: 'Opakované faktury zdarma',
-    us: true,
-    fakturoid: 'Maximum',
-    idoklad: 'Plus',
-    vyfakturuj: false,
-  },
-  {
-    label: 'Automatické upomínky zdarma',
-    us: true,
-    fakturoid: 'Na každý den',
-    idoklad: 'Plus',
-    vyfakturuj: false,
-  },
-  {
-    label: 'Dobropisy s vlastní řadou OD-',
-    us: true,
+    dotykacka: 'Omezeně',
+    storyous: 'Omezeně',
     fakturoid: true,
-    idoklad: true,
-    vyfakturuj: 'Omezeně',
   },
   {
-    label: 'Chytrá validace konceptů',
+    label: 'Rezervace s hlídáním kolizí',
     us: true,
-    fakturoid: 'Omezeně',
-    idoklad: 'Omezeně',
-    vyfakturuj: false,
+    dotykacka: false,
+    storyous: false,
+    fakturoid: false,
+  },
+  {
+    label: 'Docházka + export do CSV',
+    us: true,
+    dotykacka: false,
+    storyous: false,
+    fakturoid: false,
+  },
+  {
+    label: 'Modulární — platíš jen co používáš',
+    us: true,
+    dotykacka: false,
+    storyous: false,
+    fakturoid: false,
+  },
+  {
+    label: 'AI pomocník u faktur (česky)',
+    us: true,
+    dotykacka: false,
+    storyous: false,
+    fakturoid: false,
   },
 ]
 
 const standardFeatures: Row[] = [
-  { label: 'QR platba (ČBA standard)', us: true, fakturoid: true, idoklad: true, vyfakturuj: true },
+  { label: 'Dotyková pokladna (POS)', us: true, dotykacka: true, storyous: true, fakturoid: false },
   {
-    label: 'Vlastní logo a šablony',
+    label: 'Účty na stůl a mapa stolů',
     us: true,
-    fakturoid: true,
-    idoklad: true,
-    vyfakturuj: 'Omezeně',
-  },
-  { label: 'Klientské portfolio', us: true, fakturoid: true, idoklad: true, vyfakturuj: true },
-  { label: 'Cizí měny + kurz ČNB', us: true, fakturoid: true, idoklad: true, vyfakturuj: false },
-  {
-    label: 'Reverse charge & OSS',
-    us: true,
-    fakturoid: 'Maximum',
-    idoklad: true,
-    vyfakturuj: false,
+    dotykacka: true,
+    storyous: true,
+    fakturoid: false,
   },
   {
-    label: 'Web faktury s odkazem pro klienta',
+    label: 'Bony do kuchyně a na bar (KDS)',
     us: true,
-    fakturoid: true,
-    idoklad: true,
-    vyfakturuj: false,
+    dotykacka: true,
+    storyous: true,
+    fakturoid: false,
   },
+  { label: 'Sklad a inventura', us: true, dotykacka: true, storyous: true, fakturoid: false },
   {
-    label: 'Export do účetnictví (ISDOC, XML)',
+    label: 'Mobil / tablet bez instalace (PWA)',
     us: true,
-    fakturoid: 'Na lehko',
-    idoklad: true,
-    vyfakturuj: 'Omezeně',
-  },
-  {
-    label: 'Mobil-first (bez instalace)',
-    us: true,
+    dotykacka: 'Aplikace',
+    storyous: 'Aplikace',
     fakturoid: 'Aplikace',
-    idoklad: 'Aplikace',
-    vyfakturuj: true,
   },
+  { label: 'Tmavý režim', us: true, dotykacka: false, storyous: false, fakturoid: false },
 ]
 
 const honestFeatures: Row[] = [
-  { label: 'Vedení skladu', us: false, fakturoid: 'Maximum', idoklad: 'Plus', vyfakturuj: false },
-  { label: 'Cenové nabídky', us: 'Brzy', fakturoid: 'Maximum', idoklad: true, vyfakturuj: true },
-  { label: 'Veřejné REST API', us: 'Brzy', fakturoid: true, idoklad: true, vyfakturuj: false },
+  {
+    label: 'EET a tisk na pokladní tiskárně',
+    us: 'Brzy',
+    dotykacka: true,
+    storyous: true,
+    fakturoid: false,
+  },
   {
     label: 'Nativní mobilní aplikace',
-    us: false,
+    us: 'Brzy',
+    dotykacka: true,
+    storyous: true,
     fakturoid: true,
-    idoklad: true,
-    vyfakturuj: false,
+  },
+  {
+    label: 'Vlastní pokladní hardware',
+    us: false,
+    dotykacka: true,
+    storyous: true,
+    fakturoid: false,
+  },
+  {
+    label: 'Veřejné REST API',
+    us: 'Brzy',
+    dotykacka: true,
+    storyous: true,
+    fakturoid: true,
   },
 ]
 
 const priceRow: Row = {
-  label: 'Cena od (měsíčně, ročně placeno)',
-  us: '100 Kč',
+  label: 'Cena od (měsíčně)',
+  us: '149 Kč',
+  dotykacka: 'dle balíčku',
+  storyous: 'dle balíčku',
   fakturoid: '151 Kč',
-  idoklad: '270 Kč',
-  vyfakturuj: '149 Kč',
 }
 
 const sections: { title: string; subtitle?: string; data: Row[] }[] = [
   {
-    title: 'Co umíme my a konkurence ne (nebo až v dražším tarifu)',
+    title: 'Co umíme navíc — vše v jednom, modulárně',
+    subtitle: 'Pokladna, restaurace, sklad, docházka, rezervace i fakturace pod jedním účtem.',
     data: ourFeatures,
   },
   {
@@ -135,7 +132,7 @@ const sections: { title: string; subtitle?: string; data: Row[] }[] = [
   },
   {
     title: 'Buďme upřímní — tohle zatím neumíme',
-    subtitle: 'Pro většinu OSVČ to neřeší. Pokud potřebujete sklad nebo API, řekněte nám to.',
+    subtitle: 'Pokud potřebujete vlastní pokladní hardware nebo API, řekněte nám to.',
     data: honestFeatures,
   },
 ]
@@ -162,17 +159,17 @@ const sections: { title: string; subtitle?: string; data: Row[] }[] = [
                 <th
                   class="px-5 py-4 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground"
                 >
+                  Dotykačka
+                </th>
+                <th
+                  class="px-5 py-4 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                >
+                  Storyous
+                </th>
+                <th
+                  class="px-5 py-4 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                >
                   Fakturoid
-                </th>
-                <th
-                  class="px-5 py-4 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-                >
-                  iDoklad
-                </th>
-                <th
-                  class="px-5 py-4 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-                >
-                  Vyfakturuj
                 </th>
               </tr>
             </thead>
@@ -202,30 +199,30 @@ const sections: { title: string; subtitle?: string; data: Row[] }[] = [
                     <span v-else class="text-sm font-semibold text-coral">{{ r.us }}</span>
                   </td>
                   <td class="px-5 py-3.5 text-center">
+                    <template v-if="typeof r.dotykacka === 'boolean'">
+                      <Check v-if="r.dotykacka" class="mx-auto h-5 w-5 text-success" />
+                      <Minus v-else class="mx-auto h-5 w-5 text-muted-foreground/40" />
+                    </template>
+                    <span v-else class="text-sm font-semibold text-muted-foreground">{{
+                      r.dotykacka
+                    }}</span>
+                  </td>
+                  <td class="px-5 py-3.5 text-center">
+                    <template v-if="typeof r.storyous === 'boolean'">
+                      <Check v-if="r.storyous" class="mx-auto h-5 w-5 text-success" />
+                      <Minus v-else class="mx-auto h-5 w-5 text-muted-foreground/40" />
+                    </template>
+                    <span v-else class="text-sm font-semibold text-muted-foreground">{{
+                      r.storyous
+                    }}</span>
+                  </td>
+                  <td class="px-5 py-3.5 text-center">
                     <template v-if="typeof r.fakturoid === 'boolean'">
                       <Check v-if="r.fakturoid" class="mx-auto h-5 w-5 text-success" />
                       <Minus v-else class="mx-auto h-5 w-5 text-muted-foreground/40" />
                     </template>
                     <span v-else class="text-sm font-semibold text-muted-foreground">{{
                       r.fakturoid
-                    }}</span>
-                  </td>
-                  <td class="px-5 py-3.5 text-center">
-                    <template v-if="typeof r.idoklad === 'boolean'">
-                      <Check v-if="r.idoklad" class="mx-auto h-5 w-5 text-success" />
-                      <Minus v-else class="mx-auto h-5 w-5 text-muted-foreground/40" />
-                    </template>
-                    <span v-else class="text-sm font-semibold text-muted-foreground">{{
-                      r.idoklad
-                    }}</span>
-                  </td>
-                  <td class="px-5 py-3.5 text-center">
-                    <template v-if="typeof r.vyfakturuj === 'boolean'">
-                      <Check v-if="r.vyfakturuj" class="mx-auto h-5 w-5 text-success" />
-                      <Minus v-else class="mx-auto h-5 w-5 text-muted-foreground/40" />
-                    </template>
-                    <span v-else class="text-sm font-semibold text-muted-foreground">{{
-                      r.vyfakturuj
                     }}</span>
                   </td>
                 </tr>
@@ -241,6 +238,24 @@ const sections: { title: string; subtitle?: string; data: Row[] }[] = [
                   <span v-else class="text-sm font-semibold text-coral">{{ priceRow.us }}</span>
                 </td>
                 <td class="px-5 py-4 text-center">
+                  <template v-if="typeof priceRow.dotykacka === 'boolean'">
+                    <Check v-if="priceRow.dotykacka" class="mx-auto h-5 w-5 text-success" />
+                    <Minus v-else class="mx-auto h-5 w-5 text-muted-foreground/40" />
+                  </template>
+                  <span v-else class="text-sm font-semibold text-muted-foreground">{{
+                    priceRow.dotykacka
+                  }}</span>
+                </td>
+                <td class="px-5 py-4 text-center">
+                  <template v-if="typeof priceRow.storyous === 'boolean'">
+                    <Check v-if="priceRow.storyous" class="mx-auto h-5 w-5 text-success" />
+                    <Minus v-else class="mx-auto h-5 w-5 text-muted-foreground/40" />
+                  </template>
+                  <span v-else class="text-sm font-semibold text-muted-foreground">{{
+                    priceRow.storyous
+                  }}</span>
+                </td>
+                <td class="px-5 py-4 text-center">
                   <template v-if="typeof priceRow.fakturoid === 'boolean'">
                     <Check v-if="priceRow.fakturoid" class="mx-auto h-5 w-5 text-success" />
                     <Minus v-else class="mx-auto h-5 w-5 text-muted-foreground/40" />
@@ -249,32 +264,14 @@ const sections: { title: string; subtitle?: string; data: Row[] }[] = [
                     priceRow.fakturoid
                   }}</span>
                 </td>
-                <td class="px-5 py-4 text-center">
-                  <template v-if="typeof priceRow.idoklad === 'boolean'">
-                    <Check v-if="priceRow.idoklad" class="mx-auto h-5 w-5 text-success" />
-                    <Minus v-else class="mx-auto h-5 w-5 text-muted-foreground/40" />
-                  </template>
-                  <span v-else class="text-sm font-semibold text-muted-foreground">{{
-                    priceRow.idoklad
-                  }}</span>
-                </td>
-                <td class="px-5 py-4 text-center">
-                  <template v-if="typeof priceRow.vyfakturuj === 'boolean'">
-                    <Check v-if="priceRow.vyfakturuj" class="mx-auto h-5 w-5 text-success" />
-                    <Minus v-else class="mx-auto h-5 w-5 text-muted-foreground/40" />
-                  </template>
-                  <span v-else class="text-sm font-semibold text-muted-foreground">{{
-                    priceRow.vyfakturuj
-                  }}</span>
-                </td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
       <p class="mt-4 text-center text-xs text-muted-foreground">
-        Ceny konkurence k 4/2026, vždy nejnižší placený tarif s ročním předplatným. Zdroj: veřejné
-        ceníky.
+        Orientační srovnání k 6/2026 podle veřejně dostupných informací. Ceny a rozsah balíčků
+        konkurence se liší podle sestavy a hardwaru.
       </p>
     </div>
   </section>

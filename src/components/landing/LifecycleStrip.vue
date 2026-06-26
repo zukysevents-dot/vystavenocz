@@ -1,26 +1,26 @@
 <script setup lang="ts">
-import { FilePlus2, Send, CheckCircle2, Archive } from 'lucide-vue-next'
+import { ShoppingCart, UtensilsCrossed, CreditCard, FileText } from 'lucide-vue-next'
 
 const stages = [
   {
-    icon: FilePlus2,
-    title: 'Vystavíš',
-    desc: 'AI nebo formulář — za 30 sekund.',
+    icon: ShoppingCart,
+    title: 'Objednávka & prodej',
+    desc: 'Účet na stůl nebo prodej na pokladně — pár ťuků.',
   },
   {
-    icon: Send,
-    title: 'Pošleš',
-    desc: 'Mail s PDF a QR kódem na jeden klik.',
+    icon: UtensilsCrossed,
+    title: 'Kuchyně & sklad',
+    desc: 'Bon do kuchyně i na bar, zásoby se odečtou samy.',
   },
   {
-    icon: CheckCircle2,
-    title: 'Pohlídá splatnost',
-    desc: 'Automatické upomínky bez tvého zásahu.',
+    icon: CreditCard,
+    title: 'Platba',
+    desc: 'Hotově i kartou, rozdělení účtu, účtenka na ťuk.',
   },
   {
-    icon: Archive,
-    title: 'Najdeš kdykoli',
-    desc: 'Všechny faktury, klienti i historie na jednom místě.',
+    icon: FileText,
+    title: 'Doklad & faktura',
+    desc: 'Z prodeje vystavíš fakturu s DPH a QR jedním klikem.',
   },
 ]
 </script>
@@ -29,11 +29,12 @@ const stages = [
   <section class="bg-background py-16 sm:py-20">
     <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
       <div class="mx-auto max-w-2xl text-center">
-        <h2 class="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          Celý život faktury na jednom místě
+        <h2 class="font-display text-3xl font-black tracking-tight text-foreground sm:text-4xl">
+          Celý provoz v jednom toku
         </h2>
         <p class="mt-3 text-base text-muted-foreground sm:text-lg">
-          Od vystavení po archiv. Bez Excelu, bez papírů, bez ztracených PDF v mailu.
+          Od objednávky po doklad. Pokladna, kuchyně i sklad spolu mluví — bez papírků a ručního
+          přepisování.
         </p>
       </div>
 

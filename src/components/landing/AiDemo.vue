@@ -230,14 +230,15 @@ onUnmounted(clearTimers)
           class="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground"
         >
           <Sparkles class="h-3.5 w-3.5 text-coral" />
-          AI asistent — živá ukázka
+          AI pomocník u faktur — živá ukázka
         </div>
-        <h2 class="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+        <h2 class="font-display text-3xl font-black tracking-tight text-foreground sm:text-4xl">
           Napište, co chcete — faktura se vystaví sama
         </h2>
         <p class="mt-4 text-lg text-muted-foreground">
-          „Vystav fakturu Alze na 10 000 za IT služby." AI dotáhne IČO z ARESu, spočítá DPH a vyplní
-          celý formulář. Klikat můžete pořád ručně — AI je bonus, když spěcháte.
+          V modulu fakturace pomáhá AI: „Vystav fakturu Alze na 10 000 za IT služby." Dotáhne IČO z
+          ARESu, spočítá DPH a vyplní celý formulář. Klikat můžete pořád ručně — AI je bonus, když
+          spěcháte.
         </p>
 
         <!-- Scenario indicator -->

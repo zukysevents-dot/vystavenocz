@@ -12,12 +12,12 @@ import { Button } from '@/components/ui/button'
         <Clock class="h-3.5 w-3.5" />
         Stavíme to s vámi
       </div>
-      <h2 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+      <h2 class="font-display text-2xl font-black tracking-tight text-foreground sm:text-3xl">
         Co napíšete, to brzo uvidíte
       </h2>
       <p class="mx-auto mt-3 max-w-xl text-base leading-relaxed text-muted-foreground">
-        Drobná vylepšení obvykle nasadíme do pár dní. Když vám něco chybí, napište — odpovídáme
-        osobně.
+        Drobná vylepšení napříč moduly obvykle nasadíme do pár dní. Když vám něco v provozu chybí,
+        napište — odpovídáme osobně.
       </p>
 
       <div class="mt-6 flex justify-center">

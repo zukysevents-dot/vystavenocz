@@ -7,23 +7,23 @@ import { Button } from '@/components/ui/button'
 const promises = [
   {
     icon: Sparkles,
-    title: 'Akční cena do 1. 6.',
-    text: 'Registrujte se do 1. června a získáte současnou cenu 100 Kč/měsíc (ročně) nebo 159 Kč/měsíc. Po 1. 6. budou nové ceny 2 000 Kč ročně a 269 Kč měsíčně.',
+    title: 'Platíte jen za to, co používáte',
+    text: 'Modulární ceník — zapnete jen moduly, které potřebujete, a jen za ně platíte. Kdykoliv modul přidáte nebo odeberete.',
   },
   {
     icon: ShieldCheck,
-    title: 'Garance ceny 12 měsíců',
-    text: 'Pokud se zaregistrujete před změnou ceníku, vaše cena se po dobu 12 měsíců nezmění. Zvýšení nikdy nezavedeme zpětně.',
+    title: 'Férové a srozumitelné ceny',
+    text: 'Ceny máte přehledně v ceníku, kde si rovnou poskládáte svůj systém. Žádné skryté poplatky ani hvězdičky drobným písmem.',
   },
   {
     icon: Lock,
     title: 'Žádná platební karta na začátku',
-    text: '14 dní zkoušíte zdarma, kartu zadáváte až když se rozhodnete pokračovat. Žádné automatické stržení po triálu.',
+    text: '14 dní zkoušíte zdarma, kartu zadáváte až když se rozhodnete pokračovat. Žádné automatické stržení po zkušebce.',
   },
   {
     icon: Clock,
-    title: 'Zrušení jedním kliknutím',
-    text: 'Předplatné zrušíte sami v nastavení – bez e-mailů, bez telefonátů, bez výpovědních lhůt.',
+    title: 'Bez závazku, zrušení jedním kliknutím',
+    text: 'Předplatné i jednotlivé moduly zrušíte sami v nastavení – bez e-mailů, bez telefonátů, bez výpovědních lhůt.',
   },
   {
     icon: Heart,
@@ -33,8 +33,8 @@ const promises = [
 ]
 
 const limits = [
-  'Termíny vývoje nových funkcí orientačně dodržujeme, ale závisí na změnách legislativy a třetích stranách (např. Stripe, ARES, banky).',
-  'Cenovou garanci nelze uplatnit zpětně po vypršení 12měsíčního období – v té době přechází na aktuální ceník.',
+  'Termíny vývoje nových funkcí orientačně dodržujeme, ale závisí na změnách legislativy a třetích stranách (např. banky, ARES).',
+  'Ceny modulů jsou orientační a můžeme je do budoucna upravit; změnu vždy oznámíme dopředu a nikdy ji nezavádíme zpětně.',
   'Vrácení peněz za nevyčerpané období nenárokujeme automaticky, ale píšete-li nám férový důvod, řešíme individuálně.',
 ]
 </script>
@@ -42,7 +42,7 @@ const limits = [
 <template>
   <PageHeader
     eyebrow="Naše sliby"
-    title="Co vám garantujeme"
+    title="Férově, bez závazku"
     subtitle="Žádné hvězdičky drobným písmem. Tady je seznam všeho, co vám slibujeme – a kde jsou naše limity."
   />
 
@@ -81,7 +81,7 @@ const limits = [
 
       <div class="mt-10 flex flex-col items-center gap-3 text-center">
         <Button variant="coral" size="lg" as-child>
-          <RouterLink to="/registrace">Využít akční cenu do 1. 6.</RouterLink>
+          <RouterLink to="/registrace">Vyzkoušet zdarma</RouterLink>
         </Button>
         <RouterLink
           to="/cenik"

@@ -7,8 +7,8 @@ import CtaSection from '@/components/landing/CtaSection.vue'
 <template>
   <PageHeader
     eyebrow="Funkce"
-    title="Všechno potřebné. Nic navíc."
-    subtitle="Pro živnostníky a malé firmy, kterým se nechce řešit účetnictví — chtějí prostě vystavit fakturu a jít dál."
+    title="Jeden systém pro celý provoz."
+    subtitle="Pokladna, restaurace a kuchyně, sklad, docházka, rezervace i fakturace. Zapneš jen moduly, které potřebuješ — a platíš jen za ně."
   />
   <FeaturesSection />
   <CtaSection />

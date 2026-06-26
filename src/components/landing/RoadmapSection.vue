@@ -5,53 +5,52 @@ type Status = 'done' | 'soon' | 'planned'
 
 const items: { title: string; desc: string; status: Status; when?: string }[] = [
   {
-    title: 'AI asistent v češtině',
-    desc: 'Sestaví, opraví a doplní fakturu na povel.',
+    title: 'Pokladna (POS)',
+    desc: 'Dotykový prodej, dlaždice produktů, platba hotově i kartou, účtenka.',
     status: 'done',
   },
   {
-    title: 'Opakované faktury a upomínky',
-    desc: 'Automaticky vystavené i odeslané — bez tvého zásahu.',
+    title: 'Restaurace a kuchyně',
+    desc: 'Mapa stolů, účty na stůl, bony do kuchyně i na bar (KDS).',
     status: 'done',
   },
   {
-    title: 'Načítání z ARESu',
-    desc: 'Stačí zadat IČO a údaje firmy se doplní samy.',
+    title: 'Sklad a zásoby',
+    desc: 'Příjem, výdej, korekce, inventura a hlídání nízkých zásob.',
     status: 'done',
   },
   {
-    title: 'QR platby a export do účetnictví',
-    desc: 'Každá faktura má QR kód. Export do ISDOC a XML pro účetní.',
+    title: 'Docházka zaměstnanců',
+    desc: 'Píchačka, přehled odpracovaných hodin a export do CSV pro mzdy.',
     status: 'done',
   },
   {
-    title: 'Instalace na mobil (PWA)',
-    desc: 'Přidej Vystaveno na plochu telefonu — funguje jako appka.',
+    title: 'Rezervace',
+    desc: 'Kalendář služeb a zdrojů s hlídáním kolizí termínů.',
     status: 'done',
   },
   {
-    title: 'Cenové nabídky',
-    desc: 'Vystav nabídku, klient ji potvrdí, jedním klikem se promění ve fakturu.',
+    title: 'Fakturace a klienti',
+    desc: 'Faktury s DPH, QR platby a evidence klientů — vše propojené.',
+    status: 'done',
+  },
+  {
+    title: 'Modulární zapínání per firma',
+    desc: 'Každá firma si zapne a platí jen moduly, které opravdu používá.',
     status: 'soon',
-    when: 'Q2 2026',
-  },
-  {
-    title: 'Skladové položky a katalog',
-    desc: 'Ulož si produkty a služby — stačí pak vybrat ze seznamu.',
-    status: 'soon',
-    when: 'Q2 2026',
-  },
-  {
-    title: 'Veřejné API a webhooky',
-    desc: 'Napojení na e-shopy, CRM a vlastní automatizace.',
-    status: 'planned',
     when: 'Q3 2026',
   },
   {
-    title: 'Ruční párování plateb',
-    desc: 'Nahraj výpis z banky (CSV) a přiřaď platby k fakturám.',
-    status: 'planned',
+    title: 'Mobilní aplikace',
+    desc: 'Nativní appka pro telefon i tablet, ať máš provoz po ruce.',
+    status: 'soon',
     when: 'Q3 2026',
+  },
+  {
+    title: 'EET a tisk účtenek',
+    desc: 'Elektronická evidence tržeb a tisk účtenek na pokladní tiskárně.',
+    status: 'planned',
+    when: 'Q4 2026',
   },
 ]
 
@@ -81,12 +80,12 @@ const statusMap: Record<Status, { label: string; className: string; icon: typeof
         <p class="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
           Roadmapa
         </p>
-        <h2 class="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+        <h2 class="font-display text-3xl font-black tracking-tight text-foreground sm:text-4xl">
           Co už umíme a co chystáme
         </h2>
         <p class="mt-4 text-base text-muted-foreground sm:text-lg">
-          Vystaveno se vyvíjí každý týden podle zpětné vazby od skutečných uživatelů. Tady je, na
-          čem pracujeme.
+          Vystaveno se vyvíjí každý týden podle zpětné vazby od skutečných provozů. Tady je, na čem
+          pracujeme.
         </p>
       </div>
 
