@@ -10,7 +10,8 @@ let initialized = false
 function detectInitial(): Theme {
   const saved = localStorage.getItem(STORAGE_KEY)
   if (saved === 'light' || saved === 'dark') return saved
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  // Identita v0.4 je tmavá-primární; světlý „den" režim si uživatel zapne přepínačem.
+  return 'dark'
 }
 
 function applyTheme(theme: Theme): void {
