@@ -247,3 +247,16 @@ export interface Order {
   total: number
   items: OrderItemLine[]
 }
+
+export interface KitchenQueueItem {
+  itemId: string
+  orderId: string
+  tableName: string | null
+  productName: string
+  quantity: number
+  course: string | null
+  note: string | null
+  kitchenSection: CategoryKitchenSection
+  kitchenStatus: KitchenStatus
+  sentToKitchenAt: string | null
+}

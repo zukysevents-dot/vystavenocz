@@ -13,6 +13,7 @@ import {
   Package,
   LayoutGrid,
   UtensilsCrossed,
+  ChefHat,
   Menu,
   X,
 } from 'lucide-vue-next'
@@ -25,6 +26,7 @@ const nav = [
   { to: '/app', label: 'Přehled', icon: LayoutDashboard, exact: true },
   { to: '/app/pokladna', label: 'Pokladna', icon: ShoppingCart },
   { to: '/app/restaurace', label: 'Restaurace', icon: UtensilsCrossed },
+  { to: '/app/kuchyne', label: 'Kuchyně', icon: ChefHat },
   { to: '/app/mapa-stolu', label: 'Mapa stolů', icon: LayoutGrid },
   { to: '/app/sklad', label: 'Sklad', icon: Package },
   { to: '/app/faktury', label: 'Faktury', icon: FileText },
