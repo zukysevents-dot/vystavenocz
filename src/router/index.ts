@@ -159,6 +159,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Zásoby', layout: 'app', requiresAuth: true },
   },
   {
+    path: '/app/dochazka',
+    name: 'app-dochazka',
+    component: () => import('@/pages/DochazkaPage.vue'),
+    meta: { title: 'Docházka', layout: 'app', requiresAuth: true },
+  },
+  {
     path: '/app/restaurace',
     name: 'app-restaurace',
     component: () => import('@/pages/RestauracePage.vue'),

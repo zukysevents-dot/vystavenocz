@@ -291,3 +291,43 @@ export interface StockMovement {
   relatedStocktakeId: string | null
   createdAt: string
 }
+
+// --- Docházka ---
+
+export type AttendanceStatus = 'Open' | 'Closed'
+
+export interface Employee {
+  id: string
+  fullName: string
+  userId: string | null
+  locationId: string | null
+  isActive: boolean
+}
+
+export interface AttendanceBreak {
+  id: string
+  startAt: string
+  endAt: string | null
+}
+
+export interface AttendanceRecord {
+  id: string
+  employeeId: string
+  locationId: string | null
+  clockInAt: string
+  clockOutAt: string | null
+  status: AttendanceStatus
+  breaks: AttendanceBreak[]
+}
+
+export interface AttendanceSummaryItem {
+  employeeId: string
+  employeeName: string
+  workedMinutes: number
+}
+
+export interface AttendanceSummary {
+  year: number
+  month: number
+  items: AttendanceSummaryItem[]
+}
