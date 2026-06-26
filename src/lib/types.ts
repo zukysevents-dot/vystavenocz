@@ -216,3 +216,34 @@ export interface Category {
   parentId: string | null
   kitchenSection: CategoryKitchenSection
 }
+
+// --- Gastro: otevřené účty na stole ---
+
+export type OrderStatus = 'Open' | 'Closed' | 'Cancelled'
+export type KitchenStatus = 'New' | 'Sent' | 'Preparing' | 'Ready' | 'Served'
+
+export interface OrderItemLine {
+  id: string
+  productId: string | null
+  name: string
+  quantity: number
+  unitPrice: number
+  vatRate: number
+  course: string | null
+  note: string | null
+  kitchenSection: CategoryKitchenSection
+  kitchenStatus: KitchenStatus
+  lineTotal: number
+}
+
+export interface Order {
+  id: string
+  tableId: string | null
+  locationId: string | null
+  status: OrderStatus
+  saleId: string | null
+  openedAt: string
+  closedAt: string | null
+  total: number
+  items: OrderItemLine[]
+}

@@ -12,6 +12,7 @@ import {
   ShoppingCart,
   Package,
   LayoutGrid,
+  UtensilsCrossed,
   Menu,
   X,
 } from 'lucide-vue-next'
@@ -23,6 +24,7 @@ import { useAuthStore } from '@/stores/auth'
 const nav = [
   { to: '/app', label: 'Přehled', icon: LayoutDashboard, exact: true },
   { to: '/app/pokladna', label: 'Pokladna', icon: ShoppingCart },
+  { to: '/app/restaurace', label: 'Restaurace', icon: UtensilsCrossed },
   { to: '/app/mapa-stolu', label: 'Mapa stolů', icon: LayoutGrid },
   { to: '/app/sklad', label: 'Sklad', icon: Package },
   { to: '/app/faktury', label: 'Faktury', icon: FileText },
