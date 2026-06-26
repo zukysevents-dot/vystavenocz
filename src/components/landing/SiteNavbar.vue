@@ -7,7 +7,7 @@ import SiteLogo from '@/components/SiteLogo.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 
 const links = [
-  { to: '/funkce', label: 'Funkce' },
+  { to: '/funkce', label: 'Moduly' },
   { to: '/srovnani', label: 'Srovnání' },
   { to: '/cenik', label: 'Ceník' },
   { to: '/clanky', label: 'Články' },

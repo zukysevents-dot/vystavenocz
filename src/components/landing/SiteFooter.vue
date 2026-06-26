@@ -25,7 +25,8 @@ const year = computed(() => new Date().getFullYear())
         <div>
           <SiteLogo />
           <p class="mt-4 max-w-xs text-sm text-muted-foreground">
-            Moderní česká fakturace pro OSVČ a firmy. Postaveno v Praze.
+            Jeden systém pro celý provoz — pokladna, fakturace i rezervace. České, postavené v
+            Praze.
           </p>
         </div>
 
