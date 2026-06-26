@@ -181,3 +181,38 @@ export interface DailySalesSummary {
   cashTotal: number
   cardTotal: number
 }
+
+// --- Gastro: mapa stolů ---
+
+export type TableShape = 'Rect' | 'Circle'
+
+export interface Floor {
+  id: string
+  name: string
+  sortOrder: number
+  locationId: string | null
+}
+
+export interface DiningTable {
+  id: string
+  floorId: string
+  name: string
+  x: number
+  y: number
+  width: number
+  height: number
+  rotation: number
+  seats: number
+  shape: TableShape
+}
+
+export type CategoryKitchenSection = 'None' | 'Kitchen' | 'Bar'
+
+export interface Category {
+  id: string
+  name: string
+  color: string | null
+  sortOrder: number
+  parentId: string | null
+  kitchenSection: CategoryKitchenSection
+}
