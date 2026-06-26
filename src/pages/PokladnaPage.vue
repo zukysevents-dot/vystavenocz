@@ -13,18 +13,28 @@ import {
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { useProducts } from '@/composables/useProducts'
+import { useCategories } from '@/composables/useCategories'
 import { useSales } from '@/composables/useSales'
 import { formatCZK } from '@/lib/invoice'
 import { isApiMode } from '@/lib/http'
 import { toast } from '@/components/ui/sonner'
-import type { PaymentMethod, Product } from '@/lib/types'
+import type { Category, PaymentMethod, Product } from '@/lib/types'
 
 const { products, load } = useProducts()
+const categoriesApi = useCategories()
 const sales = useSales()
 
 const loading = ref(true)
 const paying = ref(false)
 const apiMode = isApiMode()
+
+const categories = ref<Category[]>([])
+const selectedCat = ref('')
+const visibleProducts = computed(() =>
+  selectedCat.value
+    ? products.value.filter((p) => p.categoryId === selectedCat.value)
+    : products.value,
+)
 
 interface CartLine {
   product: Product
@@ -44,6 +54,11 @@ onMounted(async () => {
   }
   loading.value = true
   await load()
+  try {
+    categories.value = await categoriesApi.list()
+  } catch (e) {
+    console.error(e)
+  }
   loading.value = false
 })
 
@@ -123,20 +138,50 @@ async function pay(method: PaymentMethod) {
             <RouterLink to="/app/sklad"><Plus class="h-4 w-4" /> Přidat produkty</RouterLink>
           </Button>
         </div>
-        <div v-else class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <button
-            v-for="p in products"
-            :key="p.id"
-            type="button"
-            class="flex min-h-24 flex-col justify-between rounded-xl border border-border bg-background p-3 text-left transition-colors hover:border-primary hover:bg-primary-soft active:scale-[0.98]"
-            @click="addToCart(p)"
-          >
-            <span class="font-semibold leading-tight">{{ p.name }}</span>
-            <span class="mt-2 text-sm font-bold text-primary tabular-nums">{{
-              formatCZK(p.salePrice)
-            }}</span>
-          </button>
-        </div>
+        <template v-else>
+          <div v-if="categories.length" class="mb-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+              :class="
+                selectedCat === ''
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/70'
+              "
+              @click="selectedCat = ''"
+            >
+              Vše
+            </button>
+            <button
+              v-for="c in categories"
+              :key="c.id"
+              type="button"
+              class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+              :class="
+                selectedCat === c.id
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/70'
+              "
+              @click="selectedCat = c.id"
+            >
+              {{ c.name }}
+            </button>
+          </div>
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <button
+              v-for="p in visibleProducts"
+              :key="p.id"
+              type="button"
+              class="flex min-h-24 flex-col justify-between rounded-xl border border-border bg-background p-3 text-left transition-colors hover:border-primary hover:bg-primary-soft active:scale-[0.98]"
+              @click="addToCart(p)"
+            >
+              <span class="font-semibold leading-tight">{{ p.name }}</span>
+              <span class="mt-2 text-sm font-bold text-primary tabular-nums">{{
+                formatCZK(p.salePrice)
+              }}</span>
+            </button>
+          </div>
+        </template>
       </div>
 
       <!-- Košík -->

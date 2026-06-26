@@ -15,17 +15,27 @@ import { Button } from '@/components/ui/button'
 import { useFloors } from '@/composables/useFloors'
 import { useTables } from '@/composables/useTables'
 import { useProducts } from '@/composables/useProducts'
+import { useCategories } from '@/composables/useCategories'
 import { useOrders } from '@/composables/useOrders'
 import { isApiMode } from '@/lib/http'
 import { formatCZK } from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
-import type { DiningTable, Floor, Order, PaymentMethod } from '@/lib/types'
+import type { Category, DiningTable, Floor, Order, PaymentMethod } from '@/lib/types'
 
 const floorsApi = useFloors()
 const tablesApi = useTables()
 const ordersApi = useOrders()
+const categoriesApi = useCategories()
 const { products, load: loadProducts } = useProducts()
 const apiMode = isApiMode()
+
+const categories = ref<Category[]>([])
+const selectedCat = ref('')
+const visibleProducts = computed(() =>
+  selectedCat.value
+    ? products.value.filter((p) => p.categoryId === selectedCat.value)
+    : products.value,
+)
 
 const loading = ref(true)
 const busy = ref(false)
@@ -52,6 +62,7 @@ onMounted(async () => {
   }
   try {
     await Promise.all([loadProducts(), refreshOpen()])
+    categories.value = await categoriesApi.list()
     floors.value = await floorsApi.list()
     if (floors.value.length) currentFloorId.value = floors.value[0].id
     if (currentFloorId.value) await loadTables()
@@ -288,21 +299,51 @@ const hasNewItems = computed(() =>
             <Package class="h-10 w-10" />
             <p class="mt-3 text-sm">Žádné produkty. Přidejte je v sekci Sklad.</p>
           </div>
-          <div v-else class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <button
-              v-for="p in products"
-              :key="p.id"
-              type="button"
-              :disabled="busy"
-              class="flex min-h-20 flex-col justify-between rounded-xl border border-border bg-background p-3 text-left transition-colors hover:border-primary hover:bg-primary-soft active:scale-[0.98] disabled:opacity-50"
-              @click="addProduct(p.id)"
-            >
-              <span class="text-sm font-semibold leading-tight">{{ p.name }}</span>
-              <span class="mt-1 text-sm font-bold text-primary tabular-nums">{{
-                formatCZK(p.salePrice)
-              }}</span>
-            </button>
-          </div>
+          <template v-else>
+            <div v-if="categories.length" class="mb-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+                :class="
+                  selectedCat === ''
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                "
+                @click="selectedCat = ''"
+              >
+                Vše
+              </button>
+              <button
+                v-for="c in categories"
+                :key="c.id"
+                type="button"
+                class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+                :class="
+                  selectedCat === c.id
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                "
+                @click="selectedCat = c.id"
+              >
+                {{ c.name }}
+              </button>
+            </div>
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <button
+                v-for="p in visibleProducts"
+                :key="p.id"
+                type="button"
+                :disabled="busy"
+                class="flex min-h-20 flex-col justify-between rounded-xl border border-border bg-background p-3 text-left transition-colors hover:border-primary hover:bg-primary-soft active:scale-[0.98] disabled:opacity-50"
+                @click="addProduct(p.id)"
+              >
+                <span class="text-sm font-semibold leading-tight">{{ p.name }}</span>
+                <span class="mt-1 text-sm font-bold text-primary tabular-nums">{{
+                  formatCZK(p.salePrice)
+                }}</span>
+              </button>
+            </div>
+          </template>
         </div>
 
         <!-- Účet -->

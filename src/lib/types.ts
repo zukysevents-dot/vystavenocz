@@ -142,6 +142,7 @@ export interface Product {
   vatRate: number
   purchasePrice: number | null
   minQuantity: number
+  categoryId: string | null
 }
 
 export type PaymentMethod = 'Cash' | 'Card'

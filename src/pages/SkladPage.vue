@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { Plus, Search, Loader2, Pencil, Trash2, Package } from 'lucide-vue-next'
+import { RouterLink } from 'vue-router'
+import { Plus, Search, Loader2, Pencil, Trash2, Package, Tags } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,11 +24,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useProducts, type ProductInput } from '@/composables/useProducts'
+import { useCategories } from '@/composables/useCategories'
 import { formatCZK } from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
-import type { Product } from '@/lib/types'
+import type { Category, Product } from '@/lib/types'
 
 const { products, load, create, update, remove } = useProducts()
+const categoriesApi = useCategories()
+const categories = ref<Category[]>([])
 
 const loading = ref(true)
 const search = ref('')
@@ -44,14 +48,27 @@ type ProductForm = {
   vatRate: number
   sku: string
   ean: string
+  categoryId: string
 }
 
-const emptyForm: ProductForm = { name: '', salePrice: 0, vatRate: 21, sku: '', ean: '' }
+const emptyForm: ProductForm = {
+  name: '',
+  salePrice: 0,
+  vatRate: 21,
+  sku: '',
+  ean: '',
+  categoryId: '',
+}
 const form = reactive<ProductForm>({ ...emptyForm })
 
 onMounted(async () => {
   loading.value = true
   await load()
+  try {
+    categories.value = await categoriesApi.list()
+  } catch (e) {
+    console.error(e)
+  }
   loading.value = false
 })
 
@@ -83,6 +100,7 @@ watch(dialogOpen, (open) => {
         vatRate: p.vatRate,
         sku: p.sku,
         ean: p.ean ?? '',
+        categoryId: p.categoryId ?? '',
       })
     } else {
       Object.assign(form, { ...emptyForm })
@@ -108,6 +126,7 @@ async function onSubmit() {
     vatRate: form.vatRate,
     purchasePrice: null,
     minQuantity: 0,
+    categoryId: form.categoryId || null,
   }
   try {
     if (editing.value) {
@@ -147,7 +166,12 @@ async function onDelete() {
         <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Sklad / katalog</h1>
         <p class="mt-1 text-muted-foreground">Produkty a ceny pro prodej na pokladně.</p>
       </div>
-      <Button variant="coral" @click="openCreate"> <Plus class="h-4 w-4" /> Nový produkt </Button>
+      <div class="flex gap-2">
+        <Button variant="outline" as-child>
+          <RouterLink to="/app/kategorie"><Tags class="h-4 w-4" /> Kategorie</RouterLink>
+        </Button>
+        <Button variant="coral" @click="openCreate"> <Plus class="h-4 w-4" /> Nový produkt </Button>
+      </div>
     </div>
 
     <div class="mt-6 relative">
@@ -261,6 +285,18 @@ async function onDelete() {
               <Label for="p-ean">Čárový kód (EAN)</Label>
               <Input id="p-ean" v-model="form.ean" inputmode="numeric" placeholder="volitelné" />
             </div>
+          </div>
+
+          <div class="space-y-2">
+            <Label for="p-cat">Kategorie</Label>
+            <select
+              id="p-cat"
+              v-model="form.categoryId"
+              class="flex h-10 w-full rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">— bez kategorie —</option>
+              <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
+            </select>
           </div>
 
           <DialogFooter>
