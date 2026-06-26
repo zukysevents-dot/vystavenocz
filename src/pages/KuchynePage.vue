@@ -1,65 +1,92 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { ChefHat, Clock, Play, Check, UtensilsCrossed } from 'lucide-vue-next'
+import { ChefHat, Clock, Check, UtensilsCrossed, Printer, Wine } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { useKitchen } from '@/composables/useKitchen'
 import { isApiMode } from '@/lib/http'
 import { toast } from '@/components/ui/sonner'
-import type { CategoryKitchenSection, KitchenQueueItem, KitchenStatus } from '@/lib/types'
+import type { CategoryKitchenSection, KitchenQueueItem } from '@/lib/types'
 
 const kitchen = useKitchen()
 const apiMode = isApiMode()
 
 const items = ref<KitchenQueueItem[]>([])
-const section = ref<CategoryKitchenSection>('None') // 'None' = vše
+const station = ref<CategoryKitchenSection>('None') // 'None' = vše
 const now = ref(Date.now())
+const busy = ref(false)
 let timer: ReturnType<typeof setInterval> | null = null
 
-const SECTIONS: { value: CategoryKitchenSection; label: string }[] = [
+const STATIONS: { value: CategoryKitchenSection; label: string }[] = [
   { value: 'None', label: 'Vše' },
   { value: 'Kitchen', label: 'Kuchyně' },
   { value: 'Bar', label: 'Bar' },
 ]
-
-const NEXT: Record<string, { status: KitchenStatus; label: string }> = {
-  Sent: { status: 'Preparing', label: 'Začít' },
-  Preparing: { status: 'Ready', label: 'Hotovo' },
-  Ready: { status: 'Served', label: 'Vydat' },
+const SECTION_LABEL: Record<CategoryKitchenSection, string> = {
+  None: 'Ostatní',
+  Kitchen: 'Kuchyně',
+  Bar: 'Bar',
 }
 
-const columns = computed(() => [
-  { key: 'Sent', title: 'Nové', items: items.value.filter((i) => i.kitchenStatus === 'Sent') },
-  {
-    key: 'Preparing',
-    title: 'Připravuje se',
-    items: items.value.filter((i) => i.kitchenStatus === 'Preparing'),
-  },
-  {
-    key: 'Ready',
-    title: 'Hotové k výdeji',
-    items: items.value.filter((i) => i.kitchenStatus === 'Ready'),
-  },
-])
+// Bon (lísteček) = položky jednoho účtu pro jednu stanici (kuchyně / bar).
+interface Ticket {
+  key: string
+  orderId: string
+  section: CategoryKitchenSection
+  tableName: string | null
+  sentAt: string | null
+  items: KitchenQueueItem[]
+  ready: boolean
+}
+
+const tickets = computed<Ticket[]>(() => {
+  const map = new Map<string, Ticket>()
+  for (const it of items.value) {
+    const key = `${it.orderId}__${it.kitchenSection}`
+    let t = map.get(key)
+    if (!t) {
+      t = {
+        key,
+        orderId: it.orderId,
+        section: it.kitchenSection,
+        tableName: it.tableName,
+        sentAt: it.sentToKitchenAt,
+        items: [],
+        ready: true,
+      }
+      map.set(key, t)
+    }
+    t.items.push(it)
+    if (it.kitchenStatus !== 'Ready') t.ready = false
+    if (it.sentToKitchenAt && (!t.sentAt || it.sentToKitchenAt < t.sentAt))
+      t.sentAt = it.sentToKitchenAt
+  }
+  return [...map.values()].sort((a, b) => (a.sentAt ?? '').localeCompare(b.sentAt ?? ''))
+})
 
 async function refresh() {
   if (!apiMode) return
   try {
-    items.value = await kitchen.queue(section.value)
+    items.value = await kitchen.queue(station.value)
     now.value = Date.now()
   } catch (e) {
     console.error(e)
   }
 }
 
-async function advance(item: KitchenQueueItem) {
-  const next = NEXT[item.kitchenStatus]
-  if (!next) return
+async function setAll(t: Ticket, status: 'Ready' | 'Served') {
+  if (busy.value) return
+  busy.value = true
   try {
-    await kitchen.setStatus(item.itemId, next.status)
+    const targets =
+      status === 'Ready' ? t.items.filter((i) => i.kitchenStatus !== 'Ready') : t.items
+    await Promise.all(targets.map((i) => kitchen.setStatus(i.itemId, status)))
+    if (status === 'Served') toast.success(`Vydáno: ${t.tableName ?? 'účet'}`)
     await refresh()
   } catch (e) {
     toast.error('Změna stavu selhala.')
     console.error(e)
+  } finally {
+    busy.value = false
   }
 }
 
@@ -68,12 +95,59 @@ function minutesSince(iso: string | null): number {
   return Math.max(0, Math.floor((now.value - new Date(iso).getTime()) / 60000))
 }
 
-watch(section, refresh)
+function printTicket(t: Ticket) {
+  const w = window.open('', '_blank', 'width=320,height=520')
+  if (!w) {
+    toast.error('Tisk zablokoval prohlížeč (povolte vyskakovací okna).')
+    return
+  }
+  const rows = t.items
+    .map(
+      (i) =>
+        `<div class="row"><b>${i.quantity}×</b> ${escapeHtml(i.productName)}${
+          i.note ? `<div class="note">↳ ${escapeHtml(i.note)}</div>` : ''
+        }</div>`,
+    )
+    .join('')
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Bon</title>
+    <style>
+      *{font-family:'Courier New',monospace}
+      body{width:280px;margin:0;padding:8px;color:#000}
+      h2{margin:0;font-size:20px;text-align:center}
+      .sub{text-align:center;font-size:12px;margin-bottom:6px}
+      hr{border:none;border-top:1px dashed #000}
+      .row{font-size:16px;margin:6px 0}
+      .note{font-size:13px;padding-left:18px}
+    </style></head><body>
+    <h2>${SECTION_LABEL[t.section].toUpperCase()}</h2>
+    <div class="sub">${escapeHtml(t.tableName ?? 'Bez stolu')} • ${new Date().toLocaleTimeString('cs-CZ')}</div>
+    <hr>${rows}<hr>
+    </body></html>`)
+  w.document.close()
+  w.focus()
+  w.print()
+  w.close()
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => {
+    const map: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }
+    return map[c]
+  })
+}
+
+watch(station, refresh)
 
 onMounted(() => {
   if (!apiMode) return
   refresh()
-  timer = setInterval(refresh, 5000) // živé obnovování fronty
+  timer = setInterval(refresh, 5000)
 })
 onUnmounted(() => {
   if (timer) clearInterval(timer)
@@ -87,27 +161,29 @@ onUnmounted(() => {
       class="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground"
     >
       <ChefHat class="mx-auto h-10 w-10" />
-      <p class="mt-3 font-semibold text-foreground">Kuchyně potřebuje připojení k serveru</p>
+      <p class="mt-3 font-semibold text-foreground">Stanice potřebuje připojení k serveru</p>
     </div>
 
     <template v-else>
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 class="text-2xl font-bold tracking-tight">Kuchyně</h1>
-          <p class="text-sm text-muted-foreground">Objednávky z účtů — obnovuje se automaticky.</p>
+          <h1 class="text-2xl font-bold tracking-tight">Bony — kuchyně & bar</h1>
+          <p class="text-sm text-muted-foreground">
+            Objednávky z účtů. Po odeslání číšníkem sem „vyjede" lísteček.
+          </p>
         </div>
         <div class="flex gap-2">
           <button
-            v-for="s in SECTIONS"
+            v-for="s in STATIONS"
             :key="s.value"
             type="button"
             class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
             :class="
-              section === s.value
+              station === s.value
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-muted text-muted-foreground hover:bg-muted/70'
             "
-            @click="section = s.value"
+            @click="station = s.value"
           >
             {{ s.label }}
           </button>
@@ -115,57 +191,76 @@ onUnmounted(() => {
       </div>
 
       <div
-        v-if="!items.length"
+        v-if="!tickets.length"
         class="flex flex-col items-center rounded-2xl border border-border bg-card p-12 text-center text-muted-foreground"
       >
         <UtensilsCrossed class="h-10 w-10" />
-        <p class="mt-3 font-semibold text-foreground">Kuchyně je prázdná</p>
+        <p class="mt-3 font-semibold text-foreground">Žádné bony</p>
         <p class="mt-1 text-sm">Nové objednávky se tu objeví automaticky.</p>
       </div>
 
-      <div v-else class="grid gap-4 md:grid-cols-3">
-        <div v-for="col in columns" :key="col.key" class="rounded-2xl border border-border bg-card">
-          <div class="flex items-center justify-between border-b border-border p-3 font-semibold">
-            {{ col.title }}
-            <span class="rounded-full bg-muted px-2 py-0.5 text-xs">{{ col.items.length }}</span>
-          </div>
-          <div class="space-y-2 p-3">
-            <div
-              v-for="item in col.items"
-              :key="item.itemId"
-              class="rounded-xl border border-border p-3"
-            >
-              <div class="flex items-start justify-between gap-2">
-                <div class="min-w-0">
-                  <div class="font-semibold">{{ item.quantity }}× {{ item.productName }}</div>
-                  <div class="text-xs text-muted-foreground">
-                    {{ item.tableName ?? 'Bez stolu' }}
-                    <span v-if="item.note"> • {{ item.note }}</span>
-                  </div>
-                </div>
-                <span
-                  class="flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium"
-                  :class="
-                    minutesSince(item.sentToKitchenAt) >= 15
-                      ? 'bg-destructive/15 text-destructive'
-                      : 'bg-muted text-muted-foreground'
-                  "
-                >
-                  <Clock class="h-3 w-3" /> {{ minutesSince(item.sentToKitchenAt) }}′
-                </span>
-              </div>
-              <Button
-                :variant="item.kitchenStatus === 'Ready' ? 'coral' : 'outline'"
-                size="sm"
-                class="mt-2 w-full"
-                @click="advance(item)"
+      <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <!-- Lísteček (bon) -->
+        <div
+          v-for="t in tickets"
+          :key="t.key"
+          class="flex flex-col rounded-xl border-2 border-dashed p-3 shadow-sm"
+          :class="t.ready ? 'border-success bg-success/5' : 'border-border bg-card'"
+        >
+          <div
+            class="flex items-start justify-between gap-2 border-b border-dashed border-border pb-2"
+          >
+            <div>
+              <div class="text-lg font-bold leading-tight">{{ t.tableName ?? 'Bez stolu' }}</div>
+              <span
+                class="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground"
               >
-                <Play v-if="item.kitchenStatus === 'Sent'" class="h-4 w-4" />
-                <Check v-else class="h-4 w-4" />
-                {{ NEXT[item.kitchenStatus]?.label }}
-              </Button>
+                <Wine v-if="t.section === 'Bar'" class="h-3 w-3" />
+                <ChefHat v-else class="h-3 w-3" />
+                {{ SECTION_LABEL[t.section] }}
+              </span>
             </div>
-            <p v-if="!col.items.length" class="py-4 text-center text-xs text-muted-foreground">—</p>
+            <span
+              class="flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold"
+              :class="
+                minutesSince(t.sentAt) >= 15
+                  ? 'bg-destructive/15 text-destructive'
+                  : 'bg-muted text-muted-foreground'
+              "
+            >
+              <Clock class="h-3 w-3" /> {{ minutesSince(t.sentAt) }}′
+            </span>
+          </div>
+
+          <ul class="flex-1 space-y-1.5 py-2 text-sm">
+            <li v-for="i in t.items" :key="i.itemId">
+              <span class="font-bold tabular-nums">{{ i.quantity }}×</span> {{ i.productName }}
+              <div v-if="i.note" class="pl-4 text-xs text-muted-foreground">↳ {{ i.note }}</div>
+            </li>
+          </ul>
+
+          <div class="flex gap-2">
+            <Button variant="ghost" size="icon" title="Tisk bonu" @click="printTicket(t)">
+              <Printer class="h-4 w-4" />
+            </Button>
+            <Button
+              v-if="!t.ready"
+              variant="outline"
+              class="flex-1"
+              :disabled="busy"
+              @click="setAll(t, 'Ready')"
+            >
+              <Check class="h-4 w-4" /> Hotovo
+            </Button>
+            <Button
+              v-else
+              variant="coral"
+              class="flex-1"
+              :disabled="busy"
+              @click="setAll(t, 'Served')"
+            >
+              <Check class="h-4 w-4" /> Vydat
+            </Button>
           </div>
         </div>
       </div>

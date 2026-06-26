@@ -143,12 +143,21 @@ async function changeQty(itemId: string, quantity: number) {
 
 async function sendToKitchen() {
   if (!currentOrder.value || busy.value) return
+  // Rozpad nových položek na stanice (kuchyně/bar) — co kam „vyjede" jako bon.
+  const fresh = currentOrder.value.items.filter((i) => i.kitchenStatus === 'New')
+  const k = fresh.filter((i) => i.kitchenSection === 'Kitchen').reduce((s, i) => s + i.quantity, 0)
+  const b = fresh.filter((i) => i.kitchenSection === 'Bar').reduce((s, i) => s + i.quantity, 0)
   busy.value = true
   try {
     currentOrder.value = await ordersApi.sendToKitchen(currentOrder.value.id)
-    toast.success('Odesláno do kuchyně.')
+    const parts: string[] = []
+    if (k) parts.push(`kuchyně ${k}`)
+    if (b) parts.push(`bar ${b}`)
+    toast.success(
+      parts.length ? `Objednávka odeslána (${parts.join(', ')}).` : 'Objednávka odeslána.',
+    )
   } catch (e) {
-    toast.error('Odeslání do kuchyně selhalo.')
+    toast.error('Odeslání objednávky selhalo.')
     console.error(e)
   } finally {
     busy.value = false
@@ -413,7 +422,7 @@ const hasNewItems = computed(() =>
               :disabled="busy"
               @click="sendToKitchen"
             >
-              <ChefHat class="h-4 w-4" /> Poslat do kuchyně
+              <ChefHat class="h-4 w-4" /> Odeslat objednávku
             </Button>
 
             <div class="grid grid-cols-2 gap-2">
