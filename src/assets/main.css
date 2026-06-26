@@ -273,6 +273,24 @@
   }
 }
 
+/* Tisk účtenky (termo 80 mm) — schová appku, zobrazí jen .receipt-printable. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .receipt-printable,
+  .receipt-printable * {
+    visibility: visible;
+  }
+  .receipt-printable {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0;
+    box-shadow: none;
+  }
+}
+
 /* unovis grafy — napojení na design tokeny, ať respektují light/dark. */
 .vis-chart {
   --vis-font-family: var(--font-sans);

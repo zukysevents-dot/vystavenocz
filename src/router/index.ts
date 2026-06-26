@@ -23,6 +23,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Domů', layout: 'public' },
   },
   {
+    path: '/uctenka',
+    name: 'uctenka-demo',
+    component: () => import('@/pages/UctenkaDemoPage.vue'),
+    meta: { title: 'Účtenka — náhled', layout: 'public' },
+  },
+  {
     path: '/funkce',
     name: 'funkce',
     component: () => import('@/pages/FunkcePage.vue'),
