@@ -261,3 +261,33 @@ export interface KitchenQueueItem {
   kitchenStatus: KitchenStatus
   sentToKitchenAt: string | null
 }
+
+// --- Sklad / zásoby ---
+
+export type StockMovementType =
+  | 'Receipt'
+  | 'Issue'
+  | 'Correction'
+  | 'Sale'
+  | 'StornoSale'
+  | 'Stocktaking'
+
+export interface StockLevel {
+  productId: string
+  productName: string
+  productSku: string
+  quantity: number
+}
+
+export interface StockMovement {
+  id: string
+  productId: string
+  locationId: string | null
+  type: StockMovementType
+  quantity: number
+  quantityAfter: number
+  note: string | null
+  relatedSaleId: string | null
+  relatedStocktakeId: string | null
+  createdAt: string
+}
