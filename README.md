@@ -62,8 +62,15 @@ JWT_SECRET="$(openssl rand -base64 32)" docker compose up --build
 # app: http://localhost:8080   ·   health: http://localhost:8080/health/ready
 ```
 
-Produkčně dej před nginx TLS (Caddy/Traefik/reverse-proxy hostingu) a `JWT_SECRET` + `DB_PASSWORD`
-předej jako secrety prostředí (ne do gitu). Migrace DB běží automaticky při startu API.
+Pro **produkční VPS s HTTPS** existuje override [`docker-compose.prod.yml`](docker-compose.prod.yml)
+(přidá Caddy s automatickým Let's Encrypt + restart politiky) a [`Caddyfile`](Caddyfile):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+Kompletní runbook (DNS, secrety, ověření, aktualizace, zálohy) → **[docs/deployment-vps.md](docs/deployment-vps.md)**.
+`JWT_SECRET` + `DB_PASSWORD` předej jako secrety prostředí (ne do gitu). Migrace DB běží automaticky při startu API.
 
 ### B) Vercel (statika) + Render (API) — oddělené originy
 

@@ -1,0 +1,11 @@
+# Caddy = veřejný TLS edge s automatickým Let's Encrypt. Forwarduje vše na nginx (service `web`),
+# který řeší SPA + reverse-proxy /api. Same-origin se tím zachová (VITE_API_URL=/api/v1).
+# Lokální ověření bez veřejné domény: DOMAIN=localhost → Caddy použije interní CA (self-signed).
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy web:80
+}
