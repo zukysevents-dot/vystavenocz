@@ -1,0 +1,48 @@
+# Single-box nasazení: nginx (SPA + reverse-proxy /api) → .NET API → PostgreSQL.
+# Spuštění z adresáře vystavenocz: `JWT_SECRET=<min-32-znaků> docker compose up --build`
+# Vyžaduje sousední repo ../vystaveno-api (build kontext API). App poběží na http://localhost:8080.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: vystaveno
+      POSTGRES_USER: vystaveno
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-vystaveno}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U vystaveno']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ../vystaveno-api
+      dockerfile: Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      PORT: 8080
+      Database__ConnectionString: 'Host=db;Database=vystaveno;Username=vystaveno;Password=${DB_PASSWORD:-vystaveno}'
+      Jwt__Secret: ${JWT_SECRET:?nastav JWT_SECRET (min. 32 znaků)}
+      Stripe__SecretKey: sk_test_dummy
+      # Same-origin přes nginx → CORS netřeba (browser nevolá cross-origin). Cors__AllowedOrigins necháváme prázdné.
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - '8080'
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api/v1
+    ports:
+      - '8080:80'
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
