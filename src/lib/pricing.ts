@@ -98,3 +98,132 @@ export const MODULAR_PRICING = {
 export function yearlyPerMonth(monthly: number): number {
   return Math.round((monthly * (12 - MODULAR_PRICING.yearlyFreeMonths)) / 12)
 }
+
+/**
+ * Rozšiřující moduly / oborové balíčky (v0.5) — staví na 6 core modulech výše a prodávají se
+ * jako add-on ve vyšších tarifech. Ceny ORIENTAČNÍ (k potvrzení majitelem); jediný zdroj pravdy
+ * pro landing ceník. Vše zatím na roadmapě (`soon`) — UI je zobrazuje jako „Brzy".
+ * Strategie a priority viz ~/.claude/plans (10 placených modulů).
+ */
+export type AddonUnit = 'provozovna' | 'pobočka' | 'firma' | 'zaměstnanec' | 'klient'
+
+export interface PricingAddon {
+  key: string
+  name: string
+  /** Krátký prodejní popis (1 věta). */
+  desc: string
+  /** Cílový segment (pro landing). */
+  segment: string
+  /** Kč/měsíc — základní cena v dané jednotce. */
+  monthly: number
+  unit: AddonUnit
+  /** Volitelná cena za další jednotku (např. za technika / zaměstnance / klienta navíc). */
+  perExtra?: { monthly: number; label: string }
+  /** Na který core modul navazuje (pokud jde o nástavbu). */
+  buildsOn?: ModuleKey
+  /** true = zatím na roadmapě (zobrazit „Brzy"). */
+  soon: boolean
+}
+
+export const PRICING_ADDONS: readonly PricingAddon[] = [
+  {
+    key: 'online-booking',
+    name: 'Online rezervace',
+    desc: 'Veřejný rezervační odkaz, připomínky a méně no-show.',
+    segment: 'Salony, barber, kosmetika, fyzio, trenéři',
+    monthly: 199,
+    unit: 'provozovna',
+    buildsOn: 'booking',
+    soon: true,
+  },
+  {
+    key: 'loyalty',
+    name: 'Věrnost & návraty',
+    desc: 'Segmentace zákazníků, win-back připomínky, věrnostní konto.',
+    segment: 'Služby a retail s opakovaným zákazníkem',
+    monthly: 199,
+    unit: 'provozovna',
+    soon: true,
+  },
+  {
+    key: 'jobs',
+    name: 'Zakázky & výjezdy',
+    desc: 'Zakázky, nabídka → faktura, materiál a hodiny, ziskovost.',
+    segment: 'Řemeslo, servis, autoservisy',
+    monthly: 299,
+    unit: 'firma',
+    perExtra: { monthly: 99, label: 'za technika' },
+    soon: true,
+  },
+  {
+    key: 'delivery',
+    name: 'Rozvoz & výdej',
+    desc: 'Vlastní objednávkový kanál bez provize platforem, sloty, KDS.',
+    segment: 'Restaurace, bistra, pizzerie',
+    monthly: 349,
+    unit: 'provozovna',
+    buildsOn: 'restaurant',
+    soon: true,
+  },
+  {
+    key: 'shifts',
+    name: 'Směny & provize',
+    desc: 'Plánování směn, provize a spropitné, mzdové podklady.',
+    segment: 'Provozy se směnami',
+    monthly: 149,
+    unit: 'provozovna',
+    perExtra: { monthly: 49, label: 'za zaměstnance' },
+    buildsOn: 'attendance',
+    soon: true,
+  },
+  {
+    key: 'cashflow',
+    name: 'Cashflow & upomínky',
+    desc: 'Automatické upomínky, aging report a výhled cashflow.',
+    segment: 'OSVČ, řemeslo, B2B na splatnost',
+    monthly: 199,
+    unit: 'firma',
+    buildsOn: 'invoicing',
+    soon: true,
+  },
+  {
+    key: 'branches',
+    name: 'Pobočky & vedení',
+    desc: 'Konsolidovaný přehled a srovnání poboček, role manažera.',
+    segment: 'Firmy s 2+ provozovnami',
+    monthly: 349,
+    unit: 'pobočka',
+    soon: true,
+  },
+  {
+    key: 'client-portal',
+    name: 'Klientská zóna',
+    desc: 'Samoobsluha klienta: faktury, online platba, schválení nabídek.',
+    segment: 'Agentury, účetní, B2B dodavatelé',
+    monthly: 199,
+    unit: 'firma',
+    buildsOn: 'invoicing',
+    soon: true,
+  },
+  {
+    key: 'accounting',
+    name: 'Účtárna',
+    desc: 'Přístup pro účetní, měsíční balíček podkladů, ISDOC/XML export.',
+    segment: 'Firmy s účetní + účetní kanceláře',
+    monthly: 199,
+    unit: 'firma',
+    perExtra: { monthly: 99, label: 'za klienta (pro účetní)' },
+    buildsOn: 'invoicing',
+    soon: true,
+  },
+  {
+    key: 'stock-scan',
+    name: 'Naskladnění & čárové kódy',
+    desc: 'Skenování přes mobil, rychlá inventura, návrhy objednávek.',
+    segment: 'Obchody, e-shopy, retail',
+    monthly: 149,
+    unit: 'provozovna',
+    buildsOn: 'inventory',
+    soon: true,
+  },
+] as const
