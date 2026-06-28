@@ -12,7 +12,13 @@ import {
   type LucideIcon,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { PRICING_MODULES, MODULAR_PRICING, yearlyPerMonth, type ModuleKey } from '@/lib/pricing'
+import {
+  PRICING_MODULES,
+  PRICING_ADDONS,
+  MODULAR_PRICING,
+  yearlyPerMonth,
+  type ModuleKey,
+} from '@/lib/pricing'
 
 const ICONS: Record<ModuleKey, LucideIcon> = {
   invoicing: FileText,
@@ -184,6 +190,46 @@ const czk = (n: number) => n.toLocaleString('cs-CZ')
         Nejste si jistí skladbou? Napište na patrik@vystaveno.cz — poradíme s nastavením pro váš
         provoz.
       </p>
+
+      <!-- Rozšíření & oborové balíčky (na roadmapě) -->
+      <div class="mt-16">
+        <div class="mx-auto max-w-2xl text-center">
+          <h3 class="font-display text-2xl font-black tracking-tight text-foreground sm:text-3xl">
+            Rozšíření &amp; oborové balíčky
+          </h3>
+          <p class="mt-3 text-sm text-muted-foreground sm:text-base">
+            Připravujeme nástavby pro konkrétní obory — zapneš je, až je budeš potřebovat.
+          </p>
+        </div>
+
+        <div class="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div
+            v-for="a in PRICING_ADDONS"
+            :key="a.key"
+            class="flex flex-col rounded-2xl border border-border bg-card p-4"
+          >
+            <div class="flex items-start justify-between gap-2">
+              <span class="font-semibold text-foreground">{{ a.name }}</span>
+              <span
+                v-if="a.soon"
+                class="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground"
+              >
+                Brzy
+              </span>
+            </div>
+            <span class="mt-1 text-xs text-muted-foreground">{{ a.segment }}</span>
+            <span class="mt-2 text-xs leading-relaxed text-muted-foreground">{{ a.desc }}</span>
+            <span class="mt-3 block font-mono text-sm text-foreground">
+              od {{ czk(a.monthly) }} Kč<span class="text-muted-foreground">
+                / měs / {{ a.unit }}</span
+              >
+            </span>
+            <span v-if="a.perExtra" class="mt-0.5 block text-xs text-muted-foreground">
+              + {{ czk(a.perExtra.monthly) }} Kč {{ a.perExtra.label }}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 </template>
