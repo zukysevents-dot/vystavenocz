@@ -28,8 +28,8 @@ const form = reactive({
   invoice_number_prefix: 'FA',
 })
 
-onMounted(() => {
-  companyStore.init()
+onMounted(async () => {
+  await companyStore.load()
   const c = companyStore.company
   if (c) {
     form.company_name = c.companyName ?? ''
@@ -60,7 +60,13 @@ async function onSubmit() {
     email: auth.user?.email ?? '',
     fullName: auth.user?.fullName ?? null,
   }
-  companyStore.save(payload)
+  try {
+    await companyStore.save(payload) // API režim: založí firmu (POST /companies) + uloží nastavení
+  } catch {
+    submitting.value = false
+    toast.error('Profil firmy se nepodařilo uložit. Zkuste to znovu.')
+    return
+  }
   submitting.value = false
   toast.success('Profil firmy uložen.')
   router.push('/app')

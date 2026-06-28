@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { isApiMode } from '@/lib/http'
 
 // Typování route meta (rozšíří se v dalších taskech — guards F0-35, SEO F2-31).
 declare module 'vue-router' {
@@ -255,6 +256,17 @@ router.beforeEach((to) => {
   }
   if (auth.isAuthenticated && (to.name === 'prihlaseni' || to.name === 'registrace')) {
     return { name: 'app' }
+  }
+  // API režim: přihlášený uživatel bez firmy musí nejdřív projít onboardingem (jinak tenant-scoped
+  // endpointy vrací „nemá firmu"). Mock režim firmu nevyžaduje.
+  if (
+    isApiMode() &&
+    to.meta.requiresAuth &&
+    auth.isAuthenticated &&
+    !auth.companyId &&
+    to.name !== 'app-onboarding'
+  ) {
+    return { name: 'app-onboarding' }
   }
   return true
 })

@@ -330,7 +330,8 @@ async function persist(): Promise<void> {
     // Posuň pořadové číslo jen v mock režimu (vodítko pro předvyplnění příští faktury).
     // V API režimu čísla vlastní server (přiděluje je při issue), klientský seq se nepoužívá.
     const c = companyStore.company
-    if (!isApiMode() && c) companyStore.save({ nextInvoiceSeq: (c.nextInvoiceSeq || 1) + 1 })
+    // save() je async; mock-only fire-and-forget (seq je jen klientské vodítko).
+    if (!isApiMode() && c) void companyStore.save({ nextInvoiceSeq: (c.nextInvoiceSeq || 1) + 1 })
     syncFromSaved(created)
     // Převezmi id do URL, aby další uložení byla update (ne duplicitní faktura).
     router.replace({ query: { id: created.id } })

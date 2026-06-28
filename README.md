@@ -35,10 +35,48 @@ npm run test:e2e   # Playwright – e2e + a11y (sám si spustí dev server)
 
 ### Konfigurace
 
-Zkopíruj `.env.example` do `.env`. Jediná proměnná je `VITE_API_URL`:
+Zkopíruj `.env.example` do `.env`. Klíčová proměnná je `VITE_API_URL`:
 
-- **prázdná** = mock datová vrstva přes `localStorage` (výchozí pro MVP)
-- **vyplněná** = (do budoucna) reálné API `vystaveno-api`
+- **prázdná** = mock datová vrstva přes `localStorage` (vývoj / e2e / offline demo)
+- **vyplněná** = reálné API `vystaveno-api` (CRUD, auth, faktury, firma, ARES). Buď absolutní URL
+  (`https://…/api/v1`, oddělený origin + CORS), nebo **relativní `/api/v1`** při same-origin nasazení
+  za nginx reverse-proxy (viz Nasazení níže).
+
+`VITE_API_URL` je veřejná build-time hodnota (Vite ji zapéká do bundlu) — **není to secret**. Serverové
+secrety (JWT, DB, SMTP) patří jen do backendu, nikdy do frontend buildu.
+
+## Nasazení
+
+Dvě podporované varianty:
+
+### A) nginx (single-box / Docker) — same-origin, bez CORS
+
+[`Dockerfile`](Dockerfile) builduje SPA a servíruje ji přes nginx, který zároveň reverse-proxuje
+`/api` a `/health` na backend ([`nginx.conf`](nginx.conf)). Frontend tak volá API na stejném originu
+(`VITE_API_URL=/api/v1`) → odpadá CORS. [`docker-compose.yml`](docker-compose.yml) postaví celý stack
+(PostgreSQL + API + nginx):
+
+```bash
+# z adresáře vystavenocz; vyžaduje sousední repo ../vystaveno-api
+JWT_SECRET="$(openssl rand -base64 32)" docker compose up --build
+# app: http://localhost:8080   ·   health: http://localhost:8080/health/ready
+```
+
+Pro **produkční VPS s HTTPS** existuje override [`docker-compose.prod.yml`](docker-compose.prod.yml)
+(přidá Caddy s automatickým Let's Encrypt + restart politiky) a [`Caddyfile`](Caddyfile):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+Kompletní runbook (DNS, secrety, ověření, aktualizace, zálohy) → **[docs/deployment-vps.md](docs/deployment-vps.md)**.
+`JWT_SECRET` + `DB_PASSWORD` předej jako secrety prostředí (ne do gitu). Migrace DB běží automaticky při startu API.
+
+### B) Vercel (statika) + Render (API) — oddělené originy
+
+Statický build na Vercel ([`vercel.json`](vercel.json) řeší SPA fallback), API na Renderu. Produkční
+`VITE_API_URL` je v [`.env.production`](.env.production); na backendu musí být `Cors__AllowedOrigins`
+nastavené na URL Vercelu. Detaily nasazení API: `vystaveno-api/docs/deployment.md`.
 
 ## Struktura projektu
 

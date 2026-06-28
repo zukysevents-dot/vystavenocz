@@ -1,0 +1,35 @@
+# Produkční override pro VPS: TLS edge (Caddy + automatické Let's Encrypt) + restart politiky.
+# Spuštění na VPS (z adresáře vystavenocz, vedle sousedního ../vystaveno-api):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# Vyžaduje .env (gitignored) s: DOMAIN, ACME_EMAIL, JWT_SECRET, DB_PASSWORD  (viz docs/deployment-vps.md)
+# Pozn.: `!reset` vyžaduje Docker Compose >= 2.24.4.
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      DOMAIN: ${DOMAIN:?nastav DOMAIN (např. fakturace.example.com)}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
+  web:
+    restart: unless-stopped
+    ports: !reset [] # za Caddy → web nepublikuje port přímo na host
+
+  api:
+    restart: unless-stopped
+
+  db:
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
