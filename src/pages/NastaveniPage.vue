@@ -50,8 +50,8 @@ const form = reactive({
   defaultPaymentDays: 14,
 })
 
-onMounted(() => {
-  companyStore.init()
+onMounted(async () => {
+  await companyStore.load()
   const c = companyStore.company
   if (!c) return
   form.companyName = c.companyName ?? ''
@@ -109,7 +109,7 @@ function removeLogo(): void {
   form.logoUrl = ''
 }
 
-function onSubmit(): void {
+async function onSubmit(): Promise<void> {
   // Splatnost 0 dní je legitimní (na počkání) — nesmí spadnout do fallbacku přes `|| 14`.
   const dueDays = Number(form.defaultPaymentDays)
   const payload: Partial<Company> = {
@@ -132,10 +132,15 @@ function onSubmit(): void {
     email: auth.user?.email ?? companyStore.company?.email ?? '',
   }
   try {
-    companyStore.save(payload)
-  } catch {
-    // localStorage quota (typicky velké logo jako data URL) — neukládej tiše do ztracena.
-    toast.error('Nastavení se nepodařilo uložit — úložiště je plné. Zmenšete logo.')
+    await companyStore.save(payload)
+  } catch (e) {
+    // API chyba (validace/síť) nebo localStorage quota (velké logo jako data URL) — neukládej tiše.
+    const isQuota = e instanceof Error && e.name === 'QuotaExceededError'
+    toast.error(
+      isQuota
+        ? 'Nastavení se nepodařilo uložit — úložiště je plné. Zmenšete logo.'
+        : 'Nastavení se nepodařilo uložit. Zkuste to znovu.',
+    )
     return
   }
   toast.success('Nastavení uloženo. Projeví se v nových fakturách.')

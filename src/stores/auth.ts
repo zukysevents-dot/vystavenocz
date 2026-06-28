@@ -103,6 +103,12 @@ export const useAuthStore = defineStore('auth', () => {
     persistSession()
   }
 
+  // Po změně tenant kontextu (založení firmy vydá nové tokeny s companyId) přenačti identitu.
+  async function reloadMe(): Promise<void> {
+    if (!isApiMode() || !user.value) return
+    await loadMe(user.value.email, user.value.fullName)
+  }
+
   async function login(email: string, password: string): Promise<AuthResult> {
     if (isApiMode()) {
       try {
@@ -187,5 +193,16 @@ export const useAuthStore = defineStore('auth', () => {
     persistMock()
   }
 
-  return { user, companyId, role, initialized, isAuthenticated, init, login, register, logout }
+  return {
+    user,
+    companyId,
+    role,
+    initialized,
+    isAuthenticated,
+    init,
+    login,
+    register,
+    logout,
+    reloadMe,
+  }
 })
