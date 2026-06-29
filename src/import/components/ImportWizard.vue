@@ -10,6 +10,7 @@ import {
   Check,
   RotateCcw,
   TriangleAlert,
+  Building2,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import {
@@ -37,7 +38,17 @@ import type { ImportEntityConfig } from '../configs'
 
 const props = defineProps<{ config: ImportEntityConfig<T> }>()
 const router = useRouter()
-const { state, pickFile, goToPreview, commit, rollbackLast, reset } = useImportWizard(props.config)
+const {
+  state,
+  hasEnrich,
+  enrichLabel,
+  pickFile,
+  goToPreview,
+  commit,
+  enrichAll,
+  rollbackLast,
+  reset,
+} = useImportWizard(props.config)
 
 const NONE = '__none__'
 const STEP_INDEX: Record<string, number> = { upload: 0, mapping: 1, preview: 2, result: 3 }
@@ -106,6 +117,11 @@ function decisionOptions(draft: EntityDraft<T>): { value: string; label: string 
   ]
   if (draft.duplicate?.existingId) base.push({ value: 'overwrite', label: 'Přepsat' })
   return base
+}
+
+async function onEnrich(): Promise<void> {
+  const res = await enrichAll()
+  toast.success(`Doplněno z ARES: ${res.enriched} řádků.`)
 }
 
 async function onCommit(): Promise<void> {
@@ -219,11 +235,26 @@ async function onRollback(): Promise<void> {
 
     <!-- KROK 3: Náhled -->
     <section v-else-if="state.step === 'preview'" class="space-y-4">
-      <div class="flex flex-wrap gap-2 text-sm">
+      <div class="flex flex-wrap items-center gap-2 text-sm">
         <Badge variant="default">{{ summary.create }} vytvoří</Badge>
         <Badge v-if="summary.overwrite" variant="secondary">{{ summary.overwrite }} přepíše</Badge>
         <Badge variant="outline">{{ summary.skip }} přeskočí</Badge>
         <Badge v-if="summary.errors" variant="destructive">{{ summary.errors }} chyb</Badge>
+        <Button
+          v-if="hasEnrich"
+          variant="outline"
+          size="sm"
+          class="ml-auto"
+          :disabled="!!state.enrichProgress"
+          @click="onEnrich"
+        >
+          <Loader2 v-if="state.enrichProgress" class="h-4 w-4 animate-spin" />
+          <Building2 v-else class="h-4 w-4" />
+          {{ enrichLabel }}
+          <span v-if="state.enrichProgress">
+            ({{ state.enrichProgress.done }}/{{ state.enrichProgress.total }})
+          </span>
+        </Button>
       </div>
       <div class="overflow-x-auto rounded-2xl border border-border bg-card">
         <Table>

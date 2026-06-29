@@ -72,3 +72,23 @@ test('import klientů z XLSX: reálný soubor přes celý wizard', async ({ page
   await expect(page.getByText('Nový Klient s.r.o.')).toBeVisible()
   await expect(page.getByText('Druhý Odběratel')).toBeVisible()
 })
+
+test('doplnění z ARES: prázdné město se doplní podle IČO', async ({ page }) => {
+  await seedApp(page, { subscription: 'pro' })
+  await dismissCookies(page)
+  await page.goto('/app/import')
+
+  await page.locator('#import-file').setInputFiles('e2e/fixtures/klienti-ares.csv')
+  await expect(page.getByText('klienti-ares.csv')).toBeVisible()
+  await page.getByRole('button', { name: /Pokračovat/ }).click()
+
+  await page.getByRole('button', { name: /Doplnit z ARES/ }).click()
+  await expect(page.getByText(/Doplněno z ARES/)).toBeVisible() // toast = dávka hotová
+
+  await page.getByRole('button', { name: /Importovat/ }).click()
+  await expect(page.getByText('Import dokončen')).toBeVisible()
+
+  // Klient má město doplněné z ARES (IČO 27082440 → Alza, Praha 7).
+  await page.goto('/app/klienti')
+  await expect(page.getByText(/Praha 7/)).toBeVisible()
+})

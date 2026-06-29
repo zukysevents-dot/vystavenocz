@@ -2,10 +2,13 @@ import type { ClientInput } from '@/composables/useClients'
 import type { ProductInput } from '@/composables/useProducts'
 import { useClients } from '@/composables/useClients'
 import { useProducts } from '@/composables/useProducts'
+import { useAres } from '@/composables/useAres'
 import { genericClients } from './adapters/generic-clients'
 import { genericProducts } from './adapters/generic-products'
 import { detectAdapter } from './adapters'
 import { validateClient, validateProduct } from './validate'
+import { isValidIco } from './normalize'
+import { mergeAres } from './enrich'
 import type { DedupKey } from './dedup'
 import type { ImportEntity, ImportSourceAdapter, ValidationIssue } from './types'
 
@@ -37,6 +40,9 @@ export interface ImportEntityConfig<T> {
   validate: (value: Partial<T>) => ValidationIssue[]
   dedupKeys: DedupKey<T>[]
   createOps: () => EntityOps<T> // volá se uvnitř composable (potřebuje Pinia kontext)
+  // Volitelné dávkové obohacení (jen klienti — ARES). Vrací změněná pole, nebo null.
+  enrichLabel?: string
+  createEnrich?: () => (value: T) => Promise<Partial<T> | null>
 }
 
 export const clientsConfig: ImportEntityConfig<ClientInput> = {
@@ -75,6 +81,19 @@ export const clientsConfig: ImportEntityConfig<ClientInput> = {
       create: (input) => api.create(input),
       update: (id, input) => api.update(id, input),
       remove: api.remove,
+    }
+  },
+  enrichLabel: 'Doplnit z ARES',
+  createEnrich: () => {
+    const ares = useAres()
+    return async (value: ClientInput) => {
+      if (!value.ico || !isValidIco(value.ico)) return null
+      const needs = !value.name?.trim() || !value.street || !value.city || !value.zip || !value.dic
+      if (!needs) return null
+      const r = await ares.lookup(value.ico, { silent: true })
+      if (!r) return null
+      const patch = mergeAres(value, r)
+      return Object.keys(patch).length ? patch : null
     }
   },
 }

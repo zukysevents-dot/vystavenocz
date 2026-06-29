@@ -28,6 +28,7 @@ interface WizardState<T> {
   parsing: boolean
   committing: boolean
   progress: { done: number; total: number } | null
+  enrichProgress: { done: number; total: number } | null
 }
 
 /**
@@ -38,6 +39,7 @@ interface WizardState<T> {
  */
 export function useImportWizard<T>(config: ImportEntityConfig<T>) {
   const ops = config.createOps()
+  const enrich = config.createEnrich?.()
   const ledger = useImportLedger()
 
   const state = reactive({
@@ -52,6 +54,7 @@ export function useImportWizard<T>(config: ImportEntityConfig<T>) {
     parsing: false,
     committing: false,
     progress: null,
+    enrichProgress: null,
   }) as unknown as WizardState<T>
 
   async function pickFile(file: File): Promise<void> {
@@ -144,6 +147,29 @@ export function useImportWizard<T>(config: ImportEntityConfig<T>) {
     state.step = 'result'
   }
 
+  /** Dávkově obohatí drafty (např. doplní adresy z ARES podle IČO) a převaliduje. */
+  async function enrichAll(): Promise<{ enriched: number }> {
+    if (!enrich) return { enriched: 0 }
+    const targets = state.drafts.filter((d) => d.decision !== 'skip' && !hasBlockingError(d.issues))
+    state.enrichProgress = { done: 0, total: targets.length }
+    let enriched = 0
+    for (const d of targets) {
+      try {
+        const patch = await enrich(d.value)
+        if (patch) {
+          Object.assign(d.value as object, patch)
+          d.issues = config.validate(d.value)
+          enriched++
+        }
+      } catch {
+        /* selhání jednoho řádku nesmí shodit celou dávku */
+      }
+      if (state.enrichProgress) state.enrichProgress.done++
+    }
+    state.enrichProgress = null
+    return { enriched }
+  }
+
   async function rollbackLast(): Promise<{ removed: number; failed: number }> {
     if (!state.result) return { removed: 0, failed: 0 }
     return ledger.rollback(state.result.batch.id, (id) => ops.remove(id))
@@ -159,7 +185,18 @@ export function useImportWizard<T>(config: ImportEntityConfig<T>) {
     state.drafts = []
     state.result = null
     state.progress = null
+    state.enrichProgress = null
   }
 
-  return { state, pickFile, goToPreview, commit, rollbackLast, reset }
+  return {
+    state,
+    hasEnrich: !!enrich,
+    enrichLabel: config.enrichLabel,
+    pickFile,
+    goToPreview,
+    commit,
+    enrichAll,
+    rollbackLast,
+    reset,
+  }
 }
