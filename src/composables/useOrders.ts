@@ -2,6 +2,12 @@ import { http } from '@/lib/http'
 import type { Order, PaymentMethod } from '@/lib/types'
 import type { PagedResult } from '@/composables/useApi'
 
+// Poznámka a chod položky (backend AddOrderItemRequest/UpdateOrderItemRequest — Note, Course).
+export interface OrderItemMeta {
+  note?: string | null
+  course?: string | null
+}
+
 // Otevřené účty na stole (gastro). Jen API mód (restaurační provoz proti reálnému backendu).
 export function useOrders() {
   async function listOpen(): Promise<Order[]> {
@@ -13,11 +19,23 @@ export function useOrders() {
   function open(tableId: string): Promise<Order> {
     return http.post<Order>('/orders', { tableId })
   }
-  function addItem(orderId: string, productId: string, quantity = 1): Promise<Order> {
-    return http.post<Order>(`/orders/${orderId}/items`, { productId, quantity })
+  function addItem(
+    orderId: string,
+    productId: string,
+    quantity = 1,
+    meta?: OrderItemMeta,
+  ): Promise<Order> {
+    return http.post<Order>(`/orders/${orderId}/items`, { productId, quantity, ...meta })
   }
-  function updateItem(orderId: string, itemId: string, quantity: number): Promise<Order> {
-    return http.put<Order>(`/orders/${orderId}/items/${itemId}`, { quantity })
+  // POZOR: backend bere Note/Course jako součást celého updatu (default null) — kdo volá jen s quantity,
+  // smaže stávající poznámku/chod. Volající proto musí předat aktuální meta, pokud je chce zachovat.
+  function updateItem(
+    orderId: string,
+    itemId: string,
+    quantity: number,
+    meta?: OrderItemMeta,
+  ): Promise<Order> {
+    return http.put<Order>(`/orders/${orderId}/items/${itemId}`, { quantity, ...meta })
   }
   function removeItem(orderId: string, itemId: string): Promise<Order> {
     return http.del<Order>(`/orders/${orderId}/items/${itemId}`)
