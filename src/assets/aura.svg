@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Vrstva_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" viewBox="0 0 859.23 859.23">
+  <!-- Generator: Adobe Illustrator 30.2.1, SVG Export Plug-In . SVG Version: 2.1.1 Build 1)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: url(#vystaveno_hilite);
+      }
+
+      .st1 {
+        fill: url(#vystaveno_orb);
+      }
+
+      .st2 {
+        fill: url(#vystaveno_glow);
+      }
+    </style>
+    <radialGradient id="vystaveno_glow" cx="429.61" cy="429.61" fx="429.61" fy="429.61" r="429.61" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff8a2b" stop-opacity=".55"/>
+      <stop offset=".4" stop-color="#ff2e9a" stop-opacity=".42"/>
+      <stop offset="1" stop-color="#7a1fe0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vystaveno_orb" cx="429.61" cy="429.61" fx="429.61" fy="429.61" r="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffe3b0"/>
+      <stop offset=".14" stop-color="#ffb347"/>
+      <stop offset=".3" stop-color="#ff8a2b"/>
+      <stop offset=".5" stop-color="#ff4d5e"/>
+      <stop offset=".7" stop-color="#ff2e9a"/>
+      <stop offset=".92" stop-color="#7a1fe0"/>
+      <stop offset="1" stop-color="#5a17a8"/>
+    </radialGradient>
+    <radialGradient id="vystaveno_hilite" cx="393.61" cy="357.61" fx="393.61" fy="357.61" r="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff" stop-opacity=".85"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <g id="vystaveno_x5F_aura">
+    <circle id="aura_x5F_glow" class="st2" cx="429.61" cy="429.61" r="429.61"/>
+    <circle id="orb" class="st1" cx="429.61" cy="429.61" r="300"/>
+    <circle id="highlight" class="st0" cx="393.61" cy="357.61" r="150"/>
+  </g>
+</svg>

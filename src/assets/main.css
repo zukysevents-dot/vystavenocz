@@ -1,9 +1,46 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+/* Cabinet Grotesk — značkový font (self-hosted; licence Fontshare FFL, volné komerčně). */
+@font-face {
+  font-family: 'Cabinet Grotesk';
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/CabinetGrotesk-Light.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Cabinet Grotesk';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/CabinetGrotesk-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Cabinet Grotesk';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/CabinetGrotesk-Medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Cabinet Grotesk';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/CabinetGrotesk-Bold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Cabinet Grotesk';
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/CabinetGrotesk-Black.woff2') format('woff2');
+}
+
 @custom-variant dark (&:is(.dark *));
 
-/* Design tokens — přeneseno ze staré React appky (Prod:src/styles.css). */
+/* Design tokens — identita v0.4 (vondrart.studio): 2 kotvy (Ink + Magenta) · 1 aura · Cabinet Grotesk. */
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -30,8 +67,11 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-coral: var(--coral);
   --color-coral-foreground: var(--coral-foreground);
+  --color-magenta: var(--coral);
+  --color-magenta-foreground: var(--coral-foreground);
   --color-mint: var(--mint);
   --color-sun: var(--sun);
+  --color-due: var(--due);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
@@ -43,126 +83,140 @@
   --color-surface: var(--surface);
   --color-surface-soft: var(--surface-soft);
 
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Cabinet Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Cabinet Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
 
   --shadow-soft: 0 1px 0 oklch(1 0 0 / 4%) inset, 0 8px 24px -12px oklch(0 0 0 / 50%);
   --shadow-glow:
-    0 0 0 1px color-mix(in oklab, var(--coral) 30%, transparent),
-    0 16px 48px -16px color-mix(in oklab, var(--coral) 45%, transparent);
+    0 0 0 1px color-mix(in oklab, var(--coral) 40%, transparent),
+    0 16px 48px -16px color-mix(in oklab, var(--coral) 55%, transparent);
   --shadow-card: 0 1px 0 oklch(1 0 0 / 4%) inset, 0 12px 32px -16px oklch(0 0 0 / 60%);
 
   --gradient-hero: linear-gradient(180deg, var(--surface-soft) 0%, var(--background) 70%);
+  /* Žhavá aura — JEDEN výrazový objekt: gold → ember → coral → magenta → violet. */
   --gradient-primary: linear-gradient(
     135deg,
-    oklch(0.82 0.14 45) 0%,
-    var(--coral) 60%,
-    oklch(0.62 0.18 28) 100%
+    #ffb347 0%,
+    #ff8a2b 22%,
+    #ff4d5e 50%,
+    #ff2e9a 76%,
+    #7a1fe0 100%
   );
-  --gradient-coral: linear-gradient(135deg, var(--coral) 0%, oklch(0.62 0.18 28) 100%);
+  --gradient-coral: linear-gradient(135deg, #ff2e9a 0%, #7a1fe0 100%);
+  --gradient-aura: radial-gradient(
+    circle at 50% 50%,
+    #ffe3b0 0%,
+    #ffb347 14%,
+    #ff8a2b 30%,
+    #ff4d5e 50%,
+    #ff2e9a 70%,
+    #7a1fe0 92%,
+    transparent 100%
+  );
   --gradient-mesh:
     radial-gradient(
       at 18% 12%,
-      color-mix(in oklab, var(--coral) 18%, transparent) 0px,
+      color-mix(in oklab, var(--coral) 22%, transparent) 0px,
       transparent 55%
     ),
-    radial-gradient(
-      at 88% 28%,
-      color-mix(in oklab, var(--coral) 10%, transparent) 0px,
-      transparent 55%
-    ),
+    radial-gradient(at 88% 28%, color-mix(in oklab, #7a1fe0 18%, transparent) 0px, transparent 55%),
     radial-gradient(at 60% 95%, oklch(1 0 0 / 4%) 0px, transparent 50%);
 }
 
 :root {
   --radius: 0.875rem;
 
-  /* LIGHT (default) — čistý warm-white s coral akcentem */
-  --background: oklch(0.995 0.003 80);
-  --foreground: oklch(0.2 0.01 60);
+  /* LIGHT — „den" mód: paper s magenta akcentem. */
+  --background: #f7f1f4;
+  --foreground: #0a0411;
 
-  --surface: oklch(0.975 0.004 80);
-  --surface-soft: oklch(0.96 0.005 70);
+  --surface: #ffffff;
+  --surface-soft: #f1e7ee;
 
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.01 60);
+  --card: #ffffff;
+  --card-foreground: #0a0411;
 
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.01 60);
+  --popover: #ffffff;
+  --popover-foreground: #0a0411;
 
-  --primary: oklch(0.2 0.01 60);
-  --primary-foreground: oklch(0.99 0.003 80);
-  --primary-soft: oklch(0.94 0.008 70);
+  --primary: #0a0411;
+  --primary-foreground: #f7f1f4;
+  --primary-soft: #efe3ec;
 
-  --secondary: oklch(0.95 0.006 70);
-  --secondary-foreground: oklch(0.2 0.01 60);
+  --secondary: #f1e7ee;
+  --secondary-foreground: #0a0411;
 
-  --muted: oklch(0.95 0.006 70);
-  --muted-foreground: oklch(0.48 0.012 65);
+  --muted: #f1e7ee;
+  --muted-foreground: #6e5689;
 
-  --accent: oklch(0.94 0.012 60);
-  --accent-foreground: oklch(0.2 0.01 60);
+  --accent: #f6e8f3;
+  --accent-foreground: #0a0411;
 
-  /* Dark warm coral — premium B2B SaaS feel. Ztmaveno pro WCAG AA (bílý text ≥ 4.5:1). */
-  --coral: oklch(0.55 0.15 42);
-  --coral-foreground: oklch(1 0 0);
+  /* Magenta = akcent. Ink text na magentě kvůli WCAG AA (≈6:1). */
+  --coral: #ff2e9a;
+  --coral-foreground: #0a0411;
 
-  --mint: oklch(0.78 0.1 165);
-  --sun: oklch(0.82 0.13 80);
+  --mint: #36dda0;
+  --sun: #ffb020;
 
-  --success: oklch(0.52 0.14 155);
-  --success-foreground: oklch(1 0 0);
+  --success: #1f9d6b;
+  --success-foreground: #ffffff;
+
+  --due: #b06a00;
 
   --destructive: oklch(0.58 0.22 25);
-  --destructive-foreground: oklch(1 0 0);
+  --destructive-foreground: #ffffff;
 
-  --border: oklch(0.2 0.01 60 / 9%);
-  --input: oklch(0.2 0.01 60 / 12%);
-  --ring: oklch(0.55 0.15 42);
+  --border: color-mix(in srgb, #0a0411 11%, transparent);
+  --input: color-mix(in srgb, #0a0411 14%, transparent);
+  --ring: #ff2e9a;
 }
 
 .dark {
-  /* DARK — sofistikovaný warm ink s coral akcentem */
-  --background: oklch(0.15 0.005 60);
-  --foreground: oklch(0.97 0.005 80);
+  /* DARK — primární identita: Ink + plum, magenta akcent, aura jen na momentu. */
+  --background: #0a0411;
+  --foreground: #f4e3ec;
 
-  --surface: oklch(0.18 0.006 60);
-  --surface-soft: oklch(0.21 0.008 60);
+  --surface: #150826;
+  --surface-soft: #1f0b38;
 
-  --card: oklch(0.19 0.007 60);
-  --card-foreground: oklch(0.97 0.005 80);
+  --card: #1a0730;
+  --card-foreground: #f4e3ec;
 
-  --popover: oklch(0.19 0.007 60);
-  --popover-foreground: oklch(0.97 0.005 80);
+  --popover: #1a0730;
+  --popover-foreground: #f4e3ec;
 
-  --primary: oklch(0.97 0.005 80);
-  --primary-foreground: oklch(0.15 0.005 60);
-  --primary-soft: oklch(0.28 0.01 60);
+  --primary: #f4e3ec;
+  --primary-foreground: #0a0411;
+  --primary-soft: #2e1645;
 
-  --secondary: oklch(0.24 0.008 60);
-  --secondary-foreground: oklch(0.97 0.005 80);
+  --secondary: #1f0b38;
+  --secondary-foreground: #f4e3ec;
 
-  --muted: oklch(0.24 0.008 60);
-  --muted-foreground: oklch(0.68 0.008 70);
+  --muted: #1f0b38;
+  --muted-foreground: #a98fc4;
 
-  --accent: oklch(0.28 0.01 60);
-  --accent-foreground: oklch(0.97 0.005 80);
+  --accent: #2e1645;
+  --accent-foreground: #f4e3ec;
 
-  --coral: oklch(0.685 0.145 44);
-  --coral-foreground: oklch(0.15 0.005 60);
+  --coral: #ff2e9a;
+  --coral-foreground: #0a0411;
 
-  --mint: oklch(0.82 0.1 165);
-  --sun: oklch(0.85 0.13 80);
+  --mint: #36dda0;
+  --sun: #ffb020;
 
-  --success: oklch(0.78 0.14 155);
-  --success-foreground: oklch(0.15 0.005 60);
+  --success: #36dda0;
+  --success-foreground: #0a0411;
+
+  --due: #ffb020;
 
   --destructive: oklch(0.65 0.22 25);
-  --destructive-foreground: oklch(1 0 0);
+  --destructive-foreground: #ffffff;
 
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 10%);
-  --ring: oklch(0.685 0.145 44);
+  --border: color-mix(in srgb, #d7b8ff 14%, transparent);
+  --input: color-mix(in srgb, #d7b8ff 16%, transparent);
+  --ring: #ff2e9a;
 }
 
 @layer base {
@@ -178,13 +232,12 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
-    font-feature-settings: 'ss01', 'cv11';
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
 
   ::selection {
-    background-color: color-mix(in oklab, var(--primary) 30%, transparent);
+    background-color: color-mix(in oklab, var(--coral) 35%, transparent);
     color: var(--foreground);
   }
 }
@@ -196,11 +249,18 @@
   .bg-hero {
     background-image: var(--gradient-hero);
   }
+  /* Žhavá aura jako pozadí (hero, klíčové momenty). */
+  .bg-aura {
+    background-image: var(--gradient-aura);
+  }
   .text-gradient-primary {
     background-image: var(--gradient-primary);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+  }
+  .font-mono {
+    font-family: var(--font-mono);
   }
   .shadow-card {
     box-shadow: var(--shadow-card);
@@ -213,7 +273,25 @@
   }
 }
 
-/* unovis grafy (F1-21) — napojení na design tokeny, ať respektují light/dark. */
+/* Tisk účtenky (termo 80 mm) — schová appku, zobrazí jen .receipt-printable. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .receipt-printable,
+  .receipt-printable * {
+    visibility: visible;
+  }
+  .receipt-printable {
+    position: fixed;
+    top: 0;
+    left: 0;
+    margin: 0;
+    box-shadow: none;
+  }
+}
+
+/* unovis grafy — napojení na design tokeny, ať respektují light/dark. */
 .vis-chart {
   --vis-font-family: var(--font-sans);
   --vis-axis-tick-label-color: var(--muted-foreground);

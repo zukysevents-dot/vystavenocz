@@ -1,15 +1,29 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { User } from '@/lib/types'
+import { http, isApiMode, getTokens, setTokens, ApiError, type Tokens } from '@/lib/http'
 
-// MVP mock auth — žádný reálný backend. Uživatel + „databáze" účtů žijí v localStorage.
-// Po napojení reálného API se nahradí těla akcí, rozhraní zůstane stejné.
-const USER_KEY = 'vystaveno.auth.user.v1'
-const USERS_KEY = 'vystaveno.auth.users.v1'
+// Dva režimy podle VITE_API_URL (viz http.ts):
+//  - mock (prázdné URL): účty + session žijí v localStorage (vývoj / e2e seed).
+//  - API: login/register/logout proti /api/v1/auth/*, identita z /me, tokeny v http.ts.
+// Rozhraní storu (login/register/logout/init/isAuthenticated/user) je v obou režimech stejné.
+const USER_KEY = 'vystaveno.auth.user.v1' // mock session
+const USERS_KEY = 'vystaveno.auth.users.v1' // mock "databáze" účtů
+const SESSION_KEY = 'vystaveno.auth.session.v1' // API: cache identity vedle tokenů (sync init po reloadu)
 
 type StoredUser = User & { password: string }
-
 type AuthResult = { ok: true } | { ok: false; error: string }
+
+interface MeResponse {
+  userId: string
+  companyId: string | null
+  role: string | null
+}
+interface Session {
+  user: User
+  companyId: string | null
+  role: string | null
+}
 
 function loadUsers(): StoredUser[] {
   try {
@@ -30,36 +44,121 @@ function makeId(): string {
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
+  const companyId = ref<string | null>(null)
+  const role = ref<string | null>(null)
   const initialized = ref(false)
   const isAuthenticated = computed(() => user.value !== null)
 
-  function persist(): void {
+  function persistMock(): void {
     if (user.value) localStorage.setItem(USER_KEY, JSON.stringify(user.value))
     else localStorage.removeItem(USER_KEY)
   }
 
+  function persistSession(): void {
+    if (user.value) {
+      const session: Session = { user: user.value, companyId: companyId.value, role: role.value }
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+    } else {
+      localStorage.removeItem(SESSION_KEY)
+    }
+  }
+
   function init(): void {
     if (initialized.value) return
+    initialized.value = true
+
+    if (isApiMode()) {
+      // Identita platí jen s tokeny; jinak session zahodit (po logoutu/expiraci).
+      if (getTokens()) {
+        try {
+          const raw = localStorage.getItem(SESSION_KEY)
+          const s = raw ? (JSON.parse(raw) as Session) : null
+          if (s) {
+            user.value = s.user
+            companyId.value = s.companyId
+            role.value = s.role
+          }
+        } catch {
+          /* poškozená session → nepřihlášen */
+        }
+      } else {
+        localStorage.removeItem(SESSION_KEY)
+      }
+      return
+    }
+
     try {
       const raw = localStorage.getItem(USER_KEY)
       user.value = raw ? (JSON.parse(raw) as User) : null
     } catch {
       user.value = null
     }
-    initialized.value = true
   }
 
-  function login(email: string, password: string): AuthResult {
+  async function loadMe(email: string, fullName: string | null): Promise<void> {
+    const me = await http.get<MeResponse>('/me')
+    user.value = { id: me.userId, email, fullName }
+    companyId.value = me.companyId
+    role.value = me.role
+    persistSession()
+  }
+
+  // Po změně tenant kontextu (založení firmy vydá nové tokeny s companyId) přenačti identitu.
+  async function reloadMe(): Promise<void> {
+    if (!isApiMode() || !user.value) return
+    await loadMe(user.value.email, user.value.fullName)
+  }
+
+  async function login(email: string, password: string): Promise<AuthResult> {
+    if (isApiMode()) {
+      try {
+        const tokens = await http.post<Tokens>('/auth/login', { email, password })
+        setTokens(tokens)
+        await loadMe(email, null)
+        return { ok: true }
+      } catch (e) {
+        setTokens(null)
+        const msg =
+          e instanceof ApiError && e.status === 401
+            ? 'Špatný e-mail nebo heslo.'
+            : 'Přihlášení selhalo. Zkuste to znovu.'
+        return { ok: false, error: msg }
+      }
+    }
+
     const found = loadUsers().find((u) => u.email.toLowerCase() === email.toLowerCase())
     if (!found || found.password !== password) {
       return { ok: false, error: 'Špatný e-mail nebo heslo.' }
     }
     user.value = { id: found.id, email: found.email, fullName: found.fullName }
-    persist()
+    persistMock()
     return { ok: true }
   }
 
-  function register(email: string, password: string, fullName: string | null): AuthResult {
+  async function register(
+    email: string,
+    password: string,
+    fullName: string | null,
+  ): Promise<AuthResult> {
+    if (isApiMode()) {
+      try {
+        // Registrace nevrací tokeny → rovnou přihlásit. DisplayName je povinné (fallback e-mail).
+        await http.post('/auth/register', { email, password, displayName: fullName ?? email })
+      } catch (e) {
+        const msg =
+          e instanceof ApiError && e.status === 409
+            ? 'Účet s tímto e-mailem už existuje.'
+            : 'Registrace selhala. Zkuste to znovu.'
+        return { ok: false, error: msg }
+      }
+      const res = await login(email, password)
+      if (res.ok && fullName && user.value) {
+        user.value = { ...user.value, fullName }
+        persistSession()
+      }
+      return res
+    }
+
     const users = loadUsers()
     if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
       return { ok: false, error: 'Účet s tímto e-mailem už existuje.' }
@@ -68,14 +167,42 @@ export const useAuthStore = defineStore('auth', () => {
     users.push(created)
     saveUsers(users)
     user.value = { id: created.id, email: created.email, fullName: created.fullName }
-    persist()
+    persistMock()
     return { ok: true }
   }
 
-  function logout(): void {
+  async function logout(): Promise<void> {
+    if (isApiMode()) {
+      const tokens = getTokens()
+      if (tokens?.refreshToken) {
+        try {
+          await http.post('/auth/logout', { refreshToken: tokens.refreshToken })
+        } catch {
+          /* best-effort — odhlásit i při výpadku sítě */
+        }
+      }
+      setTokens(null)
+      user.value = null
+      companyId.value = null
+      role.value = null
+      persistSession()
+      return
+    }
+
     user.value = null
-    persist()
+    persistMock()
   }
 
-  return { user, initialized, isAuthenticated, init, login, register, logout }
+  return {
+    user,
+    companyId,
+    role,
+    initialized,
+    isAuthenticated,
+    init,
+    login,
+    register,
+    logout,
+    reloadMe,
+  }
 })

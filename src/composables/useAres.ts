@@ -1,8 +1,11 @@
 import { ref } from 'vue'
 import { toast } from '@/components/ui/sonner'
+import { http, isApiMode, ApiError } from '@/lib/http'
 
-// MVP mock ARES — žádné reálné API. Vrací data pro pár známých IČO + generický fallback.
-// Reálný lookup (ARES REST) se doplní později; rozhraní (lookup/loading/data/reset) zůstane.
+// ARES lookup firmy podle IČO.
+//  - API režim: přes backend proxy `GET /ares/{ico}` (ten volá ares.gov.cz server-side → bez CORS).
+//  - Mock režim (bez VITE_API_URL): data pro pár známých IČO + generický fallback (vývoj bez backendu).
+// Rozhraní (lookup/loading/data/reset) je v obou režimech stejné.
 export type AresResult = {
   ico: string
   dic: string | null
@@ -44,7 +47,26 @@ export function useAres() {
     }
     loading.value = true
     data.value = null
-    await new Promise((resolve) => setTimeout(resolve, 500)) // simulace síťového dotazu
+
+    if (isApiMode()) {
+      try {
+        const result = await http.get<AresResult>(`/ares/${cleaned}`)
+        data.value = result
+        toast.success(result.companyName ? `Načteno: ${result.companyName}` : 'Firma načtena.')
+        return result
+      } catch (e) {
+        const msg =
+          e instanceof ApiError && e.status === 404
+            ? 'Firma s tímto IČO nebyla v ARES nalezena.'
+            : 'Načtení z ARES selhalo. Zkuste to znovu.'
+        toast.error(msg)
+        return null
+      } finally {
+        loading.value = false
+      }
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 500)) // mock: simulace síťového dotazu
     const known = KNOWN[cleaned]
     const result: AresResult = known
       ? { ico: cleaned, ...known }

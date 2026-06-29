@@ -25,7 +25,7 @@
     ]
   },
   "dependencies": {
-    "@fontsource/inter": "^5.2.8",
+    "@fontsource/jetbrains-mono": "^5.2.8",
     "@internationalized/date": "^3.12.2",
     "@sentry/vue": "^10.59.0",
     "@unhead/vue": "^3.1.4",

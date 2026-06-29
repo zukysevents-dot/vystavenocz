@@ -18,10 +18,10 @@ const password = ref('')
 const submitting = ref(false)
 const error = ref('')
 
-function onSubmit() {
+async function onSubmit() {
   error.value = ''
   submitting.value = true
-  const res = auth.login(email.value, password.value)
+  const res = await auth.login(email.value, password.value)
   submitting.value = false
   if (res.ok) {
     toast.success('Vítejte zpět!')

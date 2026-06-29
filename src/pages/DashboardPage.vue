@@ -16,21 +16,52 @@ import { BarChart } from '@/components/ui/chart'
 import { useInvoices } from '@/composables/useInvoices'
 import { useClients } from '@/composables/useClients'
 import { useCompanyStore } from '@/stores/company'
+import { http, isApiMode } from '@/lib/http'
 import { formatCZK, formatDate } from '@/lib/invoice'
-import type { Invoice, InvoiceStatus } from '@/lib/types'
+import type { InvoiceStatus } from '@/lib/types'
 
 const router = useRouter()
-const { invoices, load: loadInvoices } = useInvoices()
-const { clients, load: loadClients } = useClients()
+const loading = ref(true)
+// Profil firmy pro pozdrav v hlavičce; načítá ho AppLayout (reaktivně), tady jen čteme.
 const companyStore = useCompanyStore()
 
-const loading = ref(true)
+// Normalizovaný tvar dat — stejný pro API i mock režim (template nezávisí na režimu).
+interface Stats {
+  count: number
+  billed: number
+  paidAmount: number
+  paidCount: number
+  overdueAmount: number
+  overdueCount: number
+}
+interface RecentInvoice {
+  id: string
+  invoiceNumber: string | null
+  clientName: string
+  issueDate: string
+  total: number
+  status: string
+}
+interface RecentClient {
+  id: string
+  name: string
+  city: string | null
+  ico: string | null
+  email: string | null
+}
 
-onMounted(async () => {
-  companyStore.init()
-  await Promise.all([loadInvoices(), loadClients()])
-  loading.value = false
+const stats = ref<Stats>({
+  count: 0,
+  billed: 0,
+  paidAmount: 0,
+  paidCount: 0,
+  overdueAmount: 0,
+  overdueCount: 0,
 })
+const revenue = ref<{ label: string; total: number }[]>([])
+const recentInvoices = ref<RecentInvoice[]>([])
+const recentClients = ref<RecentClient[]>([])
+const hasRevenue = computed(() => revenue.value.some((b) => b.total > 0))
 
 const CZ_MONTHS = [
   'Led',
@@ -46,13 +77,95 @@ const CZ_MONTHS = [
   'Lis',
   'Pro',
 ]
-const todayISO = new Date().toISOString().slice(0, 10)
 
-function isOverdue(inv: Invoice): boolean {
-  return inv.status === 'overdue' || (inv.status === 'issued' && inv.dueDate < todayISO)
+onMounted(async () => {
+  try {
+    if (isApiMode()) await loadFromApi()
+    else await loadFromMock()
+  } finally {
+    loading.value = false
+  }
+})
+
+// API režim: tenant-scoped agregace na backendu (5 malých paralelních dotazů). Nestahuje celý
+// seznam faktur do prohlížeče — metriky/řadu/recent počítá DB. Částky all-time (široký rozsah),
+// aby odpovídaly původnímu zobrazení; čísla už nejsou omezená stropem stránky (pageSize 100).
+async function loadFromApi(): Promise<void> {
+  const today = new Date()
+  const toISO = today.toISOString().slice(0, 10)
+  const revFromISO = new Date(today.getFullYear(), today.getMonth() - 5, 1)
+    .toISOString()
+    .slice(0, 10)
+
+  interface SummaryDto {
+    totalInvoiced: number
+    totalPaid: number
+    paidCount: number
+    overdueCount: number
+    overdueAmount: number
+  }
+  interface RevenueDto {
+    series: { periodStart: string; invoicedAmount: number }[]
+  }
+  interface RecentInvoiceDto {
+    id: string
+    number: string | null
+    clientName: string
+    status: string
+    issueDate: string | null
+    total: number
+  }
+  interface RecentClientDto {
+    id: string
+    name: string
+    email: string | null
+  }
+
+  const [count, summary, rev, recInv, recCli] = await Promise.all([
+    http.get<{ total: number }>('/invoices?pageSize=1'),
+    http.get<SummaryDto>(`/dashboard/summary?from=2000-01-01&to=${toISO}`),
+    http.get<RevenueDto>(`/dashboard/revenue?from=${revFromISO}&to=${toISO}&granularity=Month`),
+    http.get<RecentInvoiceDto[]>('/dashboard/recent-invoices?limit=5'),
+    http.get<RecentClientDto[]>('/dashboard/recent-clients?limit=5'),
+  ])
+
+  stats.value = {
+    count: count.total,
+    billed: summary.totalInvoiced,
+    paidAmount: summary.totalPaid,
+    paidCount: summary.paidCount,
+    overdueAmount: summary.overdueAmount,
+    overdueCount: summary.overdueCount,
+  }
+  revenue.value = rev.series.map((b) => ({
+    label: CZ_MONTHS[new Date(b.periodStart).getMonth()],
+    total: b.invoicedAmount,
+  }))
+  recentInvoices.value = recInv.map((i) => ({
+    id: i.id,
+    invoiceNumber: i.number,
+    clientName: i.clientName,
+    issueDate: i.issueDate ?? '',
+    total: i.total,
+    status: i.status,
+  }))
+  // Backend recent-clients vrací e-mail (ne město/IČO) → subtitle padá zpět na e-mail.
+  recentClients.value = recCli.map((c) => ({
+    id: c.id,
+    name: c.name,
+    city: null,
+    ico: null,
+    email: c.email,
+  }))
 }
 
-const stats = computed(() => {
+// Mock režim (bez backendu): počítá z localStorage seznamů (vývoj / demo). Logika beze změny.
+async function loadFromMock(): Promise<void> {
+  const { invoices, load: loadInvoices } = useInvoices()
+  const { clients, load: loadClients } = useClients()
+  await Promise.all([loadInvoices(), loadClients()])
+
+  const todayISO = new Date().toISOString().slice(0, 10)
   let billed = 0
   let paidAmount = 0
   let overdueAmount = 0
@@ -64,12 +177,12 @@ const stats = computed(() => {
     if (inv.status === 'paid') {
       paidCount++
       paidAmount += amount
-    } else if (isOverdue(inv)) {
+    } else if (inv.status === 'overdue' || (inv.status === 'issued' && inv.dueDate < todayISO)) {
       overdueCount++
       overdueAmount += amount
     }
   }
-  return {
+  stats.value = {
     count: invoices.value.length,
     billed,
     paidAmount,
@@ -77,10 +190,7 @@ const stats = computed(() => {
     overdueAmount,
     overdueCount,
   }
-})
 
-// Tržby za posledních 6 měsíců (fakturováno = bez konceptů a storen).
-const revenue = computed(() => {
   const now = new Date()
   const buckets: { key: string; label: string; total: number }[] = []
   for (let i = 5; i >= 0; i--) {
@@ -98,17 +208,30 @@ const revenue = computed(() => {
     const i = idx.get(`${d.getFullYear()}-${d.getMonth()}`)
     if (i !== undefined) buckets[i].total += Number(inv.total) || 0
   }
-  return buckets
-})
+  revenue.value = buckets.map((b) => ({ label: b.label, total: b.total }))
 
-const hasRevenue = computed(() => revenue.value.some((b) => b.total > 0))
-
-const recentInvoices = computed(() =>
-  [...invoices.value].sort((a, b) => b.issueDate.localeCompare(a.issueDate)).slice(0, 5),
-)
-const recentClients = computed(() =>
-  [...clients.value].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5),
-)
+  recentInvoices.value = [...invoices.value]
+    .sort((a, b) => b.issueDate.localeCompare(a.issueDate))
+    .slice(0, 5)
+    .map((i) => ({
+      id: i.id,
+      invoiceNumber: i.invoiceNumber ?? null,
+      clientName: i.clientSnapshot?.name ?? '',
+      issueDate: i.issueDate,
+      total: Number(i.total) || 0,
+      status: i.status,
+    }))
+  recentClients.value = [...clients.value]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, 5)
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      city: c.city ?? null,
+      ico: c.ico ?? null,
+      email: c.email ?? null,
+    }))
+}
 
 type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline'
 const statusLabels: Record<InvoiceStatus, { label: string; variant: BadgeVariant }> = {
@@ -211,9 +334,9 @@ function statusMeta(s: string): { label: string; variant: BadgeVariant } {
             @click="router.push('/app/faktury/editor?id=' + inv.id)"
           >
             <span class="min-w-0 flex-1">
-              <span class="block truncate font-medium">{{ inv.invoiceNumber }}</span>
+              <span class="block truncate font-medium">{{ inv.invoiceNumber || 'Koncept' }}</span>
               <span class="block truncate text-xs text-muted-foreground">
-                {{ inv.clientSnapshot?.name || '—' }} · {{ formatDate(inv.issueDate) }}
+                {{ inv.clientName || '—' }} · {{ formatDate(inv.issueDate) }}
               </span>
             </span>
             <span class="flex shrink-0 items-center gap-2">
@@ -251,7 +374,11 @@ function statusMeta(s: string): { label: string; variant: BadgeVariant } {
             <span class="min-w-0">
               <span class="block truncate font-medium">{{ c.name }}</span>
               <span class="block truncate text-xs text-muted-foreground">
-                {{ [c.city, c.ico ? 'IČO ' + c.ico : ''].filter(Boolean).join(' · ') || '—' }}
+                {{
+                  [c.city, c.ico ? 'IČO ' + c.ico : ''].filter(Boolean).join(' · ') ||
+                  c.email ||
+                  '—'
+                }}
               </span>
             </span>
           </RouterLink>

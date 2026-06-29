@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { isApiMode } from '@/lib/http'
 
 // Typování route meta (rozšíří se v dalších taskech — guards F0-35, SEO F2-31).
 declare module 'vue-router' {
@@ -21,6 +22,12 @@ const routes: RouteRecordRaw[] = [
     name: 'home',
     component: () => import('@/pages/HomePage.vue'),
     meta: { title: 'Domů', layout: 'public' },
+  },
+  {
+    path: '/uctenka',
+    name: 'uctenka-demo',
+    component: () => import('@/pages/UctenkaDemoPage.vue'),
+    meta: { title: 'Účtenka — náhled', layout: 'public' },
   },
   {
     path: '/funkce',
@@ -135,6 +142,60 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Klienti', layout: 'app', requiresAuth: true },
   },
   {
+    path: '/app/pokladna',
+    name: 'app-pokladna',
+    component: () => import('@/pages/PokladnaPage.vue'),
+    meta: { title: 'Pokladna', layout: 'app', requiresAuth: true },
+  },
+  {
+    path: '/app/sklad',
+    name: 'app-sklad',
+    component: () => import('@/pages/SkladPage.vue'),
+    meta: { title: 'Sklad', layout: 'app', requiresAuth: true },
+  },
+  {
+    path: '/app/kategorie',
+    name: 'app-kategorie',
+    component: () => import('@/pages/KategoriePage.vue'),
+    meta: { title: 'Kategorie', layout: 'app', requiresAuth: true },
+  },
+  {
+    path: '/app/zasoby',
+    name: 'app-zasoby',
+    component: () => import('@/pages/ZasobyPage.vue'),
+    meta: { title: 'Zásoby', layout: 'app', requiresAuth: true },
+  },
+  {
+    path: '/app/dochazka',
+    name: 'app-dochazka',
+    component: () => import('@/pages/DochazkaPage.vue'),
+    meta: { title: 'Docházka', layout: 'app', requiresAuth: true },
+  },
+  {
+    path: '/app/rezervace',
+    name: 'app-rezervace',
+    component: () => import('@/pages/RezervacePage.vue'),
+    meta: { title: 'Rezervace', layout: 'app', requiresAuth: true },
+  },
+  {
+    path: '/app/restaurace',
+    name: 'app-restaurace',
+    component: () => import('@/pages/RestauracePage.vue'),
+    meta: { title: 'Restaurace', layout: 'app', requiresAuth: true },
+  },
+  {
+    path: '/app/kuchyne',
+    name: 'app-kuchyne',
+    component: () => import('@/pages/KuchynePage.vue'),
+    meta: { title: 'Kuchyně', layout: 'app', requiresAuth: true },
+  },
+  {
+    path: '/app/mapa-stolu',
+    name: 'app-mapa-stolu',
+    component: () => import('@/pages/MapaStoluPage.vue'),
+    meta: { title: 'Mapa stolů', layout: 'app', requiresAuth: true },
+  },
+  {
     path: '/app/nastaveni',
     name: 'app-nastaveni',
     component: () => import('@/pages/NastaveniPage.vue'),
@@ -195,6 +256,17 @@ router.beforeEach((to) => {
   }
   if (auth.isAuthenticated && (to.name === 'prihlaseni' || to.name === 'registrace')) {
     return { name: 'app' }
+  }
+  // API režim: přihlášený uživatel bez firmy musí nejdřív projít onboardingem (jinak tenant-scoped
+  // endpointy vrací „nemá firmu"). Mock režim firmu nevyžaduje.
+  if (
+    isApiMode() &&
+    to.meta.requiresAuth &&
+    auth.isAuthenticated &&
+    !auth.companyId &&
+    to.name !== 'app-onboarding'
+  ) {
+    return { name: 'app-onboarding' }
   }
   return true
 })

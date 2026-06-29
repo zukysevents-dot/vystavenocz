@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ShieldCheck, HeadphonesIcon, Wallet, Globe } from 'lucide-vue-next'
+import { ShieldCheck, CreditCard, MapPin, ToggleRight } from 'lucide-vue-next'
 
 const items = [
-  { icon: ShieldCheck, label: '14 dní zdarma bez karty' },
-  { icon: HeadphonesIcon, label: 'Česká podpora' },
-  { icon: Wallet, label: 'Od 100 Kč měsíčně' },
-  { icon: Globe, label: 'Plně online, bez instalace' },
+  { icon: ShieldCheck, label: '14 dní zdarma' },
+  { icon: CreditCard, label: 'Bez platební karty' },
+  { icon: MapPin, label: 'České, podle zákona' },
+  { icon: ToggleRight, label: 'Modulární — platíš jen co používáš' },
 ]
 </script>
 

@@ -12,17 +12,17 @@ import { Button } from '@/components/ui/button'
       >
         <div class="relative">
           <h2
-            class="mx-auto max-w-2xl text-4xl font-bold tracking-tight text-foreground sm:text-5xl"
+            class="mx-auto max-w-2xl font-display text-4xl font-black tracking-tight text-foreground sm:text-5xl"
           >
-            Přestaň ztrácet čas v Excelu.
+            Jeden systém pro celý provoz.
           </h2>
           <p class="mx-auto mt-5 max-w-xl text-lg text-muted-foreground sm:text-xl">
-            Začni fakturovat jednoduše — dnes, zdarma, bez karty.
+            Pokladna, kuchyně, sklad, rezervace i fakturace. Vyzkoušej zdarma — bez karty.
           </p>
           <div class="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button variant="coral" size="xl" class="group h-14 px-10 text-base" as-child>
               <RouterLink to="/registrace">
-                Začít zdarma za 30 sekund
+                Vyzkoušet zdarma
                 <ArrowRight class="transition-transform group-hover:translate-x-0.5" />
               </RouterLink>
             </Button>

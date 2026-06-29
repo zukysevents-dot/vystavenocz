@@ -3,19 +3,19 @@ import { Quote } from 'lucide-vue-next'
 
 const items = [
   {
-    quote: 'Konečně faktura hotová, než dojdu k autu.',
-    name: 'Petr',
-    role: 'elektrikář',
+    quote: 'Pokladna i sklad v jednom — ráno otevřu a všechno sedí.',
+    name: 'Tereza',
+    role: 'majitelka kavárny',
   },
   {
-    quote: 'Nemusím volat účetní, prostě jí pošlu export.',
-    name: 'Jana',
-    role: 'grafička na volné noze',
+    quote: 'Rezervace bez kolizí a žádný papírový diář. Konečně klid.',
+    name: 'Lucie',
+    role: 'kadeřnice, vlastní salon',
   },
   {
-    quote: 'AI asistent mi ušetřil spoustu času.',
-    name: 'Marek',
-    role: 'konzultant',
+    quote: 'Bony letí rovnou do kuchyně, účty na stůl drží přehled.',
+    name: 'Martin',
+    role: 'šéf restaurace',
   },
 ]
 </script>
@@ -24,7 +24,7 @@ const items = [
   <section class="bg-background py-16 sm:py-20">
     <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
       <div class="mx-auto max-w-2xl text-center">
-        <h2 class="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+        <h2 class="font-display text-3xl font-black tracking-tight text-foreground sm:text-4xl">
           Pár vět od lidí jako ty
         </h2>
       </div>

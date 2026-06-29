@@ -13,6 +13,7 @@ import {
   Download,
   Mail,
   CheckCircle2,
+  Ban,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -29,6 +30,7 @@ import InvoiceDocument from '@/components/app/InvoiceDocument.vue'
 import SendInvoiceDialog from '@/components/app/SendInvoiceDialog.vue'
 import PaywallDialog from '@/components/app/PaywallDialog.vue'
 import { downloadInvoicePdf } from '@/lib/invoice-pdf'
+import { ApiError, isApiMode } from '@/lib/http'
 import { useClients } from '@/composables/useClients'
 import {
   useInvoices,
@@ -47,6 +49,7 @@ import {
 import { toast } from '@/components/ui/sonner'
 import type {
   ClientSnapshot,
+  Invoice,
   InvoiceItem,
   InvoiceStatus,
   SupplierSnapshot,
@@ -56,7 +59,7 @@ import type {
 const route = useRoute()
 const router = useRouter()
 const { clients, load: loadClients, getById: getClientById } = useClients()
-const { create, update, getById, load: loadInvoices } = useInvoices()
+const { create, update, issue, pay, cancel, getById, load: loadInvoices } = useInvoices()
 const { hasAccess } = useSubscription()
 const companyStore = useCompanyStore()
 
@@ -160,7 +163,7 @@ onMounted(async () => {
       editingId.value = id
       status.value = inv.status
       paidAt.value = inv.paidAt
-      invoiceNumber.value = inv.invoiceNumber
+      invoiceNumber.value = inv.invoiceNumber ?? ''
       issueDate.value = inv.issueDate
       dueDate.value = inv.dueDate
       variableSymbol.value = inv.variableSymbol ?? ''
@@ -185,14 +188,17 @@ onMounted(async () => {
       return
     }
   } else {
-    // Nová faktura — předvyplň číslo z profilu firmy a VS odvoď z čísla.
+    // Nová faktura. V mock režimu předvyplň číslo z profilu firmy + VS; v API režimu
+    // koncept číslo nemá — přidělí ho server až při vystavení (issue), tak ho nevymýšlíme.
     const c = companyStore.company
-    invoiceNumber.value = buildInvoiceNumber(
-      c?.invoiceNumberPrefix || 'FA',
-      c?.invoiceNumberFormat || '{prefix}-{year}-{seq}',
-      c?.nextInvoiceSeq || 1,
-    )
-    variableSymbol.value = variableSymbolFromInvoiceNumber(invoiceNumber.value)
+    if (!isApiMode()) {
+      invoiceNumber.value = buildInvoiceNumber(
+        c?.invoiceNumberPrefix || 'FA',
+        c?.invoiceNumberFormat || '{prefix}-{year}-{seq}',
+        c?.nextInvoiceSeq || 1,
+      )
+      variableSymbol.value = variableSymbolFromInvoiceNumber(invoiceNumber.value)
+    }
     // Výchozí splatnost z profilu firmy (klient s vlastní splatností ji přepíše níže).
     dueDate.value = addDaysISO(c?.defaultPaymentDays ?? 14)
     const clientIdQ = typeof route.query.clientId === 'string' ? route.query.clientId : null
@@ -276,7 +282,15 @@ async function onDownloadPdf() {
   }
 }
 
-// Uloží aktuální stav faktury (create nebo update). Bez toastu — řeší volající.
+// Převezme do editoru serverovou pravdu po uložení/přechodu (id, přidělené číslo, stav).
+function syncFromSaved(inv: Invoice): void {
+  editingId.value = inv.id
+  if (inv.invoiceNumber) invoiceNumber.value = inv.invoiceNumber
+  status.value = inv.status
+  paidAt.value = inv.paidAt
+}
+
+// Uloží aktuální stav faktury (create nebo update konceptu). Bez toastu — řeší volající.
 async function persist(): Promise<void> {
   // Z konceptových řádků dopočítej součty po řádcích (lib calcLine).
   const builtItems: InvoiceItem[] = normalizedItems().map((it) => {
@@ -310,16 +324,27 @@ async function persist(): Promise<void> {
   }
 
   if (editingId.value) {
-    await update(editingId.value, input, vatPayer.value)
+    syncFromSaved(await update(editingId.value, input, vatPayer.value))
   } else {
     const created = await create(input, vatPayer.value)
-    editingId.value = created.id
-    // Posuň pořadové číslo, ať příští faktura nedostane stejné.
+    // Posuň pořadové číslo jen v mock režimu (vodítko pro předvyplnění příští faktury).
+    // V API režimu čísla vlastní server (přiděluje je při issue), klientský seq se nepoužívá.
     const c = companyStore.company
-    if (c) companyStore.save({ nextInvoiceSeq: (c.nextInvoiceSeq || 1) + 1 })
+    // save() je async; mock-only fire-and-forget (seq je jen klientské vodítko).
+    if (!isApiMode() && c) void companyStore.save({ nextInvoiceSeq: (c.nextInvoiceSeq || 1) + 1 })
+    syncFromSaved(created)
     // Převezmi id do URL, aby další uložení byla update (ne duplicitní faktura).
     router.replace({ query: { id: created.id } })
   }
+}
+
+// Přeloží serverový konflikt stavu (409) na srozumitelnou hlášku; ostatní chyby propustí dál.
+function handleLifecycleError(e: unknown, conflictMessage: string): void {
+  if (e instanceof ApiError && e.status === 409) {
+    toast.error(conflictMessage)
+    return
+  }
+  throw e
 }
 
 async function onSave() {
@@ -336,7 +361,7 @@ async function onSave() {
     if (e instanceof DuplicateInvoiceNumberError) {
       toast.error('Faktura s tímto číslem už existuje. Změňte číslo faktury.')
     } else {
-      throw e
+      handleLifecycleError(e, 'Vystavenou fakturu už nelze upravovat (jen koncept).')
     }
   } finally {
     saving.value = false
@@ -352,11 +377,18 @@ function onSendClick(): void {
   sendOpen.value = true
 }
 
-// Mock odeslání proběhlo v dialogu — koncept povýšíme na „Vystaveno".
+// Mock odeslání proběhlo v dialogu — koncept vystavíme (server přidělí číslo, Draft→Issued).
 async function onSent() {
-  if (status.value !== 'draft') return
-  status.value = 'issued'
-  await persist()
+  if (status.value !== 'draft' || !editingId.value) return
+  saving.value = true
+  try {
+    await persist() // ulož případné rozeditované změny konceptu
+    syncFromSaved(await issue(editingId.value))
+  } catch (e) {
+    handleLifecycleError(e, 'Fakturu se nepodařilo vystavit — zkuste to znovu.')
+  } finally {
+    saving.value = false
+  }
 }
 
 async function onMarkPaid() {
@@ -364,12 +396,31 @@ async function onMarkPaid() {
     paywallOpen.value = true
     return
   }
-  status.value = 'paid'
-  paidAt.value = new Date().toISOString()
+  if (!editingId.value) return
   saving.value = true
   try {
-    await persist()
+    // Uhradit lze jen vystavenou — koncept nejdřív ulož a vystav (přidělí číslo).
+    if (status.value === 'draft') {
+      await persist()
+      syncFromSaved(await issue(editingId.value))
+    }
+    syncFromSaved(await pay(editingId.value))
     toast.success('Faktura označena jako uhrazená.')
+  } catch (e) {
+    handleLifecycleError(e, 'Uhradit lze jen vystavenou fakturu.')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function onCancel() {
+  if (!editingId.value) return
+  saving.value = true
+  try {
+    syncFromSaved(await cancel(editingId.value))
+    toast.success('Faktura stornována.')
+  } catch (e) {
+    handleLifecycleError(e, 'Tuto fakturu už nelze stornovat.')
   } finally {
     saving.value = false
   }
@@ -411,7 +462,16 @@ async function onMarkPaid() {
           <span class="hidden sm:inline">Odeslat</span>
         </Button>
         <Button
-          v-if="editingId && status !== 'paid'"
+          v-if="editingId && (status === 'issued' || status === 'overdue')"
+          variant="outline"
+          :disabled="saving || loading"
+          @click="onCancel"
+        >
+          <Ban class="h-4 w-4 text-destructive" />
+          <span class="hidden sm:inline">Stornovat</span>
+        </Button>
+        <Button
+          v-if="editingId && status !== 'paid' && status !== 'cancelled'"
           variant="outline"
           :disabled="saving || loading"
           @click="onMarkPaid"

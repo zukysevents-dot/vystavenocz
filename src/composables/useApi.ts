@@ -1,15 +1,16 @@
 /**
  * Datová abstrakce (SWAP POINT).
  *
- * Jediné místo, kde se mock localStorage vrstva později vymění za HTTP klienta
- * na `import.meta.env.VITE_API_URL`. Volající (useClients/useInvoices/stores) se nemění.
- * Metody jsou async, aby přechod na fetch() nevyžadoval změnu signatur.
+ * Jediné místo, kde se mock localStorage vrstva přepíná na HTTP klienta proti
+ * `import.meta.env.VITE_API_URL`. Volající (useClients/useInvoices/stores) se nemění.
+ * Metody jsou async, takže přechod na fetch() nevyžadoval změnu signatur.
+ *
+ * - `VITE_API_URL` prázdné → localStorage (vývoj / e2e seed / offline demo).
+ * - `VITE_API_URL` nastavené → REST přes http.ts (list čte paged obálku {items,total,…}).
  */
+import { http, isApiMode, ApiError } from '@/lib/http'
 
 const STORAGE_PREFIX = 'vystaveno:'
-
-// Až bude VITE_API_URL nastavené, zde se přepne na fetch(API_URL). Zatím vždy localStorage.
-const API_URL = import.meta.env.VITE_API_URL
 
 function read<T>(collection: string): T[] {
   try {
@@ -28,6 +29,14 @@ export interface Identifiable {
   id: string
 }
 
+/** Paged obálka list endpointů (sjednoceno s backend-standards.md §3). */
+export interface PagedResult<T> {
+  items: T[]
+  total: number
+  page: number
+  pageSize: number
+}
+
 export interface ResourceApi<T extends Identifiable> {
   list(): Promise<T[]>
   get(id: string): Promise<T | null>
@@ -36,10 +45,35 @@ export interface ResourceApi<T extends Identifiable> {
   remove(id: string): Promise<void>
 }
 
-export function useApi<T extends Identifiable>(collection: string): ResourceApi<T> {
-  // Pozn.: až bude API_URL, vrátit zde implementaci postavenou na fetch(`${API_URL}/${collection}`).
-  void API_URL
+function httpApi<T extends Identifiable>(collection: string): ResourceApi<T> {
+  const base = `/${collection}`
+  return {
+    async list() {
+      // MVP: jedna stránka (strop backendu 100). Plné stránkování přijde s UI potřebou.
+      const res = await http.get<PagedResult<T>>(`${base}?pageSize=100`)
+      return res.items
+    },
+    async get(id) {
+      try {
+        return await http.get<T>(`${base}/${id}`)
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 404) return null
+        throw e
+      }
+    },
+    create(item) {
+      return http.post<T>(base, item)
+    },
+    update(id, patch) {
+      return http.put<T>(`${base}/${id}`, patch)
+    },
+    async remove(id) {
+      await http.del(`${base}/${id}`)
+    },
+  }
+}
 
+function localApi<T extends Identifiable>(collection: string): ResourceApi<T> {
   return {
     async list() {
       return read<T>(collection)
@@ -69,4 +103,8 @@ export function useApi<T extends Identifiable>(collection: string): ResourceApi<
       )
     },
   }
+}
+
+export function useApi<T extends Identifiable>(collection: string): ResourceApi<T> {
+  return isApiMode() ? httpApi<T>(collection) : localApi<T>(collection)
 }

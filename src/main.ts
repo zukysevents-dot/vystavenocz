@@ -2,17 +2,17 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import * as Sentry from '@sentry/vue'
 import { createHead } from '@unhead/vue/client'
-import '@fontsource/inter/400.css'
-import '@fontsource/inter/500.css'
-import '@fontsource/inter/600.css'
-import '@fontsource/inter/700.css'
+// Mono (JetBrains Mono) na částky/doklady/kódy. Cabinet Grotesk je self-hostovaný v main.css (@font-face).
+import '@fontsource/jetbrains-mono/400.css'
+import '@fontsource/jetbrains-mono/500.css'
 import '@/assets/main.css'
 import App from '@/App.vue'
 import router from '@/router'
 import { seedMockData } from '@/lib/seed'
+import { isApiMode } from '@/lib/http'
 
-// MVP: naseedovat demo data do mock vrstvy (idempotentní). Odstraní se po napojení API.
-void seedMockData()
+// MVP: demo data do mock vrstvy (idempotentní) — jen v mock režimu. Na reálném API se neseeduje.
+if (!isApiMode()) void seedMockData()
 
 const app = createApp(App)
 

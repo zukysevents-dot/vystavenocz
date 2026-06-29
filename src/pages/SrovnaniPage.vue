@@ -7,8 +7,8 @@ import CtaSection from '@/components/landing/CtaSection.vue'
 <template>
   <PageHeader
     eyebrow="Srovnání"
-    title="Stejné funkce, polovina ceny."
-    subtitle="Postavili jsme Vystaveno vedle Fakturoidu, iDokladu a Vyfakturuj. Posuďte sami."
+    title="Celý provoz v jednom, modulárně."
+    subtitle="Postavili jsme Vystaveno vedle Dotykačky, Storyous a Fakturoidu. Posuďte sami."
   />
   <ComparisonSection />
   <CtaSection />

@@ -9,6 +9,15 @@ import {
   LogOut,
   Sparkles,
   CreditCard,
+  ShoppingCart,
+  Package,
+  Boxes,
+  Tags,
+  LayoutGrid,
+  UtensilsCrossed,
+  ChefHat,
+  Clock,
+  CalendarDays,
   Menu,
   X,
 } from 'lucide-vue-next'
@@ -19,6 +28,15 @@ import { useAuthStore } from '@/stores/auth'
 
 const nav = [
   { to: '/app', label: 'Přehled', icon: LayoutDashboard, exact: true },
+  { to: '/app/pokladna', label: 'Pokladna', icon: ShoppingCart },
+  { to: '/app/restaurace', label: 'Restaurace', icon: UtensilsCrossed },
+  { to: '/app/kuchyne', label: 'Kuchyně', icon: ChefHat },
+  { to: '/app/mapa-stolu', label: 'Mapa stolů', icon: LayoutGrid },
+  { to: '/app/sklad', label: 'Sklad', icon: Package },
+  { to: '/app/zasoby', label: 'Zásoby', icon: Boxes },
+  { to: '/app/dochazka', label: 'Docházka', icon: Clock },
+  { to: '/app/rezervace', label: 'Rezervace', icon: CalendarDays },
+  { to: '/app/kategorie', label: 'Kategorie', icon: Tags },
   { to: '/app/faktury', label: 'Faktury', icon: FileText },
   { to: '/app/klienti', label: 'Klienti', icon: Users },
   { to: '/app/predplatne', label: 'Předplatné', icon: CreditCard },
@@ -34,8 +52,8 @@ function isActive(item: (typeof nav)[number]): boolean {
   return item.exact ? route.path === item.to : route.path.startsWith(item.to)
 }
 
-function signOut() {
-  auth.logout()
+async function signOut() {
+  await auth.logout()
   router.push('/')
 }
 
