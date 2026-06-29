@@ -4,8 +4,8 @@ Fakturační SaaS pro OSVČ a živnostníky. Tohle je **frontend-only MVP** ve V
 React aplikace. Data zatím žijí v `localStorage` přes mock datovou vrstvu, která je připravená na
 napojení na budoucí API (`vystaveno-api`).
 
-> Větev `main` v repu = **stará React appka** (jen reference). Vývoj probíhá na samostatných větvích
-> (např. `dev/01-init-vue3`).
+> Produkční větev `main` = **Vue app**. Stará React appka je zazálohovaná ve větvi `legacy-react`
+> (jen reference). Vyvíjí se na feature větvích.
 
 ## Stack
 
