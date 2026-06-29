@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validateClient, hasBlockingError } from './validate'
+import { validateClient, validateProduct, hasBlockingError } from './validate'
 
 describe('validateClient', () => {
   it('chybějící název → blokující error', () => {
@@ -22,5 +22,19 @@ describe('validateClient', () => {
   it('neplatný e-mail → warning', () => {
     const issues = validateClient({ name: 'Acme', email: 'nesmysl' })
     expect(issues.some((i) => i.field === 'email' && i.level === 'warning')).toBe(true)
+  })
+})
+
+describe('validateProduct', () => {
+  it('chybějící název → blokující error', () => {
+    expect(hasBlockingError(validateProduct({ name: '' }))).toBe(true)
+  })
+  it('záporná cena → warning, ne blokující', () => {
+    const issues = validateProduct({ name: 'X', salePrice: -5 })
+    expect(issues.some((i) => i.field === 'salePrice' && i.level === 'warning')).toBe(true)
+    expect(hasBlockingError(issues)).toBe(false)
+  })
+  it('platný produkt → bez nálezů', () => {
+    expect(validateProduct({ name: 'Káva', salePrice: 49 })).toEqual([])
   })
 })

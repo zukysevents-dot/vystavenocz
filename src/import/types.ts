@@ -12,7 +12,7 @@ export interface RawTable {
 }
 
 /** Entita, kterou import naplňuje. Rozšiřuje se s každým novým importérem. */
-export type ImportEntity = 'clients'
+export type ImportEntity = 'clients' | 'products'
 
 /** Mapování cílové pole entity → název zdrojového sloupce (nebo null = nemapováno). */
 export type ColumnMapping = Record<string, string | null>
@@ -26,7 +26,7 @@ export interface ValidationIssue {
   message: string
 }
 
-export type MatchReason = 'ico' | 'email' | 'name'
+export type MatchReason = 'ico' | 'email' | 'name' | 'sku' | 'ean'
 
 export interface DuplicateMatch {
   existingId: string // '' = duplicita v rámci nahraného souboru
