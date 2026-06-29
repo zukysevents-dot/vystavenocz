@@ -8,10 +8,22 @@ import {
   CreditCard,
   ChefHat,
   ArrowLeft,
+  ArrowLeftRight,
   Package,
   Ban,
+  StickyNote,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import ReceiptDialog from '@/components/ReceiptDialog.vue'
 import { buildReceipt, type ReceiptInfo } from '@/lib/receipt'
 import { useCompanyStore } from '@/stores/company'
@@ -20,10 +32,10 @@ import { useTables } from '@/composables/useTables'
 import { useProducts } from '@/composables/useProducts'
 import { useCategories } from '@/composables/useCategories'
 import { useOrders } from '@/composables/useOrders'
-import { isApiMode } from '@/lib/http'
+import { ApiError, isApiMode } from '@/lib/http'
 import { formatCZK } from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
-import type { Category, DiningTable, Floor, Order, PaymentMethod } from '@/lib/types'
+import type { Category, DiningTable, Floor, Order, OrderItemLine, PaymentMethod } from '@/lib/types'
 
 const floorsApi = useFloors()
 const tablesApi = useTables()
@@ -134,16 +146,84 @@ async function addProduct(productId: string) {
   }
 }
 
-async function changeQty(itemId: string, quantity: number) {
+async function changeQty(item: OrderItemLine, quantity: number) {
   if (!currentOrder.value || busy.value) return
   busy.value = true
   try {
     currentOrder.value =
       quantity <= 0
-        ? await ordersApi.removeItem(currentOrder.value.id, itemId)
-        : await ordersApi.updateItem(currentOrder.value.id, itemId, quantity)
+        ? await ordersApi.removeItem(currentOrder.value.id, item.id)
+        : // meta posíláme s sebou, jinak by update přepsal poznámku/chod na null
+          await ordersApi.updateItem(currentOrder.value.id, item.id, quantity, {
+            note: item.note,
+            course: item.course,
+          })
   } catch (e) {
     toast.error('Změna položky selhala.')
+    console.error(e)
+  } finally {
+    busy.value = false
+  }
+}
+
+// --- Poznámka a chod položky (dokud není odeslaná do kuchyně) ---
+const COURSES = ['1. chod', '2. chod', '3. chod'] as const
+const itemDialogOpen = ref(false)
+const editingItem = ref<OrderItemLine | null>(null)
+const itemNote = ref('')
+const itemCourse = ref<string | null>(null)
+
+function openItemMeta(item: OrderItemLine) {
+  editingItem.value = item
+  itemNote.value = item.note ?? ''
+  itemCourse.value = item.course
+  itemDialogOpen.value = true
+}
+
+async function saveItemMeta() {
+  if (!currentOrder.value || !editingItem.value || busy.value) return
+  // Aktuální položka ze serverového stavu (ne snapshot z dialogu) — robustní vůči mezizměnám.
+  const item = currentOrder.value.items.find((i) => i.id === editingItem.value!.id)
+  if (!item || item.kitchenStatus !== 'New') {
+    itemDialogOpen.value = false
+    return
+  }
+  busy.value = true
+  try {
+    currentOrder.value = await ordersApi.updateItem(currentOrder.value.id, item.id, item.quantity, {
+      note: itemNote.value.trim() || null,
+      course: itemCourse.value,
+    })
+    itemDialogOpen.value = false
+  } catch (e) {
+    toast.error('Uložení poznámky selhalo.')
+    console.error(e)
+  } finally {
+    busy.value = false
+  }
+}
+
+// --- Přesun účtu na jiný stůl (v rámci aktuálního patra) ---
+const moveDialogOpen = ref(false)
+const freeTables = computed(() => tables.value.filter((t) => !occupancy.value.has(t.id)))
+
+async function moveOrder(targetTableId: string) {
+  if (!currentOrder.value || busy.value) return
+  busy.value = true
+  try {
+    currentOrder.value = await ordersApi.move(currentOrder.value.id, targetTableId)
+    selectedTable.value = tables.value.find((t) => t.id === targetTableId) ?? selectedTable.value
+    await refreshOpen()
+    moveDialogOpen.value = false
+    toast.success(`Účet přesunut na ${selectedTable.value?.name}.`)
+  } catch (e) {
+    // 409 = cílový stůl mezitím obsadil jiný terminál → konkrétní hláška a obnov obsazenost.
+    if (e instanceof ApiError && e.status === 409) {
+      toast.error('Cílový stůl je už obsazený.')
+      await refreshOpen()
+    } else {
+      toast.error('Přesun účtu selhal.')
+    }
     console.error(e)
   } finally {
     busy.value = false
@@ -399,14 +479,32 @@ const hasNewItems = computed(() =>
                     >v kuchyni</span
                   >
                 </div>
+                <div v-if="it.course || it.note" class="mt-1 space-y-0.5">
+                  <span
+                    v-if="it.course"
+                    class="inline-block rounded bg-primary-soft px-1.5 py-0.5 text-[10px] font-medium text-primary"
+                    >{{ it.course }}</span
+                  >
+                  <div v-if="it.note" class="text-xs text-muted-foreground">↳ {{ it.note }}</div>
+                </div>
               </div>
               <div v-if="it.kitchenStatus === 'New'" class="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="h-8 w-8"
+                  title="Poznámka / chod"
+                  :disabled="busy"
+                  @click="openItemMeta(it)"
+                >
+                  <StickyNote class="h-3.5 w-3.5" />
+                </Button>
                 <Button
                   variant="outline"
                   size="icon"
                   class="h-8 w-8"
                   :disabled="busy"
-                  @click="changeQty(it.id, it.quantity - 1)"
+                  @click="changeQty(it, it.quantity - 1)"
                 >
                   <Minus class="h-3.5 w-3.5" />
                 </Button>
@@ -416,7 +514,7 @@ const hasNewItems = computed(() =>
                   size="icon"
                   class="h-8 w-8"
                   :disabled="busy"
-                  @click="changeQty(it.id, it.quantity + 1)"
+                  @click="changeQty(it, it.quantity + 1)"
                 >
                   <Plus class="h-3.5 w-3.5" />
                 </Button>
@@ -462,6 +560,15 @@ const hasNewItems = computed(() =>
               </Button>
             </div>
             <Button
+              v-if="freeTables.length"
+              variant="ghost"
+              class="mt-2 w-full"
+              :disabled="busy"
+              @click="moveDialogOpen = true"
+            >
+              <ArrowLeftRight class="h-4 w-4" /> Přesunout na jiný stůl
+            </Button>
+            <Button
               variant="ghost"
               class="mt-2 w-full text-destructive"
               :disabled="busy"
@@ -473,6 +580,77 @@ const hasNewItems = computed(() =>
         </div>
       </div>
     </template>
+
+    <!-- Poznámka a chod položky (jen dokud není odeslaná do kuchyně) -->
+    <Dialog v-model:open="itemDialogOpen">
+      <DialogContent class="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Poznámka a chod</DialogTitle>
+          <DialogDescription>{{ editingItem?.name }}</DialogDescription>
+        </DialogHeader>
+        <form class="space-y-4" @submit.prevent="saveItemMeta">
+          <div class="space-y-2">
+            <Label for="item-note">Poznámka pro kuchyni</Label>
+            <Input id="item-note" v-model="itemNote" placeholder="bez cibule, dobře propečené…" />
+          </div>
+          <div class="space-y-2">
+            <Label>Chod</Label>
+            <div class="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                :variant="itemCourse === null ? 'coral' : 'outline'"
+                class="flex-1"
+                @click="itemCourse = null"
+              >
+                Bez chodu
+              </Button>
+              <Button
+                v-for="c in COURSES"
+                :key="c"
+                type="button"
+                :variant="itemCourse === c ? 'coral' : 'outline'"
+                class="flex-1"
+                @click="itemCourse = c"
+              >
+                {{ c }}
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" @click="itemDialogOpen = false">Zrušit</Button>
+            <Button type="submit" variant="coral" :disabled="busy">
+              <Loader2 v-if="busy" class="h-4 w-4 animate-spin" />
+              Uložit
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Přesun účtu na jiný stůl -->
+    <Dialog v-model:open="moveDialogOpen">
+      <DialogContent class="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Přesunout účet</DialogTitle>
+          <DialogDescription>Vyberte volný stůl, kam účet přesunout.</DialogDescription>
+        </DialogHeader>
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <Button
+            v-for="t in freeTables"
+            :key="t.id"
+            type="button"
+            variant="outline"
+            :disabled="busy"
+            @click="moveOrder(t.id)"
+          >
+            {{ t.name }}
+          </Button>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="ghost" @click="moveDialogOpen = false">Zrušit</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     <!-- Účtenka po zaplacení (náhled + tisk/PDF) -->
     <ReceiptDialog v-model:open="receiptOpen" :receipt="receiptData" />

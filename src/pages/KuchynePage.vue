@@ -105,8 +105,8 @@ function printTicket(t: Ticket) {
     .map(
       (i) =>
         `<div class="row"><b>${i.quantity}×</b> ${escapeHtml(i.productName)}${
-          i.note ? `<div class="note">↳ ${escapeHtml(i.note)}</div>` : ''
-        }</div>`,
+          i.course ? ` <span class="course">[${escapeHtml(i.course)}]</span>` : ''
+        }${i.note ? `<div class="note">↳ ${escapeHtml(i.note)}</div>` : ''}</div>`,
     )
     .join('')
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Bon</title>
@@ -117,6 +117,7 @@ function printTicket(t: Ticket) {
       .sub{text-align:center;font-size:12px;margin-bottom:6px}
       hr{border:none;border-top:1px dashed #000}
       .row{font-size:16px;margin:6px 0}
+      .course{font-weight:bold}
       .note{font-size:13px;padding-left:18px}
     </style></head><body>
     <h2>${SECTION_LABEL[t.section].toUpperCase()}</h2>
@@ -235,6 +236,11 @@ onUnmounted(() => {
           <ul class="flex-1 space-y-1.5 py-2 text-sm">
             <li v-for="i in t.items" :key="i.itemId">
               <span class="font-bold tabular-nums">{{ i.quantity }}×</span> {{ i.productName }}
+              <span
+                v-if="i.course"
+                class="ml-1 rounded bg-muted px-1 py-0.5 text-[10px] font-semibold text-foreground"
+                >{{ i.course }}</span
+              >
               <div v-if="i.note" class="pl-4 text-xs text-muted-foreground">↳ {{ i.note }}</div>
             </li>
           </ul>
