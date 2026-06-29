@@ -1,26 +1,9 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from '@playwright/test'
 import { seedApp } from './helpers/seed'
+import { dismissCookies } from './helpers/cookies'
 
 // Fixture klienti.csv: 3 řádky. Třetí (IČO 27604977) je duplicita seedovaného
 // E2E Klienta → 2 se vytvoří, 1 se přeskočí.
-
-// Odbav cookie banner (jinak překrývá navigační tlačítka dole na stránce).
-async function dismissCookies(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    try {
-      localStorage.setItem(
-        'vystaveno.cookieConsent.v1',
-        JSON.stringify({
-          necessary: true,
-          analytics: false,
-          decidedAt: '2026-01-01T00:00:00.000Z',
-        }),
-      )
-    } catch {
-      /* localStorage nedostupný — banner zůstane, ale test to zachytí */
-    }
-  })
-}
 
 test('import klientů z CSV: nahrání → mapování → náhled → import → klient v seznamu', async ({
   page,

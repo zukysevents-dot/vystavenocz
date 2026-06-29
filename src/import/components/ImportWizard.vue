@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup lang="ts" generic="T">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
@@ -30,13 +30,14 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { toast } from '@/components/ui/sonner'
-import { useImportWizard, CLIENT_FIELDS } from '../useImportWizard'
+import { useImportWizard } from '../useImportWizard'
 import { hasBlockingError } from '../validate'
 import type { EntityDraft } from '../types'
-import type { ClientInput } from '@/composables/useClients'
+import type { ImportEntityConfig } from '../configs'
 
+const props = defineProps<{ config: ImportEntityConfig<T> }>()
 const router = useRouter()
-const { state, pickFile, goToPreview, commit, rollbackLast, reset } = useImportWizard()
+const { state, pickFile, goToPreview, commit, rollbackLast, reset } = useImportWizard(props.config)
 
 const NONE = '__none__'
 const STEP_INDEX: Record<string, number> = { upload: 0, mapping: 1, preview: 2, result: 3 }
@@ -86,14 +87,19 @@ function sample(header: string | null): string {
   return state.rawTable.rows[0]?.[header] ?? ''
 }
 
-function rowStatus(draft: EntityDraft<ClientInput>): { label: string; variant: string } {
+function cellValue(draft: EntityDraft<T>, field: string): string {
+  const v = (draft.value as Record<string, unknown>)[field]
+  return v === null || v === undefined || v === '' ? '—' : String(v)
+}
+
+function rowStatus(draft: EntityDraft<T>): { label: string; variant: string } {
   if (hasBlockingError(draft.issues)) return { label: 'Chyba', variant: 'destructive' }
   if (draft.duplicate) return { label: 'Duplicita', variant: 'secondary' }
   if (draft.issues.length) return { label: 'Varování', variant: 'outline' }
   return { label: 'OK', variant: 'default' }
 }
 
-function decisionOptions(draft: EntityDraft<ClientInput>): { value: string; label: string }[] {
+function decisionOptions(draft: EntityDraft<T>): { value: string; label: string }[] {
   const base = [
     { value: 'create', label: 'Vytvořit' },
     { value: 'skip', label: 'Přeskočit' },
@@ -112,7 +118,7 @@ async function onRollback(): Promise<void> {
   rollingBack.value = true
   try {
     const res = await rollbackLast()
-    toast.success(`Import vrácen: smazáno ${res.removed} klientů.`)
+    toast.success(`Import vrácen: smazáno ${res.removed} záznamů.`)
     reset()
   } finally {
     rollingBack.value = false
@@ -123,9 +129,9 @@ async function onRollback(): Promise<void> {
 <template>
   <div class="mx-auto max-w-4xl p-4 sm:p-6 md:p-8">
     <div class="mb-6">
-      <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Import klientů</h1>
+      <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Import {{ props.config.noun }}</h1>
       <p class="mt-1 text-muted-foreground">
-        Přeneste klienty z jiného systému přes soubor CSV — bez ručního přepisování.
+        Přeneste data z jiného systému přes soubor CSV nebo XLSX — bez ručního přepisování.
       </p>
     </div>
 
@@ -155,7 +161,7 @@ async function onRollback(): Promise<void> {
         <div>
           <div class="font-semibold">Přetáhněte sem CSV nebo XLSX soubor nebo klikněte</div>
           <p class="mt-1 text-sm text-muted-foreground">
-            Export klientů z Fakturoidu, Reservia nebo libovolné tabulky.
+            Export z Fakturoidu, Dotykačky, Reservia nebo libovolné tabulky.
           </p>
         </div>
       </label>
@@ -176,15 +182,15 @@ async function onRollback(): Promise<void> {
         <span class="text-muted-foreground">· {{ rowCount }} řádků</span>
       </div>
       <p class="text-sm text-muted-foreground">
-        Přiřaďte sloupce ze souboru k polím klienta. Pole označená * jsou povinná.
+        Přiřaďte sloupce ze souboru k polím. Pole označená * jsou povinná.
       </p>
       <div class="divide-y divide-border rounded-2xl border border-border bg-card">
         <div
-          v-for="f in CLIENT_FIELDS"
+          v-for="f in props.config.fields"
           :key="f.field"
           class="flex flex-wrap items-center gap-3 p-3 sm:flex-nowrap"
         >
-          <div class="w-40 shrink-0 text-sm font-medium">
+          <div class="w-44 shrink-0 text-sm font-medium">
             {{ f.label }}<span v-if="f.required" class="text-destructive"> *</span>
           </div>
           <Select
@@ -207,7 +213,7 @@ async function onRollback(): Promise<void> {
         </div>
       </div>
       <p v-if="!nameMapped" class="flex items-center gap-2 text-sm text-destructive">
-        <TriangleAlert class="h-4 w-4" /> Namapujte alespoň pole „Název / jméno".
+        <TriangleAlert class="h-4 w-4" /> Namapujte alespoň pole „Název".
       </p>
     </section>
 
@@ -225,8 +231,9 @@ async function onRollback(): Promise<void> {
             <TableRow>
               <TableHead>Stav</TableHead>
               <TableHead>Název</TableHead>
-              <TableHead>IČO</TableHead>
-              <TableHead>E-mail</TableHead>
+              <TableHead v-for="col in props.config.previewColumns" :key="col.field">
+                {{ col.label }}
+              </TableHead>
               <TableHead>Poznámka k řádku</TableHead>
               <TableHead>Akce</TableHead>
             </TableRow>
@@ -236,9 +243,10 @@ async function onRollback(): Promise<void> {
               <TableCell>
                 <Badge :variant="rowStatus(d).variant as never">{{ rowStatus(d).label }}</Badge>
               </TableCell>
-              <TableCell class="font-medium">{{ d.value.name || '—' }}</TableCell>
-              <TableCell>{{ d.value.ico || '—' }}</TableCell>
-              <TableCell>{{ d.value.email || '—' }}</TableCell>
+              <TableCell class="font-medium">{{ cellValue(d, 'name') }}</TableCell>
+              <TableCell v-for="col in props.config.previewColumns" :key="col.field">
+                {{ cellValue(d, col.field) }}
+              </TableCell>
               <TableCell class="max-w-48 text-xs text-muted-foreground">
                 <span v-for="(i, idx) in d.issues" :key="idx" class="block">{{ i.message }}</span>
               </TableCell>
@@ -283,7 +291,7 @@ async function onRollback(): Promise<void> {
         </div>
         <h2 class="text-xl font-semibold">Import dokončen</h2>
         <p class="text-muted-foreground">
-          Vytvořeno {{ state.result?.batch.counts.created }} klientů, přeskočeno
+          Vytvořeno {{ state.result?.batch.counts.created }} {{ props.config.noun }}, přeskočeno
           {{ state.result?.batch.counts.skipped }}.
           <template v-if="state.result?.batch.counts.overwritten">
             Přepsáno {{ state.result?.batch.counts.overwritten }}.
@@ -293,7 +301,9 @@ async function onRollback(): Promise<void> {
           </template>
         </p>
         <div class="mt-2 flex flex-wrap justify-center gap-2">
-          <Button variant="coral" @click="router.push('/app/klienti')">Zobrazit klienty</Button>
+          <Button variant="coral" @click="router.push(props.config.doneLink.to)">
+            {{ props.config.doneLink.label }}
+          </Button>
           <Button
             v-if="state.result?.batch.createdIds.length"
             variant="outline"
@@ -306,7 +316,7 @@ async function onRollback(): Promise<void> {
           <Button variant="ghost" @click="reset">Nový import</Button>
         </div>
         <p v-if="state.result?.batch.createdIds.length" class="text-xs text-muted-foreground">
-          „Vrátit import" smaže jen nově vytvořené klienty. Přepsané záznamy se nevrátí.
+          „Vrátit import" smaže jen nově vytvořené záznamy. Přepsané se nevrátí.
         </p>
       </div>
     </section>
@@ -337,7 +347,7 @@ async function onRollback(): Promise<void> {
         @click="onCommit"
       >
         <Loader2 v-if="state.committing" class="h-4 w-4 animate-spin" />
-        Importovat {{ summary.create + summary.overwrite }} klientů
+        Importovat {{ summary.create + summary.overwrite }} {{ props.config.noun }}
       </Button>
     </div>
   </div>
