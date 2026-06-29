@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeIco, isValidIco, normalizeDic, normalizePhone, trimOrNull } from './normalize'
+import {
+  normalizeIco,
+  isValidIco,
+  normalizeDic,
+  normalizePhone,
+  trimOrNull,
+  parsePrice,
+} from './normalize'
 
 describe('normalizeIco', () => {
   it('ponechá jen číslice', () => {
@@ -56,5 +63,25 @@ describe('trimOrNull', () => {
     expect(trimOrNull('  x ')).toBe('x')
     expect(trimOrNull('   ')).toBeNull()
     expect(trimOrNull(undefined)).toBeNull()
+  })
+})
+
+describe('parsePrice', () => {
+  it('CZ formát s měnou a mezerami', () => {
+    expect(parsePrice('1 290,50 Kč')).toBe(1290.5)
+  })
+  it('tečka jako oddělovač tisíců + desetinná čárka', () => {
+    expect(parsePrice('1.290,50')).toBe(1290.5)
+  })
+  it('anglický formát s tečkou', () => {
+    expect(parsePrice('1290.50')).toBe(1290.5)
+  })
+  it('celé číslo', () => {
+    expect(parsePrice('349')).toBe(349)
+  })
+  it('prázdné / nečíselné → 0', () => {
+    expect(parsePrice('')).toBe(0)
+    expect(parsePrice(null)).toBe(0)
+    expect(parsePrice('N/A')).toBe(0)
   })
 })

@@ -1,6 +1,11 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { parseCsv } from './csv'
 import { parseFile } from './parseFile'
+
+// XLSX větev testujeme jen na úrovni směrování (parseXlsx je zmockovaná).
+vi.mock('./xlsx', () => ({
+  parseXlsx: vi.fn(async () => ({ headers: ['from-xlsx'], rows: [{ 'from-xlsx': 'v' }] })),
+}))
 
 describe('parseCsv', () => {
   it('naparsuje CSV s hlavičkou a čárkou', () => {
@@ -61,8 +66,14 @@ describe('parseFile', () => {
     expect(t.rows[0]).toEqual({ name: 'Acme', email: 'a@b.cz' })
   })
 
+  it('.xlsx soubor směruje na parseXlsx', async () => {
+    const file = new File([], 'klienti.xlsx')
+    const t = await parseFile(file)
+    expect(t.headers).toEqual(['from-xlsx'])
+  })
+
   it('odmítne nepodporovaný formát', async () => {
-    const file = new File([''], 'data.xlsx')
+    const file = new File([''], 'data.pdf')
     await expect(parseFile(file)).rejects.toThrow(/Nepodporovaný/)
   })
 })

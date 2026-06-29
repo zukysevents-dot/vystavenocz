@@ -39,10 +39,12 @@ export function useAres() {
   const loading = ref(false)
   const data = ref<AresResult | null>(null)
 
-  async function lookup(rawIco: string): Promise<AresResult | null> {
+  // `silent` potlačí toasty — pro dávkové doplnění (import) by jinak spamovaly.
+  async function lookup(rawIco: string, opts?: { silent?: boolean }): Promise<AresResult | null> {
+    const silent = opts?.silent ?? false
     const cleaned = rawIco.replace(/\s/g, '')
     if (!/^\d{6,8}$/.test(cleaned)) {
-      toast.error('Zadejte platné IČO (6–8 číslic).')
+      if (!silent) toast.error('Zadejte platné IČO (6–8 číslic).')
       return null
     }
     loading.value = true
@@ -52,14 +54,17 @@ export function useAres() {
       try {
         const result = await http.get<AresResult>(`/ares/${cleaned}`)
         data.value = result
-        toast.success(result.companyName ? `Načteno: ${result.companyName}` : 'Firma načtena.')
+        if (!silent)
+          toast.success(result.companyName ? `Načteno: ${result.companyName}` : 'Firma načtena.')
         return result
       } catch (e) {
-        const msg =
-          e instanceof ApiError && e.status === 404
-            ? 'Firma s tímto IČO nebyla v ARES nalezena.'
-            : 'Načtení z ARES selhalo. Zkuste to znovu.'
-        toast.error(msg)
+        if (!silent) {
+          const msg =
+            e instanceof ApiError && e.status === 404
+              ? 'Firma s tímto IČO nebyla v ARES nalezena.'
+              : 'Načtení z ARES selhalo. Zkuste to znovu.'
+          toast.error(msg)
+        }
         return null
       } finally {
         loading.value = false
@@ -81,7 +86,7 @@ export function useAres() {
         }
     data.value = result
     loading.value = false
-    toast.success(`Načteno: ${result.companyName}`)
+    if (!silent) toast.success(`Načteno: ${result.companyName}`)
     return result
   }
 

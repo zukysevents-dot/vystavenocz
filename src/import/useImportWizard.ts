@@ -1,61 +1,61 @@
 import { reactive } from 'vue'
-import { useClients, type ClientInput } from '@/composables/useClients'
 import { parseFile } from './parse/parseFile'
-import { genericClients } from './adapters/generic-clients'
 import { applyMapping } from './mapping'
-import { detectDuplicates, type DedupKey } from './dedup'
-import { validateClient, hasBlockingError } from './validate'
+import { detectDuplicates } from './dedup'
+import { hasBlockingError } from './validate'
 import { useImportLedger } from './useImportLedger'
-import type { ColumnMapping, EntityDraft, ImportBatch, ImportResult, RawTable } from './types'
+import type {
+  ColumnMapping,
+  EntityDraft,
+  ImportBatch,
+  ImportResult,
+  ImportSourceAdapter,
+  RawTable,
+} from './types'
+import type { ImportEntityConfig } from './configs'
 
 export type WizardStep = 'upload' | 'mapping' | 'preview' | 'result'
 
-/** Cílové pole klienta pro mapování — pořadí i popisky pro UI. */
-export interface ClientField {
-  field: keyof ClientInput
-  label: string
-  required?: boolean
+interface WizardState<T> {
+  step: WizardStep
+  fileName: string
+  sourceLabel: string
+  rawTable: RawTable | null
+  adapter: ImportSourceAdapter<T>
+  mapping: ColumnMapping
+  drafts: EntityDraft<T>[]
+  result: ImportResult | null
+  parsing: boolean
+  committing: boolean
+  progress: { done: number; total: number } | null
+  enrichProgress: { done: number; total: number } | null
 }
 
-export const CLIENT_FIELDS: ClientField[] = [
-  { field: 'name', label: 'Název / jméno', required: true },
-  { field: 'ico', label: 'IČO' },
-  { field: 'dic', label: 'DIČ' },
-  { field: 'email', label: 'E-mail' },
-  { field: 'phone', label: 'Telefon' },
-  { field: 'street', label: 'Ulice' },
-  { field: 'city', label: 'Město' },
-  { field: 'zip', label: 'PSČ' },
-  { field: 'country', label: 'Země' },
-  { field: 'notes', label: 'Poznámka' },
-]
-
-const DEDUP_KEYS: DedupKey<ClientInput>[] = [
-  { reason: 'ico', value: (c) => c.ico },
-  { reason: 'email', value: (c) => c.email },
-  { reason: 'name', value: (c) => c.name },
-]
-
 /**
- * Stav a logika import wizardu pro klienty. Pipeline: upload → mapování →
- * validace + duplicity → náhled → commit přes useClients → audit/ledger.
- * Zápis jde přes existující composable, takže funguje v mock i API režimu.
+ * Stav a logika import wizardu, řízené entity-configem (klienti, produkty, …).
+ * Pipeline: upload → mapování → validace + duplicity → náhled → commit přes
+ * config.createOps → audit/ledger. Zápis jde přes existující composable, takže
+ * funguje v mock i API režimu. Přidání entity = nový config, beze změny wizardu.
  */
-export function useImportWizard() {
-  const clientsApi = useClients()
+export function useImportWizard<T>(config: ImportEntityConfig<T>) {
+  const ops = config.createOps()
+  const enrich = config.createEnrich?.()
   const ledger = useImportLedger()
 
   const state = reactive({
-    step: 'upload' as WizardStep,
+    step: 'upload',
     fileName: '',
-    rawTable: null as RawTable | null,
-    mapping: {} as ColumnMapping,
-    drafts: [] as EntityDraft<ClientInput>[],
-    result: null as ImportResult | null,
+    sourceLabel: '',
+    rawTable: null,
+    adapter: config.genericAdapter,
+    mapping: {},
+    drafts: [],
+    result: null,
     parsing: false,
     committing: false,
-    progress: null as { done: number; total: number } | null,
-  })
+    progress: null,
+    enrichProgress: null,
+  }) as unknown as WizardState<T>
 
   async function pickFile(file: File): Promise<void> {
     state.parsing = true
@@ -63,10 +63,13 @@ export function useImportWizard() {
       const table = await parseFile(file)
       state.fileName = file.name
       state.rawTable = table
+      const adapter = config.detect(table.headers) ?? config.genericAdapter
+      state.adapter = adapter
+      state.sourceLabel = adapter.source
       // Předvyplň mapování z adaptéru, ale jen sloupce, které soubor opravdu má.
       const mapping: ColumnMapping = {}
-      for (const { field } of CLIENT_FIELDS) {
-        const preset = genericClients.defaultMapping[field]
+      for (const { field } of config.fields) {
+        const preset = adapter.defaultMapping[field]
         mapping[field] = preset && table.headers.includes(preset) ? preset : null
       }
       state.mapping = mapping
@@ -78,18 +81,17 @@ export function useImportWizard() {
 
   function buildDrafts(): void {
     if (!state.rawTable) return
-    const drafts = applyMapping(state.rawTable, state.mapping, genericClients)
+    const drafts = applyMapping<T>(state.rawTable, state.mapping, state.adapter)
     for (const d of drafts) {
-      d.issues = validateClient(d.value)
+      d.issues = config.validate(d.value)
       if (hasBlockingError(d.issues)) d.decision = 'skip'
     }
-    detectDuplicates(drafts, clientsApi.clients.value, DEDUP_KEYS)
+    detectDuplicates(drafts, ops.items(), config.dedupKeys)
     state.drafts = drafts
   }
 
   async function goToPreview(): Promise<void> {
-    // Načti aktuální klienty pro detekci duplicit proti existujícímu seznamu.
-    await clientsApi.load()
+    await ops.load()
     buildDrafts()
     state.step = 'preview'
   }
@@ -111,10 +113,10 @@ export function useImportWizard() {
       }
       try {
         if (draft.decision === 'overwrite' && draft.duplicate?.existingId) {
-          await clientsApi.update(draft.duplicate.existingId, draft.value)
+          await ops.update(draft.duplicate.existingId, draft.value)
           counts.overwritten++
         } else {
-          const created = await clientsApi.create(draft.value)
+          const created = await ops.create(draft.value)
           createdIds.push(created.id)
           counts.created++
         }
@@ -130,14 +132,14 @@ export function useImportWizard() {
 
     const batch: ImportBatch = {
       id: crypto.randomUUID(),
-      source: genericClients.source,
-      entity: 'clients',
-      adapterId: genericClients.id,
+      source: state.adapter.source,
+      entity: config.entity,
+      adapterId: state.adapter.id,
       createdAt: new Date().toISOString(),
       createdIds,
       counts,
     }
-    // Zapiš do ledgeru jen dávku s vytvořenými klienty — rollback maže právě je.
+    // Zapiš do ledgeru jen dávku s vytvořenými záznamy — rollback maže právě je.
     if (createdIds.length > 0) ledger.record(batch)
     state.result = { batch, errors }
     state.committing = false
@@ -145,20 +147,56 @@ export function useImportWizard() {
     state.step = 'result'
   }
 
+  /** Dávkově obohatí drafty (např. doplní adresy z ARES podle IČO) a převaliduje. */
+  async function enrichAll(): Promise<{ enriched: number }> {
+    if (!enrich) return { enriched: 0 }
+    const targets = state.drafts.filter((d) => d.decision !== 'skip' && !hasBlockingError(d.issues))
+    state.enrichProgress = { done: 0, total: targets.length }
+    let enriched = 0
+    for (const d of targets) {
+      try {
+        const patch = await enrich(d.value)
+        if (patch) {
+          Object.assign(d.value as object, patch)
+          d.issues = config.validate(d.value)
+          enriched++
+        }
+      } catch {
+        /* selhání jednoho řádku nesmí shodit celou dávku */
+      }
+      if (state.enrichProgress) state.enrichProgress.done++
+    }
+    state.enrichProgress = null
+    return { enriched }
+  }
+
   async function rollbackLast(): Promise<{ removed: number; failed: number }> {
     if (!state.result) return { removed: 0, failed: 0 }
-    return ledger.rollback(state.result.batch.id, (id) => clientsApi.remove(id))
+    return ledger.rollback(state.result.batch.id, (id) => ops.remove(id))
   }
 
   function reset(): void {
     state.step = 'upload'
     state.fileName = ''
+    state.sourceLabel = ''
     state.rawTable = null
+    state.adapter = config.genericAdapter
     state.mapping = {}
     state.drafts = []
     state.result = null
     state.progress = null
+    state.enrichProgress = null
   }
 
-  return { state, buildDrafts, pickFile, goToPreview, commit, rollbackLast, reset }
+  return {
+    state,
+    hasEnrich: !!enrich,
+    enrichLabel: config.enrichLabel,
+    pickFile,
+    goToPreview,
+    commit,
+    enrichAll,
+    rollbackLast,
+    reset,
+  }
 }

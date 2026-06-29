@@ -42,3 +42,13 @@ export function trimOrNull(value: string | null | undefined): string | null {
   const t = value.trim()
   return t.length ? t : null
 }
+
+/** Cena z textu: „1 290,50 Kč" → 1290.5. Prázdné / nečíselné → 0. */
+export function parsePrice(value: string | null | undefined): number {
+  if (!value) return 0
+  const cleaned = value.replace(/[^\d,.-]/g, '')
+  // CZ formát s desetinnou čárkou: tečky jsou oddělovače tisíců → odstranit je.
+  const normalized = cleaned.includes(',') ? cleaned.replace(/\./g, '').replace(',', '.') : cleaned
+  const n = parseFloat(normalized)
+  return Number.isFinite(n) ? n : 0
+}

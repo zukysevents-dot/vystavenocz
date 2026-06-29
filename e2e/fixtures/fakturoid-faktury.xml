@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<invoices>
+  <invoice>
+    <number>2024001</number>
+    <variable_symbol>2024001</variable_symbol>
+    <your_name>Jan Novák</your_name>
+    <your_registration_no>08728101</your_registration_no>
+    <your_vat_no></your_vat_no>
+    <your_street>Hlavní 1</your_street>
+    <your_city>Praha</your_city>
+    <your_zip>11000</your_zip>
+    <your_country>CZ</your_country>
+    <client_name>Alfa s.r.o.</client_name>
+    <client_registration_no>11111111</client_registration_no>
+    <client_city>Brno</client_city>
+    <status>paid</status>
+    <issued_on>2024-01-31</issued_on>
+    <due_on>2024-02-14</due_on>
+    <taxable_fulfillment_due>2024-01-31</taxable_fulfillment_due>
+    <paid_on>2024-02-01</paid_on>
+    <currency>CZK</currency>
+    <payment_method>bank</payment_method>
+    <bank_account>123/0800</bank_account>
+    <total>10000.0</total>
+    <lines>
+      <line>
+        <name>Konzultace</name>
+        <quantity>1.0</quantity>
+        <unit_name>ks</unit_name>
+        <unit_price>10000.0</unit_price>
+        <vat_rate>0</vat_rate>
+      </line>
+    </lines>
+  </invoice>
+  <invoice>
+    <number>2024002</number>
+    <variable_symbol>2024002</variable_symbol>
+    <your_name>Jan Novák</your_name>
+    <your_registration_no>08728101</your_registration_no>
+    <your_vat_no></your_vat_no>
+    <your_city>Praha</your_city>
+    <client_name>Beta s.r.o.</client_name>
+    <client_registration_no>22222222</client_registration_no>
+    <client_city>Plzeň</client_city>
+    <status>paid</status>
+    <issued_on>2024-02-15</issued_on>
+    <due_on>2024-02-29</due_on>
+    <taxable_fulfillment_due>2024-02-15</taxable_fulfillment_due>
+    <paid_on>2024-02-20</paid_on>
+    <currency>CZK</currency>
+    <payment_method>bank</payment_method>
+    <total>5000.0</total>
+    <lines>
+      <line>
+        <name>Produkce</name>
+        <quantity>1.0</quantity>
+        <unit_name>ks</unit_name>
+        <unit_price>5000.0</unit_price>
+        <vat_rate>0</vat_rate>
+      </line>
+    </lines>
+  </invoice>
+</invoices>

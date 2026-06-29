@@ -138,4 +138,3 @@ Všechna data jdou přes **jediný swap-point**: [`src/composables/useApi.ts`](s
   `vite-plugin-pwa` (precache app shellu). Aktivní v produkčním buildu.
 - **Přístupnost:** design tokeny splňují WCAG AA kontrast; focus stavy, ARIA a klávesová navigace
   přes reka-ui; a11y hlídá axe v e2e sadě.
-  

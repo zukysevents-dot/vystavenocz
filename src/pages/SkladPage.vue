@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { Plus, Search, Loader2, Pencil, Trash2, Package, Tags } from 'lucide-vue-next'
+import { Plus, Search, Loader2, Pencil, Trash2, Package, Tags, Upload } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -167,6 +167,11 @@ async function onDelete() {
         <p class="mt-1 text-muted-foreground">Produkty a ceny pro prodej na pokladně.</p>
       </div>
       <div class="flex gap-2">
+        <Button variant="outline" as-child>
+          <RouterLink to="/app/import?entity=products"
+            ><Upload class="h-4 w-4" /> Importovat</RouterLink
+          >
+        </Button>
         <Button variant="outline" as-child>
           <RouterLink to="/app/kategorie"><Tags class="h-4 w-4" /> Kategorie</RouterLink>
         </Button>

@@ -1,4 +1,5 @@
 import type { ClientInput } from '@/composables/useClients'
+import type { ProductInput } from '@/composables/useProducts'
 import type { ValidationIssue } from './types'
 import { isValidIco } from './normalize'
 
@@ -22,6 +23,18 @@ export function validateClient(value: Partial<ClientInput>): ValidationIssue[] {
   }
   if (value.email && !EMAIL_RE.test(value.email)) {
     issues.push({ field: 'email', level: 'warning', message: 'E-mail nevypadá platně.' })
+  }
+  return issues
+}
+
+/** Zvaliduje draft produktu. Název je povinný; cena je jen upozornění. */
+export function validateProduct(value: Partial<ProductInput>): ValidationIssue[] {
+  const issues: ValidationIssue[] = []
+  if (!value.name || !value.name.trim()) {
+    issues.push({ field: 'name', level: 'error', message: 'Chybí název produktu.' })
+  }
+  if (typeof value.salePrice === 'number' && value.salePrice < 0) {
+    issues.push({ field: 'salePrice', level: 'warning', message: 'Záporná prodejní cena.' })
   }
   return issues
 }

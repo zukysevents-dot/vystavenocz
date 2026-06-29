@@ -55,4 +55,10 @@ test.describe('a11y (axe) — bez serious/critical porušení', () => {
     await page.goto('/app/import')
     expect(await blockingViolations(page)).toEqual([])
   })
+
+  test('import faktur', async ({ page }) => {
+    await seedApp(page, { subscription: 'pro' })
+    await page.goto('/app/import/faktury')
+    expect(await blockingViolations(page)).toEqual([])
+  })
 })
