@@ -8,7 +8,7 @@ import HighlightFeatures from '@/components/landing/HighlightFeatures.vue'
 import TestimonialsSection from '@/components/landing/TestimonialsSection.vue'
 import RapidUpdatesShort from '@/components/landing/RapidUpdatesShort.vue'
 import RoadmapSection from '@/components/landing/RoadmapSection.vue'
-import PricingSection from '@/components/landing/PricingSection.vue'
+import PricingTeaser from '@/components/landing/PricingTeaser.vue'
 import CtaSection from '@/components/landing/CtaSection.vue'
 </script>
 
@@ -35,7 +35,7 @@ import CtaSection from '@/components/landing/CtaSection.vue'
   <RapidUpdatesShort />
   <!-- Roadmapa — řeší námitku „chybí mi feature X" a buduje důvěru. -->
   <RoadmapSection />
-  <!-- Ceník (modulární + oborové balíčky) před závěrečným CTA — cena až po hodnotě/důvěře. -->
-  <PricingSection />
+  <!-- Ceník teaser před závěrečným CTA — cena až po hodnotě/důvěře; detail je na /cenik. -->
+  <PricingTeaser />
   <CtaSection />
 </template>

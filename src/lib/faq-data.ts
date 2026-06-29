@@ -10,6 +10,14 @@ export const faqs: FaqEntry[] = [
     a: 'Zapnete a platíte jen moduly, které opravdu potřebujete. Stačí samotná fakturace, nebo si přidáte pokladnu, sklad, rezervace a další — kdykoliv modul přidáte nebo odeberete. Když zapnete kompletní balík, vyjde levněji než součet samostatných modulů. Ceny vidíte v ceníku, kde si rovnou poskládáte svůj systém.',
   },
   {
+    q: 'Platím za každou provozovnu?',
+    a: 'Šest základních modulů platíte za jeden účet bez ohledu na počet zařízení. Některé oborové nástavby se počítají za provozovnu, pobočku, technika nebo zaměstnance — u každé z nich v ceníku přesně vidíte, za co se platí.',
+  },
+  {
+    q: 'Mohu pozvat účetní?',
+    a: 'Připravujeme modul Účtárna s přístupem pro účetní a měsíčním balíčkem podkladů. Už teď máte export do účetnictví (ISDOC, XML) přímo ve fakturaci, takže účetní dostane vše potřebné.',
+  },
+  {
     q: 'Jak funguje pokladna a účty na stůl?',
     a: 'Pokladna je dotyková prodejní obrazovka s dlaždicemi produktů, platbou hotově i kartou a účtenkou na jeden ťuk. V restauraci si otevřete účty na stůl podle mapy stolů, přidáváte na ně položky a účet uzavřete při platbě — včetně rozdělení mezi více hostů. Objednané položky se rovnou pošlou jako bon do kuchyně a na bar.',
   },

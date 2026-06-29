@@ -7,8 +7,8 @@ import FaqSection from '@/components/landing/FaqSection.vue'
 <template>
   <PageHeader
     eyebrow="Ceník"
-    title="Plať jen za to, co používáš."
-    subtitle="Modulární systém pro celý provoz — zapneš jen moduly, které potřebuješ. Bez limitů na počet dokladů, klientů ani uživatelů, bez závazku."
+    title="Systém, který roste s vaším podnikáním."
+    subtitle="Začněte jednoduše a zapněte jen moduly, které vám reálně pomáhají vydělávat, šetřit čas nebo držet provoz pod kontrolou. Bez limitů na počet dokladů, klientů ani uživatelů, bez závazku."
   />
   <PricingSection />
   <FaqSection />
