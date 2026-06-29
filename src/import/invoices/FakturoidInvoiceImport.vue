@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Upload,
@@ -38,6 +38,23 @@ const { state, pickFile, commit, applySupplierToProfile, rollbackLast, reset } =
 const dragOver = ref(false)
 const rollingBack = ref(false)
 const applyingProfile = ref(false)
+const stepHeading = ref<HTMLElement | null>(null)
+
+const STEP_TITLE: Record<string, string> = {
+  upload: 'Krok 1 ze 3: Nahrajte XML export',
+  preview: 'Krok 2 ze 3: Náhled faktur',
+  result: 'Krok 3 ze 3: Výsledek importu',
+}
+
+// Po přechodu mezi kroky přesuň focus na nadpis kroku — jinak focus spadne na <body>
+// (předchozí tlačítko zmizí z DOM) a screen reader neoznámí nový krok (WCAG 2.4.3 / 4.1.3).
+watch(
+  () => state.step,
+  async () => {
+    await nextTick()
+    stepHeading.value?.focus()
+  },
+)
 
 const supplier = computed(() => state.rows[0]?.input.supplierSnapshot ?? null)
 
@@ -111,6 +128,11 @@ async function onRollback(): Promise<void> {
         Nahrajte XML export faktur z Fakturoidu — zachováme čísla, datumy i stav úhrady.
       </p>
     </div>
+
+    <!-- Živý nadpis kroku — cíl focusu po přechodu, oznámí krok screen readeru. -->
+    <h2 ref="stepHeading" tabindex="-1" class="sr-only" aria-live="polite">
+      {{ STEP_TITLE[state.step] }}
+    </h2>
 
     <!-- Upozornění: v produkci čeká na backend -->
     <div
@@ -210,7 +232,12 @@ async function onRollback(): Promise<void> {
               </TableCell>
               <TableCell>
                 <Select v-model="r.decision">
-                  <SelectTrigger class="h-8 w-32"><SelectValue /></SelectTrigger>
+                  <SelectTrigger
+                    class="h-8 w-32"
+                    :aria-label="`Akce pro fakturu ${r.input.invoiceNumber || r.input.clientSnapshot.name || i + 1}`"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="create">Importovat</SelectItem>
                     <SelectItem value="skip">Přeskočit</SelectItem>

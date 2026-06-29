@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T">
-import { computed, ref } from 'vue'
+import { computed, ref, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Upload,
@@ -52,11 +52,28 @@ const {
 
 const NONE = '__none__'
 const STEP_INDEX: Record<string, number> = { upload: 0, mapping: 1, preview: 2, result: 3 }
+const STEP_TITLE: Record<string, string> = {
+  upload: 'Krok 1 ze 4: Vyberte soubor',
+  mapping: 'Krok 2 ze 4: Přiřaďte sloupce',
+  preview: 'Krok 3 ze 4: Náhled importu',
+  result: 'Krok 4 ze 4: Výsledek importu',
+}
 const progressValue = computed(() => (STEP_INDEX[state.step] / 3) * 100)
 const rowCount = computed(() => state.rawTable?.rows.length ?? 0)
 const nameMapped = computed(() => !!state.mapping.name)
 const dragOver = ref(false)
 const rollingBack = ref(false)
+const stepHeading = ref<HTMLElement | null>(null)
+
+// Po přechodu mezi kroky přesuň focus na nadpis kroku — jinak focus spadne na <body>
+// (předchozí tlačítko zmizí z DOM) a screen reader neoznámí nový krok (WCAG 2.4.3 / 4.1.3).
+watch(
+  () => state.step,
+  async () => {
+    await nextTick()
+    stepHeading.value?.focus()
+  },
+)
 
 const summary = computed(() => {
   const s = { create: 0, overwrite: 0, skip: 0, errors: 0 }
@@ -155,12 +172,37 @@ async function onRollback(): Promise<void> {
     <div class="mb-6">
       <Progress :model-value="progressValue" aria-label="Průběh importu" />
       <ol class="mt-2 flex justify-between text-xs text-muted-foreground">
-        <li :class="{ 'font-semibold text-foreground': state.step === 'upload' }">1. Soubor</li>
-        <li :class="{ 'font-semibold text-foreground': state.step === 'mapping' }">2. Mapování</li>
-        <li :class="{ 'font-semibold text-foreground': state.step === 'preview' }">3. Náhled</li>
-        <li :class="{ 'font-semibold text-foreground': state.step === 'result' }">4. Hotovo</li>
+        <li
+          :class="{ 'font-semibold text-foreground': state.step === 'upload' }"
+          :aria-current="state.step === 'upload' ? 'step' : undefined"
+        >
+          1. Soubor
+        </li>
+        <li
+          :class="{ 'font-semibold text-foreground': state.step === 'mapping' }"
+          :aria-current="state.step === 'mapping' ? 'step' : undefined"
+        >
+          2. Mapování
+        </li>
+        <li
+          :class="{ 'font-semibold text-foreground': state.step === 'preview' }"
+          :aria-current="state.step === 'preview' ? 'step' : undefined"
+        >
+          3. Náhled
+        </li>
+        <li
+          :class="{ 'font-semibold text-foreground': state.step === 'result' }"
+          :aria-current="state.step === 'result' ? 'step' : undefined"
+        >
+          4. Hotovo
+        </li>
       </ol>
     </div>
+
+    <!-- Živý nadpis kroku — cíl focusu po přechodu, oznámí krok screen readeru. -->
+    <h2 ref="stepHeading" tabindex="-1" class="sr-only" aria-live="polite">
+      {{ STEP_TITLE[state.step] }}
+    </h2>
 
     <!-- KROK 1: Upload -->
     <section v-if="state.step === 'upload'">
@@ -215,7 +257,7 @@ async function onRollback(): Promise<void> {
             :model-value="state.mapping[f.field] ?? NONE"
             @update:model-value="(v) => setMapping(f.field, v)"
           >
-            <SelectTrigger class="w-full sm:w-64">
+            <SelectTrigger class="w-full sm:w-64" :aria-label="`Sloupec pro pole ${f.label}`">
               <SelectValue placeholder="— nemapovat —" />
             </SelectTrigger>
             <SelectContent>
@@ -285,7 +327,10 @@ async function onRollback(): Promise<void> {
               </TableCell>
               <TableCell>
                 <Select v-if="!hasBlockingError(d.issues)" v-model="d.decision" class="w-32">
-                  <SelectTrigger class="h-8 w-32">
+                  <SelectTrigger
+                    class="h-8 w-32"
+                    :aria-label="`Akce pro řádek ${cellValue(d, 'name')}`"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
