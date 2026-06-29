@@ -22,7 +22,7 @@ const items = [
       >
         <li v-for="it in items" :key="it.label" class="flex items-center gap-2">
           <span
-            class="flex h-7 w-7 items-center justify-center rounded-full bg-card text-foreground/70 ring-1 ring-inset ring-border"
+            class="flex h-7 w-7 items-center justify-center rounded-full bg-coral/8 text-coral ring-1 ring-inset ring-coral/20"
           >
             <component :is="it.icon" class="h-3.5 w-3.5" :stroke-width="1.75" />
           </span>

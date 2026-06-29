@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ShoppingCart, UtensilsCrossed, CreditCard, FileText } from 'lucide-vue-next'
+import { ShoppingCart, UtensilsCrossed, CreditCard, FileText, ArrowRight } from 'lucide-vue-next'
 
 const stages = [
   {
@@ -26,36 +26,50 @@ const stages = [
 </script>
 
 <template>
-  <section class="bg-background py-16 sm:py-20">
+  <!-- Dark anchor section: token-flip via `.dark` so it stays ink in light mode too. -->
+  <section
+    class="dark relative isolate overflow-hidden bg-background py-20 text-foreground sm:py-28"
+  >
+    <div class="absolute inset-0 -z-10 bg-mesh opacity-50" aria-hidden="true" />
     <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-      <div class="mx-auto max-w-2xl text-center">
-        <h2 class="font-display text-3xl font-black tracking-tight text-foreground sm:text-4xl">
+      <div class="max-w-2xl">
+        <p
+          class="flex items-center gap-3 font-mono text-[0.7rem] font-medium uppercase tracking-[0.22em] text-muted-foreground"
+        >
+          <span class="h-px w-7 bg-coral" aria-hidden="true" />
+          Od objednávky po doklad
+        </p>
+        <h2
+          class="mt-5 font-display text-3xl font-black leading-[1.02] tracking-[-0.02em] text-foreground sm:text-[2.75rem]"
+        >
           Celý provoz v jednom toku
         </h2>
-        <p class="mt-3 text-base text-muted-foreground sm:text-lg">
-          Od objednávky po doklad. Pokladna, kuchyně i sklad spolu mluví — bez papírků a ručního
-          přepisování.
+        <p class="mt-4 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+          Pokladna, kuchyně i sklad spolu mluví — bez papírků a ručního přepisování.
         </p>
       </div>
 
-      <ol class="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <li
-          v-for="(s, i) in stages"
-          :key="s.title"
-          class="relative rounded-2xl border border-border bg-card p-5"
-        >
-          <div class="mb-3 flex items-center justify-between">
-            <div
-              class="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-soft text-foreground"
+      <ol class="mt-14 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+        <li v-for="(s, i) in stages" :key="s.title" class="relative">
+          <div class="mb-4 flex items-center gap-3">
+            <span
+              class="flex h-12 w-12 items-center justify-center rounded-2xl bg-coral/12 text-coral ring-1 ring-inset ring-coral/25"
             >
-              <component :is="s.icon" class="h-5 w-5" />
-            </div>
-            <span class="text-xs font-medium tabular-nums text-muted-foreground/60">
+              <component :is="s.icon" class="h-5 w-5" :stroke-width="1.75" />
+            </span>
+            <span class="font-mono text-sm font-medium tabular-nums text-muted-foreground">
               0{{ i + 1 }}
             </span>
           </div>
           <h3 class="text-base font-semibold text-foreground">{{ s.title }}</h3>
-          <p class="mt-1 text-sm leading-relaxed text-muted-foreground">{{ s.desc }}</p>
+          <p class="mt-1.5 text-sm leading-relaxed text-muted-foreground">{{ s.desc }}</p>
+
+          <!-- Flow connector between stages (desktop only). -->
+          <ArrowRight
+            v-if="i < stages.length - 1"
+            class="absolute -right-3 top-3 hidden h-5 w-5 text-coral/40 lg:block"
+            aria-hidden="true"
+          />
         </li>
       </ol>
     </div>
