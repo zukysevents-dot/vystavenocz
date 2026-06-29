@@ -73,6 +73,25 @@ test('import klientů z XLSX: reálný soubor přes celý wizard', async ({ page
   await expect(page.getByText('Druhý Odběratel')).toBeVisible()
 })
 
+test('import klientů z Fakturoid XML: vytáhne unikátní klienty z faktur', async ({ page }) => {
+  await seedApp(page, { subscription: 'pro' })
+  await dismissCookies(page)
+  await page.goto('/app/import')
+
+  await page.locator('#import-file').setInputFiles('e2e/fixtures/fakturoid.xml')
+  await expect(page.getByText('fakturoid.xml')).toBeVisible()
+  await expect(page.getByText('2 řádků')).toBeVisible() // 2 unikátní klienti ze 3 faktur
+  await page.getByRole('button', { name: /Pokračovat/ }).click()
+
+  await expect(page.getByText('2 vytvoří')).toBeVisible()
+  await page.getByRole('button', { name: /Importovat/ }).click()
+
+  await expect(page.getByText('Import dokončen')).toBeVisible()
+  await page.goto('/app/klienti')
+  await expect(page.getByText('Alfa Studio s.r.o.')).toBeVisible()
+  await expect(page.getByText('Beta Events z. s.')).toBeVisible()
+})
+
 test('doplnění z ARES: prázdné město se doplní podle IČO', async ({ page }) => {
   await seedApp(page, { subscription: 'pro' })
   await dismissCookies(page)

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<invoices>
+  <invoice>
+    <number>2024001</number>
+    <client_name>Alfa Studio s.r.o.</client_name>
+    <client_registration_no>27082440</client_registration_no>
+    <client_vat_no>CZ27082440</client_vat_no>
+    <client_street>Jankovcova 1</client_street>
+    <client_city>Praha</client_city>
+    <client_zip>17000</client_zip>
+    <client_country>CZ</client_country>
+  </invoice>
+  <invoice>
+    <number>2024002</number>
+    <client_name>Beta Events z. s.</client_name>
+    <client_registration_no>45317054</client_registration_no>
+    <client_vat_no></client_vat_no>
+    <client_street>Václavská 1</client_street>
+    <client_city>Mladá Boleslav</client_city>
+    <client_zip>29301</client_zip>
+    <client_country>CZ</client_country>
+  </invoice>
+  <invoice>
+    <number>2024003</number>
+    <client_name>Alfa Studio s.r.o.</client_name>
+    <client_registration_no>27082440</client_registration_no>
+    <client_vat_no>CZ27082440</client_vat_no>
+    <client_street>Jankovcova 1</client_street>
+    <client_city>Praha</client_city>
+    <client_zip>17000</client_zip>
+    <client_country>CZ</client_country>
+  </invoice>
+</invoices>

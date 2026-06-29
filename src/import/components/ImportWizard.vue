@@ -175,7 +175,9 @@ async function onRollback(): Promise<void> {
         <Loader2 v-if="state.parsing" class="h-10 w-10 animate-spin text-primary" />
         <Upload v-else class="h-10 w-10 text-muted-foreground" />
         <div>
-          <div class="font-semibold">Přetáhněte sem CSV nebo XLSX soubor nebo klikněte</div>
+          <div class="font-semibold">
+            Přetáhněte sem soubor (CSV, XLSX, Fakturoid XML) nebo klikněte
+          </div>
           <p class="mt-1 text-sm text-muted-foreground">
             Export z Fakturoidu, Dotykačky, Reservia nebo libovolné tabulky.
           </p>
@@ -184,7 +186,7 @@ async function onRollback(): Promise<void> {
       <input
         id="import-file"
         type="file"
-        accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        accept=".csv,.xlsx,.xml,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/xml,text/xml"
         class="sr-only"
         @change="onFileChange"
       />

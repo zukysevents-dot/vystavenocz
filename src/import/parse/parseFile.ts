@@ -1,10 +1,11 @@
 import { parseCsv } from './csv'
 import { parseXlsx } from './xlsx'
+import { parseFakturoidClientsXml } from './fakturoid-xml'
 import type { RawTable } from '../types'
 
 /**
  * Načte nahraný soubor a vrátí RawTable podle přípony.
- * Podporuje CSV a XLSX; ostatní formáty odmítne se srozumitelnou chybou.
+ * CSV/XLSX = obecná tabulka; XML = Fakturoid export faktur (vytáhne klienty).
  */
 export async function parseFile(file: File): Promise<RawTable> {
   const name = file.name.toLowerCase()
@@ -14,5 +15,8 @@ export async function parseFile(file: File): Promise<RawTable> {
   if (name.endsWith('.xlsx')) {
     return parseXlsx(file)
   }
-  throw new Error(`Nepodporovaný formát „${file.name}". Umíme CSV a XLSX.`)
+  if (name.endsWith('.xml')) {
+    return parseFakturoidClientsXml(await file.text())
+  }
+  throw new Error(`Nepodporovaný formát „${file.name}". Umíme CSV, XLSX a Fakturoid XML.`)
 }
