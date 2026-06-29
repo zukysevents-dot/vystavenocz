@@ -155,6 +155,11 @@ const typed = ref('')
 const phase = ref<'typing' | 'sent' | 'applied'>('typing')
 const flashKey = ref(0)
 
+const reduceMotion =
+  typeof window !== 'undefined' &&
+  typeof window.matchMedia === 'function' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
 const scenario = computed(() => SCENARIOS[scenarioIndex.value])
 const step = computed(() => scenario.value.steps[stepIndex.value])
 // Show the previous invoice state until "applied" so the change feels reactive
@@ -180,6 +185,13 @@ function clearTimers() {
 
 function runSequence() {
   clearTimers()
+  // Respect reduced-motion: show a static, already-applied invoice instead of the looping typewriter.
+  if (reduceMotion) {
+    typed.value = step.value.prompt
+    phase.value = 'applied'
+    flashKey.value += 1
+    return
+  }
   typed.value = ''
   phase.value = 'typing'
   let i = 0
@@ -226,13 +238,15 @@ onUnmounted(clearTimers)
   <section class="relative overflow-hidden bg-surface py-20 sm:py-28">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <div class="mx-auto max-w-2xl text-center">
-        <div
-          class="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground"
+        <p
+          class="mb-4 inline-flex items-center justify-center gap-2 font-mono text-[0.7rem] font-medium uppercase tracking-[0.22em] text-muted-foreground"
         >
           <Sparkles class="h-3.5 w-3.5 text-coral" />
           AI pomocník u faktur — živá ukázka
-        </div>
-        <h2 class="font-display text-3xl font-black tracking-tight text-foreground sm:text-4xl">
+        </p>
+        <h2
+          class="font-display text-3xl font-black leading-[1.05] tracking-[-0.02em] text-foreground sm:text-[2.75rem]"
+        >
           Napište, co chcete — faktura se vystaví sama
         </h2>
         <p class="mt-4 text-lg text-muted-foreground">

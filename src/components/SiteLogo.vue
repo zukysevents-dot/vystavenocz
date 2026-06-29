@@ -12,10 +12,10 @@ withDefaults(defineProps<{ variant?: 'full' | 'mark' }>(), { variant: 'full' })
     alt="Vystaveno.cz"
     width="36"
     height="36"
-    class="h-9 w-9 rounded-lg"
+    class="h-9 w-9"
   />
   <RouterLink v-else to="/" class="flex items-center gap-2" aria-label="Vystaveno.cz">
-    <img :src="iconUrl" alt="" width="36" height="36" class="h-9 w-9 rounded-lg" />
+    <img :src="iconUrl" alt="" width="36" height="36" class="h-9 w-9" />
     <span class="text-lg font-bold tracking-tight text-foreground">
       Vystaveno<span class="text-primary">.cz</span>
     </span>

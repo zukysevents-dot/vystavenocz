@@ -1,27 +1,33 @@
 <script setup lang="ts">
-import { Clock, Mail } from 'lucide-vue-next'
+import { Mail } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 </script>
 
 <template>
-  <section class="bg-surface-soft py-14 sm:py-16">
-    <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-center">
+  <section class="bg-background py-16 sm:py-20">
+    <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
       <div
-        class="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground"
+        class="flex flex-col items-start gap-6 rounded-3xl border border-border bg-surface-soft p-8 sm:p-10 md:flex-row md:items-center md:justify-between"
       >
-        <Clock class="h-3.5 w-3.5" />
-        Stavíme to s vámi
-      </div>
-      <h2 class="font-display text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-        Co napíšete, to brzo uvidíte
-      </h2>
-      <p class="mx-auto mt-3 max-w-xl text-base leading-relaxed text-muted-foreground">
-        Drobná vylepšení napříč moduly obvykle nasadíme do pár dní. Když vám něco v provozu chybí,
-        napište — odpovídáme osobně.
-      </p>
+        <div class="max-w-xl">
+          <p
+            class="flex items-center gap-3 font-mono text-[0.7rem] font-medium uppercase tracking-[0.22em] text-muted-foreground"
+          >
+            <span class="h-px w-7 bg-coral" aria-hidden="true" />
+            Stavíme to s vámi
+          </p>
+          <h2
+            class="mt-4 font-display text-2xl font-black leading-[1.05] tracking-[-0.02em] text-foreground sm:text-3xl"
+          >
+            Co napíšete, to brzo uvidíte
+          </h2>
+          <p class="mt-3 text-base leading-relaxed text-muted-foreground">
+            Drobná vylepšení napříč moduly obvykle nasadíme do pár dní. Když vám něco v provozu
+            chybí, napište — odpovídáme osobně.
+          </p>
+        </div>
 
-      <div class="mt-6 flex justify-center">
-        <Button variant="outline" size="lg" as-child>
+        <Button variant="outline" size="lg" class="shrink-0" as-child>
           <a
             href="mailto:patrik@vystaveno.cz?subject=N%C3%A1vrh%20na%20vylep%C5%A1en%C3%AD%20Vystaveno"
           >
