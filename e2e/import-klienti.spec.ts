@@ -69,3 +69,23 @@ test('rollback vrátí naimportované klienty', async ({ page }) => {
   await expect(page.getByText('Nový Klient s.r.o.')).toHaveCount(0)
   await expect(page.getByText('E2E Klient')).toBeVisible()
 })
+
+test('import klientů z XLSX: reálný soubor přes celý wizard', async ({ page }) => {
+  await seedApp(page, { subscription: 'pro' })
+  await dismissCookies(page)
+  await page.goto('/app/import')
+
+  await page.locator('#import-file').setInputFiles('e2e/fixtures/klienti.xlsx')
+  await expect(page.getByText('klienti.xlsx')).toBeVisible()
+  await expect(page.getByText('3 řádků')).toBeVisible()
+  await page.getByRole('button', { name: /Pokračovat/ }).click()
+
+  await expect(page.getByText('2 vytvoří')).toBeVisible()
+  await expect(page.getByText('1 přeskočí')).toBeVisible()
+  await page.getByRole('button', { name: /Importovat/ }).click()
+
+  await expect(page.getByText('Import dokončen')).toBeVisible()
+  await page.goto('/app/klienti')
+  await expect(page.getByText('Nový Klient s.r.o.')).toBeVisible()
+  await expect(page.getByText('Druhý Odběratel')).toBeVisible()
+})

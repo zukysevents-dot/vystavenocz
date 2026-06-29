@@ -42,6 +42,7 @@
     "papaparse": "^5.5.4",
     "pinia": "^3.0.4",
     "qrcode": "^1.5.4",
+    "read-excel-file": "^9.2.0",
     "reka-ui": "^2.9.10",
     "tailwind-merge": "^3.6.0",
     "vaul-vue": "^0.4.1",
