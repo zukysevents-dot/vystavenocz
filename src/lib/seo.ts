@@ -32,11 +32,11 @@ export const seoByRouteName: Record<string, RouteSeo> = {
       'Pokladna, restaurace, sklad, docházka, rezervace i fakturace — v jednom systému.',
   },
   cenik: {
-    title: 'Ceník — Vystaveno.cz | Plať jen za moduly, které používáš',
+    title: 'Ceník — Vystaveno.cz | Platíte jen za moduly, které využijete',
     description:
-      'Modulární ceník: zapneš jen moduly, které potřebuješ, a platíš jen za ně. Roční platba = 2 měsíce zdarma. 14 dní na vyzkoušení bez platební karty.',
-    ogTitle: 'Ceník Vystaveno.cz — modulární, platíš jen za své moduly',
-    ogDescription: 'Postav si svůj systém z modulů. Bez závazku, 14 dní zdarma bez karty.',
+      'Modulární ceník: zapnete jen moduly, které potřebujete, a platíte jen za ně. Roční platba = 2 měsíce zdarma. 14 dní na vyzkoušení bez platební karty.',
+    ogTitle: 'Ceník Vystaveno.cz — modulární, platíte jen za své moduly',
+    ogDescription: 'Poskládejte si systém z modulů. Bez závazku, 14 dní zdarma bez karty.',
   },
   faq: {
     title: 'Časté otázky — Vystaveno.cz',
