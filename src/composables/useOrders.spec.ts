@@ -39,4 +39,10 @@ describe('useOrders — payload položek (note/course)', () => {
       course: null,
     })
   })
+
+  it('move volá POST /orders/{id}/move s tělem { tableId }', async () => {
+    vi.mocked(http.post).mockResolvedValue({} as never)
+    await useOrders().move('o1', 't2')
+    expect(http.post).toHaveBeenCalledWith('/orders/o1/move', { tableId: 't2' })
+  })
 })

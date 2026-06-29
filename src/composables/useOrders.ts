@@ -43,11 +43,14 @@ export function useOrders() {
   function sendToKitchen(orderId: string): Promise<Order> {
     return http.post<Order>(`/orders/${orderId}/send-to-kitchen`)
   }
+  function move(orderId: string, tableId: string): Promise<Order> {
+    return http.post<Order>(`/orders/${orderId}/move`, { tableId })
+  }
   function pay(orderId: string, method: PaymentMethod): Promise<Order> {
     return http.post<Order>(`/orders/${orderId}/pay`, { paymentMethod: method })
   }
   function cancel(orderId: string): Promise<Order> {
     return http.post<Order>(`/orders/${orderId}/cancel`)
   }
-  return { listOpen, get, open, addItem, updateItem, removeItem, sendToKitchen, pay, cancel }
+  return { listOpen, get, open, addItem, updateItem, removeItem, sendToKitchen, move, pay, cancel }
 }

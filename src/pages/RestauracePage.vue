@@ -8,6 +8,7 @@ import {
   CreditCard,
   ChefHat,
   ArrowLeft,
+  ArrowLeftRight,
   Package,
   Ban,
   StickyNote,
@@ -31,7 +32,7 @@ import { useTables } from '@/composables/useTables'
 import { useProducts } from '@/composables/useProducts'
 import { useCategories } from '@/composables/useCategories'
 import { useOrders } from '@/composables/useOrders'
-import { isApiMode } from '@/lib/http'
+import { ApiError, isApiMode } from '@/lib/http'
 import { formatCZK } from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
 import type { Category, DiningTable, Floor, Order, OrderItemLine, PaymentMethod } from '@/lib/types'
@@ -196,6 +197,33 @@ async function saveItemMeta() {
     itemDialogOpen.value = false
   } catch (e) {
     toast.error('Uložení poznámky selhalo.')
+    console.error(e)
+  } finally {
+    busy.value = false
+  }
+}
+
+// --- Přesun účtu na jiný stůl (v rámci aktuálního patra) ---
+const moveDialogOpen = ref(false)
+const freeTables = computed(() => tables.value.filter((t) => !occupancy.value.has(t.id)))
+
+async function moveOrder(targetTableId: string) {
+  if (!currentOrder.value || busy.value) return
+  busy.value = true
+  try {
+    currentOrder.value = await ordersApi.move(currentOrder.value.id, targetTableId)
+    selectedTable.value = tables.value.find((t) => t.id === targetTableId) ?? selectedTable.value
+    await refreshOpen()
+    moveDialogOpen.value = false
+    toast.success(`Účet přesunut na ${selectedTable.value?.name}.`)
+  } catch (e) {
+    // 409 = cílový stůl mezitím obsadil jiný terminál → konkrétní hláška a obnov obsazenost.
+    if (e instanceof ApiError && e.status === 409) {
+      toast.error('Cílový stůl je už obsazený.')
+      await refreshOpen()
+    } else {
+      toast.error('Přesun účtu selhal.')
+    }
     console.error(e)
   } finally {
     busy.value = false
@@ -532,6 +560,15 @@ const hasNewItems = computed(() =>
               </Button>
             </div>
             <Button
+              v-if="freeTables.length"
+              variant="ghost"
+              class="mt-2 w-full"
+              :disabled="busy"
+              @click="moveDialogOpen = true"
+            >
+              <ArrowLeftRight class="h-4 w-4" /> Přesunout na jiný stůl
+            </Button>
+            <Button
               variant="ghost"
               class="mt-2 w-full text-destructive"
               :disabled="busy"
@@ -587,6 +624,31 @@ const hasNewItems = computed(() =>
             </Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Přesun účtu na jiný stůl -->
+    <Dialog v-model:open="moveDialogOpen">
+      <DialogContent class="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Přesunout účet</DialogTitle>
+          <DialogDescription>Vyberte volný stůl, kam účet přesunout.</DialogDescription>
+        </DialogHeader>
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <Button
+            v-for="t in freeTables"
+            :key="t.id"
+            type="button"
+            variant="outline"
+            :disabled="busy"
+            @click="moveOrder(t.id)"
+          >
+            {{ t.name }}
+          </Button>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="ghost" @click="moveDialogOpen = false">Zrušit</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
 
