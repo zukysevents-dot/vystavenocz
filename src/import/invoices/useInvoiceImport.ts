@@ -47,7 +47,9 @@ export function useInvoiceImport() {
         const num = (p.input.invoiceNumber ?? '').toLowerCase()
         const duplicate = !!num && (existing.has(num) || seen.has(num))
         if (num) seen.add(num)
-        return { ...p, duplicate, decision: duplicate ? 'skip' : 'create' }
+        // Duplicita i varování (nesoulad částky / sazba DPH) → default přeskočit; uživatel může povolit.
+        const decision: 'create' | 'skip' = duplicate || p.warnings.length > 0 ? 'skip' : 'create'
+        return { ...p, duplicate, decision }
       })
       state.fileName = file.name
       state.step = 'preview'

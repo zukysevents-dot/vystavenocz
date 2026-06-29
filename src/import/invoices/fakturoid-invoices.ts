@@ -1,5 +1,5 @@
 import type { InvoiceInput } from '@/composables/useInvoices'
-import { calcLine } from '@/lib/invoice'
+import { calcLine, calcTotals, round2 } from '@/lib/invoice'
 import type { InvoiceItem, InvoiceStatus, VatRate } from '@/lib/types'
 
 function text(el: Element, tag: string): string {
@@ -23,17 +23,24 @@ function mapStatus(s: string): InvoiceStatus {
   return 'issued'
 }
 
-/** Naparsovaná faktura: vstup pro import + pomocná data pro náhled. */
+/** Naparsovaná faktura: vstup pro import + náhled + případná varování (finanční kontrola). */
 export interface ParsedFakturoidInvoice {
   input: InvoiceInput
   vatPayer: boolean
   previewTotal: number
+  warnings: string[]
 }
 
 /**
- * Naparsuje Fakturoid XML export faktur na naše `InvoiceInput` (včetně řádků,
- * dat, stavu, dodavatele i odběratele). Zachovává původní číslo i stav — to je
- * smysl historického importu (číslo se NEpřečísluje).
+ * Naparsuje Fakturoid XML export faktur na naše `InvoiceInput` (řádky, datumy,
+ * stav, dodavatel i odběratel). Zachovává původní číslo i stav (smysl historického
+ * importu — číslo se NEpřečísluje).
+ *
+ * Finanční pojistky:
+ *  - základ řádku bere z `unit_price_without_vat` (Fakturoid umí ceny s/bez DPH —
+ *    bez tohoto by se u „cen s DPH" připočetlo DPH podruhé a částka by se nafoukla),
+ *  - vypočtený součet porovná s `<total>` z XML; nesoulad → varování (ne tichý import),
+ *  - nepodporovaná sazba DPH u plátce → varování.
  */
 export function parseFakturoidInvoices(xml: string): ParsedFakturoidInvoice[] {
   const doc = new DOMParser().parseFromString(xml, 'application/xml')
@@ -47,9 +54,16 @@ export function parseFakturoidInvoices(xml: string): ParsedFakturoidInvoice[] {
 
   return invoices.map((inv) => {
     const vatPayer = !!text(inv, 'your_vat_no') // má DIČ → plátce DPH
+    const warnings: string[] = []
+
     const items: InvoiceItem[] = Array.from(inv.getElementsByTagName('line')).map((ln, i) => {
       const quantity = num(text(ln, 'quantity')) || 1
-      const unitPrice = num(text(ln, 'unit_price'))
+      // Deterministicky bereme základ BEZ DPH (fallback unit_price, kdyby tag chyběl).
+      const unitPrice = num(text(ln, 'unit_price_without_vat') || text(ln, 'unit_price'))
+      const rawRate = Math.round(num(text(ln, 'vat_rate')))
+      if (vatPayer && ![0, 12, 21].includes(rawRate)) {
+        warnings.push(`Nepodporovaná sazba DPH ${rawRate} % na řádku „${text(ln, 'name')}".`)
+      }
       const vatRate = toVatRate(text(ln, 'vat_rate'))
       return {
         id: `imp-${i}`,
@@ -103,6 +117,15 @@ export function parseFakturoidInvoices(xml: string): ParsedFakturoidInvoice[] {
       notes: text(inv, 'note') || null,
     }
 
-    return { input, vatPayer, previewTotal: num(text(inv, 'total')) }
+    // Kontrola součtu: vypočtený total vs <total> z XML (tolerance na zaokrouhlení).
+    const previewTotal = num(text(inv, 'total'))
+    const computedTotal = round2(calcTotals(items, vatPayer).total)
+    if (previewTotal > 0 && Math.abs(computedTotal - round2(previewTotal)) > 0.5) {
+      warnings.push(
+        `Vypočtený součet ${computedTotal} Kč nesouhlasí s originálem ${previewTotal} Kč — zkontrolujte řádky.`,
+      )
+    }
+
+    return { input, vatPayer, previewTotal, warnings }
   })
 }

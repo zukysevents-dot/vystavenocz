@@ -134,16 +134,16 @@ async function onRollback(): Promise<void> {
       {{ STEP_TITLE[state.step] }}
     </h2>
 
-    <!-- Upozornění: v produkci čeká na backend -->
+    <!-- Info: jak se historické faktury ukládají -->
     <div
       v-if="isApiMode()"
-      class="mb-6 flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm"
+      class="mb-6 flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground"
     >
-      <TriangleAlert class="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+      <TriangleAlert class="mt-0.5 h-4 w-4 shrink-0" />
       <span>
-        Historický import faktur potřebuje serverový endpoint
-        <code class="rounded bg-muted px-1">/invoices/import</code>, který zachová původní číslo a
-        stav. Dokud ho backend nemá, import zde může selhat — náhled a mapování ale fungují.
+        Faktury se ukládají přes <code class="rounded bg-muted px-1">/invoices/import</code> se
+        zachovaným číslem a stavem. Pokud server fakturu odmítne (např. duplicitní číslo), řádek se
+        v souhrnu označí jako chyba.
       </span>
     </div>
 
@@ -226,9 +226,22 @@ async function onRollback(): Promise<void> {
               <TableCell>{{ r.input.issueDate || '—' }}</TableCell>
               <TableCell class="text-right tabular-nums">{{ formatCZK(r.previewTotal) }}</TableCell>
               <TableCell>
-                <Badge :variant="r.duplicate ? 'secondary' : 'outline'">
-                  {{ r.duplicate ? 'Duplicita' : (STATUS_LABEL[r.input.status] ?? r.input.status) }}
+                <Badge
+                  :variant="
+                    r.duplicate ? 'secondary' : r.warnings.length ? 'destructive' : 'outline'
+                  "
+                >
+                  {{
+                    r.duplicate
+                      ? 'Duplicita'
+                      : r.warnings.length
+                        ? 'Varování'
+                        : (STATUS_LABEL[r.input.status] ?? r.input.status)
+                  }}
                 </Badge>
+                <div v-if="r.warnings.length" class="mt-1 max-w-xs text-xs text-destructive">
+                  <div v-for="(w, wi) in r.warnings" :key="wi">{{ w }}</div>
+                </div>
               </TableCell>
               <TableCell>
                 <Select v-model="r.decision">

@@ -31,3 +31,29 @@ test('import faktur z Fakturoid XML: náhled → import → faktury v seznamu', 
   await expect(page.getByRole('cell', { name: 'Beta s.r.o.' })).toBeVisible()
   await expect(page.getByRole('cell', { name: 'Zaplaceno' }).first()).toBeVisible()
 })
+
+test('import faktur: duplicity proti existujícím se přeskočí (idempotence)', async ({ page }) => {
+  await seedApp(page, {
+    subscription: 'pro',
+    invoices: [{ invoiceNumber: '2024001' }, { invoiceNumber: '2024002' }],
+  })
+  await dismissCookies(page)
+  await page.goto('/app/import/faktury')
+
+  await page.locator('#invoice-file').setInputFiles('e2e/fixtures/fakturoid-faktury.xml')
+  await expect(page.getByText('0 importuje')).toBeVisible()
+  await expect(page.getByText('2 přeskočí')).toBeVisible()
+  await expect(page.getByText('Duplicita').first()).toBeVisible()
+  await expect(page.getByRole('button', { name: /Importovat 0 faktur/ })).toBeDisabled()
+})
+
+test('import faktur: nesoulad částky → varování a default přeskočit', async ({ page }) => {
+  await seedApp(page, { subscription: 'pro' })
+  await dismissCookies(page)
+  await page.goto('/app/import/faktury')
+
+  await page.locator('#invoice-file').setInputFiles('e2e/fixtures/fakturoid-faktury-warn.xml')
+  await expect(page.getByText('Varování')).toBeVisible()
+  await expect(page.getByText(/nesouhlasí/)).toBeVisible()
+  await expect(page.getByText('0 importuje')).toBeVisible() // varování → default přeskočit
+})
