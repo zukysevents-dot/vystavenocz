@@ -1,7 +1,7 @@
 import { storeToRefs } from 'pinia'
 import { useApi } from '@/composables/useApi'
 import { useInvoicesStore } from '@/stores/invoices'
-import { calcTotals } from '@/lib/invoice'
+import { calcTotals, toImportRequest } from '@/lib/invoice'
 import { http, isApiMode } from '@/lib/http'
 import type { Invoice } from '@/lib/types'
 
@@ -83,31 +83,6 @@ export function useInvoices() {
     return invoice
   }
 
-  /**
-   * Historický import faktury — ZACHOVÁ původní číslo i stav (na rozdíl od create,
-   * který v API režimu dělá koncept bez čísla). V API režimu cílí na backend
-   * endpoint `/invoices/import` (doplní backend); mock vytvoří fakturu v plné věrnosti.
-   */
-  async function importHistorical(input: InvoiceInput, vatPayer = true): Promise<Invoice> {
-    if (isApiMode()) {
-      return upsert(await http.post<Invoice>('/invoices/import', input))
-    }
-    const totals = calcTotals(input.items, vatPayer)
-    const now = new Date().toISOString()
-    const invoice: Invoice = {
-      ...input,
-      id: crypto.randomUUID(),
-      subtotal: totals.subtotal,
-      vatTotal: totals.vatTotal,
-      total: totals.total,
-      createdAt: now,
-      updatedAt: now,
-    }
-    await api.create(invoice)
-    store.invoices.push(invoice)
-    return invoice
-  }
-
   async function update(id: string, input: InvoiceInput, vatPayer = true): Promise<Invoice> {
     if (isApiMode()) {
       // Server přepočítá součty; PUT je povolen jen na konceptu (jinak 409).
@@ -167,5 +142,17 @@ export function useInvoices() {
     return store.invoices.find((i) => i.id === id) ?? null
   }
 
-  return { invoices, load, create, importHistorical, update, remove, issue, pay, cancel, getById }
+  /**
+   * Import historické faktury (migrace F9) — uloží doklad JAK JE přes `POST /invoices/import`.
+   * Server nepřečísluje/nepřepočítá a je idempotentní dle čísla (existující → vrátí beze změny).
+   * Mock režim (bez backendu) jen uloží fakturu do lokálního úložiště.
+   */
+  async function importInvoice(inv: Invoice): Promise<Invoice> {
+    if (isApiMode())
+      return upsert(await http.post<Invoice>('/invoices/import', toImportRequest(inv)))
+    await api.create(inv)
+    return upsert(inv)
+  }
+
+  return { invoices, load, create, update, remove, issue, pay, cancel, getById, importInvoice }
 }

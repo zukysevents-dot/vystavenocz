@@ -1,10 +1,12 @@
 import { reactive } from 'vue'
 import { useInvoices } from '@/composables/useInvoices'
 import { useCompanyStore } from '@/stores/company'
+import { calcTotals } from '@/lib/invoice'
 import { useImportLedger } from '../useImportLedger'
 import { parseFakturoidInvoices, type ParsedFakturoidInvoice } from './fakturoid-invoices'
 import { supplierToCompanyPatch } from './supplier-profile'
 import type { ImportBatch, ImportResult } from '../types'
+import type { Invoice } from '@/lib/types'
 
 export type InvoiceImportStep = 'upload' | 'preview' | 'result'
 
@@ -73,7 +75,20 @@ export function useInvoiceImport() {
         continue
       }
       try {
-        const inv = await invoicesApi.importHistorical(r.input, r.vatPayer)
+        // Postav plnou fakturu (id + součty z calcTotals nad základem bez DPH) a předej
+        // kolegovu importInvoice, který v API režimu volá /invoices/import přes toImportRequest.
+        const totals = calcTotals(r.input.items, r.vatPayer)
+        const now = new Date().toISOString()
+        const invoice: Invoice = {
+          ...r.input,
+          id: crypto.randomUUID(),
+          subtotal: totals.subtotal,
+          vatTotal: totals.vatTotal,
+          total: totals.total,
+          createdAt: now,
+          updatedAt: now,
+        }
+        const inv = await invoicesApi.importInvoice(invoice)
         createdIds.push(inv.id)
         counts.created++
       } catch (e) {

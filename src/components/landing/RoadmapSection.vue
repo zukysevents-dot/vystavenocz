@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Check, Clock, Sparkles } from 'lucide-vue-next'
 
 type Status = 'done' | 'soon' | 'planned'
@@ -54,68 +55,99 @@ const items: { title: string; desc: string; status: Status; when?: string }[] = 
   },
 ]
 
-const statusMap: Record<Status, { label: string; className: string; icon: typeof Check }> = {
-  done: {
-    label: 'Hotovo',
-    className: 'bg-success/15 text-success',
-    icon: Check,
-  },
-  soon: {
-    label: 'Brzy',
-    className: 'bg-coral/15 text-coral',
-    icon: Sparkles,
-  },
-  planned: {
-    label: 'V plánu',
-    className: 'bg-muted text-muted-foreground',
-    icon: Clock,
-  },
-}
+const statusMap: Record<Status, { label: string; dot: string; chip: string; icon: typeof Check }> =
+  {
+    done: { label: 'Hotovo', dot: 'bg-success', chip: 'bg-success/15 text-success', icon: Check },
+    soon: { label: 'Brzy', dot: 'bg-coral', chip: 'bg-coral/15 text-coral', icon: Sparkles },
+    planned: {
+      label: 'V plánu',
+      dot: 'bg-muted-foreground',
+      chip: 'bg-muted text-muted-foreground',
+      icon: Clock,
+    },
+  }
+
+const done = computed(() => items.filter((i) => i.status === 'done'))
+const upcoming = computed(() => items.filter((i) => i.status !== 'done'))
 </script>
 
 <template>
-  <section class="bg-surface-soft py-16 sm:py-20">
-    <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-      <div class="mx-auto max-w-2xl text-center">
-        <p class="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+  <section class="bg-surface-soft py-20 sm:py-28">
+    <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div class="max-w-2xl">
+        <p
+          class="flex items-center gap-3 font-mono text-[0.7rem] font-medium uppercase tracking-[0.22em] text-muted-foreground"
+        >
+          <span class="h-px w-7 bg-coral" aria-hidden="true" />
           Roadmapa
         </p>
-        <h2 class="font-display text-3xl font-black tracking-tight text-foreground sm:text-4xl">
+        <h2
+          class="mt-5 font-display text-3xl font-black leading-[1.02] tracking-[-0.02em] text-foreground sm:text-[2.75rem]"
+        >
           Co už umíme a co chystáme
         </h2>
-        <p class="mt-4 text-base text-muted-foreground sm:text-lg">
+        <p class="mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">
           Vystaveno se vyvíjí každý týden podle zpětné vazby od skutečných provozů. Tady je, na čem
           pracujeme.
         </p>
       </div>
 
-      <ul class="mx-auto mt-10 grid max-w-4xl gap-4 sm:grid-cols-2">
-        <li
-          v-for="item in items"
-          :key="item.title"
-          class="flex flex-col rounded-2xl border border-border bg-card p-5"
-        >
-          <div class="flex items-center justify-between gap-3">
+      <div class="mt-12 grid gap-x-6 gap-y-10 lg:grid-cols-3">
+        <!-- Done — the proof block (dominant). -->
+        <div class="lg:col-span-2">
+          <div class="flex items-center gap-2.5">
             <span
-              :class="`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${statusMap[item.status].className}`"
+              :class="`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${statusMap.done.chip}`"
             >
-              <component :is="statusMap[item.status].icon" class="h-3 w-3" />
-              {{ statusMap[item.status].label }}
+              <Check class="h-3 w-3" :stroke-width="2.5" />
+              {{ statusMap.done.label }}
             </span>
-            <span v-if="item.when" class="text-xs font-medium text-muted-foreground">
-              {{ item.when }}
-            </span>
+            <span class="font-mono text-xs text-muted-foreground">{{ done.length }} modulů</span>
           </div>
-          <h3 class="mt-3 text-base font-semibold text-foreground">
-            {{ item.title }}
-          </h3>
-          <p class="mt-1 text-sm leading-relaxed text-muted-foreground">
-            {{ item.desc }}
-          </p>
-        </li>
-      </ul>
+          <ul class="mt-5 grid gap-3 sm:grid-cols-2">
+            <li
+              v-for="item in done"
+              :key="item.title"
+              class="rounded-xl border border-border bg-card p-4"
+            >
+              <div class="flex items-start gap-2.5">
+                <span :class="`mt-1.5 h-2 w-2 shrink-0 rounded-full ${statusMap.done.dot}`" />
+                <div>
+                  <h3 class="text-sm font-semibold text-foreground">{{ item.title }}</h3>
+                  <p class="mt-1 text-xs leading-relaxed text-muted-foreground">{{ item.desc }}</p>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
 
-      <p class="mx-auto mt-8 max-w-xl text-center text-xs text-muted-foreground">
+        <!-- Upcoming — sidebar. -->
+        <div class="space-y-3">
+          <ul class="space-y-3">
+            <li
+              v-for="item in upcoming"
+              :key="item.title"
+              class="rounded-xl border border-border bg-card p-4"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <span
+                  :class="`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${statusMap[item.status].chip}`"
+                >
+                  <component :is="statusMap[item.status].icon" class="h-3 w-3" />
+                  {{ statusMap[item.status].label }}
+                </span>
+                <span v-if="item.when" class="font-mono text-xs text-muted-foreground">
+                  {{ item.when }}
+                </span>
+              </div>
+              <h3 class="mt-3 text-sm font-semibold text-foreground">{{ item.title }}</h3>
+              <p class="mt-1 text-xs leading-relaxed text-muted-foreground">{{ item.desc }}</p>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <p class="mt-10 max-w-xl text-sm text-muted-foreground">
         Chybí ti něco konkrétního? Napiš nám na
         <a href="mailto:patrik@vystaveno.cz" class="font-medium text-foreground underline">
           patrik@vystaveno.cz

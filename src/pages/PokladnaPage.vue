@@ -10,18 +10,37 @@ import {
   CreditCard,
   ShoppingCart,
   Package,
+  ReceiptText,
+  RotateCcw,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import ReceiptDialog from '@/components/ReceiptDialog.vue'
 import { useProducts } from '@/composables/useProducts'
 import { useCategories } from '@/composables/useCategories'
 import { useSales } from '@/composables/useSales'
 import { formatCZK } from '@/lib/invoice'
 import { buildReceipt, type ReceiptInfo } from '@/lib/receipt'
-import { isApiMode } from '@/lib/http'
+import { ApiError, isApiMode } from '@/lib/http'
 import { useCompanyStore } from '@/stores/company'
 import { toast } from '@/components/ui/sonner'
-import type { Category, PaymentMethod, Product } from '@/lib/types'
+import type { Category, DailySalesSummary, PaymentMethod, Product, Sale } from '@/lib/types'
 
 const { products, load } = useProducts()
 const categoriesApi = useCategories()
@@ -125,11 +144,70 @@ async function pay(method: PaymentMethod) {
     paying.value = false
   }
 }
+
+// --- Tržby: denní uzávěrka + historie + storno ---
+const salesDialogOpen = ref(false)
+const loadingSales = ref(false)
+const salesList = ref<Sale[]>([])
+const summary = ref<DailySalesSummary | null>(null)
+const stornoId = ref<string | null>(null)
+const storning = ref(false)
+
+async function loadSales() {
+  const [s, l] = await Promise.all([sales.summaryToday(), sales.list()])
+  summary.value = s
+  salesList.value = l
+}
+
+async function openSales() {
+  salesDialogOpen.value = true
+  loadingSales.value = true
+  try {
+    await loadSales()
+  } catch (e) {
+    toast.error('Načtení tržeb selhalo.')
+    console.error(e)
+  } finally {
+    loadingSales.value = false
+  }
+}
+
+async function doStorno() {
+  if (!stornoId.value || storning.value) return
+  const id = stornoId.value
+  stornoId.value = null
+  storning.value = true
+  try {
+    await sales.storno(id)
+    toast.success('Prodej stornován, zboží vráceno na sklad.')
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 409) toast.error('Prodej je už stornovaný.')
+    else toast.error('Storno selhalo.')
+    console.error(e)
+  } finally {
+    await loadSales() // sesynchronizuj uzávěrku i seznam (i po 409 se objeví štítek Stornováno)
+    storning.value = false
+  }
+}
+
+function saleTime(iso: string): string {
+  return new Date(iso).toLocaleString('cs-CZ', {
+    day: 'numeric',
+    month: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 </script>
 
 <template>
   <div class="p-4 sm:p-6">
-    <h1 class="mb-4 text-2xl font-bold tracking-tight">Pokladna</h1>
+    <div class="mb-4 flex items-center justify-between gap-3">
+      <h1 class="text-2xl font-bold tracking-tight">Pokladna</h1>
+      <Button v-if="apiMode" variant="outline" size="sm" @click="openSales">
+        <ReceiptText class="h-4 w-4" /> Tržby
+      </Button>
+    </div>
 
     <!-- POS funguje jen proti reálnému backendu -->
     <div
@@ -283,6 +361,95 @@ async function pay(method: PaymentMethod) {
         </div>
       </div>
     </div>
+
+    <!-- Tržby: denní uzávěrka + historie + storno -->
+    <Dialog v-model:open="salesDialogOpen">
+      <DialogContent class="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Tržby</DialogTitle>
+          <DialogDescription>Dnešní uzávěrka a historie prodejů.</DialogDescription>
+        </DialogHeader>
+
+        <div v-if="loadingSales" class="flex justify-center p-8">
+          <Loader2 class="h-6 w-6 animate-spin text-primary" />
+        </div>
+        <template v-else>
+          <div
+            v-if="summary"
+            class="grid grid-cols-3 gap-2 rounded-xl border border-border bg-muted/30 p-3 text-center"
+          >
+            <div>
+              <div class="text-xs text-muted-foreground">Tržba dnes</div>
+              <div class="font-bold tabular-nums">{{ formatCZK(summary.total) }}</div>
+            </div>
+            <div>
+              <div class="text-xs text-muted-foreground">Hotově</div>
+              <div class="font-semibold tabular-nums">{{ formatCZK(summary.cashTotal) }}</div>
+            </div>
+            <div>
+              <div class="text-xs text-muted-foreground">Kartou</div>
+              <div class="font-semibold tabular-nums">{{ formatCZK(summary.cardTotal) }}</div>
+            </div>
+          </div>
+          <p v-if="summary" class="mt-1 text-center text-xs text-muted-foreground">
+            {{ summary.count }} prodejů · DPH {{ formatCZK(summary.totalVat) }}
+          </p>
+
+          <div
+            class="mt-3 max-h-[45vh] divide-y divide-border overflow-y-auto rounded-xl border border-border"
+          >
+            <div v-if="!salesList.length" class="p-6 text-center text-sm text-muted-foreground">
+              Zatím žádné prodeje.
+            </div>
+            <div v-for="s in salesList" :key="s.id" class="flex items-center gap-3 p-3">
+              <div class="min-w-0 flex-1">
+                <div class="text-sm font-medium tabular-nums">
+                  {{ formatCZK(s.total) }}
+                  <span class="ml-1 text-xs font-normal text-muted-foreground">{{
+                    s.paymentMethod === 'Cash' ? 'hotově' : 'kartou'
+                  }}</span>
+                </div>
+                <div class="text-xs text-muted-foreground">{{ saleTime(s.soldAt) }}</div>
+              </div>
+              <span
+                v-if="s.status === 'Cancelled'"
+                class="rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold text-destructive"
+                >Stornováno</span
+              >
+              <Button
+                v-else
+                variant="ghost"
+                size="sm"
+                class="text-destructive"
+                @click="stornoId = s.id"
+              >
+                <RotateCcw class="h-3.5 w-3.5" /> Storno
+              </Button>
+            </div>
+          </div>
+        </template>
+      </DialogContent>
+    </Dialog>
+
+    <AlertDialog :open="!!stornoId" @update:open="(o) => !o && (stornoId = null)">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Stornovat prodej?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Prodej se označí jako stornovaný a zboží se vrátí na sklad. Z denní uzávěrky vypadne.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Zpět</AlertDialogCancel>
+          <AlertDialogAction
+            class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            @click="doStorno"
+          >
+            Stornovat
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
 
     <!-- Účtenka po zaplacení (náhled + tisk/PDF) -->
     <ReceiptDialog v-model:open="receiptOpen" :receipt="receiptData" />

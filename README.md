@@ -4,8 +4,8 @@ Fakturační SaaS pro OSVČ a živnostníky. Tohle je **frontend-only MVP** ve V
 React aplikace. Data zatím žijí v `localStorage` přes mock datovou vrstvu, která je připravená na
 napojení na budoucí API (`vystaveno-api`).
 
-> Větev `main` v repu = **stará React appka** (jen reference). Vývoj probíhá na samostatných větvích
-> (např. `dev/01-init-vue3`).
+> Produkční větev `main` = **Vue app**. Stará React appka je zazálohovaná ve větvi `legacy-react`
+> (jen reference). Vyvíjí se na feature větvích.
 
 ## Stack
 
@@ -138,4 +138,3 @@ Všechna data jdou přes **jediný swap-point**: [`src/composables/useApi.ts`](s
   `vite-plugin-pwa` (precache app shellu). Aktivní v produkčním buildu.
 - **Přístupnost:** design tokeny splňují WCAG AA kontrast; focus stavy, ARIA a klávesová navigace
   přes reka-ui; a11y hlídá axe v e2e sadě.
-  
