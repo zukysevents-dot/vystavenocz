@@ -83,6 +83,31 @@ export function useInvoices() {
     return invoice
   }
 
+  /**
+   * Historický import faktury — ZACHOVÁ původní číslo i stav (na rozdíl od create,
+   * který v API režimu dělá koncept bez čísla). V API režimu cílí na backend
+   * endpoint `/invoices/import` (doplní backend); mock vytvoří fakturu v plné věrnosti.
+   */
+  async function importHistorical(input: InvoiceInput, vatPayer = true): Promise<Invoice> {
+    if (isApiMode()) {
+      return upsert(await http.post<Invoice>('/invoices/import', input))
+    }
+    const totals = calcTotals(input.items, vatPayer)
+    const now = new Date().toISOString()
+    const invoice: Invoice = {
+      ...input,
+      id: crypto.randomUUID(),
+      subtotal: totals.subtotal,
+      vatTotal: totals.vatTotal,
+      total: totals.total,
+      createdAt: now,
+      updatedAt: now,
+    }
+    await api.create(invoice)
+    store.invoices.push(invoice)
+    return invoice
+  }
+
   async function update(id: string, input: InvoiceInput, vatPayer = true): Promise<Invoice> {
     if (isApiMode()) {
       // Server přepočítá součty; PUT je povolen jen na konceptu (jinak 409).
@@ -142,5 +167,5 @@ export function useInvoices() {
     return store.invoices.find((i) => i.id === id) ?? null
   }
 
-  return { invoices, load, create, update, remove, issue, pay, cancel, getById }
+  return { invoices, load, create, importHistorical, update, remove, issue, pay, cancel, getById }
 }

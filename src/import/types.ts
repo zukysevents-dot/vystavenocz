@@ -12,7 +12,7 @@ export interface RawTable {
 }
 
 /** Entita, kterou import naplňuje. Rozšiřuje se s každým novým importérem. */
-export type ImportEntity = 'clients' | 'products'
+export type ImportEntity = 'clients' | 'products' | 'invoices'
 
 /** Mapování cílové pole entity → název zdrojového sloupce (nebo null = nemapováno). */
 export type ColumnMapping = Record<string, string | null>

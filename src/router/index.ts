@@ -148,6 +148,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Import dat', layout: 'app', requiresAuth: true },
   },
   {
+    path: '/app/import/faktury',
+    name: 'app-import-faktury',
+    component: () => import('@/import/invoices/FakturoidInvoiceImport.vue'),
+    meta: { title: 'Import faktur', layout: 'app', requiresAuth: true },
+  },
+  {
     path: '/app/pokladna',
     name: 'app-pokladna',
     component: () => import('@/pages/PokladnaPage.vue'),

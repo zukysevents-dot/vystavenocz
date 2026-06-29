@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, FileText, Search, Pencil, Trash2, Loader2 } from 'lucide-vue-next'
+import { Plus, FileText, Search, Pencil, Trash2, Loader2, Upload } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -98,9 +98,12 @@ async function onDelete() {
         <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Faktury</h1>
         <p class="mt-1 text-muted-foreground">Spravujte své faktury a sledujte platby.</p>
       </div>
-      <Button variant="coral" class="shrink-0" @click="newInvoice">
-        <Plus class="h-4 w-4" /> Nová faktura
-      </Button>
+      <div class="flex shrink-0 gap-2">
+        <Button variant="outline" @click="router.push('/app/import/faktury')">
+          <Upload class="h-4 w-4" /> Import z Fakturoidu
+        </Button>
+        <Button variant="coral" @click="newInvoice"> <Plus class="h-4 w-4" /> Nová faktura </Button>
+      </div>
     </div>
 
     <div class="mt-6 flex items-center gap-3">
