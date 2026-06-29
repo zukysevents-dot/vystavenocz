@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Upload, Loader2, Check, RotateCcw, FileSpreadsheet, TriangleAlert } from 'lucide-vue-next'
+import {
+  Upload,
+  Loader2,
+  Check,
+  RotateCcw,
+  FileSpreadsheet,
+  TriangleAlert,
+  Building2,
+} from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -26,9 +34,24 @@ import { formatCZK } from '@/lib/invoice'
 import { useInvoiceImport } from './useInvoiceImport'
 
 const router = useRouter()
-const { state, pickFile, commit, rollbackLast, reset } = useInvoiceImport()
+const { state, pickFile, commit, applySupplierToProfile, rollbackLast, reset } = useInvoiceImport()
 const dragOver = ref(false)
 const rollingBack = ref(false)
+const applyingProfile = ref(false)
+
+const supplier = computed(() => state.rows[0]?.input.supplierSnapshot ?? null)
+
+async function onApplyProfile(): Promise<void> {
+  applyingProfile.value = true
+  try {
+    const n = await applySupplierToProfile()
+    toast.success(n > 0 ? `Profil firmy doplněn (${n} polí).` : 'Profil firmy už je vyplněný.')
+  } catch {
+    toast.error('Uložení profilu selhalo.')
+  } finally {
+    applyingProfile.value = false
+  }
+}
 
 const STATUS_LABEL: Record<string, string> = {
   paid: 'Uhrazená',
@@ -135,6 +158,29 @@ async function onRollback(): Promise<void> {
         <span class="font-medium">{{ state.fileName }}</span>
         <span class="text-muted-foreground">· {{ state.rows.length }} faktur</span>
       </div>
+
+      <!-- Tvoje údaje z exportu → profil firmy -->
+      <div
+        v-if="supplier?.companyName"
+        class="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-3 text-sm"
+      >
+        <Building2 class="h-4 w-4 shrink-0 text-primary" />
+        <span>
+          Tvoje údaje z exportu: <strong>{{ supplier.companyName }}</strong>
+          <template v-if="supplier.ico"> · IČO {{ supplier.ico }}</template>
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          class="ml-auto"
+          :disabled="applyingProfile"
+          @click="onApplyProfile"
+        >
+          <Loader2 v-if="applyingProfile" class="h-4 w-4 animate-spin" />
+          <Building2 v-else class="h-4 w-4" /> Předvyplnit profil firmy
+        </Button>
+      </div>
+
       <div class="flex flex-wrap gap-2 text-sm">
         <Badge variant="default">{{ willCreate }} importuje</Badge>
         <Badge variant="outline">{{ willSkip }} přeskočí</Badge>

@@ -14,6 +14,10 @@ test('import faktur z Fakturoid XML: náhled → import → faktury v seznamu', 
   await page.locator('#invoice-file').setInputFiles('e2e/fixtures/fakturoid-faktury.xml')
 
   await expect(page.getByText('2 importuje')).toBeVisible()
+  // Bod 3: nabídka předvyplnění profilu firmy z dodavatele (your_*)
+  await expect(page.getByText('Tvoje údaje z exportu')).toBeVisible()
+  await expect(page.getByRole('button', { name: /Předvyplnit profil firmy/ })).toBeVisible()
+
   await page.getByRole('button', { name: /Importovat 2 faktur/ }).click()
 
   await expect(page.getByText('Import dokončen')).toBeVisible()

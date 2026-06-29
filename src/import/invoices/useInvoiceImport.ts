@@ -1,7 +1,9 @@
 import { reactive } from 'vue'
 import { useInvoices } from '@/composables/useInvoices'
+import { useCompanyStore } from '@/stores/company'
 import { useImportLedger } from '../useImportLedger'
 import { parseFakturoidInvoices, type ParsedFakturoidInvoice } from './fakturoid-invoices'
+import { supplierToCompanyPatch } from './supplier-profile'
 import type { ImportBatch, ImportResult } from '../types'
 
 export type InvoiceImportStep = 'upload' | 'preview' | 'result'
@@ -19,6 +21,7 @@ interface InvoiceRow extends ParsedFakturoidInvoice {
  */
 export function useInvoiceImport() {
   const invoicesApi = useInvoices()
+  const companyStore = useCompanyStore()
   const ledger = useImportLedger()
 
   const state = reactive({
@@ -94,6 +97,17 @@ export function useInvoiceImport() {
     state.step = 'result'
   }
 
+  /** Předvyplní profil firmy z dodavatele (your_*) první faktury — jen prázdná pole. */
+  async function applySupplierToProfile(): Promise<number> {
+    const supplier = state.rows[0]?.input.supplierSnapshot
+    if (!supplier) return 0
+    await companyStore.load()
+    const patch = supplierToCompanyPatch(supplier, companyStore.company)
+    const filled = Object.keys(patch).length
+    if (filled > 0) await companyStore.save(patch)
+    return filled
+  }
+
   async function rollbackLast(): Promise<{ removed: number; failed: number }> {
     if (!state.result) return { removed: 0, failed: 0 }
     return ledger.rollback(state.result.batch.id, (id) => invoicesApi.remove(id))
@@ -107,5 +121,5 @@ export function useInvoiceImport() {
     state.progress = null
   }
 
-  return { state, pickFile, commit, rollbackLast, reset }
+  return { state, pickFile, commit, applySupplierToProfile, rollbackLast, reset }
 }
