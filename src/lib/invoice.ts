@@ -3,7 +3,7 @@
  * Přeneseno ze staré React appky (Prod:src/lib/invoice.ts), camelCase.
  * (IBAN/SPAYD QR utility přijdou s PDF taskem F6-48.)
  */
-import type { InvoiceItem } from '@/lib/types'
+import type { Invoice, InvoiceItem } from '@/lib/types'
 
 type LineInput = Pick<InvoiceItem, 'quantity' | 'unitPrice' | 'vatRate'>
 
@@ -143,4 +143,75 @@ export function buildSpayd(opts: {
     if (msg) parts.push(`MSG:${msg}`)
   }
   return parts.join('*')
+}
+
+// Adresa pro backend (zip \u2192 postalCode); null, kdy\u017e je pr\u00e1zdn\u00e1.
+function importAddress(
+  street?: string | null,
+  city?: string | null,
+  zip?: string | null,
+  country?: string,
+) {
+  return street || city || zip || country
+    ? {
+        street: street ?? null,
+        city: city ?? null,
+        postalCode: zip ?? null,
+        country: country ?? null,
+      }
+    : null
+}
+
+/**
+ * Mapuje frontend `Invoice` na payload pro `POST /invoices/import` (migrace historick\u00fdch faktur).
+ * Pos\u00edl\u00e1 doklad JAK JE \u2014 server nep\u0159e\u010d\u00edsluje ani nep\u0159epo\u010d\u00edt\u00e1; \u010d\u00e1stky/snapshoty jdou beze zm\u011bny.
+ * Status mapuje na backend enum (Paid/Issued); `paidAt` (ISO) zkracuje na datum.
+ */
+export function toImportRequest(inv: Invoice) {
+  const c = inv.clientSnapshot
+  const s = inv.supplierSnapshot
+  return {
+    number: inv.invoiceNumber ?? '',
+    status: inv.status === 'paid' ? 'Paid' : 'Issued',
+    clientId: inv.clientId,
+    issueDate: inv.issueDate,
+    dueDate: inv.dueDate || null,
+    taxableSupplyDate: inv.taxableDate || null,
+    paidDate: inv.paidAt ? inv.paidAt.slice(0, 10) : null,
+    currency: inv.currency,
+    isVatPayer: s.vatMode === 'payer',
+    note: inv.notes,
+    client: {
+      name: c.name,
+      ico: c.ico ?? null,
+      dic: c.dic ?? null,
+      email: c.email ?? null,
+      address: importAddress(c.street, c.city, c.zip, c.country),
+    },
+    supplier: {
+      name: s.companyName,
+      ico: s.ico,
+      dic: s.dic,
+      email: s.email ?? null,
+      phone: null,
+      address: importAddress(s.street, s.city, s.zip, s.country),
+      bankAccount:
+        s.bankAccount || s.iban || s.swift
+          ? { accountNumber: s.bankAccount ?? null, iban: s.iban ?? null, bic: s.swift ?? null }
+          : null,
+    },
+    subtotal: inv.subtotal,
+    vatTotal: inv.vatTotal,
+    total: inv.total,
+    items: inv.items.map((it) => ({
+      description: it.description,
+      unit: it.unit || null,
+      quantity: it.quantity,
+      unitPrice: it.unitPrice,
+      vatRate: it.vatRate,
+      lineBase: it.lineSubtotal,
+      lineVat: it.lineVat,
+      lineTotal: it.lineTotal,
+    })),
+  }
 }

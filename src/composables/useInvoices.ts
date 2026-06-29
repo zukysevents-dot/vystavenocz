@@ -1,7 +1,7 @@
 import { storeToRefs } from 'pinia'
 import { useApi } from '@/composables/useApi'
 import { useInvoicesStore } from '@/stores/invoices'
-import { calcTotals } from '@/lib/invoice'
+import { calcTotals, toImportRequest } from '@/lib/invoice'
 import { http, isApiMode } from '@/lib/http'
 import type { Invoice } from '@/lib/types'
 
@@ -142,5 +142,17 @@ export function useInvoices() {
     return store.invoices.find((i) => i.id === id) ?? null
   }
 
-  return { invoices, load, create, update, remove, issue, pay, cancel, getById }
+  /**
+   * Import historické faktury (migrace F9) — uloží doklad JAK JE přes `POST /invoices/import`.
+   * Server nepřečísluje/nepřepočítá a je idempotentní dle čísla (existující → vrátí beze změny).
+   * Mock režim (bez backendu) jen uloží fakturu do lokálního úložiště.
+   */
+  async function importInvoice(inv: Invoice): Promise<Invoice> {
+    if (isApiMode())
+      return upsert(await http.post<Invoice>('/invoices/import', toImportRequest(inv)))
+    await api.create(inv)
+    return upsert(inv)
+  }
+
+  return { invoices, load, create, update, remove, issue, pay, cancel, getById, importInvoice }
 }
