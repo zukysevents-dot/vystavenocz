@@ -1,6 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { Plus, Search, Loader2, Pencil, Trash2, Users, Check, Building2 } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
+import {
+  Plus,
+  Search,
+  Loader2,
+  Pencil,
+  Trash2,
+  Users,
+  Check,
+  Building2,
+  Upload,
+} from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -27,6 +38,7 @@ import { useAres } from '@/composables/useAres'
 import { toast } from '@/components/ui/sonner'
 import type { Client } from '@/lib/types'
 
+const router = useRouter()
 const { clients, load, create, update, remove } = useClients()
 const ares = useAres()
 
@@ -180,7 +192,12 @@ async function onDelete() {
         <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Klienti</h1>
         <p class="mt-1 text-muted-foreground">Spravujte odběratele pro vaše faktury.</p>
       </div>
-      <Button variant="coral" @click="openCreate"> <Plus class="h-4 w-4" /> Nový klient </Button>
+      <div class="flex gap-2">
+        <Button variant="outline" @click="router.push('/app/import')">
+          <Upload class="h-4 w-4" /> Importovat
+        </Button>
+        <Button variant="coral" @click="openCreate"> <Plus class="h-4 w-4" /> Nový klient </Button>
+      </div>
     </div>
 
     <div class="mt-6 relative">

@@ -142,6 +142,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Klienti', layout: 'app', requiresAuth: true },
   },
   {
+    path: '/app/import',
+    name: 'app-import',
+    component: () => import('@/pages/ImportPage.vue'),
+    meta: { title: 'Import dat', layout: 'app', requiresAuth: true },
+  },
+  {
     path: '/app/pokladna',
     name: 'app-pokladna',
     component: () => import('@/pages/PokladnaPage.vue'),
