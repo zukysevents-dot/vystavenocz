@@ -19,6 +19,8 @@ import {
   Clock,
   CalendarDays,
   Wallet,
+  Calculator,
+  Heart,
   Menu,
   X,
 } from 'lucide-vue-next'
@@ -40,7 +42,9 @@ const nav = [
   { to: '/app/kategorie', label: 'Kategorie', icon: Tags },
   { to: '/app/faktury', label: 'Faktury', icon: FileText },
   { to: '/app/cashflow', label: 'Cashflow', icon: Wallet },
+  { to: '/app/uctarna', label: 'Účtárna', icon: Calculator },
   { to: '/app/klienti', label: 'Klienti', icon: Users },
+  { to: '/app/vernost', label: 'Věrnost', icon: Heart },
   { to: '/app/predplatne', label: 'Předplatné', icon: CreditCard },
   { to: '/app/nastaveni', label: 'Nastavení', icon: Settings },
 ]
