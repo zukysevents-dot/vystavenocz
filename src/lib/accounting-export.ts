@@ -80,16 +80,24 @@ export function invoiceToIsdoc(inv: Invoice): string {
   const vatApplicable = payer ? 'true' : 'false'
   const method = '0' // výpočet z částky bez daně
 
-  const linesXml = inv.items
-    .map((it, i) => {
-      const pct = payer ? it.vatRate : 0
+  // DPH se odvozuje ze sazby řádku, ne ze samostatného lineVat — tím je ISDOC vnitřně
+  // konzistentní i pro importované doklady, kde by neplátce mohl mít nenulové lineVat.
+  const lines = inv.items.map((it) => {
+    const pct = payer ? it.vatRate : 0
+    const lineVat = payer ? it.lineVat : 0
+    const lineIncl = it.lineSubtotal + lineVat
+    return { it, pct, lineVat, lineIncl }
+  })
+
+  const linesXml = lines
+    .map(({ it, pct, lineVat, lineIncl }, i) => {
       return (
         `<InvoiceLine>` +
         `<ID>${i + 1}</ID>` +
         `<InvoicedQuantity unitCode="${esc(it.unit || 'ks')}">${n2(it.quantity)}</InvoicedQuantity>` +
         `<LineExtensionAmount>${n2(it.lineSubtotal)}</LineExtensionAmount>` +
-        `<LineExtensionAmountTaxInclusive>${n2(it.lineTotal)}</LineExtensionAmountTaxInclusive>` +
-        `<LineExtensionTaxAmount>${n2(it.lineVat)}</LineExtensionTaxAmount>` +
+        `<LineExtensionAmountTaxInclusive>${n2(lineIncl)}</LineExtensionAmountTaxInclusive>` +
+        `<LineExtensionTaxAmount>${n2(lineVat)}</LineExtensionTaxAmount>` +
         `<UnitPrice>${n2(it.unitPrice)}</UnitPrice>` +
         `<UnitPriceTaxInclusive>${n2(it.unitPrice * (1 + pct / 100))}</UnitPriceTaxInclusive>` +
         `<ClassifiedTaxCategory><Percent>${n2(pct)}</Percent><VATCalculationMethod>${method}</VATCalculationMethod><VATApplicable>${vatApplicable}</VATApplicable></ClassifiedTaxCategory>` +
@@ -99,15 +107,21 @@ export function invoiceToIsdoc(inv: Invoice): string {
     })
     .join('')
 
-  // Skupiny DPH podle sazby (neplátce → jediná skupina 0 %).
+  // Skupiny DPH podle sazby + součtové totály — vše ze stejných (sazbou odvozených)
+  // hodnot, aby header i LegalMonetaryTotal seděly na řádky bez ohledu na zdroj dat.
   const groups = new Map<number, { base: number; vat: number; incl: number }>()
-  for (const it of inv.items) {
-    const pct = payer ? it.vatRate : 0
+  let totalBase = 0
+  let totalVat = 0
+  let totalIncl = 0
+  for (const { it, pct, lineVat, lineIncl } of lines) {
     const g = groups.get(pct) ?? { base: 0, vat: 0, incl: 0 }
     g.base += it.lineSubtotal
-    g.vat += it.lineVat
-    g.incl += it.lineTotal
+    g.vat += lineVat
+    g.incl += lineIncl
     groups.set(pct, g)
+    totalBase += it.lineSubtotal
+    totalVat += lineVat
+    totalIncl += lineIncl
   }
   const subTotalsXml = [...groups.entries()]
     .map(
@@ -168,16 +182,16 @@ export function invoiceToIsdoc(inv: Invoice): string {
     ) +
     `</AccountingCustomerParty>` +
     `<InvoiceLines>${linesXml}</InvoiceLines>` +
-    `<TaxTotal>${subTotalsXml}<TaxAmount>${n2(inv.vatTotal)}</TaxAmount></TaxTotal>` +
+    `<TaxTotal>${subTotalsXml}<TaxAmount>${n2(totalVat)}</TaxAmount></TaxTotal>` +
     `<LegalMonetaryTotal>` +
-    `<TaxExclusiveAmount>${n2(inv.subtotal)}</TaxExclusiveAmount>` +
-    `<TaxInclusiveAmount>${n2(inv.total)}</TaxInclusiveAmount>` +
+    `<TaxExclusiveAmount>${n2(totalBase)}</TaxExclusiveAmount>` +
+    `<TaxInclusiveAmount>${n2(totalIncl)}</TaxInclusiveAmount>` +
     `<AlreadyClaimedTaxExclusiveAmount>0.00</AlreadyClaimedTaxExclusiveAmount>` +
     `<AlreadyClaimedTaxInclusiveAmount>0.00</AlreadyClaimedTaxInclusiveAmount>` +
-    `<DifferenceTaxExclusiveAmount>${n2(inv.subtotal)}</DifferenceTaxExclusiveAmount>` +
-    `<DifferenceTaxInclusiveAmount>${n2(inv.total)}</DifferenceTaxInclusiveAmount>` +
+    `<DifferenceTaxExclusiveAmount>${n2(totalBase)}</DifferenceTaxExclusiveAmount>` +
+    `<DifferenceTaxInclusiveAmount>${n2(totalIncl)}</DifferenceTaxInclusiveAmount>` +
     `<PaidDepositsAmount>0.00</PaidDepositsAmount>` +
-    `<PayableAmount>${n2(inv.total)}</PayableAmount>` +
+    `<PayableAmount>${n2(totalIncl)}</PayableAmount>` +
     `</LegalMonetaryTotal>` +
     `</Invoice>`
   )
@@ -251,6 +265,16 @@ export function isdocFilename(inv: Invoice): string {
   return `${base}.isdoc`
 }
 
+/**
+ * ISDOC nabízíme jen pro CZK faktury s aspoň jednou položkou:
+ *  - cizí měna by vyžadovala přepočet na CZK kurzem ČNB k DUZP, který frontend nemá,
+ *  - ISDOC schéma vyžaduje aspoň jeden řádek (prázdný doklad je nevalidní).
+ * Radši nenabízet než exportovat špatně.
+ */
+export function canExportIsdoc(inv: Invoice): boolean {
+  return (!inv.currency || inv.currency === 'CZK') && inv.items.length > 0
+}
+
 // --- Stažení v prohlížeči (mimo unit testy) ---
 
 function triggerDownload(filename: string, content: string, mime: string): void {
@@ -264,6 +288,7 @@ function triggerDownload(filename: string, content: string, mime: string): void 
 }
 
 export function downloadIsdoc(inv: Invoice): void {
+  if (!canExportIsdoc(inv)) return // cizí měna se nenabízí (viz canExportIsdoc)
   triggerDownload(isdocFilename(inv), invoiceToIsdoc(inv), 'application/xml;charset=utf-8')
 }
 

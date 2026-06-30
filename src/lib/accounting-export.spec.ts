@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { invoiceToIsdoc, invoicesToCsv, isdocFilename } from '@/lib/accounting-export'
+import {
+  invoiceToIsdoc,
+  invoicesToCsv,
+  isdocFilename,
+  canExportIsdoc,
+} from '@/lib/accounting-export'
 import type { Invoice } from '@/lib/types'
 
 let seq = 0
@@ -135,6 +140,72 @@ describe('invoiceToIsdoc', () => {
     )
   })
 
+  it('neplátce s nenulovým lineVat (importovaný doklad) → DPH se vynuluje, ne propíše', () => {
+    // Simulace importu: neplátce, ale položka nese nenulové lineVat/lineTotal.
+    const xml = invoiceToIsdoc(
+      inv({
+        supplierSnapshot: {
+          companyName: 'OSVČ',
+          ico: '11111111',
+          dic: null,
+          vatMode: 'non_payer',
+          street: 'Hlavní 5',
+          city: 'Brno',
+          zip: '60200',
+          country: 'CZ',
+        },
+        items: [
+          {
+            id: 'a',
+            description: 'S',
+            quantity: 1,
+            unit: 'ks',
+            unitPrice: 1000,
+            vatRate: 21,
+            lineSubtotal: 1000,
+            lineVat: 210,
+            lineTotal: 1210,
+          },
+        ],
+        subtotal: 1000,
+        vatTotal: 210,
+        total: 1210,
+      }),
+    )
+    expect(xml).toContain('<LineExtensionTaxAmount>0.00</LineExtensionTaxAmount>')
+    expect(xml).toContain(
+      '<TaxTotal><TaxSubTotal><TaxableAmount>1000.00</TaxableAmount><TaxAmount>0.00</TaxAmount>',
+    )
+    expect(xml).toContain('<PayableAmount>1000.00</PayableAmount>') // bez DPH
+    expect(xml).not.toContain('210.00')
+  })
+
+  it('dobropis se zápornými částkami → součty sedí a zůstanou záporné', () => {
+    const xml = invoiceToIsdoc(
+      inv({
+        documentType: 'credit_note',
+        items: [
+          {
+            id: 'a',
+            description: 'Vratka',
+            quantity: 1,
+            unit: 'ks',
+            unitPrice: -100,
+            vatRate: 21,
+            lineSubtotal: -100,
+            lineVat: -21,
+            lineTotal: -121,
+          },
+        ],
+        subtotal: -100,
+        vatTotal: -21,
+        total: -121,
+      }),
+    )
+    expect(xml).toContain('<TaxExclusiveAmount>-100.00</TaxExclusiveAmount>')
+    expect(xml).toContain('<PayableAmount>-121.00</PayableAmount>')
+  })
+
   it('XML-escapuje speciální znaky v popisu položky', () => {
     const xml = invoiceToIsdoc(
       inv({
@@ -158,6 +229,18 @@ describe('invoiceToIsdoc', () => {
     )
     expect(xml).toContain('Servis &amp; údržba &lt;měřáku&gt;')
     expect(xml).not.toContain('Servis & údržba')
+  })
+})
+
+describe('canExportIsdoc', () => {
+  it('CZK faktura s položkami → true', () => {
+    expect(canExportIsdoc(inv())).toBe(true)
+  })
+  it('cizí měna → false (chybí kurz na CZK)', () => {
+    expect(canExportIsdoc(inv({ currency: 'EUR' }))).toBe(false)
+  })
+  it('faktura bez položek → false (ISDOC vyžaduje aspoň řádek)', () => {
+    expect(canExportIsdoc(inv({ items: [] }))).toBe(false)
   })
 })
 

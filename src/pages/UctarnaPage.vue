@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useInvoices } from '@/composables/useInvoices'
 import { formatCZK, formatDate } from '@/lib/invoice'
-import { downloadIsdoc, downloadInvoicesCsv } from '@/lib/accounting-export'
+import { downloadIsdoc, downloadInvoicesCsv, canExportIsdoc } from '@/lib/accounting-export'
 import type { Invoice, InvoiceStatus } from '@/lib/types'
 
 const { invoices, load } = useInvoices()
@@ -17,8 +17,11 @@ onMounted(async () => {
   loading.value = false
 })
 
-// Účetní doklady = vše kromě konceptů (ty ještě nejsou vystavené).
-const documents = computed(() => invoices.value.filter((i) => i.status !== 'draft'))
+// Účetní doklady = vystavené faktury. Koncepty (ještě nevystavené) ani stornované
+// (neplatné) doklady do podkladů pro účetní nepatří.
+const documents = computed(() =>
+  invoices.value.filter((i) => i.status !== 'draft' && i.status !== 'cancelled'),
+)
 
 // Dostupná období (YYYY-MM dle data vystavení), sestupně.
 const periods = computed(() => {
@@ -125,7 +128,13 @@ function exportIsdoc(inv: Invoice) {
             <span class="font-semibold">{{ formatCZK(inv.total) }}</span>
           </div>
           <div class="mt-3 flex justify-end border-t border-border pt-2">
-            <Button variant="ghost" size="sm" @click="exportIsdoc(inv)">
+            <Button
+              variant="ghost"
+              size="sm"
+              :disabled="!canExportIsdoc(inv)"
+              :title="canExportIsdoc(inv) ? 'Stáhnout ISDOC' : 'ISDOC jen pro faktury v Kč'"
+              @click="exportIsdoc(inv)"
+            >
               <FileCode2 class="h-4 w-4" /> ISDOC
             </Button>
           </div>
@@ -166,7 +175,12 @@ function exportIsdoc(inv: Invoice) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  title="Stáhnout ISDOC (XML pro účetní program)"
+                  :disabled="!canExportIsdoc(inv)"
+                  :title="
+                    canExportIsdoc(inv)
+                      ? 'Stáhnout ISDOC (XML pro účetní program)'
+                      : 'ISDOC umíme jen pro faktury v Kč'
+                  "
                   @click="exportIsdoc(inv)"
                 >
                   <FileCode2 class="h-4 w-4" /> ISDOC
