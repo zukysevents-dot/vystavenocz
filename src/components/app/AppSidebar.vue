@@ -18,6 +18,7 @@ import {
   ChefHat,
   Clock,
   CalendarDays,
+  Wallet,
   Menu,
   X,
 } from 'lucide-vue-next'
@@ -38,6 +39,7 @@ const nav = [
   { to: '/app/rezervace', label: 'Rezervace', icon: CalendarDays },
   { to: '/app/kategorie', label: 'Kategorie', icon: Tags },
   { to: '/app/faktury', label: 'Faktury', icon: FileText },
+  { to: '/app/cashflow', label: 'Cashflow', icon: Wallet },
   { to: '/app/klienti', label: 'Klienti', icon: Users },
   { to: '/app/predplatne', label: 'Předplatné', icon: CreditCard },
   { to: '/app/nastaveni', label: 'Nastavení', icon: Settings },

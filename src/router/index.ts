@@ -136,6 +136,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Editor faktury', layout: 'app', requiresAuth: true },
   },
   {
+    path: '/app/cashflow',
+    name: 'app-cashflow',
+    component: () => import('@/pages/CashflowPage.vue'),
+    meta: { title: 'Cashflow & upomínky', layout: 'app', requiresAuth: true },
+  },
+  {
     path: '/app/klienti',
     name: 'app-klienti',
     component: () => import('@/pages/KlientiPage.vue'),
