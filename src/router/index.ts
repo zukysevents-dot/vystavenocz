@@ -148,6 +148,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Účtárna', layout: 'app', requiresAuth: true },
   },
   {
+    path: '/app/vernost',
+    name: 'app-vernost',
+    component: () => import('@/pages/VernostPage.vue'),
+    meta: { title: 'Věrnost & návraty', layout: 'app', requiresAuth: true },
+  },
+  {
     path: '/app/klienti',
     name: 'app-klienti',
     component: () => import('@/pages/KlientiPage.vue'),
