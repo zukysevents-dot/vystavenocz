@@ -43,9 +43,15 @@ export function segmentLabel(s: Segment): string {
   return SEGMENT_LABELS[s]
 }
 
-/** Doklad, který se počítá do obratu (vystavená faktura; koncept/storno ne). */
+/**
+ * Doklad, který se počítá do obratu: vystavená CZK faktura (koncept/storno/dobropis ne).
+ * Cizí měny do CZK obratu nemícháme — stejné pravidlo jako Cashflow přehled.
+ */
 function isRevenue(inv: Invoice): boolean {
-  return inv.documentType === 'invoice' && inv.status !== 'draft' && inv.status !== 'cancelled'
+  const czk = !inv.currency || inv.currency === 'CZK'
+  return (
+    czk && inv.documentType === 'invoice' && inv.status !== 'draft' && inv.status !== 'cancelled'
+  )
 }
 
 function parseDateOnly(s: string): number | null {

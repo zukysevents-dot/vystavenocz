@@ -83,6 +83,18 @@ describe('buildCustomerStats', () => {
     expect(stats[0].revenue).toBe(1000)
   })
 
+  it('cizí měnu nemíchá do CZK obratu', () => {
+    const stats = buildCustomerStats(
+      [
+        inv({ clientId: 'a', total: 1000, currency: 'CZK' }),
+        inv({ clientId: 'a', total: 1000, currency: 'EUR' }),
+      ],
+      TODAY,
+    )
+    expect(stats).toHaveLength(1)
+    expect(stats[0].revenue).toBe(1000) // EUR vynecháno
+  })
+
   it('segmentuje podle dnů od posledního nákupu', () => {
     const stats = buildCustomerStats(
       [
