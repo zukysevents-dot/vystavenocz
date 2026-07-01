@@ -197,6 +197,16 @@ export interface Shift {
   updatedAt: string
 }
 
+// Pobočka / provozovna (modul Pobočky & vedení). Modely nesou locationId → tady dostane význam.
+export interface Location {
+  id: string
+  name: string
+  address: string | null
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 export type PaymentMethod = 'Cash' | 'Card'
 export type SaleStatus = 'Completed' | 'Cancelled'
 
