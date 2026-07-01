@@ -86,7 +86,25 @@ onMounted(async () => {
 })
 
 const summary = computed(() => summarizeQuotes(quotes.value, vatPayer.value))
-const formTotal = computed(() => calcTotals(form.items, vatPayer.value).total)
+
+/** Nezáporné konečné číslo (prázdný/NaN vstup z number inputu → 0). */
+function num(v: unknown): number {
+  const n = Number(v)
+  return Number.isFinite(n) && n > 0 ? n : 0
+}
+
+// Živý součet — vstupy sanitizované, ať se během editace nezobrazí NaN.
+const formTotal = computed(
+  () =>
+    calcTotals(
+      form.items.map((i) => ({
+        quantity: num(i.quantity),
+        unitPrice: num(i.unitPrice),
+        vatRate: i.vatRate,
+      })),
+      vatPayer.value,
+    ).total,
+)
 
 function suggestNumber(): string {
   const year = new Date().getFullYear()
@@ -133,8 +151,8 @@ function buildInput(): QuoteInput {
     .filter((i) => i.description.trim())
     .map((i) => ({
       description: i.description.trim(),
-      quantity: Math.max(0, Number(i.quantity) || 0),
-      unitPrice: Math.max(0, Number(i.unitPrice) || 0),
+      quantity: num(i.quantity),
+      unitPrice: num(i.unitPrice),
       vatRate: i.vatRate,
     }))
   return {
@@ -213,20 +231,32 @@ async function convertToInvoice(q: Quote) {
   convertingId.value = q.id
   try {
     const payer = vatPayer.value
-    const items: InvoiceItem[] = q.items.map((qi) => {
-      const line = calcLine(qi, payer)
-      return {
-        id: crypto.randomUUID(),
-        description: qi.description,
-        quantity: qi.quantity,
-        unit: 'ks',
-        unitPrice: qi.unitPrice,
-        vatRate: qi.vatRate,
-        lineSubtotal: line.lineSubtotal,
-        lineVat: line.lineVat,
-        lineTotal: line.lineTotal,
-      }
-    })
+    // Stejný filtr/klamp jako při ukládání — na fakturu nesmí projít prázdná/záporná položka.
+    const items: InvoiceItem[] = q.items
+      .filter((qi) => qi.description.trim())
+      .map((qi) => {
+        const clean = {
+          quantity: num(qi.quantity),
+          unitPrice: num(qi.unitPrice),
+          vatRate: qi.vatRate,
+        }
+        const line = calcLine(clean, payer)
+        return {
+          id: crypto.randomUUID(),
+          description: qi.description.trim(),
+          quantity: clean.quantity,
+          unit: 'ks',
+          unitPrice: clean.unitPrice,
+          vatRate: qi.vatRate,
+          lineSubtotal: line.lineSubtotal,
+          lineVat: line.lineVat,
+          lineTotal: line.lineTotal,
+        }
+      })
+    if (items.length === 0) {
+      toast.error('Nabídka nemá platné položky k fakturaci.')
+      return
+    }
     const now = new Date()
     const issue = now.toISOString().slice(0, 10)
     const due = new Date(now.getTime() + 14 * 86_400_000).toISOString().slice(0, 10)
@@ -250,19 +280,26 @@ async function convertToInvoice(q: Quote) {
       notes: q.note,
     }
     const created = await invoicesApi.create(input, payer)
+    // Faktura vznikla — označení nabídky za přijatou je best-effort; jeho selhání
+    // nesmí tvrdit, že převod nevyšel (jinak by retry vytvořil druhý koncept).
     if (q.status !== 'accepted') {
-      await update(q.id, {
-        number: q.number,
-        clientName: q.clientName,
-        status: 'accepted',
-        items: q.items,
-        validUntil: q.validUntil,
-        note: q.note,
-      })
+      try {
+        await update(q.id, {
+          number: q.number,
+          clientName: q.clientName,
+          status: 'accepted',
+          items: q.items,
+          validUntil: q.validUntil,
+          note: q.note,
+        })
+      } catch {
+        // ignorujeme — faktura už existuje, stav nabídky lze doopravit ručně
+      }
     }
     toast.success('Nabídka převedena na koncept faktury.')
     router.push(`/app/faktury/editor?id=${created.id}`)
   } catch {
+    // Sem se dostaneme jen když selhalo vytvoření faktury.
     toast.error('Převod na fakturu se nezdařil.')
   } finally {
     convertingId.value = null
