@@ -22,6 +22,7 @@ import {
   Calculator,
   Heart,
   Wrench,
+  FileCheck,
   Menu,
   X,
 } from 'lucide-vue-next'
@@ -41,6 +42,7 @@ const nav = [
   { to: '/app/dochazka', label: 'Docházka', icon: Clock },
   { to: '/app/rezervace', label: 'Rezervace', icon: CalendarDays },
   { to: '/app/kategorie', label: 'Kategorie', icon: Tags },
+  { to: '/app/nabidky', label: 'Nabídky', icon: FileCheck },
   { to: '/app/faktury', label: 'Faktury', icon: FileText },
   { to: '/app/cashflow', label: 'Cashflow', icon: Wallet },
   { to: '/app/uctarna', label: 'Účtárna', icon: Calculator },

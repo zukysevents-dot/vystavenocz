@@ -160,6 +160,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Zakázky & výjezdy', layout: 'app', requiresAuth: true },
   },
   {
+    path: '/app/nabidky',
+    name: 'app-nabidky',
+    component: () => import('@/pages/NabidkyPage.vue'),
+    meta: { title: 'Nabídky', layout: 'app', requiresAuth: true },
+  },
+  {
     path: '/app/klienti',
     name: 'app-klienti',
     component: () => import('@/pages/KlientiPage.vue'),

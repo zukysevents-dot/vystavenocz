@@ -162,6 +162,28 @@ export interface Job {
   updatedAt: string
 }
 
+export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'rejected'
+
+export interface QuoteItem {
+  description: string
+  quantity: number
+  unitPrice: number
+  vatRate: VatRate
+}
+
+// Cenová nabídka (modul Nabídky) — může se převést na fakturu.
+export interface Quote {
+  id: string
+  number: string
+  clientName: string | null
+  status: QuoteStatus
+  items: QuoteItem[]
+  validUntil: string | null
+  note: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export type PaymentMethod = 'Cash' | 'Card'
 export type SaleStatus = 'Completed' | 'Cancelled'
 
