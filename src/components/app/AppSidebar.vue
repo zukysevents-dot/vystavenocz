@@ -23,6 +23,7 @@ import {
   Heart,
   Wrench,
   FileCheck,
+  Percent,
   Menu,
   X,
 } from 'lucide-vue-next'
@@ -46,6 +47,7 @@ const nav = [
   { to: '/app/faktury', label: 'Faktury', icon: FileText },
   { to: '/app/cashflow', label: 'Cashflow', icon: Wallet },
   { to: '/app/uctarna', label: 'Účtárna', icon: Calculator },
+  { to: '/app/dph', label: 'Přehled DPH', icon: Percent },
   { to: '/app/klienti', label: 'Klienti', icon: Users },
   { to: '/app/vernost', label: 'Věrnost', icon: Heart },
   { to: '/app/zakazky', label: 'Zakázky', icon: Wrench },
