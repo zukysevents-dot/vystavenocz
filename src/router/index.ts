@@ -220,6 +220,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Docházka', layout: 'app', requiresAuth: true },
   },
   {
+    path: '/app/smeny',
+    name: 'app-smeny',
+    component: () => import('@/pages/SmenyPage.vue'),
+    meta: { title: 'Směny & provize', layout: 'app', requiresAuth: true },
+  },
+  {
     path: '/app/rezervace',
     name: 'app-rezervace',
     component: () => import('@/pages/RezervacePage.vue'),
