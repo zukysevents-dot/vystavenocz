@@ -184,6 +184,19 @@ export interface Quote {
   updatedAt: string
 }
 
+// Směna (modul Směny & provize) — plánovaná směna zaměstnance → mzdový podklad.
+export interface Shift {
+  id: string
+  employeeName: string
+  date: string // YYYY-MM-DD
+  start: string // HH:mm
+  end: string // HH:mm
+  hourlyRate: number
+  note: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export type PaymentMethod = 'Cash' | 'Card'
 export type SaleStatus = 'Completed' | 'Cancelled'
 

@@ -220,10 +220,22 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Zásoby', layout: 'app', requiresAuth: true },
   },
   {
+    path: '/app/naskladneni',
+    name: 'app-naskladneni',
+    component: () => import('@/pages/NaskladneniPage.vue'),
+    meta: { title: 'Naskladnění', layout: 'app', requiresAuth: true },
+  },
+  {
     path: '/app/dochazka',
     name: 'app-dochazka',
     component: () => import('@/pages/DochazkaPage.vue'),
     meta: { title: 'Docházka', layout: 'app', requiresAuth: true },
+  },
+  {
+    path: '/app/smeny',
+    name: 'app-smeny',
+    component: () => import('@/pages/SmenyPage.vue'),
+    meta: { title: 'Směny & provize', layout: 'app', requiresAuth: true },
   },
   {
     path: '/app/rezervace',
