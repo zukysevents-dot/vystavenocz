@@ -14,13 +14,24 @@ export interface SaleLineInput {
   discountPercent?: number
 }
 
+export interface SaleOptions {
+  discountPercent?: number // sleva na CELÝ účet, 0–100
+  tipAmount?: number // spropitné v Kč, mimo DPH
+}
+
 export function useSales() {
   const lastSale = ref<Sale | null>(null)
 
-  async function create(paymentMethod: PaymentMethod, items: SaleLineInput[]): Promise<Sale> {
+  async function create(
+    paymentMethod: PaymentMethod,
+    items: SaleLineInput[],
+    options?: SaleOptions,
+  ): Promise<Sale> {
     const sale = await http.post<Sale>('/sales', {
       paymentMethod,
       items: items.map((i) => ({ ...i, discountPercent: i.discountPercent ?? 0 })),
+      discountPercent: options?.discountPercent ?? 0,
+      tipAmount: options?.tipAmount ?? 0,
     })
     lastSale.value = sale
     return sale

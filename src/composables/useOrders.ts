@@ -1,11 +1,17 @@
 import { http } from '@/lib/http'
-import type { Order, PaymentMethod } from '@/lib/types'
+import type { Order, OrderSplitGroup, PaymentMethod } from '@/lib/types'
 import type { PagedResult } from '@/composables/useApi'
 
 // Poznámka a chod položky (backend AddOrderItemRequest/UpdateOrderItemRequest — Note, Course).
 export interface OrderItemMeta {
   note?: string | null
   course?: string | null
+}
+
+// Sleva na účet + spropitné — ukládá se průběžně na otevřený účet (ne až v pay()).
+export interface OrderDiscountInput {
+  discountPercent?: number
+  tipAmount?: number
 }
 
 // Otevřené účty na stole (gastro). Jen API mód (restaurační provoz proti reálnému backendu).
@@ -46,11 +52,34 @@ export function useOrders() {
   function move(orderId: string, tableId: string): Promise<Order> {
     return http.post<Order>(`/orders/${orderId}/move`, { tableId })
   }
+  // Sleva na účet a spropitné se ukládají průběžně (přežije refresh/přepnutí obsluhy),
+  // ne až při platbě — pay() je bere z aktuálního serverového stavu Order.
+  function updateDiscount(orderId: string, input: OrderDiscountInput): Promise<Order> {
+    return http.patch<Order>(`/orders/${orderId}/discount`, input)
+  }
+  // Split je čistě zobrazovací/organizační rozpočet (kdo kolik dluží) — nemění platební tok.
+  // Idempotentní: nahrazuje celé pole splitGroups, ne inkrementální patch.
+  function updateSplit(orderId: string, splitGroups: OrderSplitGroup[]): Promise<Order> {
+    return http.put<Order>(`/orders/${orderId}/split`, { splitGroups })
+  }
   function pay(orderId: string, method: PaymentMethod): Promise<Order> {
     return http.post<Order>(`/orders/${orderId}/pay`, { paymentMethod: method })
   }
   function cancel(orderId: string): Promise<Order> {
     return http.post<Order>(`/orders/${orderId}/cancel`)
   }
-  return { listOpen, get, open, addItem, updateItem, removeItem, sendToKitchen, move, pay, cancel }
+  return {
+    listOpen,
+    get,
+    open,
+    addItem,
+    updateItem,
+    removeItem,
+    sendToKitchen,
+    move,
+    updateDiscount,
+    updateSplit,
+    pay,
+    cancel,
+  }
 }
