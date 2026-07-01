@@ -14,6 +14,7 @@ import {
   RotateCcw,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Dialog,
   DialogContent,
@@ -66,12 +67,20 @@ const visibleProducts = computed(() =>
 interface CartLine {
   product: Product
   quantity: number
+  discountPercent: number
 }
 const cart = ref<CartLine[]>([])
 
-const total = computed(() =>
-  cart.value.reduce((sum, l) => sum + l.product.salePrice * l.quantity, 0),
-)
+/** Sleva na řádek jako platné procento 0–100. */
+function clampPct(v: unknown): number {
+  const n = Number(v)
+  return Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 0
+}
+function lineTotal(l: CartLine): number {
+  return l.product.salePrice * l.quantity * (1 - clampPct(l.discountPercent) / 100)
+}
+
+const total = computed(() => cart.value.reduce((sum, l) => sum + lineTotal(l), 0))
 const itemCount = computed(() => cart.value.reduce((sum, l) => sum + l.quantity, 0))
 
 onMounted(async () => {
@@ -93,7 +102,7 @@ onMounted(async () => {
 function addToCart(p: Product) {
   const line = cart.value.find((l) => l.product.id === p.id)
   if (line) line.quantity++
-  else cart.value.push({ product: p, quantity: 1 })
+  else cart.value.push({ product: p, quantity: 1, discountPercent: 0 })
 }
 
 function inc(line: CartLine) {
@@ -117,7 +126,7 @@ async function pay(method: PaymentMethod) {
     const receiptLines = cart.value.map((l) => ({
       name: l.product.name,
       qty: l.quantity,
-      total: l.product.salePrice * l.quantity,
+      total: lineTotal(l),
     }))
     const items = cart.value.map((l) => ({
       productId: l.product.id,
@@ -125,6 +134,7 @@ async function pay(method: PaymentMethod) {
       quantity: l.quantity,
       unitPrice: l.product.salePrice,
       vatRate: l.product.vatRate,
+      discountPercent: clampPct(l.discountPercent),
     }))
     const sale = await sales.create(method, items)
     receiptData.value = buildReceipt({
@@ -311,6 +321,9 @@ function saleTime(iso: string): string {
               <div class="truncate font-medium">{{ line.product.name }}</div>
               <div class="text-xs text-muted-foreground tabular-nums">
                 {{ formatCZK(line.product.salePrice) }} × {{ line.quantity }}
+                <span v-if="clampPct(line.discountPercent) > 0" class="text-primary">
+                  · −{{ clampPct(line.discountPercent) }}% = {{ formatCZK(lineTotal(line)) }}
+                </span>
               </div>
             </div>
             <div class="flex items-center gap-1">
@@ -321,6 +334,18 @@ function saleTime(iso: string): string {
               <Button variant="outline" size="icon" class="h-8 w-8" @click="inc(line)">
                 <Plus class="h-3.5 w-3.5" />
               </Button>
+              <div class="flex items-center">
+                <Input
+                  v-model.number="line.discountPercent"
+                  type="number"
+                  min="0"
+                  max="100"
+                  class="h-8 w-12 px-1 text-center"
+                  title="Sleva v %"
+                  aria-label="Sleva v procentech"
+                />
+                <span class="ml-0.5 text-xs text-muted-foreground">%</span>
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
