@@ -23,11 +23,16 @@ export interface VatSummary {
   count: number // počet zahrnutých dokladů
 }
 
-/** Doklad relevantní pro DPH: vystavená CZK faktura (koncept/storno/dobropis/cizí měna ne). */
+/**
+ * Doklad relevantní pro DPH: vystavená CZK faktura s DUZP (koncept/storno/dobropis/
+ * cizí měna ne). Bez taxableDate by doklad tiše spadl jen do 'all', ale ne do žádného
+ * konkrétního období → vyloučíme, ať 'all' == součet období.
+ */
 function isVatRelevant(inv: Invoice): boolean {
   const czk = !inv.currency || inv.currency === 'CZK'
   return (
     czk &&
+    !!inv.taxableDate &&
     inv.documentType === 'invoice' &&
     (inv.status === 'issued' || inv.status === 'paid' || inv.status === 'overdue')
   )
@@ -50,10 +55,13 @@ export function vatSummary(invoices: Invoice[], period: string): VatSummary {
 
   const map = new Map<number, { base: number; vat: number }>()
   for (const inv of relevant) {
+    // DPH gate-ujeme dle dodavatele: neplátce nemá daň na výstupu i kdyby importovaný
+    // doklad nesl nenulové lineVat (stejná ochrana jako ISDOC export).
+    const payer = inv.supplierSnapshot?.vatMode === 'payer'
     for (const it of inv.items) {
       const g = map.get(it.vatRate) ?? { base: 0, vat: 0 }
       g.base += it.lineSubtotal
-      g.vat += it.lineVat
+      g.vat += payer ? it.lineVat : 0
       map.set(it.vatRate, g)
     }
   }

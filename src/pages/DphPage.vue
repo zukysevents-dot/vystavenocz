@@ -109,8 +109,8 @@ function periodLabel(p: string): string {
       </div>
 
       <p class="mt-3 text-xs text-muted-foreground">
-        Orientační podklad z vystavených faktur (dle DUZP). Nenahrazuje daňové přiznání ani
-        kontrolní hlášení.
+        Orientační podklad z vystavených faktur v Kč (dle DUZP). Nezahrnuje dobropisy ani cizí měny.
+        Nenahrazuje daňové přiznání ani kontrolní hlášení.
       </p>
     </template>
   </div>

@@ -108,6 +108,35 @@ describe('vatSummary', () => {
     expect(s.totalVat).toBe(0)
     expect(s.rows[0]).toEqual({ rate: 0, base: 5000, vat: 0 })
   })
+
+  it('neplátce s NENULOVÝM lineVat (importovaný doklad) → daň 0, ne nafouknutá', () => {
+    const nonPayer = {
+      companyName: 'OSVČ',
+      ico: '1',
+      dic: null,
+      vatMode: 'non_payer' as const,
+      street: null,
+      city: null,
+      zip: null,
+    }
+    const s = vatSummary(
+      [
+        inv({
+          supplierSnapshot: nonPayer,
+          items: [item({ vatRate: 21, lineSubtotal: 1000, lineVat: 210 })],
+        }),
+      ],
+      'all',
+    )
+    expect(s.totalBase).toBe(1000)
+    expect(s.totalVat).toBe(0) // DPH se neplátci nepřičte
+  })
+
+  it('faktura bez DUZP se nezapočítá ani v „all"', () => {
+    const s = vatSummary([inv({ taxableDate: '' })], 'all')
+    expect(s.count).toBe(0)
+    expect(s.totalBase).toBe(0)
+  })
 })
 
 describe('availablePeriods', () => {
