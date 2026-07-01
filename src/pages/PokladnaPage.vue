@@ -36,8 +36,9 @@ import ReceiptDialog from '@/components/ReceiptDialog.vue'
 import { useProducts } from '@/composables/useProducts'
 import { useCategories } from '@/composables/useCategories'
 import { useSales } from '@/composables/useSales'
-import { formatCZK } from '@/lib/invoice'
+import { formatCZK, round2 } from '@/lib/invoice'
 import { buildReceipt, type ReceiptInfo } from '@/lib/receipt'
+import { calcPosTotals, clampAmount, clampPercent } from '@/lib/posCalc'
 import { ApiError, isApiMode } from '@/lib/http'
 import { useCompanyStore } from '@/stores/company'
 import { toast } from '@/components/ui/sonner'
@@ -80,8 +81,29 @@ function lineTotal(l: CartLine): number {
   return l.product.salePrice * l.quantity * (1 - clampPct(l.discountPercent) / 100)
 }
 
-const total = computed(() => cart.value.reduce((sum, l) => sum + lineTotal(l), 0))
 const itemCount = computed(() => cart.value.reduce((sum, l) => sum + l.quantity, 0))
+
+// Sleva na účet (%) + spropitné (Kč) — nad rámec řádkové slevy, počítané společně přes posCalc.
+const accountDiscountPercent = ref(0)
+const tipAmount = ref(0)
+const TIP_PRESETS = [10, 15, 20, 25] as const
+
+const totals = computed(() =>
+  calcPosTotals(
+    cart.value.map((l) => ({
+      quantity: l.quantity,
+      unitPrice: l.product.salePrice,
+      vatRate: l.product.vatRate,
+      discountPercent: l.discountPercent,
+    })),
+    accountDiscountPercent.value,
+    tipAmount.value,
+  ),
+)
+
+function setTipPercent(pct: number) {
+  tipAmount.value = round2((totals.value.subtotalGross - totals.value.discountAmount) * (pct / 100))
+}
 
 onMounted(async () => {
   companyStore.init() // profil firmy (název/adresa) pro hlavičku účtenky
@@ -117,6 +139,8 @@ function removeLine(line: CartLine) {
 }
 function clearCart() {
   cart.value = []
+  accountDiscountPercent.value = 0
+  tipAmount.value = 0
 }
 
 async function pay(method: PaymentMethod) {
@@ -136,10 +160,19 @@ async function pay(method: PaymentMethod) {
       vatRate: l.product.vatRate,
       discountPercent: clampPct(l.discountPercent),
     }))
-    const sale = await sales.create(method, items)
+    // Kč hodnota slevy na účet nejde odvodit ze Sale response (ta nese jen totaly PO slevě),
+    // proto se bere z FE snapshotu před odesláním — jen pro zobrazení na účtence.
+    const discountAmountSnapshot = totals.value.discountAmount
+    const sale = await sales.create(method, items, {
+      discountPercent: clampPercent(accountDiscountPercent.value),
+      tipAmount: clampAmount(tipAmount.value),
+    })
     receiptData.value = buildReceipt({
       company: companyStore.company,
       items: receiptLines,
+      discountPercent: sale.discountPercent,
+      discountAmount: discountAmountSnapshot,
+      tipAmount: sale.tipAmount,
       total: sale.total,
       method,
       id: sale.id,
@@ -359,10 +392,66 @@ function saleTime(iso: string): string {
           </div>
         </div>
 
+        <div v-if="cart.length" class="space-y-2 border-t border-border p-4">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-sm text-muted-foreground">Sleva na účet</span>
+            <div class="flex items-center">
+              <Input
+                v-model.number="accountDiscountPercent"
+                type="number"
+                min="0"
+                max="100"
+                class="h-8 w-16 px-1 text-center"
+                aria-label="Sleva na účet v procentech"
+              />
+              <span class="ml-1 text-xs text-muted-foreground">%</span>
+            </div>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-sm text-muted-foreground">Spropitné</span>
+            <div class="flex items-center gap-1">
+              <Input
+                v-model.number="tipAmount"
+                type="number"
+                min="0"
+                class="h-8 w-20 px-1 text-right"
+                aria-label="Spropitné v Kč"
+              />
+              <span class="text-xs text-muted-foreground">Kč</span>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            <Button
+              v-for="pct in TIP_PRESETS"
+              :key="pct"
+              type="button"
+              variant="outline"
+              size="sm"
+              class="h-7 px-2 text-xs"
+              @click="setTipPercent(pct)"
+            >
+              {{ pct }} %
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              class="h-7 px-2 text-xs text-muted-foreground"
+              @click="tipAmount = 0"
+            >
+              Bez spropitného
+            </Button>
+          </div>
+        </div>
+
         <div class="border-t border-border p-4">
+          <div v-if="totals.discountAmount" class="mb-1 flex items-center justify-between text-sm">
+            <span class="text-muted-foreground">Sleva</span>
+            <span class="tabular-nums text-primary">−{{ formatCZK(totals.discountAmount) }}</span>
+          </div>
           <div class="mb-3 flex items-center justify-between">
             <span class="text-sm text-muted-foreground">Celkem</span>
-            <span class="text-2xl font-bold tabular-nums">{{ formatCZK(total) }}</span>
+            <span class="text-2xl font-bold tabular-nums">{{ formatCZK(totals.total) }}</span>
           </div>
           <div class="grid grid-cols-2 gap-2">
             <Button

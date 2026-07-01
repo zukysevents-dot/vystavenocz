@@ -26,6 +26,9 @@ withDefaults(
     items: ReceiptLine[]
     subtotal?: number
     vatLines?: ReceiptVatLine[]
+    discountPercent?: number
+    discountAmount?: number
+    tipAmount?: number
     total: number
     paymentMethod: string
     footer?: string
@@ -125,6 +128,13 @@ const money = (n: number) =>
       >
         <span>DPH {{ v.rate }} % ze {{ money(v.base) }}</span>
         <span class="tabular-nums">{{ money(v.vat) }} Kč</span>
+      </div>
+      <div v-if="discountAmount" class="flex justify-between">
+        <span>Sleva{{ discountPercent ? ` (${discountPercent} %)` : '' }}</span>
+        <span class="tabular-nums">−{{ money(discountAmount) }} Kč</span>
+      </div>
+      <div v-if="tipAmount" class="flex justify-between">
+        <span>Spropitné</span><span class="tabular-nums">{{ money(tipAmount) }} Kč</span>
       </div>
     </div>
 

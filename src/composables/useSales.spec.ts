@@ -11,7 +11,7 @@ beforeEach(() => {
 })
 
 describe('useSales — kontrakt volání', () => {
-  it('create vždy posílá discountPercent (default 0)', async () => {
+  it('create vždy posílá discountPercent (default 0) na řádku i na účtu, tipAmount 0', async () => {
     vi.mocked(http.post).mockResolvedValue({ id: 's1' } as never)
     await useSales().create('Cash', [
       { productId: 'p1', description: 'Burger', quantity: 1, unitPrice: 199, vatRate: 12 },
@@ -28,7 +28,57 @@ describe('useSales — kontrakt volání', () => {
           discountPercent: 0,
         },
       ],
+      discountPercent: 0,
+      tipAmount: 0,
     })
+  })
+
+  it('create pošle zadanou slevu na účet a spropitné', async () => {
+    vi.mocked(http.post).mockResolvedValue({ id: 's1' } as never)
+    await useSales().create(
+      'Card',
+      [{ productId: 'p1', description: 'Burger', quantity: 1, unitPrice: 199, vatRate: 12 }],
+      { discountPercent: 10, tipAmount: 50 },
+    )
+    expect(http.post).toHaveBeenCalledWith(
+      '/sales',
+      expect.objectContaining({ discountPercent: 10, tipAmount: 50 }),
+    )
+  })
+
+  it('create s options obsahujícím jen discountPercent doplní tipAmount na 0', async () => {
+    vi.mocked(http.post).mockResolvedValue({ id: 's1' } as never)
+    await useSales().create(
+      'Card',
+      [{ productId: 'p1', description: 'Burger', quantity: 1, unitPrice: 199, vatRate: 12 }],
+      { discountPercent: 15 },
+    )
+    expect(http.post).toHaveBeenCalledWith(
+      '/sales',
+      expect.objectContaining({ discountPercent: 15, tipAmount: 0 }),
+    )
+  })
+
+  it('create s options obsahujícím jen tipAmount doplní discountPercent na 0', async () => {
+    vi.mocked(http.post).mockResolvedValue({ id: 's1' } as never)
+    await useSales().create(
+      'Card',
+      [{ productId: 'p1', description: 'Burger', quantity: 1, unitPrice: 199, vatRate: 12 }],
+      { tipAmount: 30 },
+    )
+    expect(http.post).toHaveBeenCalledWith(
+      '/sales',
+      expect.objectContaining({ discountPercent: 0, tipAmount: 30 }),
+    )
+  })
+
+  it('create vrací sale response z API (např. i s vypočtenými totals ze serveru)', async () => {
+    const serverSale = { id: 's1', totalNet: 100, totalVat: 21, discountPercent: 10, tipAmount: 20 }
+    vi.mocked(http.post).mockResolvedValue(serverSale as never)
+    const result = await useSales().create('Cash', [
+      { productId: 'p1', description: 'Burger', quantity: 1, unitPrice: 199, vatRate: 12 },
+    ])
+    expect(result).toEqual(serverSale)
   })
 
   it('list volá GET /sales a rozbalí paged obálku (.items)', async () => {

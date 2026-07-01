@@ -11,6 +11,9 @@ export interface ReceiptInfo {
   dateTime: string
   table?: string
   items: ReceiptLine[]
+  discountPercent?: number
+  discountAmount?: number
+  tipAmount?: number
   total: number
   paymentMethod: string
 }
@@ -18,6 +21,9 @@ export interface ReceiptInfo {
 interface BuildReceiptArgs {
   company: Company | null
   items: ReceiptLine[]
+  discountPercent?: number
+  discountAmount?: number
+  tipAmount?: number
   total: number
   method: PaymentMethod
   /** Zdroj čísla účtenky (id prodeje/účtu) — zkrátí se na čitelný kód. */
@@ -28,6 +34,9 @@ interface BuildReceiptArgs {
 export function buildReceipt({
   company,
   items,
+  discountPercent,
+  discountAmount,
+  tipAmount,
   total,
   method,
   id,
@@ -51,6 +60,9 @@ export function buildReceipt({
     }),
     table,
     items,
+    discountPercent: discountPercent || undefined,
+    discountAmount: discountAmount || undefined,
+    tipAmount: tipAmount || undefined,
     total,
     paymentMethod: method === 'Cash' ? 'Hotově' : 'Kartou',
   }

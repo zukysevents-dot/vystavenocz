@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   Loader2,
   Minus,
@@ -12,6 +12,8 @@ import {
   Package,
   Ban,
   StickyNote,
+  Users,
+  Trash2,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -33,9 +35,24 @@ import { useProducts } from '@/composables/useProducts'
 import { useCategories } from '@/composables/useCategories'
 import { useOrders } from '@/composables/useOrders'
 import { ApiError, isApiMode } from '@/lib/http'
-import { formatCZK } from '@/lib/invoice'
+import { formatCZK, round2 } from '@/lib/invoice'
+import {
+  calcPosTotals,
+  calcSplitGroupTotal,
+  clampAmount,
+  clampPercent,
+  totalAssignedFraction,
+} from '@/lib/posCalc'
 import { toast } from '@/components/ui/sonner'
-import type { Category, DiningTable, Floor, Order, OrderItemLine, PaymentMethod } from '@/lib/types'
+import type {
+  Category,
+  DiningTable,
+  Floor,
+  Order,
+  OrderItemLine,
+  OrderSplitGroup,
+  PaymentMethod,
+} from '@/lib/types'
 
 const floorsApi = useFloors()
 const tablesApi = useTables()
@@ -119,6 +136,7 @@ async function selectTable(table: DiningTable) {
       await refreshOpen()
       mode.value = 'order'
     }
+    syncDiscountFromOrder(currentOrder.value)
   } catch (e) {
     toast.error('Účet se nepodařilo otevřít.')
     console.error(e)
@@ -128,9 +146,93 @@ async function selectTable(table: DiningTable) {
 }
 
 function backToMap() {
+  cancelPendingDiscountUpdate() // rozpracovaná sleva/tip pro opuštěný stůl se dál neposílá
   mode.value = 'map'
   selectedTable.value = null
   currentOrder.value = null
+  accountDiscountPercent.value = 0
+  tipAmount.value = 0
+}
+
+// --- Sleva na účet + spropitné (ukládá se průběžně, ne až při platbě) ---
+const accountDiscountPercent = ref(0)
+const tipAmount = ref(0)
+const TIP_PRESETS = [10, 15, 20, 25] as const
+let discountTimer: ReturnType<typeof setTimeout> | null = null
+
+// Zruší naplánovaný (ještě neodeslaný) update — volat před opuštěním/zrušením/přesunem účtu,
+// ať po 500 ms nevystřelí PATCH na už neaktuální/zavřený Order.
+function cancelPendingDiscountUpdate() {
+  if (discountTimer) {
+    clearTimeout(discountTimer)
+    discountTimer = null
+  }
+}
+// Odchod z routy (jiná stránka) uprostřed rozpracované změny — timer by běžel dál na pozadí.
+onBeforeUnmount(cancelPendingDiscountUpdate)
+
+function syncDiscountFromOrder(order: Order) {
+  accountDiscountPercent.value = order.discountPercent
+  tipAmount.value = order.tipAmount
+}
+
+// Volá se po každé změně vstupu; no-op pokud hodnoty už odpovídají persistovanému stavu
+// (např. těsně po syncDiscountFromOrder) — vyhne se zbytečnému requestu.
+function scheduleDiscountUpdate() {
+  if (!currentOrder.value) return
+  const pct = clampPercent(accountDiscountPercent.value)
+  const tip = clampAmount(tipAmount.value)
+  if (pct === currentOrder.value.discountPercent && tip === currentOrder.value.tipAmount) return
+  cancelPendingDiscountUpdate()
+  const orderId = currentOrder.value.id
+  discountTimer = setTimeout(() => {
+    discountTimer = null
+    ordersApi
+      .updateDiscount(orderId, { discountPercent: pct, tipAmount: tip })
+      .then((updated) => {
+        if (currentOrder.value?.id === orderId) currentOrder.value = updated
+      })
+      .catch((e) => {
+        // Účet mezitím opustil/zrušil/přesunul uživatel jinam — nezobrazovat matoucí chybu.
+        if (currentOrder.value?.id !== orderId) return
+        toast.error('Uložení slevy/spropitného selhalo.')
+        console.error(e)
+      })
+  }, 500)
+}
+watch([accountDiscountPercent, tipAmount], scheduleDiscountUpdate)
+
+// Před platbou zajistí, že rozpracovaná sleva/tip jsou skutečně uložené na serveru
+// (pay() je bere jen z persistovaného stavu Order, ne z requestu).
+async function flushDiscountUpdate() {
+  if (!currentOrder.value) return
+  cancelPendingDiscountUpdate()
+  const pct = clampPercent(accountDiscountPercent.value)
+  const tip = clampAmount(tipAmount.value)
+  if (pct === currentOrder.value.discountPercent && tip === currentOrder.value.tipAmount) return
+  currentOrder.value = await ordersApi.updateDiscount(currentOrder.value.id, {
+    discountPercent: pct,
+    tipAmount: tip,
+  })
+}
+
+const totals = computed(() =>
+  currentOrder.value
+    ? calcPosTotals(
+        currentOrder.value.items.map((i) => ({
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+          vatRate: i.vatRate,
+        })),
+        accountDiscountPercent.value,
+        tipAmount.value,
+      )
+    : null,
+)
+
+function setTipPercent(pct: number) {
+  if (!totals.value) return
+  tipAmount.value = round2((totals.value.subtotalGross - totals.value.discountAmount) * (pct / 100))
 }
 
 async function addProduct(productId: string) {
@@ -203,6 +305,97 @@ async function saveItemMeta() {
   }
 }
 
+// --- Split účtu — přiřazení položek (i po částech) osobám/skupinám. Čistě zobrazovací
+// rozpočet, NEmění platební tok — pay() pořád platí celý účet najednou. ---
+const splitDialogOpen = ref(false)
+const splitGroups = ref<OrderSplitGroup[]>([])
+const savingSplit = ref(false)
+
+function openSplitDialog() {
+  if (!currentOrder.value) return
+  // Kopie, ať editace v dialogu neovlivní currentOrder dřív, než se uloží.
+  // splitGroups je nové pole — starší/neaktualizovaný backend ho nemusí ještě vracet.
+  splitGroups.value = (currentOrder.value.splitGroups ?? []).map((g) => ({
+    ...g,
+    items: g.items.map((i) => ({ ...i })),
+  }))
+  splitDialogOpen.value = true
+}
+
+function addSplitGroup() {
+  splitGroups.value.push({
+    id: crypto.randomUUID(),
+    label: `Osoba ${splitGroups.value.length + 1}`,
+    items: [],
+  })
+}
+function removeSplitGroup(id: string) {
+  splitGroups.value = splitGroups.value.filter((g) => g.id !== id)
+}
+
+function getFraction(group: OrderSplitGroup, itemId: string): number {
+  return group.items.find((i) => i.itemId === itemId)?.fraction ?? 0
+}
+// pct = zadané procento (0–100) — ořízne se na zbývající volný podíl položky napříč OSTATNÍMI
+// skupinami, ať součet frakcí pro jednu položku nikdy nepřesáhne 1 (100 %).
+function setFraction(group: OrderSplitGroup, itemId: string, pct: number) {
+  const maxAllowed = 1 - totalAssignedFraction(splitGroups.value, itemId, group)
+  const fraction = Math.min(maxAllowed, clampPercent(pct) / 100)
+  const existing = group.items.find((i) => i.itemId === itemId)
+  if (fraction <= 0) {
+    group.items = group.items.filter((i) => i.itemId !== itemId)
+  } else if (existing) {
+    existing.fraction = fraction
+  } else {
+    group.items.push({ itemId, fraction })
+  }
+}
+
+function unassignedPercent(itemId: string): number {
+  return Math.round((1 - totalAssignedFraction(splitGroups.value, itemId)) * 100)
+}
+
+function groupTotal(group: OrderSplitGroup): number {
+  if (!currentOrder.value) return 0
+  // Bere se z lokálních refs (accountDiscountPercent/tipAmount), NE z currentOrder.value —
+  // ty se ukládají na server debounced (viz scheduleDiscountUpdate), takže krátce po změně
+  // ještě neodpovídají persistovanému stavu. Stejný zdroj jako panel účtu (computed totals).
+  return calcSplitGroupTotal(
+    currentOrder.value.items.map((i) => ({
+      itemId: i.id,
+      quantity: i.quantity,
+      unitPrice: i.unitPrice,
+      vatRate: i.vatRate,
+    })),
+    group,
+    accountDiscountPercent.value,
+    tipAmount.value,
+  )
+}
+
+async function saveSplit() {
+  if (!currentOrder.value || savingSplit.value) return
+  savingSplit.value = true
+  try {
+    currentOrder.value = await ordersApi.updateSplit(currentOrder.value.id, splitGroups.value)
+    toast.success('Rozdělení účtu uloženo.')
+    splitDialogOpen.value = false
+  } catch (e) {
+    // Účet mezitím zaplatil/zrušil jiný terminál — konkrétní hláška, dialog zavřít a odejít na mapu.
+    if (e instanceof ApiError && (e.status === 404 || e.status === 409)) {
+      toast.error('Účet mezitím zaplatil nebo zrušil jiný terminál.')
+      splitDialogOpen.value = false
+      await refreshOpen()
+      backToMap()
+    } else {
+      toast.error('Uložení rozdělení selhalo.')
+    }
+    console.error(e)
+  } finally {
+    savingSplit.value = false
+  }
+}
+
 // --- Přesun účtu na jiný stůl (v rámci aktuálního patra) ---
 const moveDialogOpen = ref(false)
 const freeTables = computed(() => tables.value.filter((t) => !occupancy.value.has(t.id)))
@@ -255,14 +448,20 @@ async function sendToKitchen() {
 
 async function pay(method: PaymentMethod) {
   if (!currentOrder.value || busy.value) return
-  const order = currentOrder.value
   const tableName = selectedTable.value?.name
   busy.value = true
   try {
+    await flushDiscountUpdate() // sleva/tip musí být uložené na Order, pay() je bere ze serveru
+    if (!currentOrder.value) return
+    const order = currentOrder.value
+    const discountAmountSnapshot = totals.value?.discountAmount
     const paid = await ordersApi.pay(order.id, method)
     receiptData.value = buildReceipt({
       company: companyStore.company,
       items: order.items.map((i) => ({ name: i.name, qty: i.quantity, total: i.lineTotal })),
+      discountPercent: paid.discountPercent,
+      discountAmount: discountAmountSnapshot,
+      tipAmount: paid.tipAmount,
       total: paid.total,
       method,
       id: order.id,
@@ -525,11 +724,74 @@ const hasNewItems = computed(() =>
             </div>
           </div>
 
+          <div class="space-y-2 border-t border-border p-4">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-sm text-muted-foreground">Sleva na účet</span>
+              <div class="flex items-center">
+                <Input
+                  v-model.number="accountDiscountPercent"
+                  type="number"
+                  min="0"
+                  max="100"
+                  class="h-8 w-16 px-1 text-center"
+                  :disabled="busy"
+                  aria-label="Sleva na účet v procentech"
+                />
+                <span class="ml-1 text-xs text-muted-foreground">%</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-sm text-muted-foreground">Spropitné</span>
+              <div class="flex items-center gap-1">
+                <Input
+                  v-model.number="tipAmount"
+                  type="number"
+                  min="0"
+                  class="h-8 w-20 px-1 text-right"
+                  :disabled="busy"
+                  aria-label="Spropitné v Kč"
+                />
+                <span class="text-xs text-muted-foreground">Kč</span>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              <Button
+                v-for="pct in TIP_PRESETS"
+                :key="pct"
+                type="button"
+                variant="outline"
+                size="sm"
+                class="h-7 px-2 text-xs"
+                :disabled="busy"
+                @click="setTipPercent(pct)"
+              >
+                {{ pct }} %
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                class="h-7 px-2 text-xs text-muted-foreground"
+                :disabled="busy"
+                @click="tipAmount = 0"
+              >
+                Bez spropitného
+              </Button>
+            </div>
+          </div>
+
           <div class="border-t border-border p-4">
+            <div
+              v-if="totals?.discountAmount"
+              class="mb-1 flex items-center justify-between text-sm"
+            >
+              <span class="text-muted-foreground">Sleva</span>
+              <span class="tabular-nums text-primary">−{{ formatCZK(totals.discountAmount) }}</span>
+            </div>
             <div class="mb-3 flex items-center justify-between">
               <span class="text-sm text-muted-foreground">Celkem</span>
               <span class="text-2xl font-bold tabular-nums">{{
-                formatCZK(currentOrder.total)
+                formatCZK(totals?.total ?? currentOrder.total)
               }}</span>
             </div>
 
@@ -559,6 +821,15 @@ const hasNewItems = computed(() =>
                 <CreditCard class="h-4 w-4" /> Kartou
               </Button>
             </div>
+            <Button
+              v-if="currentOrder.items.length"
+              variant="ghost"
+              class="mt-2 w-full"
+              :disabled="busy"
+              @click="openSplitDialog"
+            >
+              <Users class="h-4 w-4" /> Rozdělit účet
+            </Button>
             <Button
               v-if="freeTables.length"
               variant="ghost"
@@ -648,6 +919,97 @@ const hasNewItems = computed(() =>
         </div>
         <DialogFooter>
           <Button type="button" variant="ghost" @click="moveDialogOpen = false">Zrušit</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Rozdělit účet — přiřazení položek (i po částech) osobám. Jen rozpočet, neplatí se zvlášť. -->
+    <Dialog v-model:open="splitDialogOpen">
+      <DialogContent class="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Rozdělit účet</DialogTitle>
+          <DialogDescription>
+            Přiřaďte položky (i po částech v %) jednotlivým osobám. Nepřiřazená část zůstává
+            společná.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <div
+            v-for="g in splitGroups"
+            :key="g.id"
+            class="flex items-center gap-1 rounded-lg border border-border py-1 pl-2 pr-1"
+          >
+            <Input v-model="g.label" class="h-7 w-24 border-0 px-1 text-sm shadow-none" />
+            <span class="whitespace-nowrap text-xs text-muted-foreground tabular-nums">{{
+              formatCZK(groupTotal(g))
+            }}</span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              class="h-6 w-6"
+              title="Odebrat osobu"
+              @click="removeSplitGroup(g.id)"
+            >
+              <Trash2 class="h-3 w-3 text-destructive" />
+            </Button>
+          </div>
+          <Button type="button" variant="outline" size="sm" @click="addSplitGroup">
+            <Plus class="h-3.5 w-3.5" /> Přidat osobu
+          </Button>
+        </div>
+
+        <div
+          v-if="splitGroups.length"
+          class="max-h-[45vh] space-y-2 overflow-y-auto rounded-lg border border-border p-2"
+        >
+          <div
+            v-for="it in currentOrder?.items ?? []"
+            :key="it.id"
+            class="rounded-lg border border-border p-2"
+          >
+            <div class="mb-1.5 flex items-center justify-between text-sm font-medium">
+              <span>{{ it.name }} ({{ it.quantity }}×)</span>
+              <span class="tabular-nums">{{ formatCZK(it.lineTotal) }}</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+              <div v-for="g in splitGroups" :key="g.id" class="flex items-center gap-1">
+                <span class="text-xs text-muted-foreground">{{ g.label }}</span>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  class="h-7 w-14 px-1 text-center text-xs"
+                  :model-value="Math.round(getFraction(g, it.id) * 100)"
+                  @update:model-value="(v) => setFraction(g, it.id, Number(v))"
+                />
+                <span class="text-xs text-muted-foreground">%</span>
+              </div>
+            </div>
+            <p v-if="unassignedPercent(it.id) > 0" class="mt-1 text-xs text-muted-foreground">
+              Nepřiřazeno: {{ unassignedPercent(it.id) }} %
+            </p>
+          </div>
+        </div>
+        <p
+          v-else
+          class="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground"
+        >
+          Přidejte alespoň jednu osobu, abyste mohli přiřazovat položky.
+        </p>
+
+        <DialogFooter>
+          <Button type="button" variant="ghost" @click="splitDialogOpen = false">Zavřít</Button>
+          <Button
+            type="button"
+            variant="coral"
+            :disabled="savingSplit || !splitGroups.length"
+            @click="saveSplit"
+          >
+            <Loader2 v-if="savingSplit" class="h-4 w-4 animate-spin" />
+            Uložit rozdělení
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

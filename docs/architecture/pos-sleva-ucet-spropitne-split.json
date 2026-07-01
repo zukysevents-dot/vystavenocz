@@ -1,0 +1,127 @@
+{
+  "mode": "design",
+  "status": "approved",
+  "summary": "Návrh rozšíření Pokladny a Restaurace o slevu na účet (order-level), spropitné a frakční split účtu po skupinách v Restauraci. Revize po rozhodnutí uživatele: (1) split podporuje sdílení jedné položky mezi více skupin přes podílové frakce, (2) tip má rychlá tlačítka 10/15/20/25 % nad pevnou částkou, (3) sleva/tip na Order se ukládají průběžně novým dílčím endpointem, ne až v pay(). Rozděleno do dvou dávek: A (sleva na účet + spropitné, oba moduly) a B (frakční split, jen Restaurace, staví na A).",
+  "assumptions": [
+    "Sleva na účet se reprezentuje jako discountPercent (0-100), stejně jako dnešní řádková sleva v Pokladně — ne discountAmount. Důvod: konzistence s existující konvencí a jednoduchý přepočet do DPH rozpadu (procento zachová poměr net/vat v každé sazbě).",
+    "Pořadí výpočtu: (1) sleva na řádek → lineNet/lineVat/lineTotal (beze změny, už funguje), (2) součet řádků → mezisoučet subtotalNet/subtotalVat/subtotalGross, (3) sleva na účet se aplikuje procentuálně na mezisoučet PO řádkových slevách → totalNet/totalVat, (4) spropitné (tipAmount) se přičte čistě k finálnímu total a NEVSTUPUJE do totalNet/totalVat (tip není zdanitelné plnění) → total = totalNet + totalVat + tipAmount.",
+    "Order potřebuje totalNet/totalVat stejně jako Sale (dnes je nemá vůbec) — jinak nejde konzistentně spočítat slevu na účet vůči DPH rozpadu a promítnout ji do Sale při platbě. Sjednocení struktury je nutné, ne kosmetické.",
+    "discountPercent a tipAmount na Order se ukládají PRŮBĚŽNĚ během obsluhy stolu (rozhodnutí uživatele, bod 3) — nový dílčí endpoint, ne až v pay(). Musí přežít refresh stránky i přepnutí obsluhy u stolu, stejně jako dnes přežívají items po addItem/updateItem.",
+    "tipAmount je vždy jen výsledná uložená částka v Kč (number). Rychlá tlačítka 10/15/20/25 % jsou čistě UI pomůcka, která dopočítá tipAmount z aktuálního mezisoučtu po slevě — datový model se tím nemění, procento se nikam neukládá (rozhodnutí uživatele, bod 2, potvrzeno).",
+    "Split (Dávka B) podporuje frakční přiřazení položky do více skupin současně (rozhodnutí uživatele, bod 1) — nahrazuje původní model '1 položka = max 1 skupina'. Datový model: každá OrderSplitGroup nese seznam { itemId, fraction } místo prostého itemIds: string[].",
+    "Součet frakcí pro danou položku napříč všemi skupinami nesmí přesáhnout 1 (validace na serveru i FE). Frakce menší než 1 součet = zbytek položky je 'nerozděleno' a zobrazí se zvlášť — to NENÍ chybový stav, jen běžný mezistav při postupném rozdělování účtu.",
+    "Sleva na účet a spropitné se do splitu promítají poměrně dle podílu skupiny na CELÉM mezisoučtu účtu (groupRatio = groupShare / orderSubtotalGross), ne jen mezi přiřazenými skupinami — nerozdělená část položek 'nese' svůj poměrný díl slevy/tipu stejně jako přiřazené skupiny, dokud se nerozdělí.",
+    "Split je pouze v Restauraci. V Pokladně split nedává provozní smysl (jednorázový nákup, ne postupně rostoucí účet víc lidí u stolu) — potvrzeno v předchozí iteraci, beze změny.",
+    "Split je READ/výpočetní záležitost nad existujícím Order — nevytváří samostatné dílčí Sale doklady, nemění platební tok. pay() pořád platí CELÝ Order najednou jedním způsobem platby. Split slouží jen k zobrazení 'kdo kolik dluží' pro účely vyúčtování mezi hosty u stolu.",
+    "pay() už NEPŘIJÍMÁ discountPercent/tipAmount v request body (rozhodnutí uživatele, bod 3, viz architecture.api_endpoints) — bere se výhradně z aktuálního serverového stavu Order, který byl průběžně ukládán dílčím endpointem. Jeden zdroj pravdy, žádná duplicitní validace 'co když se request liší od uloženého stavu'.",
+    "Storno (Sale) a cancel (Order) beze změny — discountAmount/tip se stornují spolu s celým dokladem, žádná granularita na úrovni slevy/tipu."
+  ],
+  "open_questions": [
+    "Backend: existuje už na endpointech pro průběžné ukládání slevy/tipu a na POST /sales validace/zaokrouhlovací pravidlo pro DPH rozpad při procentuální slevě (zaokrouhlení na haléře v každé sazbě zvlášť)? Frontend to bude počítat pro zobrazení, ale finální hodnota přichází ze serveru (source of truth) — potvrdit stejně jako dnes u lineNet/lineVat/lineTotal.",
+    "UI otázka mimo scope architektury: má se frakce v Dávce B zadávat jako předvolby (1/2, 1/3, 1/4...) nebo libovolné číslo 0–1? Datový model (fraction: number, 0–1) unese obojí — je to jen otázka UI ovládacího prvku, developer/UX si zvolí."
+  ],
+  "architecture": {
+    "data_model": [
+      {
+        "entity": "Sale",
+        "change": "Přidat pole: discountPercent: number (0-100, default 0, sleva na CELÝ účet aplikovaná na mezisoučet PO řádkových slevách), tipAmount: number (default 0, Kč, nezdaněné spropitné). Beze změny zůstávají totalNet/totalVat (rozpad PO slevě na účet, PŘED tipem) a total (= totalNet + totalVat + tipAmount).",
+        "notes": "Konzistentní s SaleItemLine.discountPercent — stejná reprezentace (procento), jen na jiné úrovni agregace. V Pokladně se sleva/tip zadává v košíku před jediným zaplacením (jednorázová transakce), takže tam žádný průběžný endpoint nepotřebujeme — jde rovnou v POST /sales."
+      },
+      {
+        "entity": "Order",
+        "change": "Přidat pole: totalNet: number, totalVat: number (dosud chybí úplně), discountPercent: number (0-100, default 0), tipAmount: number (default 0, Kč). 'total' zůstává jako finální částka k zaplacení (= totalNet + totalVat + tipAmount). Tato pole se ukládají a mění PRŮBĚŽNĚ (viz nový endpoint PATCH /orders/{id}/discount), nezávisle na pay().",
+        "notes": "Sjednocení struktury se Sale je nutné, protože Order.pay() vytváří Sale (přes saleId) — obě entity musí nést stejný tvar finančních dat."
+      },
+      {
+        "entity": "Order (split, Dávka B)",
+        "change": "Přidat pole: splitGroups: OrderSplitGroup[] (nová struktura, viz níže). Prázdné pole = split se nepoužívá (výchozí stav, zpětně kompatibilní).",
+        "notes": "splitGroups NENÍ transakční záznam platby — je to dělicí/zobrazovací metadata nad otevřeným Order, uložené spolu s Order kvůli perzistenci mezi obsluhami/refreshem stránky."
+      },
+      {
+        "entity": "OrderSplitGroup (nový typ, REVIDOVÁNO)",
+        "change": "{ id: string, label: string (např. 'Osoba 1', 'Petr', volný text), items: OrderSplitItemShare[] } kde OrderSplitItemShare = { itemId: string, fraction: number } (fraction je podíl 0–1 na lineTotal/lineNet/lineVat dané OrderItemLine).",
+        "notes": "Nahrazuje původní itemIds: string[] (1 položka = max 1 skupina). Nový tvar umožňuje, aby jedna položka (např. 1 hlavní jídlo) měla fraction 0.5 ve skupině A a 0.5 ve skupině B zároveň — přesně rozhodnutí uživatele z bodu 1."
+      },
+      {
+        "entity": "Order (split, Dávka B) — validace",
+        "change": "Pro každou dvojici (orderId, itemId) musí platit: součet fraction přes všechny splitGroups[].items, kde items[].itemId === itemId, je <= 1 (s tolerancí na zaokrouhlení, např. 1e-9). Server tuto invariantu vynucuje při PUT /orders/{id}/split, FE ji hlídá průběžně v UI (nedovolí navýšit frakci nad zbývající volný podíl).",
+        "notes": "Součet < 1 je legitimní mezistav ('nerozděleno'), NE chyba. Chybou je jen součet > 1 (dvojí přiřazení stejné části položky)."
+      },
+      {
+        "entity": "OrderItemLine",
+        "change": "ŽÁDNÁ změna — žádné 'assignedTo'/'fraction' pole přímo na položce. Přiřazení se řeší výhradně přes OrderSplitGroup.items, aby nevznikly dva zdroje pravdy.",
+        "notes": "Řádková sleva (discountPercent) na OrderItemLine zůstává mimo scope tohoto návrhu (dnes v Restauraci neexistuje vůbec)."
+      }
+    ],
+    "api_endpoints": [
+      {
+        "method": "POST",
+        "path": "/sales",
+        "change": "Request body nově přijímá volitelné 'discountPercent?: number' a 'tipAmount?: number' (default 0). Response Sale nově obsahuje tato pole + přepočtené totalNet/totalVat/total. Beze změny oproti předchozí verzi — Pokladna je jednorázová transakce, sleva/tip jde rovnou s vytvořením Sale.",
+        "auth": "Beze změny (autorizovaný operátor pokladny)."
+      },
+      {
+        "method": "PATCH",
+        "path": "/orders/{id}/discount (NOVÝ — nahrazuje původní 'PATCH/PUT /orders/{id}' návrh)",
+        "change": "Request: { discountPercent?: number, tipAmount?: number } — průběžná aktualizace rozpracované slevy/tipu na OTEVŘENÉM účtu, kdykoli během obsluhy stolu (analogicky k addItem/updateItem, které taky průběžně mění Order). Response: aktualizovaný Order s přepočtenými totalNet/totalVat/total. Idempotentní — nahrazuje uloženou hodnotu, ne inkrementální delta.",
+        "auth": "Beze změny.",
+        "notes": "REVIZE bodu 3: toto je finální rozhodnutí místo dřívější 'jednodušší varianty jen v pay()'. Umožňuje zobrazit slevu/tip na účtu okamžitě (persistentně) během obsluhy, přežije refresh i přepnutí obsluhy."
+      },
+      {
+        "method": "POST",
+        "path": "/orders/{id}/pay",
+        "change": "REVIZE: request body už NEPŘIJÍMÁ discountPercent/tipAmount (odstraněno oproti předchozí verzi návrhu) — sleva a tip jsou v okamžiku platby už uložené na Order z předchozích volání PATCH /orders/{id}/discount. pay() je čistě 'ulož finální stav jako Sale a zavři Order'. Response Order (closed)/Sale beze změny obsahuje totalNet/totalVat/discountPercent/tipAmount/total.",
+        "auth": "Beze změny.",
+        "notes": "Jeden zdroj pravdy: sleva/tip existují jen na Order (server-side), pay() je nečte z requestu, jen z aktuálního stavu — vylučuje nesoulad mezi tím, co UI naposledy uložilo, a tím, co by se poslalo znovu v pay() requestu."
+      },
+      {
+        "method": "PUT",
+        "path": "/orders/{id}/split (Dávka B, nový)",
+        "change": "Request: { splitGroups: OrderSplitGroup[] } s revidovaným tvarem (items: {itemId, fraction}[] místo itemIds). Response: aktualizovaný Order se split daty. Idempotentní (nahrazuje celé pole splitGroups). Server validuje invariantu součtu frakcí <= 1 per položka a vrací 400 při porušení.",
+        "auth": "Beze změny."
+      }
+    ],
+    "folder_structure": [
+      "src/lib/types.ts — rozšíření Sale, Order, nový OrderSplitGroup + OrderSplitItemShare",
+      "src/composables/useSales.ts — SaleLineInput beze změny; create() rozšířit o volitelné discountPercent/tipAmount parametry vedle items",
+      "src/composables/useOrders.ts — NOVÁ funkce updateDiscount(orderId, { discountPercent?, tipAmount? }) volající PATCH /orders/{id}/discount; pay(orderId, method) beze změny signatury (žádné discount/tip parametry); nová funkce updateSplit(orderId, splitGroups) pro Dávku B",
+      "src/lib/invoice.ts nebo nový src/lib/posCalc.ts — sdílená čistá funkce pro výpočet mezisoučet → sleva na účet → DPH rozpad → tip, použitá z Pokladny i Restaurace (stejná logika, nekopírovat)",
+      "src/lib/posCalc.ts (Dávka B) — čistá funkce pro výpočet groupShare/groupRatio/groupToPay per OrderSplitGroup dle vzorce níže — sdílená mezi výpočtem UI náhledu a případnou validací",
+      "src/pages/PokladnaPage.vue — sekce 'Účtenka': nový vstup pro slevu na účet (%) a spropitné (Kč, s rychlými tlačítky 10/15/20/25 %) mezi seznamem položek a tlačítky Zaplatit",
+      "src/pages/RestauracePage.vue — sekce 'Účet': stejné vstupy (sleva na účet, spropitné) na stejném místě v layoutu; každá změna volá updateDiscount() průběžně (např. debounced blur/change, ne nutně každý keystroke), aby se stav ukládal na server bez čekání na pay()",
+      "src/pages/RestauracePage.vue (Dávka B) — nová sekce/dialog 'Rozdělit účet' (podobně jako 'Přesunout na jiný stůl') — přiřazení položek (s frakcí) do skupin + zobrazení součtu za skupinu + zobrazení nerozděleného zbytku"
+    ],
+    "tech_choices": [
+      {
+        "choice": "Žádná nová knihovna.",
+        "reason": "Sleva na účet + tip + frakční split je aritmetika nad existujícími čísly, žádná potřeba stavové knihovny navíc.",
+        "alternative": "Pinia store pro split stav — zamítnuto, currentOrder je už dnes lokální ref v RestauracePage.vue, split data patří do stejného Order objektu."
+      }
+    ]
+  },
+  "conflicts": [],
+  "security": [
+    "discountPercent a tipAmount na Order/Sale musí validovat server (0-100 pro procento, tipAmount >= 0) — FE validace je jen UX pojistka, ne zdroj pravdy.",
+    "PATCH /orders/{id}/discount smí měnit jen otevřený (status Open) Order — server musí odmítnout (409/400) pokus o úpravu slevy/tipu na už zavřeném/stornovaném účtu, stejně jako dnes addItem/updateItem fungují jen na otevřeném Order.",
+    "Součet frakcí <= 1 per položka MUSÍ validovat server (ne jen FE) při PUT /orders/{id}/split — jinak by šlo nekonzistentně 'rozdat' víc než 100 % hodnoty jedné položky mezi skupiny, což by rozbilo součet groupToPay napříč skupinami vůči celkovému total.",
+    "Sleva na účet i tip mění finální total, který jde do denní uzávěrky (DailySalesSummary) — nutné ověřit, že summaryToday() na backendu počítá s total včetně těchto polí.",
+    "Split (splitGroups) je čistě zobrazovací/organizační metadata, NENÍ finanční transakce — nesmí se zaměnit za částečné platby nebo vznik více Sale dokladů. Pokud by split měl v budoucnu vyústit v samostatné platby po skupinách, je to zásadně jiný design, ne rozšíření tohoto.",
+    "Žádný dopad na autorizaci ani izolaci dat mezi klienty (single-tenant, beze změny)."
+  ],
+  "scalability": [
+    "Bez dopadu na škálovatelnost — dodatečná číselná pole a jedna grupovací struktura nad existujícími entitami, žádná nová tabulka s velkým objemem záznamů."
+  ],
+  "handoff": {
+    "next_agent": "developer",
+    "context_for_review": "Dávka A: rozšířit Sale a Order o discountPercent (0-100) + tipAmount (Kč), sjednotit Order o totalNet/totalVat. V Pokladně jde sleva/tip rovnou v POST /sales (jednorázová transakce). V Restauraci se sleva/tip ukládá PRŮBĚŽNĚ novým PATCH /orders/{id}/discount (ne až v pay() — pay() teď žádné discount/tip parametry nepřijímá, bere je ze serverového stavu Order). Pořadí výpočtu: řádková sleva → mezisoučet → sleva na účet (%, zachovává poměr DPH sazeb) → + tip (mimo DPH). Dávka B (staví na A): revidovaný OrderSplitGroup s frakčním přiřazením { itemId, fraction } (ne 1:1 položka-skupina) umožňující sdílení jedné položky mezi víc skupin, nový endpoint PUT /orders/{id}/split, server validuje součet frakcí <= 1 per položka. Vzorec pro součet skupiny: groupShare(G) = Σ(item.lineNet+item.lineVat)*fraction; groupRatio(G) = groupShare(G) / orderSubtotalGross; groupToPay(G) = groupShare(G) * (1 - discountPercent/100) + tipAmount * groupRatio(G).",
+    "required_checks": [
+      "Ověřit, že FE výpočet slevy na účet + DPH rozpad odpovídá server response (FE hodnota je jen optimistický odhad, po odpovědi se použije výhradně server response).",
+      "Ověřit, že denní uzávěrka (DailySalesSummary / summaryToday) správně sčítá total včetně slevy na účet a tipu.",
+      "Ověřit, že PATCH /orders/{id}/discount funguje jen na otevřeném Order (server odmítne úpravu na zavřeném/stornovaném účtu) a že pay() bere discount/tip výhradně z aktuálního serverového stavu, ne z vlastního request body.",
+      "Ověřit server-side validaci součtu frakcí <= 1 per položka v PUT /orders/{id}/split (400 při přesahu), a že FE UI zabraňuje zadání frakce nad zbývající volný podíl položky.",
+      "Ověřit, že split (Dávka B) nevytváří žádný nový platební tok — pay() pořád platí celý Order jednou částkou/metodou, split je jen zobrazovací rozpočet.",
+      "Zkontrolovat, že nově přidaná pole (totalNet/totalVat) na Order nerozbijí stávající zobrazení, které dnes čte jen 'total' (např. mapa stolů — occupancy.get(t.id).total) — přidání polí musí být čistě additive.",
+      "Ověřit zaokrouhlovací pravidlo pro DPH rozpad při procentuální slevě na serveru (viz open_questions) a shodu s FE výpočtem."
+    ]
+  }
+}

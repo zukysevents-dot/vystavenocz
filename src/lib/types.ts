@@ -228,6 +228,8 @@ export interface Sale {
   locationId: string | null
   paymentMethod: PaymentMethod
   status: SaleStatus
+  discountPercent: number
+  tipAmount: number
   totalNet: number
   totalVat: number
   total: number
@@ -299,6 +301,18 @@ export interface OrderItemLine {
   lineTotal: number
 }
 
+// Split účtu — čistě zobrazovací/organizační rozpočet nad Order, NENÍ platební transakce.
+// Jedna položka smí mít nenulovou frakci ve víc skupinách zároveň (sdílené jídlo).
+export interface OrderSplitItemShare {
+  itemId: string
+  fraction: number // 0–1, podíl na lineTotal/lineNet/lineVat dané OrderItemLine
+}
+export interface OrderSplitGroup {
+  id: string
+  label: string
+  items: OrderSplitItemShare[]
+}
+
 export interface Order {
   id: string
   tableId: string | null
@@ -307,7 +321,12 @@ export interface Order {
   saleId: string | null
   openedAt: string
   closedAt: string | null
+  discountPercent: number
+  tipAmount: number
+  totalNet: number
+  totalVat: number
   total: number
+  splitGroups: OrderSplitGroup[]
   items: OrderItemLine[]
 }
 
