@@ -16,6 +16,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      # Guard: trackovaný smí být jen .env.example a .env.production (jen veřejná API URL) — nic se secrety
+      - name: Check no tracked env files
+        run: |
+          tracked=$(git ls-files | grep -E '(^|/)\.env' | grep -vE '\.env\.(example|production)$' || true)
+          if [ -n "$tracked" ]; then echo "Tracked env files: $tracked"; exit 1; fi
+
       - name: Setup Node
         uses: actions/setup-node@v5
         with:

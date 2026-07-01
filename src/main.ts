@@ -23,6 +23,11 @@ Sentry.init({
   dsn: sentryDsn,
   enabled: !!sentryDsn,
   tracesSampleRate: 0,
+  // ApiError nese celé tělo backend odpovědi (detail) — do error trackingu nepatří (může obsahovat citlivá data).
+  beforeSend(event) {
+    delete event.extra
+    return event
+  },
 })
 
 app.use(createPinia()).use(router).use(createHead()).mount('#app')

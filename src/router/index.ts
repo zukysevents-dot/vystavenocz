@@ -115,18 +115,8 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/RegistracePage.vue'),
     meta: { title: 'Registrace', layout: 'auth' },
   },
-  {
-    path: '/zapomenute-heslo',
-    name: 'zapomenute-heslo',
-    component: () => import('@/pages/ZapomenuteHesloPage.vue'),
-    meta: { title: 'Zapomenuté heslo', layout: 'auth' },
-  },
-  {
-    path: '/reset-hesla',
-    name: 'reset-hesla',
-    component: () => import('@/pages/ResetHeslaPage.vue'),
-    meta: { title: 'Reset hesla', layout: 'auth' },
-  },
+  // Obnova hesla: routy /zapomenute-heslo a /reset-hesla dočasně vyřazeny — stránky byly stub bez backendu
+  // (falešně hlásily odeslání e-mailu). Vrátit až s reálným reset flow (API endpointy + SMTP).
 
   // --- App (AppLayout, chráněné route guardem níže) ---
   {
@@ -345,6 +335,10 @@ router.beforeEach((to) => {
     to.name !== 'app-onboarding'
   ) {
     return { name: 'app-onboarding' }
+  }
+  // Employee nemá invoices.read → přehled (dashboard) by vracel 403; přistane rovnou na pokladně.
+  if (isApiMode() && to.name === 'app' && auth.role === 'Employee') {
+    return { path: '/app/pokladna' }
   }
   return true
 })

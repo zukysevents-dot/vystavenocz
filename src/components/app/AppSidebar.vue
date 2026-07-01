@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
   LayoutDashboard,
@@ -35,7 +35,7 @@ import { Button } from '@/components/ui/button'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { useAuthStore } from '@/stores/auth'
 
-const nav = [
+const navItems = [
   { to: '/app', label: 'Přehled', icon: LayoutDashboard, exact: true },
   { to: '/app/pokladna', label: 'Pokladna', icon: ShoppingCart },
   { to: '/app/restaurace', label: 'Restaurace', icon: UtensilsCrossed },
@@ -62,11 +62,18 @@ const nav = [
 ]
 
 const auth = useAuthStore()
+
+// Employee nemá invoices.read (backend vrací 403 na přehled/faktury/klienty) — finanční položky skryjeme.
+const financeRoutes = new Set(['/app', '/app/faktury', '/app/klienti'])
+const nav = computed(() =>
+  auth.role === 'Employee' ? navItems.filter((i) => !financeRoutes.has(i.to)) : navItems,
+)
+const canInvoice = computed(() => auth.role !== 'Employee')
 const route = useRoute()
 const router = useRouter()
 const mobileOpen = ref(false)
 
-function isActive(item: (typeof nav)[number]): boolean {
+function isActive(item: (typeof navItems)[number]): boolean {
   return item.exact ? route.path === item.to : route.path.startsWith(item.to)
 }
 
@@ -124,6 +131,7 @@ watch(
 
     <div class="border-t border-border p-3">
       <button
+        v-if="canInvoice"
         type="button"
         class="w-full rounded-lg bg-gradient-to-br from-primary-soft to-accent p-3 text-left text-xs transition-all hover:shadow-md"
         @click="router.push('/app/faktury/editor')"
@@ -191,6 +199,7 @@ watch(
 
     <div class="border-t border-border p-3">
       <button
+        v-if="canInvoice"
         type="button"
         class="w-full rounded-lg bg-gradient-to-br from-primary-soft to-accent p-3 text-left text-xs transition-all hover:shadow-md"
         @click="router.push('/app/faktury/editor')"

@@ -91,6 +91,7 @@ async function onSubmit() {
               <RouterLink
                 to="/podminky"
                 target="_blank"
+                rel="noopener noreferrer"
                 class="font-medium text-primary hover:underline"
               >
                 obchodními podmínkami
@@ -99,6 +100,7 @@ async function onSubmit() {
               <RouterLink
                 to="/gdpr"
                 target="_blank"
+                rel="noopener noreferrer"
                 class="font-medium text-primary hover:underline"
               >
                 zpracováním osobních údajů
