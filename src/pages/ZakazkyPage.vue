@@ -26,7 +26,14 @@ import {
 } from '@/components/ui/alert-dialog'
 import { toast } from '@/components/ui/sonner'
 import { useJobs, type JobInput } from '@/composables/useJobs'
-import { jobRevenue, jobProfit, jobMargin, summarizeJobs, jobStatusLabel } from '@/lib/jobs'
+import {
+  jobRevenue,
+  jobProfit,
+  jobMargin,
+  summarizeJobs,
+  jobStatusLabel,
+  nonNegative,
+} from '@/lib/jobs'
 import { formatCZK } from '@/lib/invoice'
 import type { Job, JobStatus } from '@/lib/types'
 
@@ -35,6 +42,8 @@ const loading = ref(true)
 const dialogOpen = ref(false)
 const editing = ref<Job | null>(null)
 const deleteId = ref<string | null>(null)
+const submitting = ref(false)
+const deleting = ref(false)
 
 const emptyForm = {
   name: '',
@@ -93,35 +102,51 @@ function openEdit(job: Job) {
 }
 
 async function save() {
+  if (submitting.value) return // zámek proti dvojkliku
   if (!form.name.trim()) {
     toast.error('Zadejte název zakázky.')
     return
   }
+  // Klampnutí na nezáporné hodnoty — vstup jde přímo do výpočtu ziskovosti.
   const input: JobInput = {
     name: form.name.trim(),
     clientName: form.clientName.trim() || null,
     status: form.status,
-    materialCost: Number(form.materialCost) || 0,
-    materialPrice: Number(form.materialPrice) || 0,
-    hours: Number(form.hours) || 0,
-    hourlyRate: Number(form.hourlyRate) || 0,
+    materialCost: nonNegative(form.materialCost),
+    materialPrice: nonNegative(form.materialPrice),
+    hours: nonNegative(form.hours),
+    hourlyRate: nonNegative(form.hourlyRate),
     note: form.note.trim() || null,
   }
-  if (editing.value) {
-    await update(editing.value.id, input)
-    toast.success('Zakázka upravena.')
-  } else {
-    await create(input)
-    toast.success('Zakázka vytvořena.')
+  submitting.value = true
+  try {
+    if (editing.value) {
+      await update(editing.value.id, input)
+      toast.success('Zakázka upravena.')
+    } else {
+      await create(input)
+      toast.success('Zakázka vytvořena.')
+    }
+    dialogOpen.value = false
+  } catch {
+    toast.error('Uložení se nezdařilo. Zkuste to prosím znovu.')
+  } finally {
+    submitting.value = false
   }
-  dialogOpen.value = false
 }
 
 async function onDelete() {
-  if (!deleteId.value) return
-  await remove(deleteId.value)
-  toast.success('Zakázka smazána.')
-  deleteId.value = null
+  if (!deleteId.value || deleting.value) return
+  deleting.value = true
+  try {
+    await remove(deleteId.value)
+    toast.success('Zakázka smazána.')
+    deleteId.value = null
+  } catch {
+    toast.error('Smazání se nezdařilo.')
+  } finally {
+    deleting.value = false
+  }
 }
 </script>
 
@@ -324,8 +349,12 @@ async function onDelete() {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" @click="dialogOpen = false">Zrušit</Button>
-          <Button variant="coral" @click="save">{{ editing ? 'Uložit' : 'Vytvořit' }}</Button>
+          <Button variant="outline" :disabled="submitting" @click="dialogOpen = false"
+            >Zrušit</Button
+          >
+          <Button variant="coral" :disabled="submitting" @click="save">
+            {{ editing ? 'Uložit' : 'Vytvořit' }}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

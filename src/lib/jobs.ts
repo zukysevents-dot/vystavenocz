@@ -17,6 +17,12 @@ export function jobStatusLabel(s: JobStatus): string {
   return STATUS_LABELS[s]
 }
 
+/** Ošetří vstup do finančního výpočtu: nezáporné konečné číslo (NaN/−∞ → 0). */
+export function nonNegative(v: unknown): number {
+  const n = Number(v)
+  return Number.isFinite(n) && n > 0 ? n : 0
+}
+
 export function jobRevenue(job: Job): number {
   return job.materialPrice + job.hours * job.hourlyRate
 }

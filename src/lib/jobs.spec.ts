@@ -6,6 +6,7 @@ import {
   jobMargin,
   summarizeJobs,
   jobStatusLabel,
+  nonNegative,
 } from '@/lib/jobs'
 import type { Job } from '@/lib/types'
 
@@ -63,6 +64,19 @@ describe('summarizeJobs', () => {
   })
   it('prázdný seznam → nuly bez dělení nulou', () => {
     expect(summarizeJobs([])).toEqual({ count: 0, revenue: 0, cost: 0, profit: 0, margin: 0 })
+  })
+})
+
+describe('nonNegative', () => {
+  it('kladné číslo projde', () => {
+    expect(nonNegative(1250)).toBe(1250)
+    expect(nonNegative(2.5)).toBe(2.5)
+  })
+  it('záporné, NaN i nevalidní vstup → 0', () => {
+    expect(nonNegative(-500)).toBe(0)
+    expect(nonNegative(NaN)).toBe(0)
+    expect(nonNegative('abc')).toBe(0)
+    expect(nonNegative(-Infinity)).toBe(0)
   })
 })
 
