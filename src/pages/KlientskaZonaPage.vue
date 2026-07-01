@@ -65,7 +65,13 @@ async function respond(q: PortalQuote, action: 'approve' | 'reject') {
     q.status = action === 'approve' ? 'accepted' : 'rejected'
     toast.success(action === 'approve' ? 'Nabídka přijata.' : 'Nabídka odmítnuta.')
   } catch {
-    toast.error('Akce se nezdařila. Zkuste to prosím znovu.')
+    // Nabídka už mohla být vyřízená jinde → načteme čerstvý stav, ať uživatel nezkouší znovu.
+    toast.error('Tuto nabídku už nelze změnit — možná byla mezitím vyřízena.')
+    try {
+      data.value = await portal.load(token)
+    } catch {
+      /* necháme původní data */
+    }
   } finally {
     respondingId.value = null
   }

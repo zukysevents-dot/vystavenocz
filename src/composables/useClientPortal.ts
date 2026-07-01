@@ -2,8 +2,9 @@ import { http } from '@/lib/http'
 
 /**
  * Klientská zóna (self-service portál) — klient přes odkaz `/klient/:token` bez
- * přihlášení vidí své faktury a schvaluje/odmítá nabídky. Volá veřejné (neautorizované)
- * endpointy klíčované tokenem klienta; http bez tokenu neposílá Authorization.
+ * přihlášení vidí své faktury a schvaluje/odmítá nabídky. Volá veřejné endpointy
+ * klíčované tokenem klienta přes http.getPublic/postPublic — striktně BEZ Authorization
+ * (aby na public endpoint neunikl JWT náhodně přihlášeného operátora).
  * Online platba faktur je pozdější fáze (platební brána = backend).
  */
 
@@ -32,7 +33,7 @@ export interface ClientPortalData {
 
 export function useClientPortal() {
   async function load(token: string): Promise<ClientPortalData> {
-    return http.get<ClientPortalData>(`/public/client/${encodeURIComponent(token)}`)
+    return http.getPublic<ClientPortalData>(`/public/client/${encodeURIComponent(token)}`)
   }
 
   /** Klient odpoví na nabídku (přijmout / odmítnout). */
@@ -41,7 +42,7 @@ export function useClientPortal() {
     quoteId: string,
     action: 'approve' | 'reject',
   ): Promise<void> {
-    await http.post(
+    await http.postPublic(
       `/public/client/${encodeURIComponent(token)}/quotes/${encodeURIComponent(quoteId)}/${action}`,
     )
   }
