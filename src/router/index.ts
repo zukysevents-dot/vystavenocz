@@ -36,6 +36,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Online rezervace', layout: 'public' },
   },
   {
+    path: '/klient/:token',
+    name: 'public-klientska-zona',
+    component: () => import('@/pages/KlientskaZonaPage.vue'),
+    meta: { title: 'Klientská zóna', layout: 'public' },
+  },
+  {
     path: '/funkce',
     name: 'funkce',
     component: () => import('@/pages/FunkcePage.vue'),
@@ -236,6 +242,12 @@ const routes: RouteRecordRaw[] = [
     name: 'app-smeny',
     component: () => import('@/pages/SmenyPage.vue'),
     meta: { title: 'Směny & provize', layout: 'app', requiresAuth: true },
+  },
+  {
+    path: '/app/pobocky',
+    name: 'app-pobocky',
+    component: () => import('@/pages/PobockyPage.vue'),
+    meta: { title: 'Pobočky & vedení', layout: 'app', requiresAuth: true },
   },
   {
     path: '/app/rezervace',

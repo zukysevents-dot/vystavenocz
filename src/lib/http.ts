@@ -78,8 +78,16 @@ function refreshTokens(): Promise<Tokens | null> {
   return refreshing
 }
 
-async function request<T>(method: string, path: string, body?: unknown, retry = true): Promise<T> {
-  const tokens = getTokens()
+async function request<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  retry = true,
+  isPublic = false,
+): Promise<T> {
+  // Veřejná volání (klientský portál, rezervace) MUSÍ jít bez Authorization —
+  // jinak by se na public endpoint přiložil JWT náhodně přihlášeného operátora.
+  const tokens = isPublic ? null : getTokens()
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   if (tokens?.accessToken) headers.Authorization = `Bearer ${tokens.accessToken}`
@@ -90,8 +98,8 @@ async function request<T>(method: string, path: string, body?: unknown, retry = 
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
 
-  // Access token expiroval → zkus refresh a request jednou zopakuj.
-  if (res.status === 401 && retry && getTokens()?.refreshToken) {
+  // Access token expiroval → zkus refresh a request jednou zopakuj (jen u auth volání).
+  if (!isPublic && res.status === 401 && retry && getTokens()?.refreshToken) {
     const refreshed = await refreshTokens()
     if (refreshed) return request<T>(method, path, body, false)
   }
@@ -120,4 +128,7 @@ export const http = {
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
   put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
   del: <T = void>(path: string) => request<T>('DELETE', path),
+  // Neautorizované volání (bez Authorization a bez refresh/retry) — veřejné endpointy.
+  getPublic: <T>(path: string) => request<T>('GET', path, undefined, false, true),
+  postPublic: <T>(path: string, body?: unknown) => request<T>('POST', path, body, false, true),
 }

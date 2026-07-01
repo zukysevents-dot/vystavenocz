@@ -6,7 +6,8 @@ import type { PagedResult } from '@/composables/useApi'
  * Veřejná rezervace (bez přihlášení) — zákazník firmy si přes veřejný odkaz
  * `/rezervace/:slug` vybere službu a pošle žádost o termín. Firmě naskočí jako
  * rezervace ve stavu „Pending", kterou potvrdí stávajícím tokem v RezervacePage.
- * Volá veřejné (neautorizované) endpointy — http hlavičku Authorization bez tokenu neposílá.
+ * Volá veřejné endpointy přes http.getPublic/postPublic — striktně BEZ Authorization
+ * (aby na public endpoint neunikl JWT náhodně přihlášeného operátora).
  */
 
 export interface PublicBookingInput {
@@ -21,7 +22,7 @@ export interface PublicBookingInput {
 export function usePublicBooking() {
   /** Aktivní služby firmy pro veřejný výběr. */
   async function services(slug: string): Promise<Service[]> {
-    const res = await http.get<PagedResult<Service>>(
+    const res = await http.getPublic<PagedResult<Service>>(
       `/public/${encodeURIComponent(slug)}/services?pageSize=200`,
     )
     return res.items
@@ -29,7 +30,7 @@ export function usePublicBooking() {
 
   /** Odešle žádost o rezervaci (vytvoří Pending). */
   async function book(slug: string, input: PublicBookingInput): Promise<void> {
-    await http.post(`/public/${encodeURIComponent(slug)}/reservations`, input)
+    await http.postPublic(`/public/${encodeURIComponent(slug)}/reservations`, input)
   }
 
   return { services, book }
