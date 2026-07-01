@@ -62,4 +62,20 @@ describe('totals', () => {
     ])
     expect(t).toEqual({ count: 2, hours: 6, wage: 1400 })
   })
+  it('prázdný seznam → nuly', () => {
+    expect(totals([])).toEqual({ count: 0, hours: 0, wage: 0 })
+    expect(summarizeByEmployee([])).toEqual([])
+  })
+})
+
+describe('hraniční případy', () => {
+  it('nulová sazba → mzda 0', () => {
+    expect(shiftWage(shift({ start: '08:00', end: '16:00', hourlyRate: 0 }))).toBe(0)
+  })
+  it('téměř celý den 00:00–23:59 → 23.98 h', () => {
+    expect(shiftHours(shift({ start: '00:00', end: '23:59' }))).toBe(23.98)
+  })
+  it('přechod přes půlnoc není podporován → 0 (vědomé omezení)', () => {
+    expect(shiftHours(shift({ start: '22:00', end: '02:00' }))).toBe(0)
+  })
 })

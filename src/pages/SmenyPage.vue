@@ -35,6 +35,7 @@ const dialogOpen = ref(false)
 const editing = ref<Shift | null>(null)
 const deleteId = ref<string | null>(null)
 const submitting = ref(false)
+const deleting = ref(false)
 
 const emptyForm = {
   employeeName: '',
@@ -91,6 +92,7 @@ async function save() {
   if (submitting.value) return
   if (!form.employeeName.trim()) return toast.error('Zadejte jméno zaměstnance.')
   if (!form.date) return toast.error('Zadejte datum.')
+  if (num(form.hourlyRate) <= 0) return toast.error('Zadejte sazbu za hodinu.')
   if (shiftHours({ ...form, id: '', note: null, createdAt: '', updatedAt: '' } as Shift) === 0)
     return toast.error('Konec směny musí být po začátku.')
 
@@ -120,14 +122,24 @@ async function save() {
 }
 
 async function onDelete() {
-  if (!deleteId.value) return
+  if (!deleteId.value || deleting.value) return
+  deleting.value = true
   try {
     await remove(deleteId.value)
     toast.success('Směna smazána.')
     deleteId.value = null
   } catch {
     toast.error('Smazání se nezdařilo.')
+  } finally {
+    deleting.value = false
   }
+}
+
+/** České skloňování: 1 směna / 2–4 směny / 5+ směn. */
+function pluralShifts(n: number): string {
+  if (n === 1) return 'směna'
+  if (n >= 2 && n <= 4) return 'směny'
+  return 'směn'
 }
 </script>
 
@@ -188,7 +200,7 @@ async function onDelete() {
             <div class="min-w-0">
               <div class="truncate font-semibold">{{ e.name }}</div>
               <div class="mt-0.5 text-xs text-muted-foreground">
-                {{ e.shifts }} {{ e.shifts === 1 ? 'směna' : 'směn' }} · {{ e.hours }} h
+                {{ e.shifts }} {{ pluralShifts(e.shifts) }} · {{ e.hours }} h
               </div>
             </div>
           </div>
