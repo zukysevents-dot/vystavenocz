@@ -30,6 +30,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Účtenka — náhled', layout: 'public' },
   },
   {
+    path: '/rezervace/:slug',
+    name: 'public-rezervace',
+    component: () => import('@/pages/PublicRezervacePage.vue'),
+    meta: { title: 'Online rezervace', layout: 'public' },
+  },
+  {
     path: '/klient/:token',
     name: 'public-klientska-zona',
     component: () => import('@/pages/KlientskaZonaPage.vue'),
