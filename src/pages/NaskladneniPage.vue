@@ -66,10 +66,13 @@ function onScan() {
   const code = scanEan.value.trim()
   if (!code) return
   const p = findByEan(products.value, code)
-  if (p) {
-    addProduct(p, 1)
-  } else {
+  if (!p) {
     toast.error(`EAN „${code}" nenalezen v katalogu.`)
+  } else if (products.value.filter((x) => x.ean === code).length > 1) {
+    // Neunikátní EAN → radši nenaskladnit špatný produkt, vyber ho ručně.
+    toast.error(`Víc produktů se stejným EAN „${code}" — vyber ho ručně níže.`)
+  } else {
+    addProduct(p, 1)
   }
   scanEan.value = ''
   focusScan()
@@ -101,22 +104,25 @@ const totalUnits = computed(() => lines.value.reduce((a, l) => a + (Number(l.qua
 
 async function submit() {
   if (submitting.value || lines.value.length === 0) return
-  const valid = lines.value.filter((l) => Number(l.quantity) > 0)
-  if (valid.length === 0) return toast.error('Zadejte kladné množství.')
+  if (lines.value.some((l) => !(Number(l.quantity) > 0)))
+    return toast.error('U všech položek zadejte kladné množství.')
   submitting.value = true
+  const total = lines.value.length
   let ok = 0
   try {
-    for (const l of valid) {
+    // Iterujeme přes kopii — každý úspěšný řádek hned odebereme z příjemky, aby
+    // opakování po částečném selhání nenaskladnilo už uložené položky podruhé.
+    for (const l of [...lines.value]) {
       await inv.receive(l.productId, Number(l.quantity), 'Naskladnění')
+      lines.value = lines.value.filter((x) => x.productId !== l.productId)
       ok++
     }
     await loadLevels()
-    lines.value = []
     toast.success(`Naskladněno ${ok} položek.`)
     focusScan()
   } catch (e) {
     console.error(e)
-    toast.error(`Naskladnění selhalo (uloženo ${ok} z ${valid.length}).`)
+    toast.error(`Naskladnění selhalo (uloženo ${ok} z ${total}). Zbytek zůstal na příjemce.`)
     await loadLevels()
   } finally {
     submitting.value = false

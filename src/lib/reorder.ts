@@ -37,7 +37,10 @@ export function reorderSuggestions(products: Product[], levels: Map<string, numb
   return rows.sort((a, b) => a.current - a.min - (b.current - b.min))
 }
 
-/** Najde produkt podle přesného EAN (čtečka pošle kód). Prázdný/nenalezený → undefined. */
+/**
+ * Najde produkt podle přesného EAN (čtečka pošle kód). Prázdný/nenalezený → undefined.
+ * Při neunikátním EAN vrací PRVNÍ shodu — volající by měl duplicity ošetřit (viz onScan).
+ */
 export function findByEan(products: Product[], ean: string): Product | undefined {
   const code = ean.trim()
   if (!code) return undefined
