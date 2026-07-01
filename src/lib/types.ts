@@ -145,6 +145,23 @@ export interface Product {
   categoryId: string | null
 }
 
+export type JobStatus = 'quote' | 'in_progress' | 'done' | 'invoiced'
+
+// Zakázka / výjezd (modul Zakázky) — materiál + hodiny → ziskovost.
+export interface Job {
+  id: string
+  name: string
+  clientName: string | null
+  status: JobStatus
+  materialCost: number // nákupní cena materiálu (náklad)
+  materialPrice: number // prodejní cena materiálu zákazníkovi (výnos)
+  hours: number
+  hourlyRate: number // sazba za hodinu práce (výnos)
+  note: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export type PaymentMethod = 'Cash' | 'Card'
 export type SaleStatus = 'Completed' | 'Cancelled'
 
