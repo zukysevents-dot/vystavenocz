@@ -148,6 +148,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Účtárna', layout: 'app', requiresAuth: true },
   },
   {
+    path: '/app/dph',
+    name: 'app-dph',
+    component: () => import('@/pages/DphPage.vue'),
+    meta: { title: 'Přehled DPH', layout: 'app', requiresAuth: true },
+  },
+  {
     path: '/app/vernost',
     name: 'app-vernost',
     component: () => import('@/pages/VernostPage.vue'),
@@ -158,6 +164,12 @@ const routes: RouteRecordRaw[] = [
     name: 'app-zakazky',
     component: () => import('@/pages/ZakazkyPage.vue'),
     meta: { title: 'Zakázky & výjezdy', layout: 'app', requiresAuth: true },
+  },
+  {
+    path: '/app/nabidky',
+    name: 'app-nabidky',
+    component: () => import('@/pages/NabidkyPage.vue'),
+    meta: { title: 'Nabídky', layout: 'app', requiresAuth: true },
   },
   {
     path: '/app/klienti',
