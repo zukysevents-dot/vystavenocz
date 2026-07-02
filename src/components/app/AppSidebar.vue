@@ -114,7 +114,7 @@ watch(
       <SiteLogo />
     </div>
 
-    <nav class="flex-1 space-y-1 p-3">
+    <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto p-3">
       <RouterLink
         v-for="item in nav"
         :key="item.to"
@@ -182,7 +182,7 @@ watch(
       </Button>
     </div>
 
-    <nav class="flex-1 space-y-1 p-3">
+    <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto p-3">
       <RouterLink
         v-for="item in nav"
         :key="item.to"
