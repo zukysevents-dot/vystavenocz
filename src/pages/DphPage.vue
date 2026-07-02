@@ -2,17 +2,20 @@
 import { computed, onMounted, ref } from 'vue'
 import { Percent, Loader2 } from 'lucide-vue-next'
 import { useInvoices } from '@/composables/useInvoices'
+import LoadError from '@/components/app/LoadError.vue'
 import { formatCZK } from '@/lib/invoice'
 import { vatSummary, availablePeriods } from '@/lib/dph'
 
-const { invoices, load } = useInvoices()
+const { invoices, loadError, load } = useInvoices()
 const loading = ref(true)
 const period = ref('all')
 
-onMounted(async () => {
+async function reload(): Promise<void> {
+  loading.value = true
   await load()
   loading.value = false
-})
+}
+onMounted(reload)
 
 const periods = computed(() => availablePeriods(invoices.value))
 const summary = computed(() => vatSummary(invoices.value, period.value))
@@ -48,6 +51,8 @@ function periodLabel(p: string): string {
     <div v-if="loading" class="mt-12 flex justify-center">
       <Loader2 class="h-6 w-6 animate-spin text-primary" />
     </div>
+
+    <LoadError v-else-if="loadError" class="mt-6" @retry="reload" />
 
     <div
       v-else-if="summary.count === 0"

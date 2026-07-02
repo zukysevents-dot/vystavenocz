@@ -9,14 +9,16 @@ export type QuoteInput = Omit<Quote, 'id' | 'createdAt' | 'updatedAt'>
 
 export function useQuotes() {
   const store = useQuotesStore()
-  const { quotes } = storeToRefs(store)
+  const { quotes, loadError } = storeToRefs(store)
 
   async function load(): Promise<void> {
+    store.loadError = false
     try {
       store.quotes = await api.list()
     } catch (e) {
       console.warn('Načtení nabídek selhalo:', e)
       store.quotes = []
+      store.loadError = true
     }
   }
 
@@ -44,5 +46,5 @@ export function useQuotes() {
     store.quotes = store.quotes.filter((q) => q.id !== id)
   }
 
-  return { quotes, load, create, update, remove }
+  return { quotes, loadError, load, create, update, remove }
 }
