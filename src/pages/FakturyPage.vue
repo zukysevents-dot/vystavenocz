@@ -21,10 +21,11 @@ import { useInvoices } from '@/composables/useInvoices'
 import { useSubscription } from '@/composables/useSubscription'
 import { formatCZK, formatDate } from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
+import LoadError from '@/components/app/LoadError.vue'
 import type { InvoiceStatus } from '@/lib/types'
 
 const router = useRouter()
-const { invoices, load, remove } = useInvoices()
+const { invoices, loadError, load, remove } = useInvoices()
 const { hasAccess } = useSubscription()
 
 const loading = ref(true)
@@ -41,10 +42,12 @@ function newInvoice() {
   router.push('/app/faktury/editor')
 }
 
-onMounted(async () => {
+async function reload(): Promise<void> {
+  loading.value = true
   await load()
   loading.value = false
-})
+}
+onMounted(reload)
 
 type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline'
 type StatusMeta = { label: string; variant: BadgeVariant }
@@ -116,6 +119,8 @@ async function onDelete() {
     <div v-if="loading" class="mt-12 flex justify-center">
       <Loader2 class="h-6 w-6 animate-spin text-primary" />
     </div>
+
+    <LoadError v-else-if="loadError" class="mt-12" @retry="reload" />
 
     <div
       v-else-if="filtered.length === 0"

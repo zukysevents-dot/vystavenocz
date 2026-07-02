@@ -27,7 +27,7 @@ export class DuplicateInvoiceNumberError extends Error {
 
 export function useInvoices() {
   const store = useInvoicesStore()
-  const { invoices } = storeToRefs(store)
+  const { invoices, loadError } = storeToRefs(store)
 
   // Zapíše čerstvý stav faktury (typicky ze serveru) do storu — insert nebo replace dle id.
   // Tím se ve store drží serverová pravda (id, číslo, součty, stav), ne klientská kopie.
@@ -39,12 +39,15 @@ export function useInvoices() {
   }
 
   async function load(): Promise<void> {
+    store.loadError = false
     try {
       store.invoices = await api.list()
     } catch (e) {
-      // Endpoint faktur ještě nemusí být dostupný → prázdný seznam místo pádu appky.
+      // Výpadek serveru → prázdný seznam místo pádu appky, ale příznak chyby ať UI ukáže
+      // „server nedostupný" (ne zavádějící „žádné faktury").
       console.warn('Načtení faktur selhalo:', e)
       store.invoices = []
+      store.loadError = true
     }
   }
 
@@ -154,5 +157,17 @@ export function useInvoices() {
     return upsert(inv)
   }
 
-  return { invoices, load, create, update, remove, issue, pay, cancel, getById, importInvoice }
+  return {
+    invoices,
+    loadError,
+    load,
+    create,
+    update,
+    remove,
+    issue,
+    pay,
+    cancel,
+    getById,
+    importInvoice,
+  }
 }

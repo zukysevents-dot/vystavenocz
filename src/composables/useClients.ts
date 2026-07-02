@@ -9,14 +9,16 @@ export type ClientInput = Omit<Client, 'id' | 'createdAt' | 'updatedAt'>
 
 export function useClients() {
   const store = useClientsStore()
-  const { clients } = storeToRefs(store)
+  const { clients, loadError } = storeToRefs(store)
 
   async function load(): Promise<void> {
+    store.loadError = false
     try {
       store.clients = await api.list()
     } catch (e) {
       console.warn('Načtení klientů selhalo:', e)
       store.clients = []
+      store.loadError = true
     }
   }
 
@@ -45,5 +47,5 @@ export function useClients() {
     return store.clients.find((c) => c.id === id) ?? null
   }
 
-  return { clients, load, create, update, remove, getById }
+  return { clients, loadError, load, create, update, remove, getById }
 }
