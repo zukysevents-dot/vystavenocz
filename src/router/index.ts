@@ -138,6 +138,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Editor faktury', layout: 'app', requiresAuth: true },
   },
   {
+    path: '/app/konsolidace',
+    name: 'app-konsolidace',
+    component: () => import('@/pages/KonsolidacePage.vue'),
+    meta: { title: 'Konsolidace poboček', layout: 'app', requiresAuth: true },
+  },
+  {
     path: '/app/cashflow',
     name: 'app-cashflow',
     component: () => import('@/pages/CashflowPage.vue'),
