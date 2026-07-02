@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button'
 import { useKitchen } from '@/composables/useKitchen'
 import { isApiMode } from '@/lib/http'
 import { toast } from '@/components/ui/sonner'
+import LoadError from '@/components/app/LoadError.vue'
 import type { CategoryKitchenSection, KitchenQueueItem } from '@/lib/types'
 
 const kitchen = useKitchen()
 const apiMode = isApiMode()
 
 const items = ref<KitchenQueueItem[]>([])
+const loadError = ref(false)
 const station = ref<CategoryKitchenSection>('None') // 'None' = vše
 const now = ref(Date.now())
 const busy = ref(false)
@@ -68,8 +70,11 @@ async function refresh() {
   try {
     items.value = await kitchen.queue(station.value)
     now.value = Date.now()
+    loadError.value = false
   } catch (e) {
-    console.error(e)
+    // Průběžný poll nezahazuje už zobrazené bony — chybu ukážeme, jen když nemáme data.
+    console.warn('Načtení bonů selhalo:', e)
+    loadError.value = true
   }
 }
 
@@ -191,8 +196,14 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <LoadError
+        v-if="loadError && !tickets.length"
+        message="Bony se nepodařilo načíst — zkontrolujte připojení k serveru."
+        @retry="refresh"
+      />
+
       <div
-        v-if="!tickets.length"
+        v-else-if="!tickets.length"
         class="flex flex-col items-center rounded-2xl border border-border bg-card p-12 text-center text-muted-foreground"
       >
         <UtensilsCrossed class="h-10 w-10" />

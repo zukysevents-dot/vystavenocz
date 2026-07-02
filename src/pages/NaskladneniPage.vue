@@ -1,8 +1,18 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
-import { ScanBarcode, Search, Trash2, Loader2, PackagePlus, AlertTriangle } from 'lucide-vue-next'
+import {
+  ScanBarcode,
+  Search,
+  Trash2,
+  Loader2,
+  PackagePlus,
+  AlertTriangle,
+  Camera,
+} from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import CameraScanner from '@/components/app/CameraScanner.vue'
+import LoadError from '@/components/app/LoadError.vue'
 import { useProducts } from '@/composables/useProducts'
 import { useInventory } from '@/composables/useInventory'
 import { isApiMode } from '@/lib/http'
@@ -15,12 +25,14 @@ const inv = useInventory()
 const apiMode = isApiMode()
 
 const loading = ref(true)
+const loadError = ref(false)
 const submitting = ref(false)
 const levelMap = ref(new Map<string, number>())
 
 const scanEan = ref('')
 const search = ref('')
 const scanInput = ref<HTMLInputElement | null>(null)
+const scannerOpen = ref(false)
 
 interface ReceiveLine {
   productId: string
@@ -35,20 +47,27 @@ async function loadLevels() {
   levelMap.value = new Map(levels.map((l) => [l.productId, l.quantity]))
 }
 
-onMounted(async () => {
-  if (!apiMode) {
-    loading.value = false
-    return
-  }
+async function reload() {
+  loading.value = true
+  loadError.value = false
   try {
     await loadProducts()
     await loadLevels()
   } catch (e) {
-    console.error(e)
+    console.warn('Načtení skladu selhalo:', e)
+    loadError.value = true
   } finally {
     loading.value = false
-    focusScan()
+    if (!loadError.value) focusScan()
   }
+}
+
+onMounted(() => {
+  if (!apiMode) {
+    loading.value = false
+    return
+  }
+  reload()
 })
 
 function focusScan() {
@@ -61,9 +80,10 @@ function addProduct(p: Product, qty = 1) {
   else lines.value.push({ productId: p.id, name: p.name, sku: p.sku, quantity: qty })
 }
 
-// Sken / EAN → přidat na příjemku (čtečka pošle kód + Enter).
-function onScan() {
-  const code = scanEan.value.trim()
+// Sken / EAN → přidat na příjemku. Sdílené pro HW čtečku i kameru.
+// announce=true (kamera) potvrdí přidání toastem — skener zůstává otevřený.
+function handleCode(raw: string, announce = false) {
+  const code = raw.trim()
   if (!code) return
   const p = findByEan(products.value, code)
   if (!p) {
@@ -73,7 +93,13 @@ function onScan() {
     toast.error(`Víc produktů se stejným EAN „${code}" — vyber ho ručně níže.`)
   } else {
     addProduct(p, 1)
+    if (announce) toast.success(`${p.name} přidán na příjemku.`)
   }
+}
+
+// Čtečka pošle kód + Enter.
+function onScan() {
+  handleCode(scanEan.value)
   scanEan.value = ''
   focusScan()
 }
@@ -158,6 +184,8 @@ function addSuggestion(productId: string, suggested: number) {
       <Loader2 class="h-6 w-6 animate-spin text-primary" />
     </div>
 
+    <LoadError v-else-if="loadError" class="mt-6" :retrying="loading" @retry="reload" />
+
     <div v-else class="mt-6 grid gap-4 lg:grid-cols-[1fr_340px]">
       <!-- Příjemka -->
       <div class="space-y-4">
@@ -166,13 +194,25 @@ function addSuggestion(productId: string, suggested: number) {
           <label class="mb-1.5 flex items-center gap-1.5 text-sm font-medium" for="scan">
             <ScanBarcode class="h-4 w-4 text-primary" /> Sken / EAN
           </label>
-          <Input
-            id="scan"
-            ref="scanInput"
-            v-model="scanEan"
-            placeholder="Naskenuj kód nebo zadej EAN a stiskni Enter"
-            @keyup.enter="onScan"
-          />
+          <div class="flex gap-2">
+            <Input
+              id="scan"
+              ref="scanInput"
+              v-model="scanEan"
+              placeholder="Naskenuj kód nebo zadej EAN a stiskni Enter"
+              class="flex-1"
+              @keyup.enter="onScan"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              class="shrink-0"
+              title="Skenovat kamerou"
+              @click="scannerOpen = true"
+            >
+              <Camera class="h-4 w-4" /> Kamera
+            </Button>
+          </div>
 
           <!-- Ruční vyhledání -->
           <div class="relative mt-3">
@@ -266,5 +306,7 @@ function addSuggestion(productId: string, suggested: number) {
         </div>
       </div>
     </div>
+
+    <CameraScanner v-model:open="scannerOpen" @detected="(c) => handleCode(c, true)" />
   </div>
 </template>
