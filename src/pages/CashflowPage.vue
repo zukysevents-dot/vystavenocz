@@ -4,6 +4,7 @@ import { Wallet, AlertTriangle, FileText, Mail, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useInvoices } from '@/composables/useInvoices'
+import LoadError from '@/components/app/LoadError.vue'
 import { formatCZK, formatDate } from '@/lib/invoice'
 import {
   buildOutstanding,
@@ -16,16 +17,18 @@ import {
 } from '@/lib/cashflow'
 import type { Invoice } from '@/lib/types'
 
-const { invoices, load } = useInvoices()
+const { invoices, loadError, load } = useInvoices()
 const loading = ref(true)
 
 // Referenční „dnešek" — jednou při mountu, ať se výpočty během renderu neměmí.
 const today = new Date()
 
-onMounted(async () => {
+async function reload(): Promise<void> {
+  loading.value = true
   await load()
   loading.value = false
-})
+}
+onMounted(reload)
 
 const outstanding = computed(() => buildOutstanding(invoices.value, today))
 const summary = computed(() => summarize(outstanding.value))
@@ -59,6 +62,8 @@ function remind(inv: Invoice) {
     <div v-if="loading" class="mt-12 flex justify-center">
       <Loader2 class="h-6 w-6 animate-spin text-primary" />
     </div>
+
+    <LoadError v-else-if="loadError" class="mt-6" @retry="reload" />
 
     <div
       v-else-if="outstanding.length === 0"

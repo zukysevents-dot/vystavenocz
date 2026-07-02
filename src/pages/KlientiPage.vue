@@ -36,10 +36,11 @@ import {
 import { useClients, type ClientInput } from '@/composables/useClients'
 import { useAres } from '@/composables/useAres'
 import { toast } from '@/components/ui/sonner'
+import LoadError from '@/components/app/LoadError.vue'
 import type { Client } from '@/lib/types'
 
 const router = useRouter()
-const { clients, load, create, update, remove } = useClients()
+const { clients, loadError, load, create, update, remove } = useClients()
 const ares = useAres()
 
 const loading = ref(true)
@@ -80,11 +81,12 @@ const emptyForm: ClientForm = {
 
 const form = reactive<ClientForm>({ ...emptyForm })
 
-onMounted(async () => {
+async function reload(): Promise<void> {
   loading.value = true
   await load()
   loading.value = false
-})
+}
+onMounted(reload)
 
 const filtered = computed(() => {
   const q = search.value.toLowerCase().trim()
@@ -207,7 +209,9 @@ async function onDelete() {
       <Input v-model="search" class="pl-9" placeholder="Hledat podle jména, IČO nebo e-mailu…" />
     </div>
 
-    <div class="mt-6 rounded-2xl border border-border bg-card">
+    <LoadError v-if="loadError && !loading" class="mt-6" @retry="reload" />
+
+    <div v-else class="mt-6 rounded-2xl border border-border bg-card">
       <div v-if="loading" class="flex justify-center p-12">
         <Loader2 class="h-6 w-6 animate-spin text-primary" />
       </div>

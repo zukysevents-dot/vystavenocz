@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { BarChart } from '@/components/ui/chart'
+import LoadError from '@/components/app/LoadError.vue'
 import { useInvoices } from '@/composables/useInvoices'
 import { useClients } from '@/composables/useClients'
 import { useLocations } from '@/composables/useLocations'
@@ -96,16 +97,23 @@ const CZ_MONTHS = [
   'Pro',
 ]
 
-onMounted(async () => {
+const loadError = ref(false)
+
+async function loadAll(): Promise<void> {
+  loading.value = true
+  loadError.value = false
   try {
-    await Promise.all([
-      isApiMode() ? loadFromApi() : loadFromMock(),
-      loadPos(), // POS provoz — nezávisle na fakturační části, ať jeho výpadek neshodí dashboard
-    ])
+    // POS provoz běží nezávisle (vlastní try/catch); hlavní část (faktury) řídí chybový stav.
+    await Promise.all([isApiMode() ? loadFromApi() : loadFromMock(), loadPos()])
+  } catch (e) {
+    console.warn('Načtení přehledu selhalo:', e)
+    loadError.value = true
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(loadAll)
 
 // POS provoz — prodeje + pobočky. Chyba (např. chybějící /sales endpoint) nesmí shodit
 // zbytek dashboardu, proto vlastní try/catch a graceful prázdný stav.
@@ -297,166 +305,174 @@ function statusMeta(s: string): { label: string; variant: BadgeVariant } {
       </div>
     </div>
 
-    <!-- Metriky -->
-    <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <div class="rounded-xl border border-border bg-card p-4">
-        <div class="flex items-center gap-2 text-sm text-muted-foreground">
-          <FileText class="h-4 w-4" /> Faktury celkem
-        </div>
-        <div class="mt-2 text-2xl font-bold">{{ stats.count }}</div>
-      </div>
-      <div class="rounded-xl border border-border bg-card p-4">
-        <div class="flex items-center gap-2 text-sm text-muted-foreground">
-          <Coins class="h-4 w-4" /> Fakturováno
-        </div>
-        <div class="mt-2 text-2xl font-bold">{{ formatCZK(stats.billed) }}</div>
-      </div>
-      <div class="rounded-xl border border-border bg-card p-4">
-        <div class="flex items-center gap-2 text-sm text-muted-foreground">
-          <CheckCircle2 class="h-4 w-4 text-success" /> Uhrazené
-        </div>
-        <div class="mt-2 text-2xl font-bold">{{ stats.paidCount }}</div>
-        <div class="text-xs text-muted-foreground">{{ formatCZK(stats.paidAmount) }}</div>
-      </div>
-      <div class="rounded-xl border border-border bg-card p-4">
-        <div class="flex items-center gap-2 text-sm text-muted-foreground">
-          <AlertTriangle class="h-4 w-4 text-destructive" /> Po splatnosti
-        </div>
-        <div class="mt-2 text-2xl font-bold">{{ stats.overdueCount }}</div>
-        <div class="text-xs text-muted-foreground">{{ formatCZK(stats.overdueAmount) }}</div>
-      </div>
-    </div>
+    <!-- Výpadek serveru → místo zavádějícího prázdna (0 faktur) ukážeme chybu + retry -->
+    <LoadError v-if="loadError && !loading" class="mt-6" :retrying="loading" @retry="loadAll" />
 
-    <!-- Graf tržeb -->
-    <div class="mt-6 rounded-xl border border-border bg-card p-4 sm:p-6">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        Tržby (posledních 6 měsíců)
-      </h2>
-      <BarChart
-        v-if="hasRevenue"
-        class="mt-4"
-        :data="revenue"
-        :x="(_, i) => i"
-        :y="(d) => d.total"
-        :x-tick-format="(_, i) => revenue[i]?.label ?? ''"
-        aria-label="Tržby za posledních 6 měsíců"
-      />
-      <p v-else class="mt-4 text-sm text-muted-foreground">
-        Zatím žádné tržby k zobrazení. Vystavte první fakturu.
-      </p>
-    </div>
+    <template v-else>
+      <!-- Metriky -->
+      <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-xl border border-border bg-card p-4">
+          <div class="flex items-center gap-2 text-sm text-muted-foreground">
+            <FileText class="h-4 w-4" /> Faktury celkem
+          </div>
+          <div class="mt-2 text-2xl font-bold">{{ stats.count }}</div>
+        </div>
+        <div class="rounded-xl border border-border bg-card p-4">
+          <div class="flex items-center gap-2 text-sm text-muted-foreground">
+            <Coins class="h-4 w-4" /> Fakturováno
+          </div>
+          <div class="mt-2 text-2xl font-bold">{{ formatCZK(stats.billed) }}</div>
+        </div>
+        <div class="rounded-xl border border-border bg-card p-4">
+          <div class="flex items-center gap-2 text-sm text-muted-foreground">
+            <CheckCircle2 class="h-4 w-4 text-success" /> Uhrazené
+          </div>
+          <div class="mt-2 text-2xl font-bold">{{ stats.paidCount }}</div>
+          <div class="text-xs text-muted-foreground">{{ formatCZK(stats.paidAmount) }}</div>
+        </div>
+        <div class="rounded-xl border border-border bg-card p-4">
+          <div class="flex items-center gap-2 text-sm text-muted-foreground">
+            <AlertTriangle class="h-4 w-4 text-destructive" /> Po splatnosti
+          </div>
+          <div class="mt-2 text-2xl font-bold">{{ stats.overdueCount }}</div>
+          <div class="text-xs text-muted-foreground">{{ formatCZK(stats.overdueAmount) }}</div>
+        </div>
+      </div>
 
-    <!-- Provoz (pokladna & pobočky) -->
-    <div v-if="hasPos" class="mt-6 rounded-xl border border-border bg-card p-4 sm:p-6">
-      <div class="flex items-center justify-between">
+      <!-- Graf tržeb -->
+      <div class="mt-6 rounded-xl border border-border bg-card p-4 sm:p-6">
         <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Provoz — pokladna &amp; pobočky
+          Tržby (posledních 6 měsíců)
         </h2>
-        <RouterLink to="/app/konsolidace" class="text-xs font-medium text-primary hover:underline">
-          Konsolidace
-        </RouterLink>
-      </div>
-      <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <div class="flex items-center gap-2 text-sm text-muted-foreground">
-            <TrendingUp class="h-4 w-4" /> POS tržby
-          </div>
-          <div class="mt-1 text-2xl font-bold">{{ formatCZK(posSummary.totalRevenue) }}</div>
-        </div>
-        <div>
-          <div class="flex items-center gap-2 text-sm text-muted-foreground">
-            <ShoppingCart class="h-4 w-4" /> Prodejů
-          </div>
-          <div class="mt-1 text-2xl font-bold">{{ posSummary.totalSales }}</div>
-        </div>
-        <div>
-          <div class="flex items-center gap-2 text-sm text-muted-foreground">
-            <Building2 class="h-4 w-4" /> Poboček
-          </div>
-          <div class="mt-1 text-2xl font-bold">{{ posSummary.locationCount }}</div>
-        </div>
-        <div>
-          <div class="flex items-center gap-2 text-sm text-muted-foreground">
-            <Trophy class="h-4 w-4 text-primary" /> Nejlepší pobočka
-          </div>
-          <div class="mt-1 truncate text-2xl font-bold">
-            {{ posSummary.topLocationName ?? '—' }}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Poslední faktury + klienti -->
-    <div class="mt-6 grid gap-4 lg:grid-cols-2">
-      <div class="min-w-0 rounded-xl border border-border bg-card p-4 sm:p-6">
-        <div class="flex items-center justify-between">
-          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Poslední faktury
-          </h2>
-          <RouterLink to="/app/faktury" class="text-xs font-medium text-primary hover:underline">
-            Všechny
-          </RouterLink>
-        </div>
-        <div v-if="recentInvoices.length" class="mt-4 space-y-1">
-          <button
-            v-for="inv in recentInvoices"
-            :key="inv.id"
-            type="button"
-            class="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-muted"
-            @click="router.push('/app/faktury/editor?id=' + inv.id)"
-          >
-            <span class="min-w-0 flex-1">
-              <span class="block truncate font-medium">{{ inv.invoiceNumber || 'Koncept' }}</span>
-              <span class="block truncate text-xs text-muted-foreground">
-                {{ inv.clientName || '—' }} · {{ formatDate(inv.issueDate) }}
-              </span>
-            </span>
-            <span class="flex shrink-0 items-center gap-2">
-              <span class="font-semibold">{{ formatCZK(inv.total) }}</span>
-              <Badge :variant="statusMeta(inv.status).variant">
-                {{ statusMeta(inv.status).label }}
-              </Badge>
-            </span>
-          </button>
-        </div>
-        <p v-else class="mt-4 text-sm text-muted-foreground">Zatím žádné faktury.</p>
+        <BarChart
+          v-if="hasRevenue"
+          class="mt-4"
+          :data="revenue"
+          :x="(_, i) => i"
+          :y="(d) => d.total"
+          :x-tick-format="(_, i) => revenue[i]?.label ?? ''"
+          aria-label="Tržby za posledních 6 měsíců"
+        />
+        <p v-else class="mt-4 text-sm text-muted-foreground">
+          Zatím žádné tržby k zobrazení. Vystavte první fakturu.
+        </p>
       </div>
 
-      <div class="min-w-0 rounded-xl border border-border bg-card p-4 sm:p-6">
+      <!-- Provoz (pokladna & pobočky) -->
+      <div v-if="hasPos" class="mt-6 rounded-xl border border-border bg-card p-4 sm:p-6">
         <div class="flex items-center justify-between">
           <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Poslední klienti
+            Provoz — pokladna &amp; pobočky
           </h2>
-          <RouterLink to="/app/klienti" class="text-xs font-medium text-primary hover:underline">
-            Všichni
-          </RouterLink>
-        </div>
-        <div v-if="recentClients.length" class="mt-4 space-y-1">
           <RouterLink
-            v-for="c in recentClients"
-            :key="c.id"
-            to="/app/klienti"
-            class="flex items-center gap-3 rounded-lg px-2 py-2 text-sm hover:bg-muted"
+            to="/app/konsolidace"
+            class="text-xs font-medium text-primary hover:underline"
           >
-            <span
-              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"
-            >
-              <Users class="h-4 w-4" />
-            </span>
-            <span class="min-w-0">
-              <span class="block truncate font-medium">{{ c.name }}</span>
-              <span class="block truncate text-xs text-muted-foreground">
-                {{
-                  [c.city, c.ico ? 'IČO ' + c.ico : ''].filter(Boolean).join(' · ') ||
-                  c.email ||
-                  '—'
-                }}
-              </span>
-            </span>
+            Konsolidace
           </RouterLink>
         </div>
-        <p v-else class="mt-4 text-sm text-muted-foreground">Zatím žádní klienti.</p>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <div class="flex items-center gap-2 text-sm text-muted-foreground">
+              <TrendingUp class="h-4 w-4" /> POS tržby
+            </div>
+            <div class="mt-1 text-2xl font-bold">{{ formatCZK(posSummary.totalRevenue) }}</div>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 text-sm text-muted-foreground">
+              <ShoppingCart class="h-4 w-4" /> Prodejů
+            </div>
+            <div class="mt-1 text-2xl font-bold">{{ posSummary.totalSales }}</div>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 text-sm text-muted-foreground">
+              <Building2 class="h-4 w-4" /> Poboček
+            </div>
+            <div class="mt-1 text-2xl font-bold">{{ posSummary.locationCount }}</div>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 text-sm text-muted-foreground">
+              <Trophy class="h-4 w-4 text-primary" /> Nejlepší pobočka
+            </div>
+            <div class="mt-1 truncate text-2xl font-bold">
+              {{ posSummary.topLocationName ?? '—' }}
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+
+      <!-- Poslední faktury + klienti -->
+      <div class="mt-6 grid gap-4 lg:grid-cols-2">
+        <div class="min-w-0 rounded-xl border border-border bg-card p-4 sm:p-6">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Poslední faktury
+            </h2>
+            <RouterLink to="/app/faktury" class="text-xs font-medium text-primary hover:underline">
+              Všechny
+            </RouterLink>
+          </div>
+          <div v-if="recentInvoices.length" class="mt-4 space-y-1">
+            <button
+              v-for="inv in recentInvoices"
+              :key="inv.id"
+              type="button"
+              class="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-muted"
+              @click="router.push('/app/faktury/editor?id=' + inv.id)"
+            >
+              <span class="min-w-0 flex-1">
+                <span class="block truncate font-medium">{{ inv.invoiceNumber || 'Koncept' }}</span>
+                <span class="block truncate text-xs text-muted-foreground">
+                  {{ inv.clientName || '—' }} · {{ formatDate(inv.issueDate) }}
+                </span>
+              </span>
+              <span class="flex shrink-0 items-center gap-2">
+                <span class="font-semibold">{{ formatCZK(inv.total) }}</span>
+                <Badge :variant="statusMeta(inv.status).variant">
+                  {{ statusMeta(inv.status).label }}
+                </Badge>
+              </span>
+            </button>
+          </div>
+          <p v-else class="mt-4 text-sm text-muted-foreground">Zatím žádné faktury.</p>
+        </div>
+
+        <div class="min-w-0 rounded-xl border border-border bg-card p-4 sm:p-6">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Poslední klienti
+            </h2>
+            <RouterLink to="/app/klienti" class="text-xs font-medium text-primary hover:underline">
+              Všichni
+            </RouterLink>
+          </div>
+          <div v-if="recentClients.length" class="mt-4 space-y-1">
+            <RouterLink
+              v-for="c in recentClients"
+              :key="c.id"
+              to="/app/klienti"
+              class="flex items-center gap-3 rounded-lg px-2 py-2 text-sm hover:bg-muted"
+            >
+              <span
+                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"
+              >
+                <Users class="h-4 w-4" />
+              </span>
+              <span class="min-w-0">
+                <span class="block truncate font-medium">{{ c.name }}</span>
+                <span class="block truncate text-xs text-muted-foreground">
+                  {{
+                    [c.city, c.ico ? 'IČO ' + c.ico : ''].filter(Boolean).join(' · ') ||
+                    c.email ||
+                    '—'
+                  }}
+                </span>
+              </span>
+            </RouterLink>
+          </div>
+          <p v-else class="mt-4 text-sm text-muted-foreground">Zatím žádní klienti.</p>
+        </div>
+      </div>
+    </template>
   </div>
 </template>
