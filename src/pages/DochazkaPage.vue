@@ -38,6 +38,7 @@ import { useAttendance, type EmployeeInput } from '@/composables/useAttendance'
 import { useAuthStore } from '@/stores/auth'
 import { isApiMode, ApiError } from '@/lib/http'
 import { toast } from '@/components/ui/sonner'
+import LoadError from '@/components/app/LoadError.vue'
 import type { AttendanceRecord, AttendanceSummary, Employee } from '@/lib/types'
 
 const att = useAttendance()
@@ -45,6 +46,7 @@ const auth = useAuthStore()
 const apiMode = isApiMode()
 
 const loading = ref(true)
+const loadError = ref(false)
 const busy = ref(false)
 const tab = ref<'clock' | 'employees' | 'summary'>('clock')
 const TABS = [
@@ -65,34 +67,47 @@ const openBreak = computed(() => {
   return last && last.endAt === null ? last : null
 })
 
-async function loadCurrent() {
+// Vrací true při úspěchu i u 403 (= platný stav „nejste zaměstnanec", ne výpadek).
+async function loadCurrent(): Promise<boolean> {
   try {
     record.value = await att.current()
     notEmployee.value = false
+    return true
   } catch (e) {
     if (e instanceof ApiError && e.status === 403) {
       notEmployee.value = true
       record.value = null
-    } else {
-      console.error(e)
+      return true
     }
+    console.warn('Načtení docházky selhalo:', e)
+    return false
   }
 }
-async function loadEmployees() {
+async function loadEmployees(): Promise<boolean> {
   try {
     employees.value = await att.employees()
+    return true
   } catch (e) {
-    console.error(e)
+    console.warn('Načtení zaměstnanců selhalo:', e)
+    return false
   }
 }
 
-onMounted(async () => {
+async function reload() {
+  loading.value = true
+  loadError.value = false
+  // Chybu ukážeme, jen když padne celý initial load (server nedostupný).
+  const [okCurrent, okEmployees] = await Promise.all([loadCurrent(), loadEmployees()])
+  if (!okCurrent && !okEmployees) loadError.value = true
+  loading.value = false
+}
+
+onMounted(() => {
   if (!apiMode) {
     loading.value = false
     return
   }
-  await Promise.all([loadCurrent(), loadEmployees()])
-  loading.value = false
+  reload()
   timer = setInterval(() => (now.value = Date.now()), 1000)
 })
 onUnmounted(() => {
@@ -259,6 +274,8 @@ async function exportCsv() {
       <div v-if="loading" class="mt-6 flex justify-center p-12">
         <Loader2 class="h-6 w-6 animate-spin text-primary" />
       </div>
+
+      <LoadError v-else-if="loadError" class="mt-6" @retry="reload" />
 
       <!-- PÍCHAČKA -->
       <template v-else-if="tab === 'clock'">

@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from '@/components/ui/sonner'
+import LoadError from '@/components/app/LoadError.vue'
 import { useShifts, type ShiftInput } from '@/composables/useShifts'
 import { shiftHours, shiftWage, summarizeByEmployee, totals } from '@/lib/shifts'
 import { formatCZK, formatDate } from '@/lib/invoice'
@@ -31,6 +32,7 @@ import type { Shift } from '@/lib/types'
 
 const { shifts, load, create, update, remove } = useShifts()
 const loading = ref(true)
+const loadError = ref(false)
 const dialogOpen = ref(false)
 const editing = ref<Shift | null>(null)
 const deleteId = ref<string | null>(null)
@@ -47,10 +49,19 @@ const emptyForm = {
 }
 const form = reactive({ ...emptyForm })
 
-onMounted(async () => {
-  await load()
-  loading.value = false
-})
+async function reload() {
+  loading.value = true
+  loadError.value = false
+  try {
+    await load()
+  } catch (e) {
+    console.warn('Načtení směn selhalo:', e)
+    loadError.value = true
+  } finally {
+    loading.value = false
+  }
+}
+onMounted(reload)
 
 function num(v: unknown): number {
   const n = Number(v)
@@ -156,6 +167,8 @@ function pluralShifts(n: number): string {
     <div v-if="loading" class="mt-12 flex justify-center">
       <Loader2 class="h-6 w-6 animate-spin text-primary" />
     </div>
+
+    <LoadError v-else-if="loadError" class="mt-6" @retry="reload" />
 
     <div
       v-else-if="shifts.length === 0"
