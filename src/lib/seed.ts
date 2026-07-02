@@ -7,9 +7,18 @@ import {
   buildInvoiceNumber,
   calcLine,
   calcTotals,
+  round2,
   variableSymbolFromInvoiceNumber,
 } from '@/lib/invoice'
-import type { Client, Invoice, InvoiceItem, SupplierSnapshot, VatRate } from '@/lib/types'
+import type {
+  Client,
+  Invoice,
+  InvoiceItem,
+  Location,
+  Sale,
+  SupplierSnapshot,
+  VatRate,
+} from '@/lib/types'
 
 const SUPPLIER: SupplierSnapshot = {
   companyName: 'Demo Dodavatel s.r.o.',
@@ -37,9 +46,89 @@ function makeItem(
   return { id: crypto.randomUUID(), description, quantity, unit, unitPrice, vatRate, ...calc }
 }
 
+/**
+ * Demo pobočky + prodeje s locationId — aby modul Konsolidace poboček ukázal reálná
+ * čísla i v mock režimu (POS Sale jinak existují jen proti API). Pevná id poboček, ať na
+ * ně prodeje můžou odkazovat. Idempotentní: seedne jen když jsou dané kolekce prázdné.
+ */
+async function seedLocationsAndSales(): Promise<void> {
+  const locationsApi = useApi<Location>('locations')
+  const salesApi = useApi<Sale>('sales')
+  const now = new Date().toISOString()
+
+  const locations: Location[] = [
+    {
+      id: 'loc-praha',
+      name: 'Praha — Vinohrady',
+      address: 'Korunní 12, Praha',
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'loc-brno',
+      name: 'Brno — střed',
+      address: 'Masarykova 5, Brno',
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'loc-ostrava',
+      name: 'Ostrava',
+      address: 'Stodolní 8, Ostrava',
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ]
+  if ((await locationsApi.list()).length === 0) {
+    for (const l of locations) await locationsApi.create(l)
+  }
+
+  if ((await salesApi.list()).length === 0) {
+    // Prodej vč. DPH 21 % → rozpad na net/vat; rozprostřené přes ~2 měsíce kvůli filtru období.
+    const base = Date.now()
+    // `net` je bez DPH; `total` = net + DPH + spropitné (jako reálný POS Sale).
+    const makeSale = (locationId: string, revenue: number, daysAgo: number, tip = 0): Sale => {
+      const net = round2(revenue / 1.21)
+      const soldAt = new Date(base - daysAgo * 86_400_000).toISOString()
+      return {
+        id: crypto.randomUUID(),
+        locationId,
+        paymentMethod: daysAgo % 2 === 0 ? 'Card' : 'Cash',
+        status: 'Completed',
+        discountPercent: 0,
+        tipAmount: tip,
+        totalNet: net,
+        totalVat: round2(revenue - net),
+        total: round2(revenue + tip),
+        soldAt,
+        items: [],
+      }
+    }
+    const demo: Sale[] = [
+      makeSale('loc-praha', 2450, 2, 100),
+      makeSale('loc-praha', 1890, 5),
+      makeSale('loc-praha', 3200, 9, 200),
+      makeSale('loc-praha', 1450, 34),
+      makeSale('loc-brno', 1780, 3, 50),
+      makeSale('loc-brno', 2100, 7),
+      makeSale('loc-brno', 1320, 33),
+      makeSale('loc-ostrava', 990, 4),
+      makeSale('loc-ostrava', 1550, 8, 80),
+      makeSale('loc-ostrava', 1240, 35),
+    ]
+    for (const s of demo) await salesApi.create(s)
+  }
+}
+
 export async function seedMockData(): Promise<void> {
   const clientsApi = useApi<Client>('clients')
   const invoicesApi = useApi<Invoice>('invoices')
+
+  // Pobočky + prodeje seedujeme nezávisle (mají vlastní prázdnostní kontrolu).
+  await seedLocationsAndSales()
 
   if ((await clientsApi.list()).length > 0) return
 
