@@ -9,21 +9,30 @@ import {
   Plus,
   UserPlus,
   Users,
+  TrendingUp,
+  ShoppingCart,
+  Building2,
+  Trophy,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { BarChart } from '@/components/ui/chart'
 import { useInvoices } from '@/composables/useInvoices'
 import { useClients } from '@/composables/useClients'
+import { useLocations } from '@/composables/useLocations'
+import { useApi } from '@/composables/useApi'
 import { useCompanyStore } from '@/stores/company'
 import { http, isApiMode } from '@/lib/http'
 import { formatCZK, formatDate } from '@/lib/invoice'
-import type { InvoiceStatus } from '@/lib/types'
+import { buildLocationRevenue, consolidationSummary } from '@/lib/consolidation'
+import type { InvoiceStatus, Sale } from '@/lib/types'
 
 const router = useRouter()
 const loading = ref(true)
 // Profil firmy pro pozdrav v hlavičce; načítá ho AppLayout (reaktivně), tady jen čteme.
 const companyStore = useCompanyStore()
+const salesApi = useApi<Sale>('sales')
+const { locations, load: loadLocations } = useLocations()
 
 // Normalizovaný tvar dat — stejný pro API i mock režim (template nezávisí na režimu).
 interface Stats {
@@ -63,6 +72,15 @@ const recentInvoices = ref<RecentInvoice[]>([])
 const recentClients = ref<RecentClient[]>([])
 const hasRevenue = computed(() => revenue.value.some((b) => b.total > 0))
 
+// Provoz (POS & pobočky) — tržby z prodejů seskupené po pobočkách. Čte se stejně v obou
+// režimech přes useApi<Sale>('sales') (API: /sales, mock: seed). Reuse otestované consolidation
+// logiky. locationId plní backend; do té doby padne do „Nepřiřazeno".
+const posSales = ref<Sale[]>([])
+const posSummary = computed(() =>
+  consolidationSummary(buildLocationRevenue(posSales.value, locations.value)),
+)
+const hasPos = computed(() => posSales.value.length > 0)
+
 const CZ_MONTHS = [
   'Led',
   'Úno',
@@ -80,12 +98,26 @@ const CZ_MONTHS = [
 
 onMounted(async () => {
   try {
-    if (isApiMode()) await loadFromApi()
-    else await loadFromMock()
+    await Promise.all([
+      isApiMode() ? loadFromApi() : loadFromMock(),
+      loadPos(), // POS provoz — nezávisle na fakturační části, ať jeho výpadek neshodí dashboard
+    ])
   } finally {
     loading.value = false
   }
 })
+
+// POS provoz — prodeje + pobočky. Chyba (např. chybějící /sales endpoint) nesmí shodit
+// zbytek dashboardu, proto vlastní try/catch a graceful prázdný stav.
+async function loadPos(): Promise<void> {
+  try {
+    const [sales] = await Promise.all([salesApi.list(), loadLocations()])
+    posSales.value = sales
+  } catch (e) {
+    console.warn('Načtení POS provozu selhalo:', e)
+    posSales.value = []
+  }
+}
 
 // API režim: tenant-scoped agregace na backendu (5 malých paralelních dotazů). Nestahuje celý
 // seznam faktur do prohlížeče — metriky/řadu/recent počítá DB. Částky all-time (široký rozsah),
@@ -312,6 +344,46 @@ function statusMeta(s: string): { label: string; variant: BadgeVariant } {
       <p v-else class="mt-4 text-sm text-muted-foreground">
         Zatím žádné tržby k zobrazení. Vystavte první fakturu.
       </p>
+    </div>
+
+    <!-- Provoz (pokladna & pobočky) -->
+    <div v-if="hasPos" class="mt-6 rounded-xl border border-border bg-card p-4 sm:p-6">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Provoz — pokladna &amp; pobočky
+        </h2>
+        <RouterLink to="/app/konsolidace" class="text-xs font-medium text-primary hover:underline">
+          Konsolidace
+        </RouterLink>
+      </div>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <div class="flex items-center gap-2 text-sm text-muted-foreground">
+            <TrendingUp class="h-4 w-4" /> POS tržby
+          </div>
+          <div class="mt-1 text-2xl font-bold">{{ formatCZK(posSummary.totalRevenue) }}</div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 text-sm text-muted-foreground">
+            <ShoppingCart class="h-4 w-4" /> Prodejů
+          </div>
+          <div class="mt-1 text-2xl font-bold">{{ posSummary.totalSales }}</div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 text-sm text-muted-foreground">
+            <Building2 class="h-4 w-4" /> Poboček
+          </div>
+          <div class="mt-1 text-2xl font-bold">{{ posSummary.locationCount }}</div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 text-sm text-muted-foreground">
+            <Trophy class="h-4 w-4 text-primary" /> Nejlepší pobočka
+          </div>
+          <div class="mt-1 truncate text-2xl font-bold">
+            {{ posSummary.topLocationName ?? '—' }}
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Poslední faktury + klienti -->
