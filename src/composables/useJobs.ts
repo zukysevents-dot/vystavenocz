@@ -9,15 +9,17 @@ export type JobInput = Omit<Job, 'id' | 'createdAt' | 'updatedAt'>
 
 export function useJobs() {
   const store = useJobsStore()
-  const { jobs } = storeToRefs(store)
+  const { jobs, loadError } = storeToRefs(store)
 
   async function load(): Promise<void> {
+    store.loadError = false
     try {
       store.jobs = await api.list()
     } catch (e) {
       // Endpoint nedostupný / modul vypnutý → prázdný seznam místo pádu appky.
       console.warn('Načtení zakázek selhalo:', e)
       store.jobs = []
+      store.loadError = true
     }
   }
 
@@ -45,5 +47,5 @@ export function useJobs() {
     store.jobs = store.jobs.filter((j) => j.id !== id)
   }
 
-  return { jobs, load, create, update, remove }
+  return { jobs, loadError, load, create, update, remove }
 }

@@ -4,18 +4,21 @@ import { Calculator, Download, FileCode2, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useInvoices } from '@/composables/useInvoices'
+import LoadError from '@/components/app/LoadError.vue'
 import { formatCZK, formatDate } from '@/lib/invoice'
 import { downloadIsdoc, downloadInvoicesCsv, canExportIsdoc } from '@/lib/accounting-export'
 import type { Invoice, InvoiceStatus } from '@/lib/types'
 
-const { invoices, load } = useInvoices()
+const { invoices, loadError, load } = useInvoices()
 const loading = ref(true)
 const period = ref<string>('all')
 
-onMounted(async () => {
+async function reload(): Promise<void> {
+  loading.value = true
   await load()
   loading.value = false
-})
+}
+onMounted(reload)
 
 // Účetní doklady = vystavené faktury. Koncepty (ještě nevystavené) ani stornované
 // (neplatné) doklady do podkladů pro účetní nepatří.
@@ -92,6 +95,8 @@ function exportIsdoc(inv: Invoice) {
     <div v-if="loading" class="mt-12 flex justify-center">
       <Loader2 class="h-6 w-6 animate-spin text-primary" />
     </div>
+
+    <LoadError v-else-if="loadError" class="mt-6" @retry="reload" />
 
     <div
       v-else-if="filtered.length === 0"

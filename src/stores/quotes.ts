@@ -5,5 +5,7 @@ import type { Quote } from '@/lib/types'
 // Cenové nabídky. Naplní useQuotes().load().
 export const useQuotesStore = defineStore('quotes', () => {
   const quotes = ref<Quote[]>([])
-  return { quotes }
+  // True = poslední načtení selhalo (výpadek serveru) → UI ukáže chybu místo prázdna.
+  const loadError = ref(false)
+  return { quotes, loadError }
 })

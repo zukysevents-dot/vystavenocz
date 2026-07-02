@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from '@/components/ui/sonner'
+import LoadError from '@/components/app/LoadError.vue'
 import { useJobs, type JobInput } from '@/composables/useJobs'
 import {
   jobRevenue,
@@ -37,7 +38,7 @@ import {
 import { formatCZK } from '@/lib/invoice'
 import type { Job, JobStatus } from '@/lib/types'
 
-const { jobs, load, create, update, remove } = useJobs()
+const { jobs, loadError, load, create, update, remove } = useJobs()
 const loading = ref(true)
 const dialogOpen = ref(false)
 const editing = ref<Job | null>(null)
@@ -57,10 +58,12 @@ const emptyForm = {
 }
 const form = reactive({ ...emptyForm })
 
-onMounted(async () => {
+async function reload(): Promise<void> {
+  loading.value = true
   await load()
   loading.value = false
-})
+}
+onMounted(reload)
 
 const summary = computed(() => summarizeJobs(jobs.value))
 const statuses: JobStatus[] = ['quote', 'in_progress', 'done', 'invoiced']
@@ -163,6 +166,8 @@ async function onDelete() {
     <div v-if="loading" class="mt-12 flex justify-center">
       <Loader2 class="h-6 w-6 animate-spin text-primary" />
     </div>
+
+    <LoadError v-else-if="loadError" class="mt-6" @retry="reload" />
 
     <div
       v-else-if="jobs.length === 0"

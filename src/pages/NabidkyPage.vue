@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from '@/components/ui/sonner'
+import LoadError from '@/components/app/LoadError.vue'
 import { useQuotes, type QuoteInput } from '@/composables/useQuotes'
 import { useInvoices, type InvoiceInput } from '@/composables/useInvoices'
 import { useCompanyStore } from '@/stores/company'
@@ -41,7 +42,7 @@ import type {
 } from '@/lib/types'
 
 const router = useRouter()
-const { quotes, load, create, update, remove } = useQuotes()
+const { quotes, loadError, load, create, update, remove } = useQuotes()
 const invoicesApi = useInvoices()
 const companyStore = useCompanyStore()
 
@@ -79,10 +80,14 @@ const form = reactive({
   items: [emptyItem()] as FormItem[],
 })
 
-onMounted(async () => {
-  companyStore.init()
+async function reload(): Promise<void> {
+  loading.value = true
   await load()
   loading.value = false
+}
+onMounted(async () => {
+  companyStore.init()
+  await reload()
 })
 
 const summary = computed(() => summarizeQuotes(quotes.value, vatPayer.value))
@@ -320,6 +325,8 @@ async function convertToInvoice(q: Quote) {
     <div v-if="loading" class="mt-12 flex justify-center">
       <Loader2 class="h-6 w-6 animate-spin text-primary" />
     </div>
+
+    <LoadError v-else-if="loadError" class="mt-6" @retry="reload" />
 
     <div
       v-else-if="quotes.length === 0"

@@ -5,6 +5,7 @@ import { useApi } from '@/composables/useApi'
 import { useLocations } from '@/composables/useLocations'
 import { formatCZK } from '@/lib/invoice'
 import { availablePeriods, buildLocationRevenue, consolidationSummary } from '@/lib/consolidation'
+import LoadError from '@/components/app/LoadError.vue'
 import type { Sale } from '@/lib/types'
 
 // Prodeje čteme přes useApi<Sale>('sales') — v API režimu trefí /sales (reálná data),
@@ -14,17 +15,22 @@ const { locations, load: loadLocations } = useLocations()
 
 const sales = ref<Sale[]>([])
 const loading = ref(true)
+const loadError = ref(false)
 const period = ref('all')
 
-onMounted(async () => {
+async function reload(): Promise<void> {
+  loading.value = true
+  loadError.value = false
   try {
     await Promise.all([loadLocations(), salesApi.list().then((s) => (sales.value = s))])
   } catch (e) {
     console.warn('Načtení dat konsolidace selhalo:', e)
+    loadError.value = true
   } finally {
     loading.value = false
   }
-})
+}
+onMounted(reload)
 
 const periods = computed(() => availablePeriods(sales.value))
 const rows = computed(() => buildLocationRevenue(sales.value, locations.value, period.value))
@@ -67,6 +73,8 @@ function periodLabel(p: string): string {
     <div v-if="loading" class="mt-12 flex justify-center">
       <Loader2 class="h-6 w-6 animate-spin text-primary" />
     </div>
+
+    <LoadError v-else-if="loadError" class="mt-6" @retry="reload" />
 
     <div
       v-else-if="rows.length === 0"
