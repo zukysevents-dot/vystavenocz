@@ -21,6 +21,7 @@ import {
   CalendarDays,
   CalendarClock,
   Building2,
+  BarChart3,
   Wallet,
   Calculator,
   Heart,
@@ -47,6 +48,7 @@ const navItems = [
   { to: '/app/dochazka', label: 'Docházka', icon: Clock },
   { to: '/app/smeny', label: 'Směny', icon: CalendarClock },
   { to: '/app/pobocky', label: 'Pobočky', icon: Building2 },
+  { to: '/app/konsolidace', label: 'Konsolidace', icon: BarChart3 },
   { to: '/app/rezervace', label: 'Rezervace', icon: CalendarDays },
   { to: '/app/kategorie', label: 'Kategorie', icon: Tags },
   { to: '/app/nabidky', label: 'Nabídky', icon: FileCheck },
@@ -64,7 +66,8 @@ const navItems = [
 const auth = useAuthStore()
 
 // Employee nemá invoices.read (backend vrací 403 na přehled/faktury/klienty) — finanční položky skryjeme.
-const financeRoutes = new Set(['/app', '/app/faktury', '/app/klienti'])
+// Konsolidace = manažerský přehled tržeb napříč pobočkami → taky skrýt Employee roli.
+const financeRoutes = new Set(['/app', '/app/faktury', '/app/klienti', '/app/konsolidace'])
 const nav = computed(() =>
   auth.role === 'Employee' ? navItems.filter((i) => !financeRoutes.has(i.to)) : navItems,
 )
