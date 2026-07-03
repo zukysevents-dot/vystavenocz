@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { Building2, TrendingUp, ShoppingCart, Trophy, Loader2 } from 'lucide-vue-next'
-import { useApi } from '@/composables/useApi'
+import { useApi, LIST_ALL_MAX } from '@/composables/useApi'
 import { useLocations } from '@/composables/useLocations'
 import { formatCZK } from '@/lib/invoice'
 import { availablePeriods, buildLocationRevenue, consolidationSummary } from '@/lib/consolidation'
@@ -22,7 +22,7 @@ async function reload(): Promise<void> {
   loading.value = true
   loadError.value = false
   try {
-    await Promise.all([loadLocations(), salesApi.list().then((s) => (sales.value = s))])
+    await Promise.all([loadLocations(), salesApi.listAll().then((s) => (sales.value = s))])
   } catch (e) {
     console.warn('Načtení dat konsolidace selhalo:', e)
     loadError.value = true
@@ -35,8 +35,10 @@ onMounted(reload)
 const periods = computed(() => availablePeriods(sales.value))
 const rows = computed(() => buildLocationRevenue(sales.value, locations.value, period.value))
 const summary = computed(() => consolidationSummary(rows.value))
-// list() vrací max 100 prodejů (strop useApi) — u agregace varujeme, ať čísla nevypadají úplná.
-const truncated = computed(() => sales.value.length >= 100)
+// listAll() projde všechny stránky do stropu LIST_ALL_MAX. Až při jeho dosažení varujeme, že u
+// ještě většího objemu čísla nemusí být úplná (pak je namístě serverová agregace).
+const truncated = computed(() => sales.value.length >= LIST_ALL_MAX)
+const maxSalesLabel = LIST_ALL_MAX.toLocaleString('cs-CZ')
 
 function periodLabel(p: string): string {
   const [y, m] = p.split('-')
@@ -67,7 +69,8 @@ function periodLabel(p: string): string {
       v-if="!loading && truncated"
       class="mt-4 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground"
     >
-      Zobrazeno prvních 100 prodejů — u většího objemu mohou být čísla neúplná.
+      Zobrazeno prvních {{ maxSalesLabel }} prodejů — u ještě většího objemu mohou být čísla
+      neúplná.
     </p>
 
     <div v-if="loading" class="mt-12 flex justify-center">

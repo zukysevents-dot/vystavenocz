@@ -39,11 +39,19 @@ export interface PagedResult<T> {
 
 export interface ResourceApi<T extends Identifiable> {
   list(): Promise<T[]>
+  /** Projde všechny stránky (do rozumného stropu). Pro agregace, kde 1 stránka nestačí. */
+  listAll(): Promise<T[]>
   get(id: string): Promise<T | null>
   create(item: T): Promise<T>
   update(id: string, patch: Partial<T>): Promise<T>
   remove(id: string): Promise<void>
 }
+
+/** Strop stránkování `listAll` — pojistka proti obřím datasetům. */
+const LIST_ALL_MAX_PAGES = 50
+const LIST_ALL_PAGE_SIZE = 100
+/** Max. počet záznamů, které `listAll` načte (nad tím jen varuje). Sdílené s UI (KonsolidacePage). */
+export const LIST_ALL_MAX = LIST_ALL_MAX_PAGES * LIST_ALL_PAGE_SIZE
 
 function httpApi<T extends Identifiable>(collection: string): ResourceApi<T> {
   const base = `/${collection}`
@@ -52,6 +60,23 @@ function httpApi<T extends Identifiable>(collection: string): ResourceApi<T> {
       // MVP: jedna stránka (strop backendu 100). Plné stránkování přijde s UI potřebou.
       const res = await http.get<PagedResult<T>>(`${base}?pageSize=100`)
       return res.items
+    },
+    async listAll() {
+      const ps = LIST_ALL_PAGE_SIZE
+      const first = await http.get<PagedResult<T>>(`${base}?page=1&pageSize=${ps}`)
+      const all = [...first.items]
+      const totalPages = Math.min(Math.ceil(first.total / ps), LIST_ALL_MAX_PAGES)
+      for (let page = 2; page <= totalPages; page++) {
+        const res = await http.get<PagedResult<T>>(`${base}?page=${page}&pageSize=${ps}`)
+        all.push(...res.items)
+      }
+      if (first.total > LIST_ALL_MAX) {
+        console.warn(
+          `${collection}: načteno prvních ${LIST_ALL_MAX} z ${first.total} — pro víc použij backendovou agregaci.`,
+        )
+      }
+      // Dedup podle id — pojistka, kdyby backend ignoroval `page` a vracel pořád první stránku.
+      return [...new Map(all.map((x) => [x.id, x])).values()]
     },
     async get(id) {
       try {
@@ -76,6 +101,9 @@ function httpApi<T extends Identifiable>(collection: string): ResourceApi<T> {
 function localApi<T extends Identifiable>(collection: string): ResourceApi<T> {
   return {
     async list() {
+      return read<T>(collection)
+    },
+    async listAll() {
       return read<T>(collection)
     },
     async get(id) {

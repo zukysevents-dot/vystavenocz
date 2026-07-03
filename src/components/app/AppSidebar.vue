@@ -66,10 +66,18 @@ const navItems = [
 const auth = useAuthStore()
 
 // Employee nemá invoices.read (backend vrací 403 na přehled/faktury/klienty) — finanční položky skryjeme.
-// Konsolidace = manažerský přehled tržeb napříč pobočkami → taky skrýt Employee roli.
-const financeRoutes = new Set(['/app', '/app/faktury', '/app/klienti', '/app/konsolidace'])
+// Manažerské stránky (Konsolidace, Pobočky) taky skrýt Employee roli — jsou vyhrazené vedení.
+// Pozn.: tady jen skrýváme položky Employee (blacklist); závazný gate je whitelist `requiresRole`
+// v routeru (dnes role Owner/Manager/Employee). Při případné 4. roli sjednotit se `requiresRole`.
+const managerHiddenRoutes = new Set([
+  '/app',
+  '/app/faktury',
+  '/app/klienti',
+  '/app/konsolidace',
+  '/app/pobocky',
+])
 const nav = computed(() =>
-  auth.role === 'Employee' ? navItems.filter((i) => !financeRoutes.has(i.to)) : navItems,
+  auth.role === 'Employee' ? navItems.filter((i) => !managerHiddenRoutes.has(i.to)) : navItems,
 )
 const canInvoice = computed(() => auth.role !== 'Employee')
 const route = useRoute()

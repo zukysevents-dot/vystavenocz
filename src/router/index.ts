@@ -8,6 +8,8 @@ declare module 'vue-router' {
     title?: string
     requiresAuth?: boolean
     layout?: 'public' | 'app' | 'auth'
+    /** Povolené role (jinak přesměrování na Přehled). Prázdné/nevyplněné = bez omezení. */
+    requiresRole?: string[]
   }
 }
 
@@ -141,7 +143,12 @@ const routes: RouteRecordRaw[] = [
     path: '/app/konsolidace',
     name: 'app-konsolidace',
     component: () => import('@/pages/KonsolidacePage.vue'),
-    meta: { title: 'Konsolidace poboček', layout: 'app', requiresAuth: true },
+    meta: {
+      title: 'Konsolidace poboček',
+      layout: 'app',
+      requiresAuth: true,
+      requiresRole: ['Owner', 'Manager'],
+    },
   },
   {
     path: '/app/cashflow',
@@ -243,7 +250,12 @@ const routes: RouteRecordRaw[] = [
     path: '/app/pobocky',
     name: 'app-pobocky',
     component: () => import('@/pages/PobockyPage.vue'),
-    meta: { title: 'Pobočky & vedení', layout: 'app', requiresAuth: true },
+    meta: {
+      title: 'Pobočky & vedení',
+      layout: 'app',
+      requiresAuth: true,
+      requiresRole: ['Owner', 'Manager'],
+    },
   },
   {
     path: '/app/rezervace',
@@ -341,6 +353,11 @@ router.beforeEach((to) => {
     to.name !== 'app-onboarding'
   ) {
     return { name: 'app-onboarding' }
+  }
+  // Role gating: routa vyhrazená rolím (manažerské stránky) → nedostatečná role zpět na Přehled.
+  // hasRole je fail-open (mock / neznámá role neblokuje); skutečné vynucení je na backendu.
+  if (to.meta.requiresRole && auth.isAuthenticated && !auth.hasRole(...to.meta.requiresRole)) {
+    return { name: 'app' }
   }
   // Employee nemá invoices.read → přehled (dashboard) by vracel 403; přistane rovnou na pokladně.
   if (isApiMode() && to.name === 'app' && auth.role === 'Employee') {
