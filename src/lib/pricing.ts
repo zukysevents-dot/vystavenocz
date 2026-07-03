@@ -215,8 +215,8 @@ export const PRICING_SEGMENTS: readonly PricingSegment[] = [
 /**
  * Rozšiřující moduly / oborové balíčky (v0.5) — staví na 6 core modulech výše a prodávají se
  * jako add-on ve vyšších tarifech. Ceny ORIENTAČNÍ (k potvrzení majitelem); jediný zdroj pravdy
- * pro landing ceník. Vše zatím na roadmapě (`soon`) — UI je zobrazuje jako „Připravujeme".
- * Strategie a priority viz ~/.claude/plans (10 placených modulů).
+ * pro landing ceník. `soon: true` = zobrazit nálepku „Připravujeme" (jinak modul vystupuje jako
+ * dostupný). Strategie a priority viz ~/.claude/plans (10 placených modulů).
  */
 export type AddonUnit = 'provozovna' | 'pobočka' | 'firma' | 'zaměstnanec' | 'klient'
 
@@ -266,7 +266,7 @@ export const PRICING_ADDONS: readonly PricingAddon[] = [
     monthly: 199,
     unit: 'provozovna',
     buildsOn: 'booking',
-    soon: true,
+    soon: false,
   },
   {
     key: 'loyalty',
@@ -276,7 +276,7 @@ export const PRICING_ADDONS: readonly PricingAddon[] = [
     category: 'services',
     monthly: 199,
     unit: 'provozovna',
-    soon: true,
+    soon: false,
   },
   {
     key: 'jobs',
@@ -287,7 +287,7 @@ export const PRICING_ADDONS: readonly PricingAddon[] = [
     monthly: 299,
     unit: 'firma',
     perExtra: { monthly: 99, label: 'za technika' },
-    soon: true,
+    soon: false,
   },
   {
     key: 'delivery',
@@ -298,7 +298,7 @@ export const PRICING_ADDONS: readonly PricingAddon[] = [
     monthly: 349,
     unit: 'provozovna',
     buildsOn: 'restaurant',
-    soon: true,
+    soon: false,
   },
   {
     key: 'shifts',
@@ -310,7 +310,7 @@ export const PRICING_ADDONS: readonly PricingAddon[] = [
     unit: 'provozovna',
     perExtra: { monthly: 49, label: 'za zaměstnance' },
     buildsOn: 'attendance',
-    soon: true,
+    soon: false,
   },
   {
     key: 'cashflow',
@@ -321,7 +321,7 @@ export const PRICING_ADDONS: readonly PricingAddon[] = [
     monthly: 199,
     unit: 'firma',
     buildsOn: 'invoicing',
-    soon: true,
+    soon: false,
   },
   {
     key: 'branches',
@@ -331,7 +331,7 @@ export const PRICING_ADDONS: readonly PricingAddon[] = [
     category: 'team',
     monthly: 349,
     unit: 'pobočka',
-    soon: true,
+    soon: false,
   },
   {
     key: 'client-portal',
@@ -342,7 +342,7 @@ export const PRICING_ADDONS: readonly PricingAddon[] = [
     monthly: 199,
     unit: 'firma',
     buildsOn: 'invoicing',
-    soon: true,
+    soon: false,
   },
   {
     key: 'accounting',
@@ -354,7 +354,7 @@ export const PRICING_ADDONS: readonly PricingAddon[] = [
     unit: 'firma',
     perExtra: { monthly: 99, label: 'za klienta (pro účetní)' },
     buildsOn: 'invoicing',
-    soon: true,
+    soon: false,
   },
   {
     key: 'stock-scan',
@@ -365,6 +365,6 @@ export const PRICING_ADDONS: readonly PricingAddon[] = [
     monthly: 149,
     unit: 'provozovna',
     buildsOn: 'inventory',
-    soon: true,
+    soon: false,
   },
 ] as const

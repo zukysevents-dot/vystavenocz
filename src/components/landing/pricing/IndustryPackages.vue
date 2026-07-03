@@ -47,8 +47,7 @@ const mailto = (name: string) =>
         Až porostete, Vystaveno poroste s vámi.
       </h3>
       <p class="mt-3 text-sm text-muted-foreground sm:text-base">
-        Oborové nástavby pro konkrétní provozy. Připravujeme je podle zájmu — zapnete je, až je
-        budete reálně potřebovat.
+        Oborové nástavby pro konkrétní provozy. Zapnete je, až je budete reálně potřebovat.
       </p>
     </div>
 
@@ -96,6 +95,7 @@ const mailto = (name: string) =>
         <div class="flex items-start justify-between gap-2">
           <span class="font-semibold text-foreground">{{ a.name }}</span>
           <span
+            v-if="a.soon"
             class="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground"
           >
             Připravujeme
