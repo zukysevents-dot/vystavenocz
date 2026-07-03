@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { shiftHours, shiftWage, summarizeByEmployee, totals } from '@/lib/shifts'
-import type { Shift } from '@/lib/types'
+import {
+  shiftHours,
+  shiftWage,
+  summarizeByEmployee,
+  totals,
+  calculateCommission,
+} from '@/lib/shifts'
+import type { Sale, Shift } from '@/lib/types'
 
 let seq = 0
 function shift(over: Partial<Shift> = {}): Shift {
@@ -77,5 +83,92 @@ describe('hraniční případy', () => {
   })
   it('přechod přes půlnoc není podporován → 0 (vědomé omezení)', () => {
     expect(shiftHours(shift({ start: '22:00', end: '02:00' }))).toBe(0)
+  })
+})
+
+function sale(over: Partial<Sale> = {}): Sale {
+  seq += 1
+  return {
+    id: `sale${seq}`,
+    locationId: null,
+    employeeId: null,
+    paymentMethod: 'Card',
+    status: 'Completed',
+    discountPercent: 0,
+    tipAmount: 0,
+    totalNet: 1000,
+    totalVat: 210,
+    total: 1210,
+    soldAt: '2024-06-03T10:00:00.000Z',
+    items: [],
+    ...over,
+  }
+}
+
+describe('calculateCommission', () => {
+  const emps = [
+    { id: 'e1', fullName: 'Anna' },
+    { id: 'e2', fullName: 'Bob' },
+  ]
+
+  it('sečte čisté tržby per zaměstnanec a spočítá provizi, seřadí sestupně', () => {
+    const r = calculateCommission(
+      [
+        sale({ employeeId: 'e1', totalNet: 1000 }),
+        sale({ employeeId: 'e1', totalNet: 500 }),
+        sale({ employeeId: 'e2', totalNet: 2000 }),
+      ],
+      emps,
+      10,
+    )
+    expect(r).toEqual([
+      { employeeId: 'e2', name: 'Bob', salesCount: 1, revenue: 2000, commission: 200 },
+      { employeeId: 'e1', name: 'Anna', salesCount: 2, revenue: 1500, commission: 150 },
+    ])
+  })
+
+  it('storno a prodeje bez zaměstnance se nepočítají', () => {
+    const r = calculateCommission(
+      [
+        sale({ employeeId: 'e1', totalNet: 1000 }),
+        sale({ employeeId: 'e1', totalNet: 999, status: 'Cancelled' }),
+        sale({ employeeId: null, totalNet: 5000 }),
+      ],
+      emps,
+      10,
+    )
+    expect(r).toEqual([
+      { employeeId: 'e1', name: 'Anna', salesCount: 1, revenue: 1000, commission: 100 },
+    ])
+  })
+
+  it('zaměstnanec mimo seznam → „Neznámý zaměstnanec"', () => {
+    const r = calculateCommission([sale({ employeeId: 'x9', totalNet: 1000 })], emps, 10)
+    expect(r[0].name).toBe('Neznámý zaměstnanec')
+  })
+
+  it('nulová/neplatná/NaN sazba → provize 0, tržby sečteny', () => {
+    const s = [sale({ employeeId: 'e1', totalNet: 1000 })]
+    expect(calculateCommission(s, emps, 0)[0]).toMatchObject({ revenue: 1000, commission: 0 })
+    expect(calculateCommission(s, emps, -5)[0].commission).toBe(0)
+    expect(calculateCommission(s, emps, Number.NaN)[0].commission).toBe(0)
+  })
+
+  it('sazba nad 100 % se zastropuje na 100 %', () => {
+    const r = calculateCommission([sale({ employeeId: 'e1', totalNet: 1000 })], emps, 150)
+    expect(r[0].commission).toBe(1000) // 100 % z 1000, ne 1500
+  })
+
+  it('záporná tržba (vratka jako Completed prodej) se do provize nepočítá', () => {
+    const r = calculateCommission(
+      [sale({ employeeId: 'e1', totalNet: 1000 }), sale({ employeeId: 'e1', totalNet: -400 })],
+      emps,
+      10,
+    )
+    expect(r[0]).toMatchObject({ salesCount: 1, revenue: 1000, commission: 100 })
+  })
+
+  it('prázdný vstup → prázdný výstup', () => {
+    expect(calculateCommission([], emps, 10)).toEqual([])
   })
 })

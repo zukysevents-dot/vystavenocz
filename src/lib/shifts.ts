@@ -1,10 +1,11 @@
 import { round2 } from './invoice'
-import type { Shift } from './types'
+import { clampPercent } from './posCalc'
+import type { Sale, Shift, Employee } from './types'
 
 /**
  * Směny & mzdové podklady — čistá logika. Z naplánovaných směn počítá odpracované
- * hodiny a mzdový náklad (hodiny × sazba). Provize (z tržeb na zaměstnance) vyžaduje
- * napojení na prodeje → samostatná fáze; zde jen plánování + mzdový podklad.
+ * hodiny a mzdový náklad (hodiny × sazba). Provize se počítá z tržeb napojených na
+ * zaměstnance (Sale.employeeId) — viz calculateCommission.
  */
 
 function toMinutes(hhmm: string): number | null {
@@ -62,4 +63,45 @@ export function totals(shifts: Shift[]): ShiftsTotals {
     hours: round2(shifts.reduce((a, s) => a + shiftHours(s), 0)),
     wage: round2(shifts.reduce((a, s) => a + shiftWage(s), 0)),
   }
+}
+
+export interface EmployeeCommission {
+  employeeId: string
+  name: string
+  salesCount: number
+  revenue: number // čistá tržba (základ provize), bez DPH a spropitného
+  commission: number // revenue × ratePercent %
+}
+
+/**
+ * Provize z tržeb per zaměstnanec. Základ = čistá tržba (`totalNet`) DOKONČENÝCH prodejů
+ * napojených na zaměstnance přes `Sale.employeeId`. `ratePercent` = % provize (clampnuto 0–100).
+ * Nepočítá se: storno, prodeje bez zaměstnance a záporné tržby (vratky/dobropisy). Jméno se
+ * dohledá v `employees` (jinak „Neznámý zaměstnanec"). Řazeno podle provize sestupně.
+ */
+export function calculateCommission(
+  sales: Sale[],
+  employees: Pick<Employee, 'id' | 'fullName'>[],
+  ratePercent: number,
+): EmployeeCommission[] {
+  const rate = clampPercent(ratePercent) // 0–100, NaN/prázdno → 0
+  const nameById = new Map(employees.map((e) => [e.id, e.fullName]))
+  const map = new Map<string, EmployeeCommission>()
+  for (const s of sales) {
+    // Jen dokončené prodeje s přiřazeným zaměstnancem; záporná tržba (vratka/dobropis
+    // jako Completed prodej) do provizního podkladu nepatří.
+    if (s.status !== 'Completed' || !s.employeeId || s.totalNet < 0) continue
+    const e = map.get(s.employeeId) ?? {
+      employeeId: s.employeeId,
+      name: nameById.get(s.employeeId) ?? 'Neznámý zaměstnanec',
+      salesCount: 0,
+      revenue: 0,
+      commission: 0,
+    }
+    e.salesCount += 1
+    e.revenue = round2(e.revenue + s.totalNet)
+    e.commission = round2((e.revenue * rate) / 100)
+    map.set(s.employeeId, e)
+  }
+  return [...map.values()].sort((a, b) => b.commission - a.commission)
 }
