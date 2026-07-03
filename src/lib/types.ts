@@ -226,6 +226,8 @@ export interface SaleItemLine {
 export interface Sale {
   id: string
   locationId: string | null
+  /** Kdo prodej uskutečnil (pro provize). Plní backend podle přihlášeného/vybraného zaměstnance. */
+  employeeId: string | null
   paymentMethod: PaymentMethod
   status: SaleStatus
   discountPercent: number

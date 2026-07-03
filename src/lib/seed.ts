@@ -96,6 +96,7 @@ async function seedLocationsAndSales(): Promise<void> {
       return {
         id: crypto.randomUUID(),
         locationId,
+        employeeId: null,
         paymentMethod: daysAgo % 2 === 0 ? 'Card' : 'Cash',
         status: 'Completed',
         discountPercent: 0,

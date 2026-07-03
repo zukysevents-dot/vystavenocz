@@ -26,13 +26,30 @@ import {
 import { toast } from '@/components/ui/sonner'
 import LoadError from '@/components/app/LoadError.vue'
 import { useShifts, type ShiftInput } from '@/composables/useShifts'
-import { shiftHours, shiftWage, summarizeByEmployee, totals } from '@/lib/shifts'
+import { useAttendance } from '@/composables/useAttendance'
+import { useApi } from '@/composables/useApi'
+import { isApiMode } from '@/lib/http'
+import {
+  shiftHours,
+  shiftWage,
+  summarizeByEmployee,
+  totals,
+  calculateCommission,
+} from '@/lib/shifts'
 import { formatCZK, formatDate } from '@/lib/invoice'
-import type { Shift } from '@/lib/types'
+import type { Shift, Sale, Employee } from '@/lib/types'
 
 const { shifts, load, create, update, remove } = useShifts()
 const loading = ref(true)
 const loadError = ref(false)
+
+// Provize z tržeb — potřebuje prodeje (Sale.employeeId) + seznam zaměstnanců (API-only).
+// V mock režimu zůstane prázdné (prodeje nemají employeeId, zaměstnanci jsou jen ze serveru).
+const salesApi = useApi<Sale>('sales')
+const att = useAttendance()
+const employees = ref<Employee[]>([])
+const sales = ref<Sale[]>([])
+const commissionRate = ref(0)
 const dialogOpen = ref(false)
 const editing = ref<Shift | null>(null)
 const deleteId = ref<string | null>(null)
@@ -49,11 +66,22 @@ const emptyForm = {
 }
 const form = reactive({ ...emptyForm })
 
+// Best-effort — provize je doplněk; její výpadek (mock / bez serveru) nesmí shodit stránku směn.
+async function loadProvize() {
+  try {
+    sales.value = await salesApi.listAll()
+    employees.value = isApiMode() ? await att.employees() : []
+  } catch {
+    /* bez serveru zůstane prázdné → placeholder */
+  }
+}
+
 async function reload() {
   loading.value = true
   loadError.value = false
   try {
     await load()
+    await loadProvize()
   } catch (e) {
     console.warn('Načtení směn selhalo:', e)
     loadError.value = true
@@ -74,6 +102,9 @@ const sortedShifts = computed(() =>
 )
 const summary = computed(() => totals(shifts.value))
 const byEmployee = computed(() => summarizeByEmployee(shifts.value))
+const commissions = computed(() =>
+  calculateCommission(sales.value, employees.value, commissionRate.value),
+)
 
 // Živý náhled hodin + mzdy ve formuláři.
 const preview = computed(() => {
@@ -220,6 +251,63 @@ function pluralShifts(n: number): string {
           <div class="mt-2 text-lg font-bold">{{ formatCZK(e.wage) }}</div>
         </div>
       </div>
+
+      <!-- Provize z tržeb -->
+      <div class="mt-8 flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-lg font-semibold">Provize z tržeb</h2>
+        <label class="flex items-center gap-2 text-sm">
+          <span class="text-muted-foreground">Sazba provize</span>
+          <span class="flex items-center gap-1">
+            <Input
+              v-model.number="commissionRate"
+              type="number"
+              min="0"
+              max="100"
+              class="h-9 w-20"
+            />
+            <span class="text-muted-foreground">%</span>
+          </span>
+        </label>
+      </div>
+
+      <div
+        v-if="commissions.length"
+        class="mt-3 overflow-x-auto rounded-xl border border-border bg-card"
+      >
+        <table class="w-full min-w-[560px] text-sm">
+          <thead
+            class="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground"
+          >
+            <tr>
+              <th class="px-4 py-3 text-left">Zaměstnanec</th>
+              <th class="px-4 py-3 text-right">Prodejů</th>
+              <th class="px-4 py-3 text-right">Tržby (bez DPH)</th>
+              <th class="px-4 py-3 text-right">Provize</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="c in commissions"
+              :key="c.employeeId"
+              class="border-b border-border last:border-0"
+            >
+              <td class="px-4 py-3 font-medium">{{ c.name }}</td>
+              <td class="px-4 py-3 text-right tabular-nums">{{ c.salesCount }}</td>
+              <td class="px-4 py-3 text-right tabular-nums">{{ formatCZK(c.revenue) }}</td>
+              <td class="px-4 py-3 text-right font-semibold tabular-nums">
+                {{ formatCZK(c.commission) }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p
+        v-else
+        class="mt-3 rounded-xl border border-dashed border-border bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground"
+      >
+        Provize se zobrazí, jakmile budou prodeje napojené na konkrétní zaměstnance.
+      </p>
 
       <!-- Seznam směn -->
       <h2 class="mt-8 text-lg font-semibold">Naplánované směny</h2>
