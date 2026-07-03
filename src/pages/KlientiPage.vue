@@ -11,6 +11,7 @@ import {
   Check,
   Building2,
   Upload,
+  Download,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,6 +36,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useClients, type ClientInput } from '@/composables/useClients'
 import { useAres } from '@/composables/useAres'
+import { downloadCsv } from '@/lib/csv-export'
 import { toast } from '@/components/ui/sonner'
 import LoadError from '@/components/app/LoadError.vue'
 import type { Client } from '@/lib/types'
@@ -99,6 +101,22 @@ const filtered = computed(() => {
     )
   })
 })
+
+function exportClients() {
+  downloadCsv(
+    'klienti.csv',
+    ['Jméno', 'IČO', 'DIČ', 'E-mail', 'Telefon', 'Město', 'Splatnost (dní)'],
+    filtered.value.map((c) => [
+      c.name,
+      c.ico ?? '',
+      c.dic ?? '',
+      c.email ?? '',
+      c.phone ?? '',
+      c.city ?? '',
+      c.defaultPaymentDays,
+    ]),
+  )
+}
 
 function openCreate() {
   editing.value = null
@@ -195,6 +213,9 @@ async function onDelete() {
         <p class="mt-1 text-muted-foreground">Spravujte odběratele pro vaše faktury.</p>
       </div>
       <div class="flex gap-2">
+        <Button variant="outline" :disabled="!filtered.length" @click="exportClients">
+          <Download class="h-4 w-4" /> Export CSV
+        </Button>
         <Button variant="outline" @click="router.push('/app/import')">
           <Upload class="h-4 w-4" /> Importovat
         </Button>

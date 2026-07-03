@@ -591,7 +591,7 @@ const hasNewItems = computed(() =>
     <!-- ÚČET na stole -->
     <template v-else-if="currentOrder">
       <div class="mb-4 flex items-center gap-3">
-        <Button variant="ghost" size="icon" @click="backToMap"
+        <Button variant="ghost" size="icon" aria-label="Zpět na mapu stolů" @click="backToMap"
           ><ArrowLeft class="h-5 w-5"
         /></Button>
         <h1 class="text-2xl font-bold tracking-tight">Účet — {{ selectedTable?.name }}</h1>
@@ -703,6 +703,7 @@ const hasNewItems = computed(() =>
                   size="icon"
                   class="h-8 w-8"
                   :disabled="busy"
+                  aria-label="Ubrat kus"
                   @click="changeQty(it, it.quantity - 1)"
                 >
                   <Minus class="h-3.5 w-3.5" />
@@ -713,6 +714,7 @@ const hasNewItems = computed(() =>
                   size="icon"
                   class="h-8 w-8"
                   :disabled="busy"
+                  aria-label="Přidat kus"
                   @click="changeQty(it, it.quantity + 1)"
                 >
                   <Plus class="h-3.5 w-3.5" />

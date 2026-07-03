@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Building2, TrendingUp, ShoppingCart, Trophy, Loader2 } from 'lucide-vue-next'
+import { Building2, TrendingUp, ShoppingCart, Trophy, Loader2, Download } from 'lucide-vue-next'
+import { Button } from '@/components/ui/button'
 import { useApi, LIST_ALL_MAX } from '@/composables/useApi'
 import { useLocations } from '@/composables/useLocations'
+import { downloadCsv } from '@/lib/csv-export'
 import { formatCZK } from '@/lib/invoice'
 import { availablePeriods, buildLocationRevenue, consolidationSummary } from '@/lib/consolidation'
 import LoadError from '@/components/app/LoadError.vue'
@@ -44,6 +46,21 @@ function periodLabel(p: string): string {
   const [y, m] = p.split('-')
   return `${m}/${y}`
 }
+
+function exportConsolidation() {
+  downloadCsv(
+    'konsolidace.csv',
+    ['Pobočka', 'Tržby', 'Spropitné', 'Prodejů', 'Průměrný prodej', 'Podíl %'],
+    rows.value.map((r) => [
+      r.locationName,
+      r.revenue,
+      r.tips,
+      r.saleCount,
+      r.avgSale,
+      r.sharePercent,
+    ]),
+  )
+}
 </script>
 
 <template>
@@ -53,16 +70,21 @@ function periodLabel(p: string): string {
         <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Konsolidace poboček</h1>
         <p class="mt-1 text-muted-foreground">Tržby a výkon poboček na jednom místě.</p>
       </div>
-      <label v-if="periods.length" class="flex items-center gap-2 text-sm">
-        <span class="text-muted-foreground">Období</span>
-        <select
-          v-model="period"
-          class="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        >
-          <option value="all">Vše</option>
-          <option v-for="p in periods" :key="p" :value="p">{{ periodLabel(p) }}</option>
-        </select>
-      </label>
+      <div class="flex items-end gap-2">
+        <label v-if="periods.length" class="flex items-center gap-2 text-sm">
+          <span class="text-muted-foreground">Období</span>
+          <select
+            v-model="period"
+            class="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            <option value="all">Vše</option>
+            <option v-for="p in periods" :key="p" :value="p">{{ periodLabel(p) }}</option>
+          </select>
+        </label>
+        <Button variant="outline" :disabled="!rows.length" @click="exportConsolidation">
+          <Download class="h-4 w-4" /> Export CSV
+        </Button>
+      </div>
     </div>
 
     <p

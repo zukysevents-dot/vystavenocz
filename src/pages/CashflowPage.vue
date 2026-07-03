@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Wallet, AlertTriangle, FileText, Mail, Loader2 } from 'lucide-vue-next'
+import { Wallet, AlertTriangle, FileText, Mail, Loader2, Download } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useInvoices } from '@/composables/useInvoices'
 import LoadError from '@/components/app/LoadError.vue'
+import { downloadCsv } from '@/lib/csv-export'
 import { formatCZK, formatDate } from '@/lib/invoice'
 import {
   buildOutstanding,
@@ -40,15 +41,28 @@ const otherCurrency = computed(() => otherCurrencyCount(invoices.value))
 function remind(inv: Invoice) {
   window.location.href = reminderMailto(buildReminder(inv, today))
 }
+
+function exportDebtors() {
+  downloadCsv(
+    'dluznici.csv',
+    ['Klient', 'E-mail', 'Dlužná částka', 'Faktur', 'Dní po splatnosti'],
+    topDebtors.value.map((d) => [d.name, d.email ?? '', d.amount, d.count, d.maxDaysOverdue]),
+  )
+}
 </script>
 
 <template>
   <div class="mx-auto max-w-6xl p-4 sm:p-6 md:p-8">
-    <div>
-      <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Cashflow &amp; upomínky</h1>
-      <p class="mt-1 text-muted-foreground">
-        Kdo ti dluží, co je po splatnosti a komu připomenout.
-      </p>
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Cashflow &amp; upomínky</h1>
+        <p class="mt-1 text-muted-foreground">
+          Kdo ti dluží, co je po splatnosti a komu připomenout.
+        </p>
+      </div>
+      <Button variant="outline" :disabled="!topDebtors.length" @click="exportDebtors">
+        <Download class="h-4 w-4" /> Export dlužníků
+      </Button>
     </div>
 
     <p

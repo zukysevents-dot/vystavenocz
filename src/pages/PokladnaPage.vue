@@ -360,11 +360,23 @@ function saleTime(iso: string): string {
               </div>
             </div>
             <div class="flex items-center gap-1">
-              <Button variant="outline" size="icon" class="h-8 w-8" @click="dec(line)">
+              <Button
+                variant="outline"
+                size="icon"
+                class="h-8 w-8"
+                aria-label="Ubrat kus"
+                @click="dec(line)"
+              >
                 <Minus class="h-3.5 w-3.5" />
               </Button>
               <span class="w-6 text-center tabular-nums">{{ line.quantity }}</span>
-              <Button variant="outline" size="icon" class="h-8 w-8" @click="inc(line)">
+              <Button
+                variant="outline"
+                size="icon"
+                class="h-8 w-8"
+                aria-label="Přidat kus"
+                @click="inc(line)"
+              >
                 <Plus class="h-3.5 w-3.5" />
               </Button>
               <div class="flex items-center">
