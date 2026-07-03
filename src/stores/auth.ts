@@ -193,6 +193,13 @@ export const useAuthStore = defineStore('auth', () => {
     persistMock()
   }
 
+  // Smí uživatel na něco vyhrazené daným rolím? Neznámá role (mock režim / backend ji nevrací)
+  // = neblokujeme (fail-open) — skutečné vynucení dělá backend; tohle je jen UX vrstva.
+  function hasRole(...roles: string[]): boolean {
+    if (role.value === null) return true
+    return roles.includes(role.value)
+  }
+
   return {
     user,
     companyId,
@@ -204,5 +211,6 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     logout,
     reloadMe,
+    hasRole,
   }
 })
