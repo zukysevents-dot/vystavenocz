@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures/test'
 import { seedApp } from './helpers/seed'
 
 test('fiktivní upgrade na Pro → děkujeme → aktivní tarif', async ({ page }) => {

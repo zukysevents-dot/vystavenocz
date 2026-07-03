@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures/test'
 import { seedApp } from './helpers/seed'
 
 test('dashboard zobrazí metriky, graf a poslední faktury', async ({ page }) => {

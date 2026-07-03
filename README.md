@@ -58,7 +58,10 @@ Dvě podporované varianty:
 
 ```bash
 # z adresáře vystavenocz; vyžaduje sousední repo ../vystaveno-api
-JWT_SECRET="$(openssl rand -base64 32)" docker compose up --build
+DB_PASSWORD="$(openssl rand -base64 24)" \
+JWT_SECRET="$(openssl rand -base64 32)" \
+STRIPE_SECRET_KEY="sk_test_dummy" \
+docker compose up --build
 # app: http://localhost:8080   ·   health: http://localhost:8080/health/ready
 ```
 
@@ -70,7 +73,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
 Kompletní runbook (DNS, secrety, ověření, aktualizace, zálohy) → **[docs/deployment-vps.md](docs/deployment-vps.md)**.
-`JWT_SECRET` + `DB_PASSWORD` předej jako secrety prostředí (ne do gitu). Migrace DB běží automaticky při startu API.
+`JWT_SECRET`, `DB_PASSWORD` a `STRIPE_SECRET_KEY` předej jako secrety prostředí (ne do gitu). Migrace DB běží automaticky při startu API.
 
 ### B) Vercel (statika) + Render (API) — oddělené originy
 

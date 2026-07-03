@@ -25,12 +25,14 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useProducts, type ProductInput } from '@/composables/useProducts'
 import { useCategories } from '@/composables/useCategories'
+import { isApiMode } from '@/lib/http'
 import { formatCZK } from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
 import type { Category, Product } from '@/lib/types'
 
 const { products, load, create, update, remove } = useProducts()
 const categoriesApi = useCategories()
+const apiMode = isApiMode()
 const categories = ref<Category[]>([])
 
 const loading = ref(true)
@@ -64,10 +66,12 @@ const form = reactive<ProductForm>({ ...emptyForm })
 onMounted(async () => {
   loading.value = true
   await load()
-  try {
-    categories.value = await categoriesApi.list()
-  } catch (e) {
-    console.error(e)
+  if (apiMode) {
+    try {
+      categories.value = await categoriesApi.list()
+    } catch (e) {
+      console.error(e)
+    }
   }
   loading.value = false
 })

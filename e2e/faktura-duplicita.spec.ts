@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures/test'
 import { seedApp } from './helpers/seed'
 
 // Reprodukce pre-existující díry z F6: číslo nové faktury se generuje z company.nextInvoiceSeq
