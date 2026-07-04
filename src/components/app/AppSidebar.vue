@@ -28,6 +28,7 @@ import {
   Wrench,
   FileCheck,
   Percent,
+  Upload,
   Menu,
   X,
 } from 'lucide-vue-next'
@@ -57,6 +58,7 @@ const navItems = [
   { to: '/app/uctarna', label: 'Účtárna', icon: Calculator },
   { to: '/app/dph', label: 'Přehled DPH', icon: Percent },
   { to: '/app/klienti', label: 'Klienti', icon: Users },
+  { to: '/app/import', label: 'Import dat', icon: Upload },
   { to: '/app/vernost', label: 'Věrnost', icon: Heart },
   { to: '/app/zakazky', label: 'Zakázky', icon: Wrench },
   { to: '/app/predplatne', label: 'Předplatné', icon: CreditCard },
@@ -75,6 +77,7 @@ const managerHiddenRoutes = new Set([
   '/app/klienti',
   '/app/konsolidace',
   '/app/pobocky',
+  '/app/import',
 ])
 const nav = computed(() =>
   auth.role === 'Employee' ? navItems.filter((i) => !managerHiddenRoutes.has(i.to)) : navItems,
