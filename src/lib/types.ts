@@ -249,6 +249,46 @@ export interface DailySalesSummary {
   cardTotal: number
 }
 
+// --- Uzávěrka: zavření dne / Z-report (Fáze 2) ---
+
+/** Řádek rozpadu DPH v Z-reportu — zafixovaný v okamžiku zavření dne. */
+export interface DayCloseVatLine {
+  vatRate: number
+  net: number
+  vat: number
+  gross: number
+}
+
+/**
+ * Stav obchodního dne pro danou pobočku. Když `status === 'Open'`, den ještě není
+ * uzavřen a nese jen `date`/`locationId`. Když `'Closed'`, jsou vyplněná zafixovaná
+ * čísla Z-reportu; hotovostní pole (`cash*`) můžou být null, pokud uzávěrka hotovosti neproběhla.
+ */
+export interface DayCloseResponse {
+  status: 'Open' | 'Closed'
+  date: string
+  locationId: string
+  // Vyplněné jen když status === 'Closed':
+  zReportNumber?: number
+  closedAt?: string
+  saleCount?: number
+  totalNet?: number
+  totalVat?: number
+  total?: number
+  cashTotal?: number
+  cardTotal?: number
+  tipTotal?: number
+  discountTotal?: number
+  cancelledCount?: number
+  cancelledTotal?: number
+  vatBreakdown?: DayCloseVatLine[]
+  cashOpening?: number | null
+  cashCountedClosing?: number | null
+  cashDrop?: number | null
+  cashExpectedClosing?: number | null
+  cashDifference?: number | null
+}
+
 // --- Gastro: mapa stolů ---
 
 export type TableShape = 'Rect' | 'Circle'
