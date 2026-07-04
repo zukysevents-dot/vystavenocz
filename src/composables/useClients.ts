@@ -22,6 +22,18 @@ export function useClients() {
     }
   }
 
+  // Všechny stránky (strop LIST_ALL_MAX) — import potřebuje pro dedup vidět CELÝ adresář, ne jen prvních 100.
+  async function loadAll(): Promise<void> {
+    store.loadError = false
+    try {
+      store.clients = await api.listAll()
+    } catch (e) {
+      console.warn('Načtení klientů selhalo:', e)
+      store.clients = []
+      store.loadError = true
+    }
+  }
+
   async function create(input: ClientInput): Promise<Client> {
     const now = new Date().toISOString()
     const client: Client = { ...input, id: crypto.randomUUID(), createdAt: now, updatedAt: now }
@@ -47,5 +59,5 @@ export function useClients() {
     return store.clients.find((c) => c.id === id) ?? null
   }
 
-  return { clients, loadError, load, create, update, remove, getById }
+  return { clients, loadError, load, loadAll, create, update, remove, getById }
 }
