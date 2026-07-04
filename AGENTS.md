@@ -3,6 +3,13 @@
 Pro AI coding agenty (Codex, Claude, …). Shrnuje, co **není zřejmé jen z kódu**.
 Podrobná pravidla stylu a způsobu práce jsou v **[CLAUDE.md](CLAUDE.md)** — platí i pro tebe, přečti si ji.
 
+## Kontext pro AI agenty
+
+`AGENTS.md` je hlavní společný kontext pro Codex a ostatní AI coding agenty. `CLAUDE.md` je Claude Code vstup se stejnými závaznými pravidly pro práci.
+Při každé smysluplné změně projektu aktualizuj **oba soubory**, aby se při přepínání mezi Codexem a Claude Code neztratil kontext.
+
+Za smysluplnou změnu se bere hlavně: architektura, doménový model, modulový systém, API kontrakty, deploy postup, bezpečnostní pravidla, workflow vývoje, testovací brány a důležitá produktová rozhodnutí.
+
 ## Co to je
 
 Vystaveno.cz — fakturační + pokladní (POS) / gastro SaaS pro malé české firmy.
