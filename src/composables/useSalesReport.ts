@@ -4,12 +4,14 @@ import { useApi } from '@/composables/useApi'
 import { useSales } from '@/composables/useSales'
 import { useProducts } from '@/composables/useProducts'
 import { useCategories } from '@/composables/useCategories'
+import { round2 } from '@/lib/invoice'
 import type { DailySalesSummary, Sale } from '@/lib/types'
 import {
   summarizeSales,
   buildVatBreakdown,
   buildTopProducts,
   buildRevenueByCategory,
+  businessDateOfSale,
   type SalesSummary,
   type VatBreakdownRow,
   type TopProductRow,
@@ -61,6 +63,20 @@ export function useSalesReport() {
     return summaryToday().catch(() => null)
   }
 
+  function withServerSummary(local: SalesSummary, server: DailySalesSummary | null): SalesSummary {
+    if (!server) return local
+    return {
+      ...local,
+      count: server.count,
+      totalNet: server.totalNet,
+      totalVat: server.totalVat,
+      total: server.total,
+      cashTotal: server.cashTotal,
+      cardTotal: server.cardTotal,
+      avgSale: server.count ? round2(server.total / server.count) : 0,
+    }
+  }
+
   /**
    * @param filter volitelný filtr na den + pobočku (Fáze 2). Bez filtru = dnešek/všechny
    *   pobočky z posledních 50 účtenek (Fáze 1, orientační).
@@ -81,7 +97,7 @@ export function useSalesReport() {
       const filtered = filter?.date
         ? list_.filter(
             (s) =>
-              s.soldAt.slice(0, 10) === filter.date &&
+              businessDateOfSale(s.soldAt) === filter.date &&
               (!filter.locationId || s.locationId === filter.locationId),
           )
         : list_
@@ -97,7 +113,7 @@ export function useSalesReport() {
         if (name) categoryNameByProductId.set(p.id, name)
       }
 
-      summary.value = summarizeSales(filtered)
+      summary.value = withServerSummary(summarizeSales(filtered), summary_)
       vatBreakdown.value = buildVatBreakdown(filtered)
       // Bez limitu = všechny prodané produkty (pro inventuru), seřazené od nejprodávanějšího.
       soldProducts.value = buildTopProducts(filtered, productNameById, Number.POSITIVE_INFINITY)

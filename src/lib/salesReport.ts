@@ -8,6 +8,22 @@ import { round2 } from './invoice'
  * (a Sale `totalNet/totalVat/total`), takže se jen SČÍTAJÍ, nedopočítávají. Vše přes `round2`.
  */
 
+const BUSINESS_TIME_ZONE = 'Europe/Prague'
+
+export function businessDateOfSale(soldAt: string): string {
+  const date = new Date(soldAt)
+  if (Number.isNaN(date.getTime())) return soldAt.slice(0, 10)
+
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date)
+  const part = (type: string) => parts.find((p) => p.type === type)?.value ?? ''
+  return `${part('year')}-${part('month')}-${part('day')}`
+}
+
 export interface SalesSummary {
   count: number // počet dokončených účtenek
   totalNet: number

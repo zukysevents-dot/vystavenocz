@@ -4,6 +4,7 @@ import {
   buildVatBreakdown,
   buildTopProducts,
   buildRevenueByCategory,
+  businessDateOfSale,
 } from '@/lib/salesReport'
 import type { Sale, SaleItemLine } from '@/lib/types'
 
@@ -40,6 +41,16 @@ function sale(over: Partial<Sale> = {}): Sale {
     ...over,
   }
 }
+
+describe('businessDateOfSale', () => {
+  it('přiřadí prodej po půlnoci v Česku do správného obchodního dne', () => {
+    expect(businessDateOfSale('2026-07-04T22:31:00.000Z')).toBe('2026-07-05')
+  })
+
+  it('neposune běžný den mimo půlnoční hranu', () => {
+    expect(businessDateOfSale('2026-07-04T10:00:00.000Z')).toBe('2026-07-04')
+  })
+})
 
 describe('summarizeSales', () => {
   it('prázdný vstup nedělí nulou a vrací nuly', () => {
