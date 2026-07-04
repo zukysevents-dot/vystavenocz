@@ -16,6 +16,8 @@ Vystaveno.cz — fakturační + pokladní (POS) / gastro SaaS pro malé české 
 Tento repozitář = **frontend**: Vue 3 (`<script setup>` SFC) + Vite + TypeScript, package manager **npm**.
 Migrace ze staré React appky (zazálohovaná ve větvi `legacy-react`, nevracet do working tree).
 
+Produktová roadmapa modulárního Vystaveno + gastro priority je v `docs/product/modular-business-roadmap.md`. Při změně zásadního produktového směru ji aktualizuj společně s tímto kontextem.
+
 ## Dva repozitáře, jeden produkt
 
 - **`vystavenocz`** (tento) — frontend (Vue).
