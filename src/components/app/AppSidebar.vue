@@ -22,6 +22,7 @@ import {
   CalendarClock,
   Building2,
   BarChart3,
+  Receipt,
   Wallet,
   Calculator,
   Heart,
@@ -50,6 +51,7 @@ const navItems = [
   { to: '/app/smeny', label: 'Směny', icon: CalendarClock },
   { to: '/app/pobocky', label: 'Pobočky', icon: Building2 },
   { to: '/app/konsolidace', label: 'Konsolidace', icon: BarChart3 },
+  { to: '/app/uzaverka', label: 'Uzávěrka', icon: Receipt },
   { to: '/app/rezervace', label: 'Rezervace', icon: CalendarDays },
   { to: '/app/kategorie', label: 'Kategorie', icon: Tags },
   { to: '/app/nabidky', label: 'Nabídky', icon: FileCheck },
@@ -76,6 +78,7 @@ const managerHiddenRoutes = new Set([
   '/app/faktury',
   '/app/klienti',
   '/app/konsolidace',
+  '/app/uzaverka',
   '/app/pobocky',
   '/app/import',
 ])

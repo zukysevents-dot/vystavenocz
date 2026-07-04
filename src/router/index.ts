@@ -151,6 +151,17 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/app/uzaverka',
+    name: 'app-uzaverka',
+    component: () => import('@/pages/UzaverkaPage.vue'),
+    meta: {
+      title: 'Uzávěrka',
+      layout: 'app',
+      requiresAuth: true,
+      requiresRole: ['Owner', 'Manager'],
+    },
+  },
+  {
     path: '/app/cashflow',
     name: 'app-cashflow',
     component: () => import('@/pages/CashflowPage.vue'),
