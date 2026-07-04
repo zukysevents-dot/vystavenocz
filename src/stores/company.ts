@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { http, isApiMode, setTokens, type Tokens } from '@/lib/http'
 import { useAuthStore } from '@/stores/auth'
 import type { Company } from '@/lib/types'
+import { normalizeModules, type AppModuleId } from '@/lib/modules'
 
 // Profil firmy. Mock režim → localStorage. API režim → /company (GET/PUT) + /companies (POST založení).
 // Backend /company drží jen podmnožinu profilu; frontend-only pole (vatMode 3-stav, číslování faktur,
@@ -37,6 +38,9 @@ interface CompanySettingsResponse {
 interface CreateCompanyResponse {
   company: { id: string; name: string }
   tokens: Tokens
+}
+interface CompanyModulesResponse {
+  modules: string[]
 }
 
 function emptyCompany(email: string, fullName: string | null): Company {
@@ -169,5 +173,32 @@ export const useCompanyStore = defineStore('company', () => {
     persist()
   }
 
-  return { company, initialized, init, load, save }
+  async function loadModules(): Promise<AppModuleId[]> {
+    const auth = useAuthStore()
+    if (!isApiMode() || !auth.companyId) return auth.modules
+
+    const response = await http.get<CompanyModulesResponse>('/company/modules')
+    const modules = normalizeModules(response.modules)
+    auth.modules = modules
+    return modules
+  }
+
+  async function saveModules(modules: AppModuleId[]): Promise<AppModuleId[]> {
+    const normalized = normalizeModules(modules)
+    const auth = useAuthStore()
+
+    if (isApiMode()) {
+      const response = await http.put<CompanyModulesResponse>('/company/modules', {
+        modules: normalized,
+      })
+      auth.modules = normalizeModules(response.modules)
+      await auth.reloadMe()
+      return auth.modules
+    }
+
+    auth.modules = normalized
+    return normalized
+  }
+
+  return { company, initialized, init, load, save, loadModules, saveModules }
 })

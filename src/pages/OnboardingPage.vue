@@ -9,6 +9,7 @@ import { toast } from '@/components/ui/sonner'
 import { useCompanyStore } from '@/stores/company'
 import { useAuthStore } from '@/stores/auth'
 import type { Company } from '@/lib/types'
+import { BUSINESS_PROFILES, type BusinessProfileId } from '@/lib/modules'
 
 const companyStore = useCompanyStore()
 const auth = useAuthStore()
@@ -17,6 +18,7 @@ const router = useRouter()
 const submitting = ref(false)
 
 const form = reactive({
+  business_profile: 'gastro' as BusinessProfileId,
   company_name: '',
   ico: '',
   dic: '',
@@ -62,6 +64,8 @@ async function onSubmit() {
   }
   try {
     await companyStore.save(payload) // API režim: založí firmu (POST /companies) + uloží nastavení
+    const profile = BUSINESS_PROFILES.find((p) => p.id === form.business_profile)
+    if (profile) await companyStore.saveModules(profile.modules)
   } catch {
     submitting.value = false
     toast.error('Profil firmy se nepodařilo uložit. Zkuste to znovu.')
@@ -79,6 +83,34 @@ async function onSubmit() {
     <p class="mt-1 text-muted-foreground">Tyto údaje se objeví na všech vašich fakturách.</p>
 
     <form class="mt-8 space-y-6" @submit.prevent="onSubmit">
+      <div class="rounded-xl border border-border bg-card p-6">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Typ podnikání
+        </h2>
+        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+          <label
+            v-for="profile in BUSINESS_PROFILES"
+            :key="profile.id"
+            class="cursor-pointer rounded-lg border p-4 transition-colors"
+            :class="
+              form.business_profile === profile.id
+                ? 'border-primary bg-primary-soft text-primary'
+                : 'border-border hover:bg-muted'
+            "
+          >
+            <input
+              v-model="form.business_profile"
+              class="sr-only"
+              type="radio"
+              name="business_profile"
+              :value="profile.id"
+            />
+            <span class="block text-sm font-semibold">{{ profile.label }}</span>
+            <span class="mt-1 block text-xs text-muted-foreground">{{ profile.description }}</span>
+          </label>
+        </div>
+      </div>
+
       <div class="rounded-xl border border-border bg-card p-6">
         <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Firma</h2>
         <div class="mt-4 space-y-4">

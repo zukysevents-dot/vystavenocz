@@ -17,6 +17,54 @@ export type AppModuleId = (typeof APP_MODULES)[number]
 
 export const DEFAULT_ENABLED_MODULES: AppModuleId[] = [...APP_MODULES]
 
+export type BusinessProfileId = 'gastro' | 'services' | 'crafts' | 'shop'
+
+export interface BusinessProfile {
+  id: BusinessProfileId
+  label: string
+  description: string
+  modules: AppModuleId[]
+}
+
+export const BUSINESS_PROFILES: BusinessProfile[] = [
+  {
+    id: 'gastro',
+    label: 'Gastro',
+    description: 'Pokladna, stoly, kuchyně, sklad, uzávěrky, docházka a rezervace.',
+    modules: [
+      'core',
+      'invoicing',
+      'pos',
+      'gastro',
+      'stock',
+      'attendance',
+      'booking',
+      'reporting',
+      'loyalty',
+      'ai',
+      'integrations',
+    ],
+  },
+  {
+    id: 'services',
+    label: 'Služby',
+    description: 'Rezervace, klienti, služby, fakturace, docházka a reporty.',
+    modules: ['core', 'invoicing', 'booking', 'attendance', 'reporting', 'ai', 'integrations'],
+  },
+  {
+    id: 'crafts',
+    label: 'Řemesla a zakázky',
+    description: 'Zakázky, materiál, výjezdy, sklad, předání práce a fakturace.',
+    modules: ['core', 'invoicing', 'jobs', 'stock', 'reporting', 'ai', 'integrations'],
+  },
+  {
+    id: 'shop',
+    label: 'Obchod',
+    description: 'Produkty, pokladna, EAN, sklad, vratky, věrnost a reporty.',
+    modules: ['core', 'invoicing', 'pos', 'stock', 'reporting', 'loyalty', 'ai', 'integrations'],
+  },
+]
+
 export interface AppNavDefinition {
   to: string
   label: string

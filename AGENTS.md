@@ -18,7 +18,7 @@ Migrace ze staré React appky (zazálohovaná ve větvi `legacy-react`, nevracet
 
 Produktová roadmapa modulárního Vystaveno + gastro priority je v `docs/product/modular-business-roadmap.md`. Při změně zásadního produktového směru ji aktualizuj společně s tímto kontextem.
 
-Modulární runtime základ: backend `/me` vrací `modules` + `features`; frontend je drží v `src/stores/auth.ts` a app shell filtruje navigaci/routy přes `src/lib/modules.ts`. Default je zatím všechny moduly zapnuté, aby se nezměnil povrch aplikace před tenant-specific výběrem modulů.
+Modulární runtime základ: backend `/me` vrací `modules` + `features`; frontend je drží v `src/stores/auth.ts` a app shell filtruje navigaci/routy přes `src/lib/modules.ts`. Backend ukládá tenant-selected moduly v `company_modules`; staré firmy bez řádků mají fallback na všechny default moduly. Onboarding vybírá první modulový balíček podle typu podnikání.
 
 ## Dva repozitáře, jeden produkt
 

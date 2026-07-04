@@ -6,8 +6,9 @@ Last updated: 2026-07-05
 
 - Started: runtime module/capability foundation.
 - Backend `/me` exposes `modules` and `features`.
+- Backend persists tenant-selected modules in `company_modules`; tenants without rows still fall back to all default modules.
 - Frontend auth store persists capabilities and the app shell filters navigation/routes through a typed module manifest.
-- Current default is intentionally all modules enabled, so existing tenants keep the same app surface until tenant-specific module selection is added.
+- Onboarding lets the company choose a business profile: Gastro, Services, Crafts/Jobs, or Shop. The selected profile saves the first enabled module bundle.
 
 ## Product goal
 
