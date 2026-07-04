@@ -9,8 +9,9 @@ import { detectAdapter } from './adapters'
 import { validateClient, validateProduct } from './validate'
 import { isValidIco } from './normalize'
 import { mergeAres } from './enrich'
+import { createProductRefsResolver, createProductPostCreate } from './cascade/products'
 import type { DedupKey } from './dedup'
-import type { ImportEntity, ImportSourceAdapter, ValidationIssue } from './types'
+import type { EntityDraft, ImportEntity, ImportSourceAdapter, ValidationIssue } from './types'
 
 /** Cílové pole entity pro mapování (pořadí i popisek do UI). */
 export interface FieldDef {
@@ -40,6 +41,14 @@ export interface ImportEntityConfig<T> {
   validate: (value: Partial<T>) => ValidationIssue[]
   dedupKeys: DedupKey<T>[]
   createOps: () => EntityOps<T> // volá se uvnitř composable (potřebuje Pinia kontext)
+  // Namapovatelná pole, která NEjsou součástí entity (kategorie, množství) — mapping
+  // je odloží do draft.extras a spotřebují je cascade hooky níže.
+  extraFields?: string[]
+  // Cascade (jen produkty): před commitem doplní vazby (kategorie → categoryId),
+  // po vytvoření záznamu dotáhne navazující data (naskladnění). Tovární styl kvůli
+  // Pinia kontextu, stejně jako createOps/createEnrich.
+  createRefsResolver?: () => (drafts: EntityDraft<T>[]) => Promise<void>
+  createPostCreate?: () => (createdId: string, draft: EntityDraft<T>) => Promise<void>
   // Volitelné dávkové obohacení (jen klienti — ARES). Vrací změněná pole, nebo null.
   enrichLabel?: string
   createEnrich?: () => (value: T) => Promise<Partial<T> | null>
@@ -109,10 +118,17 @@ export const productsConfig: ImportEntityConfig<ProductInput> = {
     { field: 'salePrice', label: 'Prodejní cena (vč. DPH)' },
     { field: 'vatRate', label: 'Sazba DPH (%)' },
     { field: 'purchasePrice', label: 'Nákupní cena' },
+    { field: 'category', label: 'Kategorie' },
+    { field: 'quantity', label: 'Množství / skladem' },
   ],
+  // Kategorie a množství nejsou pole entity Product — jdou do draft.extras a
+  // spotřebují je cascade hooky (kategorie → categoryId, množství → naskladnění).
+  extraFields: ['category', 'quantity'],
   previewColumns: [
     { field: 'sku', label: 'SKU' },
     { field: 'salePrice', label: 'Cena' },
+    { field: 'category', label: 'Kategorie' },
+    { field: 'quantity', label: 'Skladem' },
   ],
   genericAdapter: genericProducts,
   detect: (h) => detectAdapter(h, 'products') as ImportSourceAdapter<ProductInput> | undefined,
@@ -132,4 +148,6 @@ export const productsConfig: ImportEntityConfig<ProductInput> = {
       remove: api.remove,
     }
   },
+  createRefsResolver: createProductRefsResolver,
+  createPostCreate: createProductPostCreate,
 }

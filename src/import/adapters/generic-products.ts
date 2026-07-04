@@ -15,6 +15,19 @@ export const genericProducts: ImportSourceAdapter<ProductInput> = {
     salePrice: 'salePrice',
     vatRate: 'vatRate',
     purchasePrice: 'purchasePrice',
+    category: 'kategorie',
+    quantity: 'skladem',
+  },
+  // Aliasy hlaviček pro autodetekci mapování (i z českých exportů / konkurence).
+  aliases: {
+    name: ['name', 'nazev', 'produkt', 'polozka'],
+    sku: ['sku', 'kod', 'kodzbozi'],
+    ean: ['ean', 'carovykod'],
+    salePrice: ['saleprice', 'cena', 'prodejnicena', 'cenavcdph'],
+    vatRate: ['vatrate', 'dph', 'sazbadph', 'vat'],
+    purchasePrice: ['purchaseprice', 'nakupnicena', 'nakup'],
+    category: ['kategorie', 'category', 'skupina'],
+    quantity: ['skladem', 'mnozstvi', 'quantity', 'qty', 'stock', 'pocet'],
   },
   transform: (_row, m) => {
     const vr = (m.vatRate ?? '').replace(/[^\d]/g, '')
