@@ -9,8 +9,11 @@ test('import produktů z CSV: stejný wizard, entita produkty, naplní katalog',
   await dismissCookies(page)
   await page.goto('/app/import?entity=products')
 
-  await expect(page.getByRole('heading', { name: 'Import produktů' })).toBeVisible()
+  // Krok 1: nahraj soubor (skrytý input). ?entity=products → po nahrání se otevře wizard „Import produktů".
   await page.locator('#import-file').setInputFiles('e2e/fixtures/produkty.csv')
+
+  // Krok 2: mapování — wizard produktů (nadpis „Import produktů" potvrzuje entitu z URL)
+  await expect(page.getByRole('heading', { name: 'Import produktů' })).toBeVisible()
   await expect(page.getByText('produkty.csv')).toBeVisible()
   await expect(page.getByText('3 řádků')).toBeVisible()
   await page.getByRole('button', { name: /Pokračovat/ }).click()
