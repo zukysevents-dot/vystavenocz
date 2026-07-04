@@ -53,7 +53,7 @@ const dirty = ref(false)
 const floorDialogOpen = ref(false)
 const editingFloor = ref<Floor | null>(null)
 const floorName = ref('')
-const deleteFloorOpen = ref(false)
+const deleteFloorId = ref<string | null>(null)
 
 const tableDialogOpen = ref(false)
 const editingTable = ref<DiningTable | null>(null)
@@ -130,17 +130,18 @@ async function submitFloor() {
   }
 }
 async function confirmDeleteFloor() {
-  if (!currentFloor.value) return
+  const id = deleteFloorId.value
+  if (!id) return
   try {
-    await floorsApi.remove(currentFloor.value.id)
-    floors.value = floors.value.filter((f) => f.id !== currentFloorId.value)
-    currentFloorId.value = floors.value[0]?.id ?? null
+    await floorsApi.remove(id)
+    floors.value = floors.value.filter((f) => f.id !== id)
+    if (currentFloorId.value === id) currentFloorId.value = floors.value[0]?.id ?? null
     toast.success('Místnost smazána.')
   } catch (e) {
-    toast.error('Místnost nelze smazat, dokud má stoly.')
+    toast.error('Smazání místnosti selhalo.')
     console.error(e)
   } finally {
-    deleteFloorOpen.value = false
+    deleteFloorId.value = null
   }
 }
 
@@ -372,7 +373,7 @@ function onCanvasPointerDown(e: PointerEvent) {
           variant="ghost"
           size="icon"
           title="Smazat"
-          @click="deleteFloorOpen = true"
+          @click="deleteFloorId = currentFloorId"
         >
           <Trash2 class="h-4 w-4 text-destructive" />
         </Button>
@@ -551,12 +552,12 @@ function onCanvasPointerDown(e: PointerEvent) {
     </Dialog>
 
     <!-- Smazat místnost -->
-    <AlertDialog :open="deleteFloorOpen" @update:open="(o) => (deleteFloorOpen = o)">
+    <AlertDialog :open="!!deleteFloorId" @update:open="(o) => !o && (deleteFloorId = null)">
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Smazat místnost?</AlertDialogTitle>
           <AlertDialogDescription>
-            Místnost „{{ currentFloor?.name }}" se odstraní. Nejdřív z ní smažte všechny stoly.
+            Místnost „{{ currentFloor?.name }}" se smaže i se všemi svými stoly. Akci nelze vrátit.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
