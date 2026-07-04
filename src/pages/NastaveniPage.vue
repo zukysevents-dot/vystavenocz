@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ImageUp, Save, Trash2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -15,6 +16,7 @@ import { toast } from '@/components/ui/sonner'
 import { useCompanyStore } from '@/stores/company'
 import { useAuthStore } from '@/stores/auth'
 import { buildInvoiceNumber } from '@/lib/invoice'
+import type { AppModuleId } from '@/lib/modules'
 import type { Company, VatMode } from '@/lib/types'
 
 const companyStore = useCompanyStore()
@@ -29,6 +31,50 @@ const vatModes: { value: VatMode; label: string }[] = [
   { value: 'payer', label: 'Plátce DPH' },
   { value: 'identified', label: 'Identifikovaná osoba' },
   { value: 'non_payer', label: 'Neplátce DPH' },
+]
+
+const moduleOptions: { id: AppModuleId; label: string; description: string; locked?: boolean }[] = [
+  {
+    id: 'core',
+    label: 'Jádro',
+    description: 'Firma, pobočky, uživatelé, klienti a nastavení.',
+    locked: true,
+  },
+  {
+    id: 'invoicing',
+    label: 'Fakturace',
+    description: 'Faktury, nabídky, DPH, cashflow a účetní výstupy.',
+  },
+  { id: 'pos', label: 'Pokladna', description: 'Prodej, platby, účtenky, uzávěrky a Z-reporty.' },
+  { id: 'gastro', label: 'Gastro', description: 'Restaurace, stoly, kuchyně a gastro provoz.' },
+  { id: 'stock', label: 'Sklad', description: 'Zásoby, naskladnění, inventury a skladové pohyby.' },
+  {
+    id: 'attendance',
+    label: 'Docházka',
+    description: 'Zaměstnanci, směny, příchody, odchody a pauzy.',
+  },
+  { id: 'booking', label: 'Rezervace', description: 'Služby, zdroje a veřejné rezervace.' },
+  { id: 'jobs', label: 'Zakázky', description: 'Výjezdy, práce v terénu a zakázkový provoz.' },
+  {
+    id: 'reporting',
+    label: 'Reporty',
+    description: 'Konsolidace, manažerské přehledy a porovnání provozoven.',
+  },
+  {
+    id: 'loyalty',
+    label: 'Věrnost',
+    description: 'Věrnostní programy, návraty zákazníků a marketing.',
+  },
+  {
+    id: 'ai',
+    label: 'AI asistent',
+    description: 'Asistent nad doklady, provozem, reporty a doporučeními.',
+  },
+  {
+    id: 'integrations',
+    label: 'Integrace',
+    description: 'Importy, exporty, účetnictví, API a napojení služeb.',
+  },
 ]
 
 const form = reactive({
@@ -49,9 +95,15 @@ const form = reactive({
   nextInvoiceSeq: 1,
   defaultPaymentDays: 14,
 })
+const enabledModules = ref<AppModuleId[]>([...auth.modules])
 
 onMounted(async () => {
   await companyStore.load()
+  try {
+    enabledModules.value = await companyStore.loadModules()
+  } catch {
+    enabledModules.value = auth.modules
+  }
   const c = companyStore.company
   if (!c) return
   form.companyName = c.companyName ?? ''
@@ -71,6 +123,16 @@ onMounted(async () => {
   form.nextInvoiceSeq = c.nextInvoiceSeq ?? 1
   form.defaultPaymentDays = c.defaultPaymentDays ?? 14
 })
+
+function toggleModule(module: AppModuleId, enabled: boolean | 'indeterminate' | undefined): void {
+  if (module === 'core') return
+  if (enabled === true) {
+    if (!enabledModules.value.includes(module))
+      enabledModules.value = [...enabledModules.value, module]
+    return
+  }
+  enabledModules.value = enabledModules.value.filter((m) => m !== module)
+}
 
 // Živý náhled, jaké číslo dostane příští faktura.
 const numberPreview = computed(() =>
@@ -133,6 +195,7 @@ async function onSubmit(): Promise<void> {
   }
   try {
     await companyStore.save(payload)
+    enabledModules.value = await companyStore.saveModules(enabledModules.value)
   } catch (e) {
     // API chyba (validace/síť) nebo localStorage quota (velké logo jako data URL) — neukládej tiše.
     const isQuota = e instanceof Error && e.name === 'QuotaExceededError'
@@ -217,6 +280,30 @@ async function onSubmit(): Promise<void> {
               <Input id="zip" v-model="form.zip" />
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Moduly -->
+      <div class="rounded-xl border border-border bg-card p-6">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Moduly</h2>
+        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+          <label
+            v-for="module in moduleOptions"
+            :key="module.id"
+            class="flex gap-3 rounded-lg border border-border p-4"
+            :class="module.locked ? 'bg-muted/30' : 'cursor-pointer hover:bg-muted/40'"
+          >
+            <Checkbox
+              class="mt-0.5"
+              :model-value="enabledModules.includes(module.id)"
+              :disabled="module.locked"
+              @update:model-value="(checked) => toggleModule(module.id, checked)"
+            />
+            <span>
+              <span class="block text-sm font-semibold">{{ module.label }}</span>
+              <span class="mt-1 block text-xs text-muted-foreground">{{ module.description }}</span>
+            </span>
+          </label>
         </div>
       </div>
 

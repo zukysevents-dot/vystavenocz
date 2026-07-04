@@ -16,6 +16,10 @@ describe('module capabilities', () => {
     expect(normalizeModules(['core', 'gastro', 'unknown'])).toEqual(['core', 'gastro'])
   })
 
+  it('keeps the core module enabled even when older payloads omit it', () => {
+    expect(normalizeModules(['gastro', 'pos'])).toEqual(['core', 'gastro', 'pos'])
+  })
+
   it('falls back to all modules when API does not return module capabilities yet', () => {
     expect(normalizeModules(undefined)).toEqual(DEFAULT_ENABLED_MODULES)
     expect(normalizeModules([])).toEqual(DEFAULT_ENABLED_MODULES)

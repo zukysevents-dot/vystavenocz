@@ -9,6 +9,7 @@ Last updated: 2026-07-05
 - Backend persists tenant-selected modules in `company_modules`; tenants without rows still fall back to all default modules.
 - Frontend auth store persists capabilities and the app shell filters navigation/routes through a typed module manifest.
 - Onboarding lets the company choose a business profile: Gastro, Services, Crafts/Jobs, or Shop. The selected profile saves the first enabled module bundle.
+- Company settings lets owners adjust enabled modules after onboarding through `/company/modules`; the mandatory `core` module is always kept enabled by normalization.
 
 ## Product goal
 
@@ -199,7 +200,7 @@ Vystaveno should win through:
 
 ## Implementation order
 
-1. Stabilize module capability resolver, permissions, and navigation rules.
+1. Stabilize module capability resolver, permissions, navigation rules, and module settings.
 2. Make Gastro MVP reliable: POS, tables, kitchen, receipts, shifts, day close.
 3. Add stock movements from sales and protect financial/POS audit integrity.
 4. Build recipes and purchase receipts.

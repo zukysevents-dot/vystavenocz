@@ -18,7 +18,7 @@ Migrace ze staré React appky (zazálohovaná ve větvi `legacy-react`, nevracet
 
 Produktová roadmapa modulárního Vystaveno + gastro priority je v `docs/product/modular-business-roadmap.md`. Při změně zásadního produktového směru ji aktualizuj společně s tímto kontextem.
 
-Modulární runtime základ: backend `/me` vrací `modules` + `features`; frontend je drží v `src/stores/auth.ts` a app shell filtruje navigaci/routy přes `src/lib/modules.ts`. Backend ukládá tenant-selected moduly v `company_modules`; staré firmy bez řádků mají fallback na všechny default moduly. Onboarding vybírá první modulový balíček podle typu podnikání.
+Modulární runtime základ: backend `/me` vrací `modules` + `features`; frontend je drží v `src/stores/auth.ts` a app shell filtruje navigaci/routy přes `src/lib/modules.ts`. Backend ukládá tenant-selected moduly v `company_modules`; staré firmy bez řádků mají fallback na všechny default moduly. Onboarding vybírá první modulový balíček podle typu podnikání a `Nastavení firmy` umožňuje pozdější změnu modulů přes `/company/modules`. Modul `core` je povinný a normalizace ho vždy doplní.
 
 ## Dva repozitáře, jeden produkt
 
@@ -71,7 +71,7 @@ Migrace databáze naskočí samy při startu API. Ověření živého stavu: `cu
 ## Konvence (dodržuj)
 
 - **S uživatelem komunikuj česky, kód a identifikátory anglicky.** Uživatel je netechnický — vysvětluj polopaticky, po jednom kroku.
-- **Necommituj ani nepushuj bez výslovného souhlasu uživatele.** Pracuje se na feature větvích, PR do `main`.
+- Uživatel dal souhlas průběžně commitovat a pushovat dokončené změny. Stále pracuj na feature větvích a přes PR do `main`; nepushuj přímo do `main`, pokud si to výslovně neřekne.
 - **Do commit zpráv NEDÁVAT AI/„Co-Authored-By" trailer.**
 - Minimální zásah, drž se stávajícího stylu, nerefaktoruj, co není rozbité (viz [CLAUDE.md](CLAUDE.md) §2–3).
 
