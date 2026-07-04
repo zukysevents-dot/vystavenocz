@@ -37,60 +37,54 @@ import SiteLogo from '@/components/SiteLogo.vue'
 import { Button } from '@/components/ui/button'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { useAuthStore } from '@/stores/auth'
+import { APP_NAV_DEFINITIONS, isModuleEnabled, type AppNavDefinition } from '@/lib/modules'
 
-const navItems = [
-  { to: '/app', label: 'Přehled', icon: LayoutDashboard, exact: true },
-  { to: '/app/pokladna', label: 'Pokladna', icon: ShoppingCart },
-  { to: '/app/restaurace', label: 'Restaurace', icon: UtensilsCrossed },
-  { to: '/app/kuchyne', label: 'Kuchyně', icon: ChefHat },
-  { to: '/app/mapa-stolu', label: 'Mapa stolů', icon: LayoutGrid },
-  { to: '/app/sklad', label: 'Sklad', icon: Package },
-  { to: '/app/zasoby', label: 'Zásoby', icon: Boxes },
-  { to: '/app/naskladneni', label: 'Naskladnění', icon: ScanBarcode },
-  { to: '/app/dochazka', label: 'Docházka', icon: Clock },
-  { to: '/app/smeny', label: 'Směny', icon: CalendarClock },
-  { to: '/app/pobocky', label: 'Pobočky', icon: Building2 },
-  { to: '/app/konsolidace', label: 'Konsolidace', icon: BarChart3 },
-  { to: '/app/uzaverka', label: 'Uzávěrka', icon: Receipt },
-  { to: '/app/rezervace', label: 'Rezervace', icon: CalendarDays },
-  { to: '/app/kategorie', label: 'Kategorie', icon: Tags },
-  { to: '/app/nabidky', label: 'Nabídky', icon: FileCheck },
-  { to: '/app/faktury', label: 'Faktury', icon: FileText },
-  { to: '/app/cashflow', label: 'Cashflow', icon: Wallet },
-  { to: '/app/uctarna', label: 'Účtárna', icon: Calculator },
-  { to: '/app/dph', label: 'Přehled DPH', icon: Percent },
-  { to: '/app/klienti', label: 'Klienti', icon: Users },
-  { to: '/app/import', label: 'Import dat', icon: Upload },
-  { to: '/app/vernost', label: 'Věrnost', icon: Heart },
-  { to: '/app/zakazky', label: 'Zakázky', icon: Wrench },
-  { to: '/app/predplatne', label: 'Předplatné', icon: CreditCard },
-  { to: '/app/nastaveni', label: 'Nastavení', icon: Settings },
-]
+const navIcons = {
+  '/app': LayoutDashboard,
+  '/app/pokladna': ShoppingCart,
+  '/app/restaurace': UtensilsCrossed,
+  '/app/kuchyne': ChefHat,
+  '/app/mapa-stolu': LayoutGrid,
+  '/app/sklad': Package,
+  '/app/zasoby': Boxes,
+  '/app/naskladneni': ScanBarcode,
+  '/app/dochazka': Clock,
+  '/app/smeny': CalendarClock,
+  '/app/pobocky': Building2,
+  '/app/konsolidace': BarChart3,
+  '/app/uzaverka': Receipt,
+  '/app/rezervace': CalendarDays,
+  '/app/kategorie': Tags,
+  '/app/nabidky': FileCheck,
+  '/app/faktury': FileText,
+  '/app/cashflow': Wallet,
+  '/app/uctarna': Calculator,
+  '/app/dph': Percent,
+  '/app/klienti': Users,
+  '/app/import': Upload,
+  '/app/vernost': Heart,
+  '/app/zakazky': Wrench,
+  '/app/predplatne': CreditCard,
+  '/app/nastaveni': Settings,
+} as const
 
 const auth = useAuthStore()
 
-// Employee nemá invoices.read (backend vrací 403 na přehled/faktury/klienty) — finanční položky skryjeme.
-// Manažerské stránky (Konsolidace, Pobočky) taky skrýt Employee roli — jsou vyhrazené vedení.
-// Pozn.: tady jen skrýváme položky Employee (blacklist); závazný gate je whitelist `requiresRole`
-// v routeru (dnes role Owner/Manager/Employee). Při případné 4. roli sjednotit se `requiresRole`.
-const managerHiddenRoutes = new Set([
-  '/app',
-  '/app/faktury',
-  '/app/klienti',
-  '/app/konsolidace',
-  '/app/uzaverka',
-  '/app/pobocky',
-  '/app/import',
-])
-const nav = computed(() =>
-  auth.role === 'Employee' ? navItems.filter((i) => !managerHiddenRoutes.has(i.to)) : navItems,
+type SidebarNavItem = AppNavDefinition & { icon: (typeof navIcons)[keyof typeof navIcons] }
+
+const nav = computed<SidebarNavItem[]>(() =>
+  APP_NAV_DEFINITIONS.filter((item) => {
+    if (!isModuleEnabled(item.module, auth.modules)) return false
+    if (auth.role && item.hiddenForRoles?.includes(auth.role)) return false
+    return true
+  }).map((item) => ({ ...item, icon: navIcons[item.to as keyof typeof navIcons] })),
 )
 const canInvoice = computed(() => auth.role !== 'Employee')
 const route = useRoute()
 const router = useRouter()
 const mobileOpen = ref(false)
 
-function isActive(item: (typeof navItems)[number]): boolean {
+function isActive(item: SidebarNavItem): boolean {
   return item.exact ? route.path === item.to : route.path.startsWith(item.to)
 }
 
