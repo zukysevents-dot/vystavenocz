@@ -18,6 +18,7 @@ describe('useSales — kontrakt volání', () => {
     ])
     expect(http.post).toHaveBeenCalledWith('/sales', {
       paymentMethod: 'Cash',
+      locationId: null,
       items: [
         {
           productId: 'p1',
@@ -31,6 +32,29 @@ describe('useSales — kontrakt volání', () => {
       discountPercent: 0,
       tipAmount: 0,
     })
+  })
+
+  it('create pošle zvolenou provozovnu (locationId) do těla prodeje', async () => {
+    vi.mocked(http.post).mockResolvedValue({ id: 's1' } as never)
+    await useSales().create(
+      'Cash',
+      [{ productId: 'p1', description: 'Burger', quantity: 1, unitPrice: 199, vatRate: 12 }],
+      { locationId: 'loc-1' },
+    )
+    expect(http.post).toHaveBeenCalledWith(
+      '/sales',
+      expect.objectContaining({ locationId: 'loc-1' }),
+    )
+  })
+
+  it('create s prázdným locationId ("") pošle null (klient bez provozoven)', async () => {
+    vi.mocked(http.post).mockResolvedValue({ id: 's1' } as never)
+    await useSales().create(
+      'Cash',
+      [{ productId: 'p1', description: 'Burger', quantity: 1, unitPrice: 199, vatRate: 12 }],
+      { locationId: '' },
+    )
+    expect(http.post).toHaveBeenCalledWith('/sales', expect.objectContaining({ locationId: null }))
   })
 
   it('create pošle zadanou slevu na účet a spropitné', async () => {

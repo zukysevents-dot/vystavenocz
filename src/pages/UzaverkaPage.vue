@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { RouterLink } from 'vue-router'
 import {
   Receipt,
   ShoppingCart,
@@ -44,7 +45,7 @@ import type { DayCloseResponse } from '@/lib/types'
 
 const apiMode = isApiMode()
 
-const { loading, error, summary, vatBreakdown, topProducts, byCategory, reload } = useSalesReport()
+const { loading, error, summary, vatBreakdown, soldProducts, byCategory, reload } = useSalesReport()
 const { getDayClose, closeDay } = useDayClose()
 const { locations, load: loadLocations } = useLocations()
 
@@ -57,6 +58,9 @@ function todayISO(): string {
 const today = todayISO()
 const selectedDate = ref(today)
 const selectedLocationId = ref<string>('')
+// Provozovny už doběhly (ať neblikne prázdný stav, dokud se načítají).
+const locationsLoaded = ref(false)
+const noLocations = computed(() => apiMode && locationsLoaded.value && locations.value.length === 0)
 
 // Stav dne + Z-report (jen API režim).
 const dayState = ref<DayCloseResponse | null>(null)
@@ -170,6 +174,13 @@ function exportZReport(): void {
     rows.push([`DPH ${v.vatRate} % — daň`, v.vat])
     rows.push([`DPH ${v.vatRate} % — vč. DPH`, v.gross])
   }
+  // Prodané produkty (inventura) — vlastní 3sloupcový blok: název / množství / tržba.
+  if (z.productBreakdown?.length) {
+    rows.push(['Prodané produkty', 'Množství', 'Tržba'])
+    for (const p of z.productBreakdown) {
+      rows.push([p.name, p.quantity, p.revenueGross])
+    }
+  }
   if (hasCashClose.value) {
     rows.push(['Počáteční hotovost', z.cashOpening ?? 0])
     rows.push(['Spočítaná hotovost', z.cashCountedClosing ?? 0])
@@ -183,6 +194,7 @@ function exportZReport(): void {
 onMounted(async () => {
   if (apiMode) {
     await loadLocations()
+    locationsLoaded.value = true
     // Jedna pobočka → vezmeme automaticky; víc → uživatel vybere.
     if (locations.value.length >= 1) selectedLocationId.value = locations.value[0].id
     await loadDay()
@@ -217,8 +229,21 @@ watch([selectedDate, selectedLocationId], () => {
       </span>
     </div>
 
+    <!-- Klient nemá žádnou provozovnu → per-pobočka uzávěrka nemá co ukázat. -->
+    <div v-if="noLocations" class="mt-6 rounded-xl border border-border bg-card p-6 text-center">
+      <Info class="mx-auto h-8 w-8 text-muted-foreground" />
+      <p class="mt-3 font-semibold">Zatím žádná provozovna</p>
+      <p class="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+        Uzávěrka se dělá po provozovnách. Přidejte si provozovnu a pak na ni v pokladně prodávejte —
+        tržby se sem začnou propisovat.
+      </p>
+      <Button as-child variant="coral" class="mt-4">
+        <RouterLink to="/app/pobocky">Přidat provozovnu</RouterLink>
+      </Button>
+    </div>
+
     <!-- Výběr dne + pobočky (Fáze 2, jen API režim) -->
-    <div v-if="apiMode" class="mt-6 flex flex-wrap items-end gap-3">
+    <div v-else-if="apiMode" class="mt-6 flex flex-wrap items-end gap-3">
       <div class="grid gap-1.5">
         <Label for="uzaverka-date">Den</Label>
         <Input id="uzaverka-date" v-model="selectedDate" type="date" :max="today" class="w-44" />
@@ -378,6 +403,55 @@ watch([selectedDate, selectedLocationId], () => {
         </div>
       </div>
 
+      <!-- Prodané produkty (zafixované) — kompletní výpis za den pro inventuru -->
+      <h2 class="mt-8 text-lg font-semibold">Prodané produkty</h2>
+      <p class="mt-1 text-sm text-muted-foreground">
+        Kompletní seznam prodaných položek za den — pro inventuru.
+      </p>
+      <div
+        v-if="!zReport.productBreakdown || zReport.productBreakdown.length === 0"
+        class="mt-3 rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground"
+      >
+        Žádné prodané položky.
+      </div>
+      <div v-else class="mt-3 overflow-x-auto rounded-xl border border-border bg-card">
+        <table class="w-full min-w-[480px] text-sm">
+          <thead
+            class="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground"
+          >
+            <tr>
+              <th class="px-4 py-3 text-left">Produkt</th>
+              <th class="px-4 py-3 text-right">Množství</th>
+              <th class="px-4 py-3 text-right">Tržba</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="p in zReport.productBreakdown"
+              :key="p.productId ?? 'unknown'"
+              class="border-b border-border last:border-0 hover:bg-muted/30"
+            >
+              <td class="px-4 py-3 font-medium">{{ p.name }}</td>
+              <td class="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                {{ p.quantity }}
+              </td>
+              <td class="px-4 py-3 text-right font-semibold tabular-nums">
+                {{ formatCZK(p.revenueGross) }}
+              </td>
+            </tr>
+          </tbody>
+          <tfoot class="border-t border-border bg-muted/20 font-semibold">
+            <tr>
+              <td class="px-4 py-3">Celkem položek</td>
+              <td class="px-4 py-3 text-right tabular-nums">
+                {{ zReport.productBreakdown.reduce((sum, p) => sum + p.quantity, 0) }}
+              </td>
+              <td class="px-4 py-3 text-right tabular-nums">{{ formatCZK(zReport.total ?? 0) }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
       <!-- Hotovostní uzávěrka (jen když vyplněná) -->
       <template v-if="hasCashClose">
         <h2 class="mt-8 text-lg font-semibold">Hotovostní uzávěrka</h2>
@@ -425,7 +499,8 @@ watch([selectedDate, selectedLocationId], () => {
     </template>
 
     <!-- ============ OTEVŘENÝ DEN → ŽIVÝ PŘEHLED + ZAVŘÍT ============ -->
-    <template v-else>
+    <!-- Bez provozovny (apiMode) se sem nepadá — jinak by živý přehled točil donekonečna. -->
+    <template v-else-if="!noLocations">
       <div v-if="loading" class="mt-12 flex justify-center">
         <Loader2 class="h-6 w-6 animate-spin text-primary" />
       </div>
@@ -554,10 +629,13 @@ watch([selectedDate, selectedLocationId], () => {
           </div>
         </div>
 
-        <!-- Top produkty -->
-        <h2 class="mt-8 text-lg font-semibold">Top produkty</h2>
+        <!-- Prodané produkty — kompletní výpis za den (pro inventuru) -->
+        <h2 class="mt-8 text-lg font-semibold">Prodané produkty</h2>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Kompletní seznam prodaných položek za den — pro inventuru.
+        </p>
         <div
-          v-if="topProducts.length === 0"
+          v-if="soldProducts.length === 0"
           class="mt-3 rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground"
         >
           Zatím žádné prodané položky.
@@ -575,7 +653,7 @@ watch([selectedDate, selectedLocationId], () => {
             </thead>
             <tbody>
               <tr
-                v-for="p in topProducts"
+                v-for="p in soldProducts"
                 :key="p.productId ?? 'unknown'"
                 class="border-b border-border last:border-0 hover:bg-muted/30"
               >
@@ -588,6 +666,15 @@ watch([selectedDate, selectedLocationId], () => {
                 </td>
               </tr>
             </tbody>
+            <tfoot class="border-t border-border bg-muted/20 font-semibold">
+              <tr>
+                <td class="px-4 py-3">Celkem položek</td>
+                <td class="px-4 py-3 text-right tabular-nums">
+                  {{ soldProducts.reduce((sum, p) => sum + p.quantity, 0) }}
+                </td>
+                <td class="px-4 py-3 text-right tabular-nums">{{ formatCZK(summary.total) }}</td>
+              </tr>
+            </tfoot>
           </table>
         </div>
 

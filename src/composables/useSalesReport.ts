@@ -44,7 +44,8 @@ export function useSalesReport() {
   const serverSummary = ref<DailySalesSummary | null>(null)
   const summary = ref<SalesSummary>(summarizeSales([]))
   const vatBreakdown = ref<VatBreakdownRow[]>([])
-  const topProducts = ref<TopProductRow[]>([])
+  // Kompletní seznam prodaných produktů za den (kvůli inventuře) — ne jen „top", ale všechny.
+  const soldProducts = ref<TopProductRow[]>([])
   const byCategory = ref<CategoryRevenueRow[]>([])
 
   /**
@@ -98,7 +99,8 @@ export function useSalesReport() {
 
       summary.value = summarizeSales(filtered)
       vatBreakdown.value = buildVatBreakdown(filtered)
-      topProducts.value = buildTopProducts(filtered, productNameById)
+      // Bez limitu = všechny prodané produkty (pro inventuru), seřazené od nejprodávanějšího.
+      soldProducts.value = buildTopProducts(filtered, productNameById, Number.POSITIVE_INFINITY)
       byCategory.value = buildRevenueByCategory(filtered, categoryNameByProductId)
     } catch (e) {
       console.warn('Načtení uzávěrky selhalo:', e)
@@ -115,7 +117,7 @@ export function useSalesReport() {
     serverSummary,
     summary,
     vatBreakdown,
-    topProducts,
+    soldProducts,
     byCategory,
     reload,
   }
