@@ -2,7 +2,6 @@
 import { computed, ref, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  Upload,
   FileSpreadsheet,
   Loader2,
   ArrowLeft,
@@ -36,19 +35,11 @@ import { hasBlockingError } from '../validate'
 import type { EntityDraft } from '../types'
 import type { ImportEntityConfig } from '../configs'
 
-const props = defineProps<{ config: ImportEntityConfig<T> }>()
+const props = defineProps<{ config: ImportEntityConfig<T>; file?: File | null }>()
+const emit = defineEmits<{ reset: [] }>()
 const router = useRouter()
-const {
-  state,
-  hasEnrich,
-  enrichLabel,
-  pickFile,
-  goToPreview,
-  commit,
-  enrichAll,
-  rollbackLast,
-  reset,
-} = useImportWizard(props.config)
+const { state, hasEnrich, enrichLabel, pickFile, goToPreview, commit, enrichAll, rollbackLast } =
+  useImportWizard(props.config)
 
 const NONE = '__none__'
 const STEP_INDEX: Record<string, number> = { upload: 0, mapping: 1, preview: 2, result: 3 }
@@ -61,7 +52,6 @@ const STEP_TITLE: Record<string, string> = {
 const progressValue = computed(() => (STEP_INDEX[state.step] / 3) * 100)
 const rowCount = computed(() => state.rawTable?.rows.length ?? 0)
 const nameMapped = computed(() => !!state.mapping.name)
-const dragOver = ref(false)
 const rollingBack = ref(false)
 const stepHeading = ref<HTMLElement | null>(null)
 
@@ -95,16 +85,14 @@ async function handleFile(file: File | undefined): Promise<void> {
   }
 }
 
-function onFileChange(e: Event): void {
-  const input = e.target as HTMLInputElement
-  void handleFile(input.files?.[0])
-  input.value = ''
-}
-
-function onDrop(e: DragEvent): void {
-  dragOver.value = false
-  void handleFile(e.dataTransfer?.files?.[0])
-}
+// Soubor vybírá a typ detekuje stránka (ImportPage) a předává ho sem — rovnou naparsovat.
+watch(
+  () => props.file,
+  (f) => {
+    if (f) void handleFile(f)
+  },
+  { immediate: true },
+)
 
 function setMapping(field: string, value: unknown): void {
   state.mapping[field] = value === NONE ? null : String(value)
@@ -116,7 +104,8 @@ function sample(header: string | null): string {
 }
 
 function cellValue(draft: EntityDraft<T>, field: string): string {
-  const v = (draft.value as Record<string, unknown>)[field]
+  // Ne-entitní sloupce (kategorie, množství) žijí v extras, ne ve value.
+  const v = (draft.value as Record<string, unknown>)[field] ?? draft.extras?.[field]
   return v === null || v === undefined || v === '' ? '—' : String(v)
 }
 
@@ -152,7 +141,7 @@ async function onRollback(): Promise<void> {
   try {
     const res = await rollbackLast()
     toast.success(`Import vrácen: smazáno ${res.removed} záznamů.`)
-    reset()
+    emit('reset')
   } finally {
     rollingBack.value = false
   }
@@ -204,34 +193,9 @@ async function onRollback(): Promise<void> {
       {{ STEP_TITLE[state.step] }}
     </h2>
 
-    <!-- KROK 1: Upload -->
-    <section v-if="state.step === 'upload'">
-      <label
-        for="import-file"
-        class="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed bg-card p-12 text-center transition-colors hover:bg-muted/40"
-        :class="dragOver ? 'border-primary bg-primary-soft/40' : 'border-border'"
-        @dragover.prevent="dragOver = true"
-        @dragleave.prevent="dragOver = false"
-        @drop.prevent="onDrop"
-      >
-        <Loader2 v-if="state.parsing" class="h-10 w-10 animate-spin text-primary" />
-        <Upload v-else class="h-10 w-10 text-muted-foreground" />
-        <div>
-          <div class="font-semibold">
-            Přetáhněte sem soubor (CSV, XLSX, Fakturoid XML) nebo klikněte
-          </div>
-          <p class="mt-1 text-sm text-muted-foreground">
-            Export z Fakturoidu, Dotykačky, Reservia nebo libovolné tabulky.
-          </p>
-        </div>
-      </label>
-      <input
-        id="import-file"
-        type="file"
-        accept=".csv,.xlsx,.xml,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/xml,text/xml"
-        class="sr-only"
-        @change="onFileChange"
-      />
+    <!-- KROK 1: Soubor se načítá (výběr souboru + detekce typu řeší ImportPage) -->
+    <section v-if="state.step === 'upload'" class="flex justify-center p-12">
+      <Loader2 class="h-8 w-8 animate-spin text-primary" />
     </section>
 
     <!-- KROK 2: Mapování -->
@@ -391,7 +355,7 @@ async function onRollback(): Promise<void> {
             <Loader2 v-if="rollingBack" class="h-4 w-4 animate-spin" />
             <RotateCcw v-else class="h-4 w-4" /> Vrátit import
           </Button>
-          <Button variant="ghost" @click="reset">Nový import</Button>
+          <Button variant="ghost" @click="emit('reset')">Nový import</Button>
         </div>
         <p v-if="state.result?.batch.createdIds.length" class="text-xs text-muted-foreground">
           „Vrátit import" smaže jen nově vytvořené záznamy. Přepsané se nevrátí.
@@ -404,7 +368,7 @@ async function onRollback(): Promise<void> {
       <Button
         v-if="state.step === 'mapping' || state.step === 'preview'"
         variant="ghost"
-        @click="state.step === 'preview' ? (state.step = 'mapping') : reset()"
+        @click="state.step === 'preview' ? (state.step = 'mapping') : emit('reset')"
       >
         <ArrowLeft class="h-4 w-4" /> Zpět
       </Button>

@@ -16,6 +16,21 @@ import type { ImportEntityConfig } from './configs'
 
 export type WizardStep = 'upload' | 'mapping' | 'preview' | 'result'
 
+/** Normalizace názvu hlavičky pro porovnání (bez diakritiky/velikosti/oddělovačů). */
+function normHeader(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^a-z0-9]/g, '')
+}
+
+/** Najde v hlavičkách souboru první, která (normalizovaně) sedí na některý z kandidátů. */
+function findHeader(headers: string[], candidates: string[]): string | null {
+  const wanted = new Set(candidates.map(normHeader))
+  return headers.find((h) => wanted.has(normHeader(h))) ?? null
+}
+
 interface WizardState<T> {
   step: WizardStep
   fileName: string
@@ -40,6 +55,8 @@ interface WizardState<T> {
 export function useImportWizard<T>(config: ImportEntityConfig<T>) {
   const ops = config.createOps()
   const enrich = config.createEnrich?.()
+  const resolveRefs = config.createRefsResolver?.()
+  const postCreate = config.createPostCreate?.()
   const ledger = useImportLedger()
 
   const state = reactive({
@@ -66,11 +83,12 @@ export function useImportWizard<T>(config: ImportEntityConfig<T>) {
       const adapter = config.detect(table.headers) ?? config.genericAdapter
       state.adapter = adapter
       state.sourceLabel = adapter.source
-      // Předvyplň mapování z adaptéru, ale jen sloupce, které soubor opravdu má.
+      // Předvyplň mapování z adaptéru — normalizovaně (bez diakritiky/velikosti) a
+      // přes aliasy, ať se rozpoznají i české / odlišné názvy hlaviček.
       const mapping: ColumnMapping = {}
       for (const { field } of config.fields) {
-        const preset = adapter.defaultMapping[field]
-        mapping[field] = preset && table.headers.includes(preset) ? preset : null
+        const candidates = adapter.aliases?.[field] ?? [adapter.defaultMapping[field] ?? field]
+        mapping[field] = findHeader(table.headers, candidates)
       }
       state.mapping = mapping
       state.step = 'mapping'
@@ -81,7 +99,7 @@ export function useImportWizard<T>(config: ImportEntityConfig<T>) {
 
   function buildDrafts(): void {
     if (!state.rawTable) return
-    const drafts = applyMapping<T>(state.rawTable, state.mapping, state.adapter)
+    const drafts = applyMapping<T>(state.rawTable, state.mapping, state.adapter, config.extraFields)
     for (const d of drafts) {
       d.issues = config.validate(d.value)
       if (hasBlockingError(d.issues)) d.decision = 'skip'
@@ -106,6 +124,19 @@ export function useImportWizard<T>(config: ImportEntityConfig<T>) {
     )
     state.progress = { done: 0, total: actionable.length }
 
+    // Před zápisem dotáhni vazby (kategorie → categoryId) pro řádky, které se budou
+    // vytvářet/přepisovat. Selhání nesmí shodit dávku — jen se zaznamená.
+    if (resolveRefs) {
+      try {
+        await resolveRefs(actionable)
+      } catch (e) {
+        errors.push({
+          rowIndex: -1,
+          message: e instanceof Error ? e.message : 'Doplnění kategorií selhalo',
+        })
+      }
+    }
+
     for (const draft of state.drafts) {
       if (draft.decision === 'skip' || hasBlockingError(draft.issues)) {
         counts.skipped++
@@ -119,6 +150,17 @@ export function useImportWizard<T>(config: ImportEntityConfig<T>) {
           const created = await ops.create(draft.value)
           createdIds.push(created.id)
           counts.created++
+          // Naskladnění jen u NOVĚ vytvořených (ne u přepsání) — je přírůstkové.
+          if (postCreate) {
+            try {
+              await postCreate(created.id, draft)
+            } catch (e) {
+              errors.push({
+                rowIndex: draft.rowIndex,
+                message: e instanceof Error ? e.message : 'Naskladnění selhalo',
+              })
+            }
+          }
         }
       } catch (e) {
         counts.failed++

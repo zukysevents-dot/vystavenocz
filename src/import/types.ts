@@ -41,6 +41,10 @@ export interface EntityDraft<T> {
   rowIndex: number
   raw: Record<string, string>
   value: T // namapovaná + vyčištěná entita (XInput); před validací nemusí být kompletní
+  // Namapované sloupce, které NEjsou součástí entity T (např. název kategorie,
+  // množství u produktů) — spotřebují je cascade hooky (config.createRefsResolver /
+  // createPostCreate), nikdy netečou do ops.create.
+  extras?: Record<string, string>
   issues: ValidationIssue[]
   duplicate?: DuplicateMatch
   decision: RowDecision
@@ -56,6 +60,8 @@ export interface ImportSourceAdapter<TInput> {
   entity: ImportEntity
   label: string
   defaultMapping: ColumnMapping
+  /** Aliasy názvů hlaviček pro autodetekci mapování (pole → možné názvy sloupců). */
+  aliases?: Record<string, string[]>
   /** Heuristika pro autodetekci zdroje podle hlaviček. */
   detect?(headers: string[]): boolean
   /** Po namapování, před validací: čištění a převody na typovanou entitu. */
