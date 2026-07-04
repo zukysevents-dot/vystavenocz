@@ -14,6 +14,7 @@ import {
   StickyNote,
   Users,
   Trash2,
+  Check,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,13 +37,7 @@ import { useCategories } from '@/composables/useCategories'
 import { useOrders } from '@/composables/useOrders'
 import { ApiError, isApiMode } from '@/lib/http'
 import { formatCZK, round2 } from '@/lib/invoice'
-import {
-  calcPosTotals,
-  calcSplitGroupTotal,
-  clampAmount,
-  clampPercent,
-  totalAssignedFraction,
-} from '@/lib/posCalc'
+import { calcPosTotals, calcSplitGroupTotal, clampAmount, clampPercent } from '@/lib/posCalc'
 import { toast } from '@/components/ui/sonner'
 import type {
   Category,
@@ -333,27 +328,35 @@ function removeSplitGroup(id: string) {
   splitGroups.value = splitGroups.value.filter((g) => g.id !== id)
 }
 
-function getFraction(group: OrderSplitGroup, itemId: string): number {
-  return group.items.find((i) => i.itemId === itemId)?.fraction ?? 0
+function isAssigned(group: OrderSplitGroup, itemId: string): boolean {
+  return group.items.some((i) => i.itemId === itemId)
 }
-// pct = zadané procento (0–100) — ořízne se na zbývající volný podíl položky napříč OSTATNÍMI
-// skupinami, ať součet frakcí pro jednu položku nikdy nepřesáhne 1 (100 %).
-function setFraction(group: OrderSplitGroup, itemId: string, pct: number) {
-  const maxAllowed = 1 - totalAssignedFraction(splitGroups.value, itemId, group)
-  const fraction = Math.min(maxAllowed, clampPercent(pct) / 100)
-  const existing = group.items.find((i) => i.itemId === itemId)
-  if (fraction <= 0) {
+function assignedCount(itemId: string): number {
+  return splitGroups.value.filter((g) => g.items.some((i) => i.itemId === itemId)).length
+}
+// Klik = přepnout, jestli tahle osoba položku platí. Cena se pak rozpočítá ROVNÝM DÍLEM
+// mezi všechny osoby, které položku mají (2 → na půl, 3 → na třetiny). Položka je tak vždy
+// buď celá přiřazená (součet frakcí = 1), nebo úplně nepřiřazená (společná).
+function toggleItem(group: OrderSplitGroup, itemId: string) {
+  if (isAssigned(group, itemId)) {
     group.items = group.items.filter((i) => i.itemId !== itemId)
-  } else if (existing) {
-    existing.fraction = fraction
   } else {
-    group.items.push({ itemId, fraction })
+    group.items.push({ itemId, fraction: 0 })
+  }
+  const assigned = splitGroups.value.filter((g) => g.items.some((i) => i.itemId === itemId))
+  const share = assigned.length > 0 ? 1 / assigned.length : 0
+  for (const g of assigned) {
+    const entry = g.items.find((i) => i.itemId === itemId)
+    if (entry) entry.fraction = share
   }
 }
 
-function unassignedPercent(itemId: string): number {
-  return Math.round((1 - totalAssignedFraction(splitGroups.value, itemId)) * 100)
-}
+// Kolik z účtu zůstává nepřiřazené (společné) = celkem − součet částek všech osob.
+const unassignedSplitTotal = computed(() => {
+  if (!currentOrder.value || !totals.value) return 0
+  const assigned = splitGroups.value.reduce((sum, g) => sum + groupTotal(g), 0)
+  return round2(totals.value.total - assigned)
+})
 
 function groupTotal(group: OrderSplitGroup): number {
   if (!currentOrder.value) return 0
@@ -931,8 +934,8 @@ const hasNewItems = computed(() =>
         <DialogHeader>
           <DialogTitle>Rozdělit účet</DialogTitle>
           <DialogDescription>
-            Přiřaďte položky (i po částech v %) jednotlivým osobám. Nepřiřazená část zůstává
-            společná.
+            Ťukni u položky na osoby, které ji platí — cena se rozdělí rovným dílem. Nepřiřazené
+            položky zůstávají společné.
           </DialogDescription>
         </DialogHeader>
 
@@ -962,36 +965,54 @@ const hasNewItems = computed(() =>
           </Button>
         </div>
 
-        <div
-          v-if="splitGroups.length"
-          class="max-h-[45vh] space-y-2 overflow-y-auto rounded-lg border border-border p-2"
-        >
-          <div
-            v-for="it in currentOrder?.items ?? []"
-            :key="it.id"
-            class="rounded-lg border border-border p-2"
-          >
-            <div class="mb-1.5 flex items-center justify-between text-sm font-medium">
-              <span>{{ it.name }} ({{ it.quantity }}×)</span>
-              <span class="tabular-nums">{{ formatCZK(it.lineTotal) }}</span>
-            </div>
-            <div class="flex flex-wrap items-center gap-3">
-              <div v-for="g in splitGroups" :key="g.id" class="flex items-center gap-1">
-                <span class="text-xs text-muted-foreground">{{ g.label }}</span>
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  class="h-7 w-14 px-1 text-center text-xs"
-                  :model-value="Math.round(getFraction(g, it.id) * 100)"
-                  @update:model-value="(v) => setFraction(g, it.id, Number(v))"
-                />
-                <span class="text-xs text-muted-foreground">%</span>
+        <div v-if="splitGroups.length" class="space-y-2">
+          <div class="max-h-[45vh] space-y-2 overflow-y-auto rounded-lg border border-border p-2">
+            <div
+              v-for="it in currentOrder?.items ?? []"
+              :key="it.id"
+              class="rounded-lg border border-border p-2"
+            >
+              <div class="mb-2 flex items-center justify-between text-sm font-medium">
+                <span>
+                  {{ it.name }}
+                  <span v-if="it.quantity > 1" class="text-muted-foreground"
+                    >×{{ it.quantity }}</span
+                  >
+                </span>
+                <span class="tabular-nums">{{ formatCZK(it.lineTotal) }}</span>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button
+                  v-for="g in splitGroups"
+                  :key="g.id"
+                  type="button"
+                  class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors"
+                  :class="
+                    isAssigned(g, it.id)
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'border-border text-muted-foreground hover:bg-muted'
+                  "
+                  :aria-pressed="isAssigned(g, it.id)"
+                  @click="toggleItem(g, it.id)"
+                >
+                  <Check v-if="isAssigned(g, it.id)" class="h-3 w-3" />
+                  {{ g.label }}
+                </button>
+                <span class="ml-1 text-xs text-muted-foreground">
+                  {{
+                    assignedCount(it.id) === 0
+                      ? 'společné'
+                      : assignedCount(it.id) === 1
+                        ? 'celé'
+                        : `rovným dílem · ${formatCZK(it.lineTotal / assignedCount(it.id))} / os.`
+                  }}
+                </span>
               </div>
             </div>
-            <p v-if="unassignedPercent(it.id) > 0" class="mt-1 text-xs text-muted-foreground">
-              Nepřiřazeno: {{ unassignedPercent(it.id) }} %
-            </p>
+          </div>
+          <div class="flex items-center justify-between px-1 text-sm">
+            <span class="text-muted-foreground">Nepřiřazeno (společné)</span>
+            <span class="tabular-nums font-medium">{{ formatCZK(unassignedSplitTotal) }}</span>
           </div>
         </div>
         <p
