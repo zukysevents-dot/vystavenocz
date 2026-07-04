@@ -2,6 +2,13 @@
 
 Last updated: 2026-07-05
 
+## Implementation status
+
+- Started: runtime module/capability foundation.
+- Backend `/me` exposes `modules` and `features`.
+- Frontend auth store persists capabilities and the app shell filters navigation/routes through a typed module manifest.
+- Current default is intentionally all modules enabled, so existing tenants keep the same app surface until tenant-specific module selection is added.
+
 ## Product goal
 
 Vystaveno is a modular business operating system for Czech freelancers and companies. Each tenant chooses only the modules they need, and the UI, API capabilities, permissions, onboarding, reports, and billing adapt to that selection.

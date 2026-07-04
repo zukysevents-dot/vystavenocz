@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { isApiMode } from '@/lib/http'
+import type { AppModuleId } from '@/lib/modules'
 
 // Typování route meta (rozšíří se v dalších taskech — guards F0-35, SEO F2-31).
 declare module 'vue-router' {
@@ -10,6 +11,8 @@ declare module 'vue-router' {
     layout?: 'public' | 'app' | 'auth'
     /** Povolené role (jinak přesměrování na Přehled). Prázdné/nevyplněné = bez omezení. */
     requiresRole?: string[]
+    /** Zapnutý runtime modul firmy. Nevyplněné = bez modulového omezení. */
+    requiresModule?: AppModuleId
   }
 }
 
@@ -125,19 +128,24 @@ const routes: RouteRecordRaw[] = [
     path: '/app',
     name: 'app',
     component: () => import('@/pages/DashboardPage.vue'),
-    meta: { title: 'Přehled', layout: 'app', requiresAuth: true },
+    meta: { title: 'Přehled', layout: 'app', requiresAuth: true, requiresModule: 'core' },
   },
   {
     path: '/app/faktury',
     name: 'app-faktury',
     component: () => import('@/pages/FakturyPage.vue'),
-    meta: { title: 'Faktury', layout: 'app', requiresAuth: true },
+    meta: { title: 'Faktury', layout: 'app', requiresAuth: true, requiresModule: 'invoicing' },
   },
   {
     path: '/app/faktury/editor',
     name: 'app-faktury-editor',
     component: () => import('@/pages/FakturyEditorPage.vue'),
-    meta: { title: 'Editor faktury', layout: 'app', requiresAuth: true },
+    meta: {
+      title: 'Editor faktury',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'invoicing',
+    },
   },
   {
     path: '/app/konsolidace',
@@ -147,6 +155,7 @@ const routes: RouteRecordRaw[] = [
       title: 'Konsolidace poboček',
       layout: 'app',
       requiresAuth: true,
+      requiresModule: 'reporting',
       requiresRole: ['Owner', 'Manager'],
     },
   },
@@ -158,6 +167,7 @@ const routes: RouteRecordRaw[] = [
       title: 'Uzávěrka',
       layout: 'app',
       requiresAuth: true,
+      requiresModule: 'pos',
       requiresRole: ['Owner', 'Manager'],
     },
   },
@@ -165,97 +175,122 @@ const routes: RouteRecordRaw[] = [
     path: '/app/cashflow',
     name: 'app-cashflow',
     component: () => import('@/pages/CashflowPage.vue'),
-    meta: { title: 'Cashflow & upomínky', layout: 'app', requiresAuth: true },
+    meta: {
+      title: 'Cashflow & upomínky',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'invoicing',
+    },
   },
   {
     path: '/app/uctarna',
     name: 'app-uctarna',
     component: () => import('@/pages/UctarnaPage.vue'),
-    meta: { title: 'Účtárna', layout: 'app', requiresAuth: true },
+    meta: { title: 'Účtárna', layout: 'app', requiresAuth: true, requiresModule: 'invoicing' },
   },
   {
     path: '/app/dph',
     name: 'app-dph',
     component: () => import('@/pages/DphPage.vue'),
-    meta: { title: 'Přehled DPH', layout: 'app', requiresAuth: true },
+    meta: { title: 'Přehled DPH', layout: 'app', requiresAuth: true, requiresModule: 'invoicing' },
   },
   {
     path: '/app/vernost',
     name: 'app-vernost',
     component: () => import('@/pages/VernostPage.vue'),
-    meta: { title: 'Věrnost & návraty', layout: 'app', requiresAuth: true },
+    meta: {
+      title: 'Věrnost & návraty',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'loyalty',
+    },
   },
   {
     path: '/app/zakazky',
     name: 'app-zakazky',
     component: () => import('@/pages/ZakazkyPage.vue'),
-    meta: { title: 'Zakázky & výjezdy', layout: 'app', requiresAuth: true },
+    meta: { title: 'Zakázky & výjezdy', layout: 'app', requiresAuth: true, requiresModule: 'jobs' },
   },
   {
     path: '/app/nabidky',
     name: 'app-nabidky',
     component: () => import('@/pages/NabidkyPage.vue'),
-    meta: { title: 'Nabídky', layout: 'app', requiresAuth: true },
+    meta: { title: 'Nabídky', layout: 'app', requiresAuth: true, requiresModule: 'invoicing' },
   },
   {
     path: '/app/klienti',
     name: 'app-klienti',
     component: () => import('@/pages/KlientiPage.vue'),
-    meta: { title: 'Klienti', layout: 'app', requiresAuth: true },
+    meta: { title: 'Klienti', layout: 'app', requiresAuth: true, requiresModule: 'core' },
   },
   {
     path: '/app/import',
     name: 'app-import',
     component: () => import('@/pages/ImportPage.vue'),
-    meta: { title: 'Import dat', layout: 'app', requiresAuth: true },
+    meta: {
+      title: 'Import dat',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'integrations',
+    },
   },
   {
     path: '/app/import/faktury',
     name: 'app-import-faktury',
     component: () => import('@/import/invoices/FakturoidInvoiceImport.vue'),
-    meta: { title: 'Import faktur', layout: 'app', requiresAuth: true },
+    meta: {
+      title: 'Import faktur',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'invoicing',
+    },
   },
   {
     path: '/app/pokladna',
     name: 'app-pokladna',
     component: () => import('@/pages/PokladnaPage.vue'),
-    meta: { title: 'Pokladna', layout: 'app', requiresAuth: true },
+    meta: { title: 'Pokladna', layout: 'app', requiresAuth: true, requiresModule: 'pos' },
   },
   {
     path: '/app/sklad',
     name: 'app-sklad',
     component: () => import('@/pages/SkladPage.vue'),
-    meta: { title: 'Sklad', layout: 'app', requiresAuth: true },
+    meta: { title: 'Sklad', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
   },
   {
     path: '/app/kategorie',
     name: 'app-kategorie',
     component: () => import('@/pages/KategoriePage.vue'),
-    meta: { title: 'Kategorie', layout: 'app', requiresAuth: true },
+    meta: { title: 'Kategorie', layout: 'app', requiresAuth: true, requiresModule: 'core' },
   },
   {
     path: '/app/zasoby',
     name: 'app-zasoby',
     component: () => import('@/pages/ZasobyPage.vue'),
-    meta: { title: 'Zásoby', layout: 'app', requiresAuth: true },
+    meta: { title: 'Zásoby', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
   },
   {
     path: '/app/naskladneni',
     name: 'app-naskladneni',
     component: () => import('@/pages/NaskladneniPage.vue'),
-    meta: { title: 'Naskladnění', layout: 'app', requiresAuth: true },
+    meta: { title: 'Naskladnění', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
   },
   {
     path: '/app/dochazka',
     name: 'app-dochazka',
     component: () => import('@/pages/DochazkaPage.vue'),
-    meta: { title: 'Docházka', layout: 'app', requiresAuth: true },
+    meta: { title: 'Docházka', layout: 'app', requiresAuth: true, requiresModule: 'attendance' },
   },
   {
     path: '/app/smeny',
     name: 'app-smeny',
     component: () => import('@/pages/SmenyPage.vue'),
-    meta: { title: 'Směny & provize', layout: 'app', requiresAuth: true },
+    meta: {
+      title: 'Směny & provize',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'attendance',
+    },
   },
   {
     path: '/app/pobocky',
@@ -265,6 +300,7 @@ const routes: RouteRecordRaw[] = [
       title: 'Pobočky & vedení',
       layout: 'app',
       requiresAuth: true,
+      requiresModule: 'core',
       requiresRole: ['Owner', 'Manager'],
     },
   },
@@ -272,49 +308,49 @@ const routes: RouteRecordRaw[] = [
     path: '/app/rezervace',
     name: 'app-rezervace',
     component: () => import('@/pages/RezervacePage.vue'),
-    meta: { title: 'Rezervace', layout: 'app', requiresAuth: true },
+    meta: { title: 'Rezervace', layout: 'app', requiresAuth: true, requiresModule: 'booking' },
   },
   {
     path: '/app/restaurace',
     name: 'app-restaurace',
     component: () => import('@/pages/RestauracePage.vue'),
-    meta: { title: 'Restaurace', layout: 'app', requiresAuth: true },
+    meta: { title: 'Restaurace', layout: 'app', requiresAuth: true, requiresModule: 'gastro' },
   },
   {
     path: '/app/kuchyne',
     name: 'app-kuchyne',
     component: () => import('@/pages/KuchynePage.vue'),
-    meta: { title: 'Kuchyně', layout: 'app', requiresAuth: true },
+    meta: { title: 'Kuchyně', layout: 'app', requiresAuth: true, requiresModule: 'gastro' },
   },
   {
     path: '/app/mapa-stolu',
     name: 'app-mapa-stolu',
     component: () => import('@/pages/MapaStoluPage.vue'),
-    meta: { title: 'Mapa stolů', layout: 'app', requiresAuth: true },
+    meta: { title: 'Mapa stolů', layout: 'app', requiresAuth: true, requiresModule: 'gastro' },
   },
   {
     path: '/app/nastaveni',
     name: 'app-nastaveni',
     component: () => import('@/pages/NastaveniPage.vue'),
-    meta: { title: 'Nastavení', layout: 'app', requiresAuth: true },
+    meta: { title: 'Nastavení', layout: 'app', requiresAuth: true, requiresModule: 'core' },
   },
   {
     path: '/app/onboarding',
     name: 'app-onboarding',
     component: () => import('@/pages/OnboardingPage.vue'),
-    meta: { title: 'Onboarding', layout: 'app', requiresAuth: true },
+    meta: { title: 'Onboarding', layout: 'app', requiresAuth: true, requiresModule: 'core' },
   },
   {
     path: '/app/predplatne',
     name: 'app-predplatne',
     component: () => import('@/pages/PredplatnePage.vue'),
-    meta: { title: 'Předplatné', layout: 'app', requiresAuth: true },
+    meta: { title: 'Předplatné', layout: 'app', requiresAuth: true, requiresModule: 'core' },
   },
   {
     path: '/app/predplatne/dekujeme',
     name: 'app-predplatne-dekujeme',
     component: () => import('@/pages/PredplatneDekujemePage.vue'),
-    meta: { title: 'Děkujeme', layout: 'app', requiresAuth: true },
+    meta: { title: 'Děkujeme', layout: 'app', requiresAuth: true, requiresModule: 'core' },
   },
 
   // --- 404 ---
@@ -368,6 +404,10 @@ router.beforeEach((to) => {
   // Role gating: routa vyhrazená rolím (manažerské stránky) → nedostatečná role zpět na Přehled.
   // hasRole je fail-open (mock / neznámá role neblokuje); skutečné vynucení je na backendu.
   if (to.meta.requiresRole && auth.isAuthenticated && !auth.hasRole(...to.meta.requiresRole)) {
+    return { name: 'app' }
+  }
+  // Modulový UX gate: tenant vidí jen zapnuté moduly. API enforcement přijde navazujícím krokem.
+  if (to.meta.requiresModule && auth.isAuthenticated && !auth.hasModule(to.meta.requiresModule)) {
     return { name: 'app' }
   }
   // Employee nemá invoices.read → přehled (dashboard) by vracel 403; přistane rovnou na pokladně.

@@ -18,6 +18,8 @@ Migrace ze staré React appky (zazálohovaná ve větvi `legacy-react`, nevracet
 
 Produktová roadmapa modulárního Vystaveno + gastro priority je v `docs/product/modular-business-roadmap.md`. Při změně zásadního produktového směru ji aktualizuj společně s tímto kontextem.
 
+Modulární runtime základ: backend `/me` vrací `modules` + `features`; frontend je drží v `src/stores/auth.ts` a app shell filtruje navigaci/routy přes `src/lib/modules.ts`. Default je zatím všechny moduly zapnuté, aby se nezměnil povrch aplikace před tenant-specific výběrem modulů.
+
 ## Dva repozitáře, jeden produkt
 
 - **`vystavenocz`** (tento) — frontend (Vue).

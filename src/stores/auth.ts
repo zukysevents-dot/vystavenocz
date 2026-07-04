@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { User } from '@/lib/types'
 import { http, isApiMode, getTokens, setTokens, ApiError, type Tokens } from '@/lib/http'
+import { DEFAULT_ENABLED_MODULES, normalizeModules, type AppModuleId } from '@/lib/modules'
 
 // Dva režimy podle VITE_API_URL (viz http.ts):
 //  - mock (prázdné URL): účty + session žijí v localStorage (vývoj / e2e seed).
@@ -15,14 +16,21 @@ type StoredUser = User & { password: string }
 type AuthResult = { ok: true } | { ok: false; error: string }
 
 interface MeResponse {
-  userId: string
+  userId?: string
+  id?: string
+  email?: string
+  displayName?: string
   companyId: string | null
   role: string | null
+  modules?: string[]
+  features?: string[]
 }
 interface Session {
   user: User
   companyId: string | null
   role: string | null
+  modules: AppModuleId[]
+  features: string[]
 }
 
 function loadUsers(): StoredUser[] {
@@ -46,6 +54,8 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const companyId = ref<string | null>(null)
   const role = ref<string | null>(null)
+  const modules = ref<AppModuleId[]>(DEFAULT_ENABLED_MODULES)
+  const features = ref<string[]>([])
   const initialized = ref(false)
   const isAuthenticated = computed(() => user.value !== null)
 
@@ -56,7 +66,13 @@ export const useAuthStore = defineStore('auth', () => {
 
   function persistSession(): void {
     if (user.value) {
-      const session: Session = { user: user.value, companyId: companyId.value, role: role.value }
+      const session: Session = {
+        user: user.value,
+        companyId: companyId.value,
+        role: role.value,
+        modules: modules.value,
+        features: features.value,
+      }
       localStorage.setItem(SESSION_KEY, JSON.stringify(session))
     } else {
       localStorage.removeItem(SESSION_KEY)
@@ -77,6 +93,8 @@ export const useAuthStore = defineStore('auth', () => {
             user.value = s.user
             companyId.value = s.companyId
             role.value = s.role
+            modules.value = normalizeModules(s.modules)
+            features.value = s.features ?? []
           }
         } catch {
           /* poškozená session → nepřihlášen */
@@ -92,14 +110,22 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = raw ? (JSON.parse(raw) as User) : null
     } catch {
       user.value = null
+      modules.value = DEFAULT_ENABLED_MODULES
+      features.value = []
     }
   }
 
   async function loadMe(email: string, fullName: string | null): Promise<void> {
     const me = await http.get<MeResponse>('/me')
-    user.value = { id: me.userId, email, fullName }
+    user.value = {
+      id: me.userId ?? me.id ?? '',
+      email: me.email ?? email,
+      fullName: me.displayName ?? fullName,
+    }
     companyId.value = me.companyId
     role.value = me.role
+    modules.value = normalizeModules(me.modules)
+    features.value = me.features ?? []
     persistSession()
   }
 
@@ -185,11 +211,15 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = null
       companyId.value = null
       role.value = null
+      modules.value = DEFAULT_ENABLED_MODULES
+      features.value = []
       persistSession()
       return
     }
 
     user.value = null
+    modules.value = DEFAULT_ENABLED_MODULES
+    features.value = []
     persistMock()
   }
 
@@ -200,10 +230,21 @@ export const useAuthStore = defineStore('auth', () => {
     return roles.includes(role.value)
   }
 
+  function hasModule(module: AppModuleId): boolean {
+    return modules.value.includes(module)
+  }
+
+  function hasFeature(feature: string): boolean {
+    if (!features.value.length) return true
+    return features.value.includes(feature)
+  }
+
   return {
     user,
     companyId,
     role,
+    modules,
+    features,
     initialized,
     isAuthenticated,
     init,
@@ -212,5 +253,7 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     reloadMe,
     hasRole,
+    hasModule,
+    hasFeature,
   }
 })

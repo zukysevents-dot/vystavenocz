@@ -26,3 +26,16 @@ describe('auth store — hasRole (role gating)', () => {
     expect(s.hasRole('Owner', 'Manager')).toBe(false)
   })
 })
+
+describe('auth store — module and feature gating', () => {
+  it('defaultně má zapnuté všechny moduly, aby se současná aplikace nezamkla', () => {
+    const s = useAuthStore()
+    expect(s.hasModule('gastro')).toBe(true)
+    expect(s.hasModule('invoicing')).toBe(true)
+  })
+
+  it('features jsou fail-open, dokud je backend ve starém kontraktu nevrací', () => {
+    const s = useAuthStore()
+    expect(s.hasFeature('pos.operate')).toBe(true)
+  })
+})
