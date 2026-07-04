@@ -259,6 +259,14 @@ export interface DayCloseVatLine {
   gross: number
 }
 
+/** Řádek prodaného produktu v Z-reportu (pro inventuru) — zafixovaný v okamžiku zavření dne. */
+export interface DayCloseProductLine {
+  productId: string | null
+  name: string
+  quantity: number
+  revenueGross: number
+}
+
 /**
  * Stav obchodního dne pro danou pobočku. Když `status === 'Open'`, den ještě není
  * uzavřen a nese jen `date`/`locationId`. Když `'Closed'`, jsou vyplněná zafixovaná
@@ -282,6 +290,7 @@ export interface DayCloseResponse {
   cancelledCount?: number
   cancelledTotal?: number
   vatBreakdown?: DayCloseVatLine[]
+  productBreakdown?: DayCloseProductLine[]
   cashOpening?: number | null
   cashCountedClosing?: number | null
   cashDrop?: number | null

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import {
   Loader2,
@@ -32,9 +32,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import ReceiptDialog from '@/components/ReceiptDialog.vue'
 import { useProducts } from '@/composables/useProducts'
 import { useCategories } from '@/composables/useCategories'
+import { useLocations } from '@/composables/useLocations'
 import { useSales } from '@/composables/useSales'
 import { formatCZK, round2 } from '@/lib/invoice'
 import { buildReceipt, type ReceiptInfo } from '@/lib/receipt'
@@ -46,8 +54,18 @@ import type { Category, DailySalesSummary, PaymentMethod, Product, Sale } from '
 
 const { products, load } = useProducts()
 const categoriesApi = useCategories()
+const { locations, load: loadLocations } = useLocations()
 const sales = useSales()
 const companyStore = useCompanyStore()
+
+// Provozovna, na které pokladna prodává (kvůli uzávěrce per pobočku). Jedna pobočka → automaticky,
+// víc → pokladní vybere, žádná → prodává se „bez pobočky" (uzávěrka po provozovnách pak nic neukáže).
+// Výběr si pamatujeme, ať ho pokladní nemusí volit po každém načtení.
+const POS_LOCATION_KEY = 'vystaveno.pos.locationId'
+const currentLocationId = ref<string>('')
+watch(currentLocationId, (id) => {
+  if (id) localStorage.setItem(POS_LOCATION_KEY, id)
+})
 
 const loading = ref(true)
 const paying = ref(false)
@@ -112,12 +130,16 @@ onMounted(async () => {
     return
   }
   loading.value = true
-  await load()
+  await Promise.all([load(), loadLocations()])
   try {
     categories.value = await categoriesApi.list()
   } catch (e) {
     console.error(e)
   }
+  // Výběr provozovny: zapamatovaná (pokud stále existuje) → jinak první → jinak žádná.
+  const stored = localStorage.getItem(POS_LOCATION_KEY)
+  if (stored && locations.value.some((l) => l.id === stored)) currentLocationId.value = stored
+  else if (locations.value.length) currentLocationId.value = locations.value[0].id
   loading.value = false
 })
 
@@ -166,6 +188,7 @@ async function pay(method: PaymentMethod) {
     const sale = await sales.create(method, items, {
       discountPercent: clampPercent(accountDiscountPercent.value),
       tipAmount: clampAmount(tipAmount.value),
+      locationId: currentLocationId.value || null,
     })
     receiptData.value = buildReceipt({
       company: companyStore.company,
@@ -252,11 +275,39 @@ function saleTime(iso: string): string {
 
 <template>
   <div class="p-4 sm:p-6">
-    <div class="mb-4 flex items-center justify-between gap-3">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold tracking-tight">Pokladna</h1>
-      <Button v-if="apiMode" variant="outline" size="sm" @click="openSales">
-        <ReceiptText class="h-4 w-4" /> Tržby
-      </Button>
+      <div class="flex items-center gap-2">
+        <!-- Výběr provozovny (jen když jich má klient víc) — určuje, kam prodej spadne v uzávěrce. -->
+        <Select v-if="apiMode && locations.length > 1" v-model="currentLocationId">
+          <SelectTrigger class="h-9 w-48" aria-label="Provozovna">
+            <SelectValue placeholder="Vyberte provozovnu…" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="l in locations" :key="l.id" :value="l.id">{{ l.name }}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button v-if="apiMode" variant="outline" size="sm" @click="openSales">
+          <ReceiptText class="h-4 w-4" /> Tržby
+        </Button>
+      </div>
+    </div>
+
+    <!-- Klient nemá žádnou provozovnu → uzávěrka po provozovnách nebude mít co ukázat. -->
+    <div
+      v-if="apiMode && !loading && locations.length === 0"
+      class="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground"
+    >
+      <span>
+        Pro uzávěrku po provozovnách si nejdřív přidejte provozovnu. Bez ní se prodeje uloží „bez
+        pobočky" a v uzávěrce se neobjeví.
+      </span>
+      <RouterLink
+        to="/app/pobocky"
+        class="font-medium text-primary underline-offset-2 hover:underline"
+      >
+        Přidat provozovnu
+      </RouterLink>
     </div>
 
     <!-- POS funguje jen proti reálnému backendu -->

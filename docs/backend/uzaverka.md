@@ -84,6 +84,7 @@ cashTotal, cardTotal                numeric(12,2)
 tipTotal, discountTotal             numeric(12,2)
 cancelledCount int, cancelledTotal  numeric(12,2)
 vatBreakdown        jsonb           -- [{ vatRate, net, vat, gross }]
+productBreakdown    jsonb           -- [{ productId|null, name, quantity, revenueGross }] — prodané produkty za den (inventura), snapshot
 -- hotovostní uzávěrka (Fáze 3, viz níže) --
 cashOpening, cashPayIns, cashPayOuts, cashDrop, cashExpectedClosing, cashCountedClosing, cashDifference  numeric(12,2)|null
 

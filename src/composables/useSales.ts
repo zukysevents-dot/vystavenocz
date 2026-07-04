@@ -17,6 +17,9 @@ export interface SaleLineInput {
 export interface SaleOptions {
   discountPercent?: number // sleva na CELÝ účet, 0–100
   tipAmount?: number // spropitné v Kč, mimo DPH
+  // Provozovna, na které prodej vznikl. Bez ní backend uloží prodej „bez pobočky" a per-pobočka
+  // uzávěrka (Z-report) ho neuvidí. '' / null = neposílat (klient bez provozoven).
+  locationId?: string | null
 }
 
 export function useSales() {
@@ -29,6 +32,7 @@ export function useSales() {
   ): Promise<Sale> {
     const sale = await http.post<Sale>('/sales', {
       paymentMethod,
+      locationId: options?.locationId || null,
       items: items.map((i) => ({ ...i, discountPercent: i.discountPercent ?? 0 })),
       discountPercent: options?.discountPercent ?? 0,
       tipAmount: options?.tipAmount ?? 0,
