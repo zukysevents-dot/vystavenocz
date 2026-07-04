@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   APP_MODULES,
+  BUSINESS_PROFILES,
   DEFAULT_ENABLED_MODULES,
   isModuleEnabled,
   normalizeModules,
@@ -23,5 +24,16 @@ describe('module capabilities', () => {
   it('checks whether a module is enabled', () => {
     expect(isModuleEnabled('gastro', ['core', 'gastro'])).toBe(true)
     expect(isModuleEnabled('stock', ['core', 'gastro'])).toBe(false)
+  })
+
+  it('business profiles always include core and keep vertical modules scoped', () => {
+    const gastro = BUSINESS_PROFILES.find((profile) => profile.id === 'gastro')!
+    const crafts = BUSINESS_PROFILES.find((profile) => profile.id === 'crafts')!
+
+    expect(BUSINESS_PROFILES.every((profile) => profile.modules.includes('core'))).toBe(true)
+    expect(gastro.modules).toContain('gastro')
+    expect(gastro.modules).toContain('pos')
+    expect(crafts.modules).toContain('jobs')
+    expect(crafts.modules).not.toContain('gastro')
   })
 })
