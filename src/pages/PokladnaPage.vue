@@ -12,6 +12,7 @@ import {
   Package,
   ReceiptText,
   RotateCcw,
+  FileClock,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -252,11 +253,16 @@ function saleTime(iso: string): string {
 
 <template>
   <div class="p-4 sm:p-6">
-    <div class="mb-4 flex items-center justify-between gap-3">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold tracking-tight">Pokladna</h1>
-      <Button v-if="apiMode" variant="outline" size="sm" @click="openSales">
-        <ReceiptText class="h-4 w-4" /> Tržby
-      </Button>
+      <div v-if="apiMode" class="flex items-center gap-2">
+        <Button variant="outline" size="sm" @click="openSales">
+          <ReceiptText class="h-4 w-4" /> Tržby
+        </Button>
+        <Button as-child variant="coral" size="lg">
+          <RouterLink to="/app/uzaverka"> <FileClock class="h-5 w-5" /> Uzávěrka </RouterLink>
+        </Button>
+      </div>
     </div>
 
     <!-- POS funguje jen proti reálnému backendu -->
