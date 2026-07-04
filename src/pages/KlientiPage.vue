@@ -50,6 +50,7 @@ const search = ref('')
 const editing = ref<Client | null>(null)
 const dialogOpen = ref(false)
 const deleteId = ref<string | null>(null)
+const deleteOpen = ref(false)
 const submitting = ref(false)
 
 // Formulář drží textová pole jako string (prázdné = ''); na null se mapuje až při uložení.
@@ -197,11 +198,20 @@ async function onSubmit() {
   }
 }
 
+function askDelete(id: string) {
+  deleteId.value = id
+  deleteOpen.value = true
+}
 async function onDelete() {
-  if (!deleteId.value) return
-  await remove(deleteId.value)
-  toast.success('Klient smazán.')
+  // Odchyť ID a zavři dialog SYNCHRONNĚ, teprve pak mazání (async). Jinak by
+  // překreslení seznamu při await rozbilo zavírací animaci dialogu. deleteId se
+  // nesmí nulovat v @update:open, jinak by ho tento handler přečetl už jako null.
+  const id = deleteId.value
+  if (!id) return
+  deleteOpen.value = false
   deleteId.value = null
+  await remove(id)
+  toast.success('Klient smazán.')
 }
 </script>
 
@@ -277,7 +287,7 @@ async function onDelete() {
             <Button variant="ghost" size="icon" title="Upravit" @click="openEdit(c)">
               <Pencil class="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" title="Smazat" @click="deleteId = c.id">
+            <Button variant="ghost" size="icon" title="Smazat" @click="askDelete(c.id)">
               <Trash2 class="h-4 w-4 text-destructive" />
             </Button>
           </div>
@@ -390,7 +400,7 @@ async function onDelete() {
     </Dialog>
 
     <!-- Potvrzení smazání -->
-    <AlertDialog :open="!!deleteId" @update:open="(o) => !o && (deleteId = null)">
+    <AlertDialog :open="deleteOpen" @update:open="(o) => (deleteOpen = o)">
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Smazat klienta?</AlertDialogTitle>

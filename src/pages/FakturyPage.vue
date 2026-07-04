@@ -31,7 +31,13 @@ const { hasAccess } = useSubscription()
 const loading = ref(true)
 const search = ref('')
 const deleteId = ref<string | null>(null)
+const deleteOpen = ref(false)
 const paywallOpen = ref(false)
+
+function askDelete(id: string) {
+  deleteId.value = id
+  deleteOpen.value = true
+}
 
 // Vystavení nové faktury je prémiová akce — bez aktivního tarifu ukážeme paywall.
 function newInvoice() {
@@ -77,9 +83,12 @@ const filtered = computed(() => {
 })
 
 async function onDelete() {
-  if (!deleteId.value) return
+  const id = deleteId.value
+  if (!id) return
+  deleteOpen.value = false
+  deleteId.value = null
   try {
-    await remove(deleteId.value)
+    await remove(id)
     toast.success('Faktura smazána.')
   } catch (e) {
     // Vystavenou fakturu server smazat nedovolí (409) — patří ji stornovat, ne mazat.
@@ -88,8 +97,6 @@ async function onDelete() {
     } else {
       throw e
     }
-  } finally {
-    deleteId.value = null
   }
 }
 </script>
@@ -173,7 +180,7 @@ async function onDelete() {
             >
               <Pencil class="h-4 w-4" /> Upravit
             </Button>
-            <Button variant="ghost" size="sm" @click="deleteId = inv.id">
+            <Button variant="ghost" size="sm" @click="askDelete(inv.id)">
               <Trash2 class="h-4 w-4 text-destructive" /> Smazat
             </Button>
           </div>
@@ -220,7 +227,7 @@ async function onDelete() {
                   >
                     <Pencil class="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" title="Smazat" @click="deleteId = inv.id">
+                  <Button variant="ghost" size="icon" title="Smazat" @click="askDelete(inv.id)">
                     <Trash2 class="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
@@ -232,7 +239,7 @@ async function onDelete() {
     </template>
 
     <!-- Potvrzení smazání -->
-    <AlertDialog :open="!!deleteId" @update:open="(o) => !o && (deleteId = null)">
+    <AlertDialog :open="deleteOpen" @update:open="(o) => (deleteOpen = o)">
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Smazat fakturu?</AlertDialogTitle>

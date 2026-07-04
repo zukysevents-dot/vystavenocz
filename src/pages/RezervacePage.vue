@@ -170,6 +170,12 @@ const svcDialogOpen = ref(false)
 const editingSvc = ref<Service | null>(null)
 const svcForm = reactive({ name: '', durationMinutes: 30, price: 0, vatRate: 21, isActive: true })
 const deleteSvcId = ref<string | null>(null)
+const deleteSvcOpen = ref(false)
+
+function askDeleteSvc(id: string) {
+  deleteSvcId.value = id
+  deleteSvcOpen.value = true
+}
 
 function openAddSvc() {
   editingSvc.value = null
@@ -212,16 +218,17 @@ async function submitSvc() {
   }
 }
 async function confirmDeleteSvc() {
-  if (!deleteSvcId.value) return
+  const id = deleteSvcId.value
+  if (!id) return
+  deleteSvcOpen.value = false
+  deleteSvcId.value = null
   try {
-    await api.removeService(deleteSvcId.value)
-    services.value = services.value.filter((s) => s.id !== deleteSvcId.value)
+    await api.removeService(id)
+    services.value = services.value.filter((s) => s.id !== id)
     toast.success('Služba smazána.')
   } catch (e) {
     toast.error('Smazání selhalo.')
     console.error(e)
-  } finally {
-    deleteSvcId.value = null
   }
 }
 
@@ -230,6 +237,12 @@ const rscDialogOpen = ref(false)
 const editingRsc = ref<Resource | null>(null)
 const rscForm = reactive({ name: '', isActive: true })
 const deleteRscId = ref<string | null>(null)
+const deleteRscOpen = ref(false)
+
+function askDeleteRsc(id: string) {
+  deleteRscId.value = id
+  deleteRscOpen.value = true
+}
 
 function openAddRsc() {
   editingRsc.value = null
@@ -259,16 +272,17 @@ async function submitRsc() {
   }
 }
 async function confirmDeleteRsc() {
-  if (!deleteRscId.value) return
+  const id = deleteRscId.value
+  if (!id) return
+  deleteRscOpen.value = false
+  deleteRscId.value = null
   try {
-    await api.removeResource(deleteRscId.value)
-    resources.value = resources.value.filter((r) => r.id !== deleteRscId.value)
+    await api.removeResource(id)
+    resources.value = resources.value.filter((r) => r.id !== id)
     toast.success('Zdroj smazán.')
   } catch (e) {
     toast.error('Smazání selhalo (možná má rezervace).')
     console.error(e)
-  } finally {
-    deleteRscId.value = null
   }
 }
 
@@ -413,7 +427,7 @@ onMounted(async () => {
                 <Button variant="ghost" size="icon" title="Upravit" @click="openEditSvc(s)">
                   <Pencil class="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" title="Smazat" @click="deleteSvcId = s.id">
+                <Button variant="ghost" size="icon" title="Smazat" @click="askDeleteSvc(s.id)">
                   <Trash2 class="h-4 w-4 text-destructive" />
                 </Button>
               </div>
@@ -445,7 +459,7 @@ onMounted(async () => {
                 <Button variant="ghost" size="icon" title="Upravit" @click="openEditRsc(r)">
                   <Pencil class="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" title="Smazat" @click="deleteRscId = r.id">
+                <Button variant="ghost" size="icon" title="Smazat" @click="askDeleteRsc(r.id)">
                   <Trash2 class="h-4 w-4 text-destructive" />
                 </Button>
               </div>
@@ -596,7 +610,7 @@ onMounted(async () => {
       </DialogContent>
     </Dialog>
 
-    <AlertDialog :open="!!deleteSvcId" @update:open="(o) => !o && (deleteSvcId = null)">
+    <AlertDialog :open="deleteSvcOpen" @update:open="(o) => (deleteSvcOpen = o)">
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Smazat službu?</AlertDialogTitle>
@@ -613,7 +627,7 @@ onMounted(async () => {
       </AlertDialogContent>
     </AlertDialog>
 
-    <AlertDialog :open="!!deleteRscId" @update:open="(o) => !o && (deleteRscId = null)">
+    <AlertDialog :open="deleteRscOpen" @update:open="(o) => (deleteRscOpen = o)">
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Smazat zdroj?</AlertDialogTitle>

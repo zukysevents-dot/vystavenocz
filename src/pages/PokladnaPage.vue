@@ -194,7 +194,13 @@ const loadingSales = ref(false)
 const salesList = ref<Sale[]>([])
 const summary = ref<DailySalesSummary | null>(null)
 const stornoId = ref<string | null>(null)
+const stornoOpen = ref(false)
 const storning = ref(false)
+
+function askStorno(id: string) {
+  stornoId.value = id
+  stornoOpen.value = true
+}
 
 async function loadSales() {
   const [s, l] = await Promise.all([sales.summaryToday(), sales.list()])
@@ -218,6 +224,7 @@ async function openSales() {
 async function doStorno() {
   if (!stornoId.value || storning.value) return
   const id = stornoId.value
+  stornoOpen.value = false
   stornoId.value = null
   storning.value = true
   try {
@@ -547,7 +554,7 @@ function saleTime(iso: string): string {
                 variant="ghost"
                 size="sm"
                 class="text-destructive"
-                @click="stornoId = s.id"
+                @click="askStorno(s.id)"
               >
                 <RotateCcw class="h-3.5 w-3.5" /> Storno
               </Button>
@@ -557,7 +564,7 @@ function saleTime(iso: string): string {
       </DialogContent>
     </Dialog>
 
-    <AlertDialog :open="!!stornoId" @update:open="(o) => !o && (stornoId = null)">
+    <AlertDialog :open="stornoOpen" @update:open="(o) => (stornoOpen = o)">
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Stornovat prodej?</AlertDialogTitle>

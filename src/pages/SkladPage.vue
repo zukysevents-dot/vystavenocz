@@ -40,7 +40,13 @@ const search = ref('')
 const editing = ref<Product | null>(null)
 const dialogOpen = ref(false)
 const deleteId = ref<string | null>(null)
+const deleteOpen = ref(false)
 const submitting = ref(false)
+
+function askDelete(id: string) {
+  deleteId.value = id
+  deleteOpen.value = true
+}
 
 const VAT_RATES = [0, 12, 21]
 
@@ -150,15 +156,16 @@ async function onSubmit() {
 }
 
 async function onDelete() {
-  if (!deleteId.value) return
+  const id = deleteId.value
+  if (!id) return
+  deleteOpen.value = false
+  deleteId.value = null
   try {
-    await remove(deleteId.value)
+    await remove(id)
     toast.success('Produkt smazán.')
   } catch (e) {
     toast.error('Smazání selhalo.')
     console.error(e)
-  } finally {
-    deleteId.value = null
   }
 }
 </script>
@@ -233,7 +240,7 @@ async function onDelete() {
               <Button variant="ghost" size="icon" title="Upravit" @click="openEdit(p)">
                 <Pencil class="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" title="Smazat" @click="deleteId = p.id">
+              <Button variant="ghost" size="icon" title="Smazat" @click="askDelete(p.id)">
                 <Trash2 class="h-4 w-4 text-destructive" />
               </Button>
             </div>
@@ -320,7 +327,7 @@ async function onDelete() {
     </Dialog>
 
     <!-- Potvrzení smazání -->
-    <AlertDialog :open="!!deleteId" @update:open="(o) => !o && (deleteId = null)">
+    <AlertDialog :open="deleteOpen" @update:open="(o) => (deleteOpen = o)">
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Smazat produkt?</AlertDialogTitle>

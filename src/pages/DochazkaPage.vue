@@ -153,6 +153,12 @@ const empDialogOpen = ref(false)
 const editingEmp = ref<Employee | null>(null)
 const empForm = reactive({ fullName: '', isActive: true, linkMe: false })
 const deleteEmpId = ref<string | null>(null)
+const deleteEmpOpen = ref(false)
+
+function askDeleteEmp(id: string) {
+  deleteEmpId.value = id
+  deleteEmpOpen.value = true
+}
 
 function openAddEmp(linkMe = false) {
   editingEmp.value = null
@@ -198,16 +204,17 @@ async function submitEmp() {
   }
 }
 async function confirmDeleteEmp() {
-  if (!deleteEmpId.value) return
+  const id = deleteEmpId.value
+  if (!id) return
+  deleteEmpOpen.value = false
+  deleteEmpId.value = null
   try {
-    await att.removeEmployee(deleteEmpId.value)
-    employees.value = employees.value.filter((e) => e.id !== deleteEmpId.value)
+    await att.removeEmployee(id)
+    employees.value = employees.value.filter((e) => e.id !== id)
     toast.success('Zaměstnanec smazán.')
   } catch (e) {
     toast.error('Smazání selhalo.')
     console.error(e)
-  } finally {
-    deleteEmpId.value = null
   }
 }
 
@@ -387,7 +394,7 @@ async function exportCsv() {
                 <Button variant="ghost" size="icon" title="Upravit" @click="openEditEmp(e)">
                   <Pencil class="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" title="Smazat" @click="deleteEmpId = e.id">
+                <Button variant="ghost" size="icon" title="Smazat" @click="askDeleteEmp(e.id)">
                   <Trash2 class="h-4 w-4 text-destructive" />
                 </Button>
               </div>
@@ -463,7 +470,7 @@ async function exportCsv() {
       </DialogContent>
     </Dialog>
 
-    <AlertDialog :open="!!deleteEmpId" @update:open="(o) => !o && (deleteEmpId = null)">
+    <AlertDialog :open="deleteEmpOpen" @update:open="(o) => (deleteEmpOpen = o)">
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Smazat zaměstnance?</AlertDialogTitle>

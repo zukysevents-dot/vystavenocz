@@ -35,7 +35,13 @@ const categories = ref<Category[]>([])
 const editing = ref<Category | null>(null)
 const dialogOpen = ref(false)
 const deleteId = ref<string | null>(null)
+const deleteOpen = ref(false)
 const submitting = ref(false)
+
+function askDelete(id: string) {
+  deleteId.value = id
+  deleteOpen.value = true
+}
 
 const SECTIONS: { value: CategoryKitchenSection; label: string }[] = [
   { value: 'None', label: 'Žádná' },
@@ -120,16 +126,17 @@ async function onSubmit() {
 }
 
 async function onDelete() {
-  if (!deleteId.value) return
+  const id = deleteId.value
+  if (!id) return
+  deleteOpen.value = false
+  deleteId.value = null
   try {
-    await api.remove(deleteId.value)
-    categories.value = categories.value.filter((c) => c.id !== deleteId.value)
+    await api.remove(id)
+    categories.value = categories.value.filter((c) => c.id !== id)
     toast.success('Kategorie smazána.')
   } catch (e) {
     toast.error('Smazání selhalo (možná ji používají produkty).')
     console.error(e)
-  } finally {
-    deleteId.value = null
   }
 }
 </script>
@@ -180,7 +187,7 @@ async function onDelete() {
             <Button variant="ghost" size="icon" title="Upravit" @click="openEdit(c)">
               <Pencil class="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" title="Smazat" @click="deleteId = c.id">
+            <Button variant="ghost" size="icon" title="Smazat" @click="askDelete(c.id)">
               <Trash2 class="h-4 w-4 text-destructive" />
             </Button>
           </div>
@@ -236,7 +243,7 @@ async function onDelete() {
       </DialogContent>
     </Dialog>
 
-    <AlertDialog :open="!!deleteId" @update:open="(o) => !o && (deleteId = null)">
+    <AlertDialog :open="deleteOpen" @update:open="(o) => (deleteOpen = o)">
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Smazat kategorii?</AlertDialogTitle>

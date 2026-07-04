@@ -54,11 +54,13 @@ const floorDialogOpen = ref(false)
 const editingFloor = ref<Floor | null>(null)
 const floorName = ref('')
 const deleteFloorId = ref<string | null>(null)
+const deleteFloorOpen = ref(false)
 
 const tableDialogOpen = ref(false)
 const editingTable = ref<DiningTable | null>(null)
 const tableForm = reactive({ name: '', seats: 4, shape: 'Rect' as TableShape })
 const deleteTableId = ref<string | null>(null)
+const deleteTableOpen = ref(false)
 
 const currentFloor = computed(() => floors.value.find((f) => f.id === currentFloorId.value) ?? null)
 const selectedTable = computed(() => tables.value.find((t) => t.id === selectedId.value) ?? null)
@@ -129,9 +131,19 @@ async function submitFloor() {
     console.error(e)
   }
 }
+function askDeleteFloor() {
+  if (!currentFloorId.value) return
+  deleteFloorId.value = currentFloorId.value
+  deleteFloorOpen.value = true
+}
 async function confirmDeleteFloor() {
+  // Odchyť ID a zavři dialog SYNCHRONNĚ, teprve pak mazání. deleteFloorId se nesmí
+  // nulovat v @update:open, jinak by ho tato obsluha přečetla už jako null (proto
+  // samostatný deleteFloorOpen pro stav dialogu).
   const id = deleteFloorId.value
   if (!id) return
+  deleteFloorOpen.value = false
+  deleteFloorId.value = null
   try {
     await floorsApi.remove(id)
     floors.value = floors.value.filter((f) => f.id !== id)
@@ -140,8 +152,6 @@ async function confirmDeleteFloor() {
   } catch (e) {
     toast.error('Smazání místnosti selhalo.')
     console.error(e)
-  } finally {
-    deleteFloorId.value = null
   }
 }
 
@@ -205,18 +215,23 @@ async function submitTable() {
     console.error(e)
   }
 }
+function askDeleteTable(id: string) {
+  deleteTableId.value = id
+  deleteTableOpen.value = true
+}
 async function confirmDeleteTable() {
-  if (!deleteTableId.value) return
+  const id = deleteTableId.value
+  if (!id) return
+  deleteTableOpen.value = false
+  deleteTableId.value = null
   try {
-    await tablesApi.remove(deleteTableId.value)
-    tables.value = tables.value.filter((t) => t.id !== deleteTableId.value)
-    if (selectedId.value === deleteTableId.value) selectedId.value = null
+    await tablesApi.remove(id)
+    tables.value = tables.value.filter((t) => t.id !== id)
+    if (selectedId.value === id) selectedId.value = null
     toast.success('Stůl smazán.')
   } catch (e) {
     toast.error('Smazání stolu selhalo.')
     console.error(e)
-  } finally {
-    deleteTableId.value = null
   }
 }
 function rotateSelected() {
@@ -373,7 +388,7 @@ function onCanvasPointerDown(e: PointerEvent) {
           variant="ghost"
           size="icon"
           title="Smazat"
-          @click="deleteFloorId = currentFloorId"
+          @click="askDeleteFloor()"
         >
           <Trash2 class="h-4 w-4 text-destructive" />
         </Button>
@@ -469,7 +484,7 @@ function onCanvasPointerDown(e: PointerEvent) {
               <Button variant="outline" size="sm" @click="rotateSelected">
                 <RotateCw class="h-4 w-4" /> Otočit
               </Button>
-              <Button variant="ghost" size="sm" @click="deleteTableId = selectedTable.id">
+              <Button variant="ghost" size="sm" @click="askDeleteTable(selectedTable.id)">
                 <Trash2 class="h-4 w-4 text-destructive" /> Smazat
               </Button>
             </div>
@@ -552,7 +567,7 @@ function onCanvasPointerDown(e: PointerEvent) {
     </Dialog>
 
     <!-- Smazat místnost -->
-    <AlertDialog :open="!!deleteFloorId" @update:open="(o) => !o && (deleteFloorId = null)">
+    <AlertDialog :open="deleteFloorOpen" @update:open="(o) => (deleteFloorOpen = o)">
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Smazat místnost?</AlertDialogTitle>
@@ -573,7 +588,7 @@ function onCanvasPointerDown(e: PointerEvent) {
     </AlertDialog>
 
     <!-- Smazat stůl -->
-    <AlertDialog :open="!!deleteTableId" @update:open="(o) => !o && (deleteTableId = null)">
+    <AlertDialog :open="deleteTableOpen" @update:open="(o) => (deleteTableOpen = o)">
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Smazat stůl?</AlertDialogTitle>
