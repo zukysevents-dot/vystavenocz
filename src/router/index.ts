@@ -168,7 +168,7 @@ const routes: RouteRecordRaw[] = [
       layout: 'app',
       requiresAuth: true,
       requiresModule: 'reporting',
-      requiresRole: ['Owner', 'Manager'],
+      requiresRole: ['Owner', 'Admin', 'Manager'],
     },
   },
   {
