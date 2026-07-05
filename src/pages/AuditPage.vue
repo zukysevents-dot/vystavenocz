@@ -6,6 +6,7 @@ import LoadError from '@/components/app/LoadError.vue'
 import { useAudit } from '@/composables/useAudit'
 import { isApiMode } from '@/lib/http'
 import {
+  AUDIT_ACTION_LABELS,
   auditActionLabel,
   auditDataValue,
   auditEntityLabel,
@@ -22,8 +23,16 @@ const entries = ref<AuditEntry[]>([])
 const page = ref(1)
 const pageSize = 20
 const total = ref(0)
+const action = ref('')
 
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize)))
+const ACTION_OPTIONS = [
+  { value: '', label: 'Všechny akce' },
+  { value: 'SaleCancelled', label: AUDIT_ACTION_LABELS.SaleCancelled },
+  { value: 'OrderDiscountUpdated', label: AUDIT_ACTION_LABELS.OrderDiscountUpdated },
+  { value: 'DayClosed', label: AUDIT_ACTION_LABELS.DayClosed },
+  { value: 'ProductPriceChanged', label: AUDIT_ACTION_LABELS.ProductPriceChanged },
+]
 
 async function load(targetPage = page.value): Promise<void> {
   if (!apiMode) {
@@ -33,7 +42,12 @@ async function load(targetPage = page.value): Promise<void> {
   loading.value = true
   loadError.value = false
   try {
-    const res = await auditApi.list({ page: targetPage, pageSize, sort: '-createdAt' })
+    const res = await auditApi.list({
+      page: targetPage,
+      pageSize,
+      sort: '-createdAt',
+      action: action.value || undefined,
+    })
     entries.value = res.items
     total.value = res.total
     page.value = res.page
@@ -43,6 +57,12 @@ async function load(targetPage = page.value): Promise<void> {
   } finally {
     loading.value = false
   }
+}
+
+function selectAction(next: string): void {
+  if (action.value === next) return
+  action.value = next
+  load(1)
 }
 
 function formatDateTime(iso: string): string {
@@ -89,6 +109,23 @@ onMounted(() => load())
         <Button variant="outline" :disabled="loading" @click="load(1)">
           <History class="h-4 w-4" /> Obnovit
         </Button>
+      </div>
+
+      <div class="mt-4 flex flex-wrap items-center gap-2">
+        <button
+          v-for="option in ACTION_OPTIONS"
+          :key="option.value"
+          type="button"
+          class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+          :class="
+            action === option.value
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted text-muted-foreground hover:bg-muted/70'
+          "
+          @click="selectAction(option.value)"
+        >
+          {{ option.label }}
+        </button>
       </div>
 
       <div v-if="loading" class="flex justify-center p-12">

@@ -26,4 +26,14 @@ describe('useAudit', () => {
 
     expect(http.get).toHaveBeenCalledWith('/company/audit?page=2&pageSize=10&sort=createdAt')
   })
+
+  it('passes optional action filter', async () => {
+    vi.mocked(http.get).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 } as never)
+
+    await useAudit().list({ action: 'SaleCancelled' })
+
+    expect(http.get).toHaveBeenCalledWith(
+      '/company/audit?page=1&pageSize=20&sort=-createdAt&action=SaleCancelled',
+    )
+  })
 })
