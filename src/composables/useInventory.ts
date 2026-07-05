@@ -1,5 +1,11 @@
 import { http } from '@/lib/http'
-import type { StockLevel, StockMirror, StockMovement } from '@/lib/types'
+import type {
+  CreatePurchaseReceiptRequest,
+  PurchaseReceipt,
+  StockLevel,
+  StockMirror,
+  StockMovement,
+} from '@/lib/types'
 import type { PagedResult } from '@/composables/useApi'
 
 export interface StocktakeItemInput {
@@ -18,6 +24,14 @@ export function useInventory() {
   function receive(productId: string, quantity: number, note: string | null): Promise<unknown> {
     return http.post('/inventory/receipts', { productId, quantity, note })
   }
+  function purchaseReceipts(): Promise<PurchaseReceipt[]> {
+    return http
+      .get<PagedResult<PurchaseReceipt>>('/inventory/purchase-receipts?pageSize=50')
+      .then((r) => r.items)
+  }
+  function createPurchaseReceipt(request: CreatePurchaseReceiptRequest): Promise<PurchaseReceipt> {
+    return http.post('/inventory/purchase-receipts', request)
+  }
   function issue(productId: string, quantity: number, note: string | null): Promise<unknown> {
     return http.post('/inventory/issues', { productId, quantity, note })
   }
@@ -30,5 +44,15 @@ export function useInventory() {
   function stockMirror(): Promise<StockMirror> {
     return http.get('/inventory/stock-mirror')
   }
-  return { levels, movements, receive, issue, correct, stocktake, stockMirror }
+  return {
+    levels,
+    movements,
+    receive,
+    purchaseReceipts,
+    createPurchaseReceipt,
+    issue,
+    correct,
+    stocktake,
+    stockMirror,
+  }
 }

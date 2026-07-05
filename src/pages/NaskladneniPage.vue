@@ -8,6 +8,7 @@ import {
   PackagePlus,
   AlertTriangle,
   Camera,
+  FileText,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,7 +19,7 @@ import { useInventory } from '@/composables/useInventory'
 import { isApiMode } from '@/lib/http'
 import { toast } from '@/components/ui/sonner'
 import { reorderSuggestions, findByEan } from '@/lib/reorder'
-import type { Product } from '@/lib/types'
+import type { Product, PurchaseReceipt } from '@/lib/types'
 
 const { products, load: loadProducts } = useProducts()
 const inv = useInventory()
@@ -28,6 +29,7 @@ const loading = ref(true)
 const loadError = ref(false)
 const submitting = ref(false)
 const levelMap = ref(new Map<string, number>())
+const recentReceipts = ref<PurchaseReceipt[]>([])
 
 const scanEan = ref('')
 const search = ref('')
@@ -39,12 +41,30 @@ interface ReceiveLine {
   name: string
   sku: string
   quantity: number
+  unitCost: number | ''
 }
 const lines = ref<ReceiveLine[]>([])
+
+const supplierName = ref('')
+const documentNumber = ref('')
+const note = ref('')
+const receivedOn = ref(todayInputValue())
+
+function todayInputValue(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 async function loadLevels() {
   const levels = await inv.levels()
   levelMap.value = new Map(levels.map((l) => [l.productId, l.quantity]))
+}
+
+async function loadRecentReceipts() {
+  recentReceipts.value = await inv.purchaseReceipts()
 }
 
 async function reload() {
@@ -52,7 +72,7 @@ async function reload() {
   loadError.value = false
   try {
     await loadProducts()
-    await loadLevels()
+    await Promise.all([loadLevels(), loadRecentReceipts()])
   } catch (e) {
     console.warn('Načtení skladu selhalo:', e)
     loadError.value = true
@@ -77,7 +97,15 @@ function focusScan() {
 function addProduct(p: Product, qty = 1) {
   const existing = lines.value.find((l) => l.productId === p.id)
   if (existing) existing.quantity += qty
-  else lines.value.push({ productId: p.id, name: p.name, sku: p.sku, quantity: qty })
+  else {
+    lines.value.push({
+      productId: p.id,
+      name: p.name,
+      sku: p.sku,
+      quantity: qty,
+      unitCost: p.purchasePrice ?? '',
+    })
+  }
 }
 
 // Sken / EAN → přidat na příjemku. Sdílené pro HW čtečku i kameru.
@@ -127,29 +155,59 @@ function removeLine(id: string) {
 }
 
 const totalUnits = computed(() => lines.value.reduce((a, l) => a + (Number(l.quantity) || 0), 0))
+const totalCost = computed(() =>
+  lines.value.reduce((sum, l) => {
+    const quantity = Number(l.quantity) || 0
+    const unitCost = normalizeUnitCost(l.unitCost)
+    return unitCost === null || Number.isNaN(unitCost) ? sum : sum + quantity * unitCost
+  }, 0),
+)
+const hasAnyCost = computed(() => lines.value.some((l) => normalizeUnitCost(l.unitCost) !== null))
+
+function normalizeUnitCost(value: number | ''): number | null {
+  if (value === '') return null
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+function fmtMoney(value: number): string {
+  return value.toLocaleString('cs-CZ', { style: 'currency', currency: 'CZK' })
+}
+
+function fmtDate(value: string): string {
+  return new Date(value).toLocaleDateString('cs-CZ')
+}
 
 async function submit() {
   if (submitting.value || lines.value.length === 0) return
   if (lines.value.some((l) => !(Number(l.quantity) > 0)))
     return toast.error('U všech položek zadejte kladné množství.')
+  if (lines.value.some((l) => normalizeUnitCost(l.unitCost) !== null && Number(l.unitCost) < 0))
+    return toast.error('Nákupní cena nesmí být záporná.')
   submitting.value = true
-  const total = lines.value.length
-  let ok = 0
   try {
-    // Iterujeme přes kopii — každý úspěšný řádek hned odebereme z příjemky, aby
-    // opakování po částečném selhání nenaskladnilo už uložené položky podruhé.
-    for (const l of [...lines.value]) {
-      await inv.receive(l.productId, Number(l.quantity), 'Naskladnění')
-      lines.value = lines.value.filter((x) => x.productId !== l.productId)
-      ok++
-    }
-    await loadLevels()
-    toast.success(`Naskladněno ${ok} položek.`)
+    const receipt = await inv.createPurchaseReceipt({
+      supplierName: supplierName.value.trim() || null,
+      documentNumber: documentNumber.value.trim() || null,
+      receivedOn: receivedOn.value || null,
+      note: note.value.trim() || null,
+      locationId: null,
+      items: lines.value.map((l) => ({
+        productId: l.productId,
+        quantity: Number(l.quantity),
+        unitCost: normalizeUnitCost(l.unitCost),
+      })),
+    })
+    lines.value = []
+    documentNumber.value = ''
+    note.value = ''
+    await Promise.all([loadLevels(), loadRecentReceipts()])
+    toast.success(`Příjemka uložena: ${receipt.items.length} položek.`)
     focusScan()
   } catch (e) {
     console.error(e)
-    toast.error(`Naskladnění selhalo (uloženo ${ok} z ${total}). Zbytek zůstal na příjemce.`)
-    await loadLevels()
+    toast.error('Příjemka se neuložila. Sklad zůstal beze změny.')
+    await Promise.all([loadLevels(), loadRecentReceipts()])
   } finally {
     submitting.value = false
   }
@@ -168,7 +226,9 @@ function addSuggestion(productId: string, suggested: number) {
   <div class="mx-auto max-w-5xl p-4 sm:p-6 md:p-8">
     <div>
       <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Naskladnění</h1>
-      <p class="mt-1 text-muted-foreground">Naskenuj čárové kódy a naskladni zboží jedním tahem.</p>
+      <p class="mt-1 text-muted-foreground">
+        Vytvoř příjemku, naskenuj zboží a ulož dohledatelný skladový doklad.
+      </p>
     </div>
 
     <div
@@ -189,6 +249,31 @@ function addSuggestion(productId: string, suggested: number) {
     <div v-else class="mt-6 grid gap-4 lg:grid-cols-[1fr_340px]">
       <!-- Příjemka -->
       <div class="space-y-4">
+        <!-- Hlavička dokladu -->
+        <div class="rounded-2xl border border-border bg-card p-4">
+          <h2 class="flex items-center gap-1.5 font-semibold">
+            <FileText class="h-4 w-4 text-primary" /> Příjemka
+          </h2>
+          <div class="mt-4 grid gap-3 sm:grid-cols-2">
+            <label class="space-y-1.5 text-sm font-medium">
+              <span>Dodavatel</span>
+              <Input v-model="supplierName" placeholder="Např. Makro" />
+            </label>
+            <label class="space-y-1.5 text-sm font-medium">
+              <span>Číslo dokladu</span>
+              <Input v-model="documentNumber" placeholder="Faktura / dodací list" />
+            </label>
+            <label class="space-y-1.5 text-sm font-medium">
+              <span>Datum příjmu</span>
+              <Input v-model="receivedOn" type="date" />
+            </label>
+            <label class="space-y-1.5 text-sm font-medium">
+              <span>Poznámka</span>
+              <Input v-model="note" placeholder="Volitelné" />
+            </label>
+          </div>
+        </div>
+
         <!-- Sken -->
         <div class="rounded-2xl border border-border bg-card p-4">
           <label class="mb-1.5 flex items-center gap-1.5 text-sm font-medium" for="scan">
@@ -241,66 +326,128 @@ function addSuggestion(productId: string, suggested: number) {
         <!-- Řádky příjemky -->
         <div class="rounded-2xl border border-border bg-card">
           <div v-if="lines.length === 0" class="p-8 text-center text-sm text-muted-foreground">
-            Naskenuj nebo přidej produkty — objeví se tu k naskladnění.
+            Naskenuj nebo přidej produkty. Řádky příjemky se objeví tady.
           </div>
           <div v-else class="divide-y divide-border">
-            <div v-for="l in lines" :key="l.productId" class="flex items-center gap-2 p-3">
-              <div class="min-w-0 flex-1">
+            <div
+              v-for="l in lines"
+              :key="l.productId"
+              class="grid gap-3 p-3 sm:grid-cols-[minmax(0,1fr)_96px_128px_40px] sm:items-end"
+            >
+              <div class="min-w-0">
                 <div class="truncate font-medium">{{ l.name }}</div>
                 <div class="text-xs text-muted-foreground">{{ l.sku }}</div>
               </div>
-              <Input
-                v-model.number="l.quantity"
-                type="number"
-                min="0"
-                class="h-9 w-20 text-center"
-                aria-label="Množství"
-              />
-              <Button variant="ghost" size="icon" title="Odebrat" @click="removeLine(l.productId)">
+              <label class="space-y-1 text-xs font-medium text-muted-foreground">
+                <span>Množství</span>
+                <Input
+                  v-model.number="l.quantity"
+                  type="number"
+                  min="0"
+                  class="h-9 text-center"
+                  aria-label="Množství"
+                />
+              </label>
+              <label class="space-y-1 text-xs font-medium text-muted-foreground">
+                <span>Nákup / ks</span>
+                <Input
+                  v-model.number="l.unitCost"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="h-9 text-right"
+                  aria-label="Nákupní cena za kus"
+                />
+              </label>
+              <Button
+                variant="ghost"
+                size="icon"
+                class="self-end"
+                title="Odebrat"
+                @click="removeLine(l.productId)"
+              >
                 <Trash2 class="h-4 w-4 text-destructive" />
               </Button>
             </div>
           </div>
 
-          <div class="flex items-center justify-between border-t border-border p-4">
+          <div
+            class="flex flex-col gap-3 border-t border-border p-4 sm:flex-row sm:items-center sm:justify-between"
+          >
             <span class="text-sm text-muted-foreground">
               {{ lines.length }} položek · {{ totalUnits }} ks
+              <template v-if="hasAnyCost"> · nákup {{ fmtMoney(totalCost) }}</template>
             </span>
             <Button variant="coral" :disabled="lines.length === 0 || submitting" @click="submit">
               <Loader2 v-if="submitting" class="h-4 w-4 animate-spin" />
-              <PackagePlus v-else class="h-4 w-4" /> Naskladnit
+              <PackagePlus v-else class="h-4 w-4" /> Uložit příjemku
             </Button>
           </div>
         </div>
       </div>
 
-      <!-- Návrhy k doobjednání -->
-      <div class="rounded-2xl border border-border bg-card p-4">
-        <h2 class="flex items-center gap-1.5 font-semibold">
-          <AlertTriangle class="h-4 w-4 text-destructive" /> K doobjednání
-        </h2>
-        <p class="mt-0.5 text-xs text-muted-foreground">Zboží na/pod minimem.</p>
+      <div class="space-y-4">
+        <!-- Návrhy k doobjednání -->
+        <div class="rounded-2xl border border-border bg-card p-4">
+          <h2 class="flex items-center gap-1.5 font-semibold">
+            <AlertTriangle class="h-4 w-4 text-destructive" /> K doobjednání
+          </h2>
+          <p class="mt-0.5 text-xs text-muted-foreground">Zboží na/pod minimem.</p>
 
-        <div v-if="suggestions.length === 0" class="mt-4 text-sm text-muted-foreground">
-          Vše je nad minimem. 👍
-        </div>
-        <div v-else class="mt-3 space-y-2">
-          <div
-            v-for="s in suggestions"
-            :key="s.productId"
-            class="rounded-lg border border-border p-2.5"
-          >
-            <div class="truncate text-sm font-medium">{{ s.name }}</div>
-            <div class="mt-0.5 flex items-center justify-between text-xs text-muted-foreground">
-              <span>stav {{ s.current }} / min {{ s.min }}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                class="h-7"
-                @click="addSuggestion(s.productId, s.suggested)"
+          <div v-if="suggestions.length === 0" class="mt-4 text-sm text-muted-foreground">
+            Vše je nad minimem.
+          </div>
+          <div v-else class="mt-3 space-y-2">
+            <div
+              v-for="s in suggestions"
+              :key="s.productId"
+              class="rounded-lg border border-border p-2.5"
+            >
+              <div class="truncate text-sm font-medium">{{ s.name }}</div>
+              <div
+                class="mt-0.5 flex items-center justify-between gap-2 text-xs text-muted-foreground"
               >
-                + {{ s.suggested }} ks
-              </Button>
+                <span>stav {{ s.current }} / min {{ s.min }}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  class="h-7 shrink-0"
+                  @click="addSuggestion(s.productId, s.suggested)"
+                >
+                  + {{ s.suggested }} ks
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Poslední příjemky -->
+        <div class="rounded-2xl border border-border bg-card p-4">
+          <h2 class="flex items-center gap-1.5 font-semibold">
+            <FileText class="h-4 w-4 text-primary" /> Poslední příjemky
+          </h2>
+          <div v-if="recentReceipts.length === 0" class="mt-4 text-sm text-muted-foreground">
+            Zatím tu není žádná příjemka.
+          </div>
+          <div v-else class="mt-3 space-y-2">
+            <div
+              v-for="receipt in recentReceipts.slice(0, 5)"
+              :key="receipt.id"
+              class="rounded-lg border border-border p-2.5"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <div class="min-w-0">
+                  <div class="truncate text-sm font-medium">
+                    {{ receipt.documentNumber || receipt.supplierName || 'Příjemka' }}
+                  </div>
+                  <div class="text-xs text-muted-foreground">
+                    {{ fmtDate(receipt.receivedOn) }} · {{ receipt.items.length }} položek
+                  </div>
+                </div>
+                <div class="shrink-0 text-sm font-semibold">
+                  {{ receipt.totalCost == null ? 'Bez ceny' : fmtMoney(receipt.totalCost) }}
+                </div>
+              </div>
             </div>
           </div>
         </div>
