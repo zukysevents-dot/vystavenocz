@@ -58,7 +58,7 @@ npx playwright test  # e2e (mock režim, seed v e2e/helpers/seed.ts)
 
 **Definice „hotovo":** `npm run build` + `npm run lint` + `npx vitest run` projdou; u UI flow i `npx playwright test`. Bez lokálního Node jde vše přes `npx`.
 
-## Deploy (produkce = VPS, ne Vercel/Render)
+## Deploy (produkce = VPS only)
 
 Produkce běží na vlastním VPS (OVH), Docker stack: Caddy (TLS) → nginx (SPA statika + reverse-proxy `/api`) → .NET API → PostgreSQL.
 Deploy soubory jsou v TOMTO repu (`Dockerfile`, `docker-compose*.yml`, `nginx.conf`, `Caddyfile`); API se builduje ze sousedního `../vystaveno-api` (musí ležet vedle).

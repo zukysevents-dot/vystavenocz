@@ -47,9 +47,9 @@ secrety (JWT, DB, SMTP) patří jen do backendu, nikdy do frontend buildu.
 
 ## Nasazení
 
-Dvě podporované varianty:
+Produkce běží pouze na VPS přes Docker stack.
 
-### A) nginx (single-box / Docker) — same-origin, bez CORS
+### nginx (single-box / Docker) — same-origin, bez CORS
 
 [`Dockerfile`](Dockerfile) builduje SPA a servíruje ji přes nginx, který zároveň reverse-proxuje
 `/api` a `/health` na backend ([`nginx.conf`](nginx.conf)). Frontend tak volá API na stejném originu
@@ -74,12 +74,6 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
 Kompletní runbook (DNS, secrety, ověření, aktualizace, zálohy) → **[docs/deployment-vps.md](docs/deployment-vps.md)**.
 `JWT_SECRET`, `DB_PASSWORD` a `STRIPE_SECRET_KEY` předej jako secrety prostředí (ne do gitu). Migrace DB běží automaticky při startu API.
-
-### B) Vercel (statika) + Render (API) — oddělené originy
-
-Statický build na Vercel ([`vercel.json`](vercel.json) řeší SPA fallback), API na Renderu. Produkční
-`VITE_API_URL` je v [`.env.production`](.env.production); na backendu musí být `Cors__AllowedOrigins`
-nastavené na URL Vercelu. Detaily nasazení API: `vystaveno-api/docs/deployment.md`.
 
 ## Struktura projektu
 
