@@ -158,6 +158,10 @@ export interface ProductRecipe {
   productId: string
   ingredients: ProductRecipeIngredient[]
   estimatedCost: number
+  salePrice: number
+  grossMargin: number
+  grossMarginPercent: number
+  foodCostPercent: number
 }
 
 export interface ProductRecipeInput {
