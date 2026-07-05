@@ -96,8 +96,8 @@ Must support a real service day:
 
 Must make the restaurant paperless:
 
-- recipes linked to menu items (foundation: product recipe API in `vystaveno-api` and editor in `Sklad / katalog`; sale-time ingredient deduction follows)
-- stock deduction by recipes, including portions, variants, semi-products, waste, and yield
+- recipes linked to menu items (product recipe API in `vystaveno-api`, editor in `Sklad / katalog`, and backend PR #153 sale-time ingredient deduction for POS/restaurant payments)
+- advanced stock deduction by recipes, including portions, variants, semi-products, waste, and yield
 - suppliers, purchase receipts, purchase prices, average cost, and price history
 - stock movements: receive, issue, transfer, adjust, write-off, staff meal, breakage, expiration
 - inventory count by warehouse/category/product, with expected vs counted amount
@@ -203,8 +203,8 @@ Vystaveno should win through:
 1. Stabilize module capability resolver, permissions, navigation rules, and module settings.
 2. Make Gastro MVP reliable: POS, tables, kitchen, receipts, shifts, day close.
 3. Add stock movements from sales and protect financial/POS audit integrity.
-4. Finish recipes: merge/deploy recipe API + editor, then deduct ingredients from recipes on POS/restaurant payments.
-5. Build purchase receipts, inventory, and stock mirror.
+4. Merge/deploy recipe stock deduction, then extend recipes with portions, variants, semi-products, waste, and yield.
+5. Build purchase receipts, inventory counts, and stock mirror.
 6. Add food cost, margin, variance, and manager reports.
 7. Add modular onboarding and templates per business type.
 8. Add services and jobs as the next non-gastro verticals.
