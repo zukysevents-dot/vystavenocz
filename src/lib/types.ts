@@ -423,6 +423,10 @@ export interface KitchenQueueItem {
 export type StockMovementType =
   | 'Receipt'
   | 'Issue'
+  | 'WriteOff'
+  | 'StaffMeal'
+  | 'Breakage'
+  | 'Expiration'
   | 'Correction'
   | 'Sale'
   | 'StornoSale'
