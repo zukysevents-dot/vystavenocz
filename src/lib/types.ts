@@ -319,6 +319,8 @@ export interface DayCloseResponse {
   vatBreakdown?: DayCloseVatLine[]
   productBreakdown?: DayCloseProductLine[]
   cashOpening?: number | null
+  cashPayIns?: number | null
+  cashPayOuts?: number | null
   cashCountedClosing?: number | null
   cashDrop?: number | null
   cashExpectedClosing?: number | null
