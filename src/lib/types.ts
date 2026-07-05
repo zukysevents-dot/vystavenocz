@@ -424,6 +424,7 @@ export interface KitchenQueueItem {
   kitchenSection: CategoryKitchenSection
   kitchenStatus: KitchenStatus
   sentToKitchenAt: string | null
+  kitchenStatusUpdatedAt: string | null
 }
 
 // --- Sklad / zásoby ---
