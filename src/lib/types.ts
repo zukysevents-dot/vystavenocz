@@ -444,6 +444,28 @@ export interface StockMovement {
   createdAt: string
 }
 
+export interface StockMirrorItem {
+  productId: string
+  productName: string
+  productSku: string
+  openingQuantity: number
+  receivedQuantity: number
+  soldQuantity: number
+  stornoQuantity: number
+  issuedQuantity: number
+  correctionQuantity: number
+  stocktakingQuantity: number
+  expectedQuantity: number
+  actualQuantity: number
+  varianceQuantity: number
+}
+
+export interface StockMirror {
+  from: string
+  to: string
+  items: StockMirrorItem[]
+}
+
 // --- Docházka ---
 
 export type AttendanceStatus = 'Open' | 'Closed'

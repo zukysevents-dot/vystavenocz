@@ -8,6 +8,7 @@ import {
   ClipboardCheck,
   SlidersHorizontal,
   AlertTriangle,
+  Scale,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,7 +26,7 @@ import { useInventory, type StocktakeItemInput } from '@/composables/useInventor
 import { isApiMode, ApiError } from '@/lib/http'
 import { formatDate } from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
-import type { StockMovement, StockMovementType } from '@/lib/types'
+import type { StockMirror, StockMirrorItem, StockMovement, StockMovementType } from '@/lib/types'
 
 const { products, load: loadProducts } = useProducts()
 const inv = useInventory()
@@ -33,11 +34,13 @@ const apiMode = isApiMode()
 
 const loading = ref(true)
 const busy = ref(false)
-const tab = ref<'levels' | 'movements'>('levels')
+const tab = ref<'levels' | 'movements' | 'mirror'>('levels')
 const search = ref('')
 const levelMap = ref(new Map<string, number>())
 const movements = ref<StockMovement[]>([])
 const movementsLoaded = ref(false)
+const mirror = ref<StockMirror | null>(null)
+const mirrorLoaded = ref(false)
 
 const MOVE_LABEL: Record<StockMovementType, string> = {
   Receipt: 'Příjem',
@@ -79,12 +82,23 @@ const rows = computed<Row[]>(() => {
     })
 })
 const lowCount = computed(() => rows.value.filter((r) => r.low).length)
+const mirrorVarianceCount = computed(
+  () => mirror.value?.items.filter((i) => Math.abs(i.varianceQuantity) > 0.0001).length ?? 0,
+)
 
 function productName(id: string): string {
   return products.value.find((p) => p.id === id)?.name ?? '—'
 }
 function fmtQty(n: number): string {
   return Number(n).toLocaleString('cs-CZ', { maximumFractionDigits: 3 })
+}
+function fmtSigned(n: number): string {
+  return `${n > 0 ? '+' : ''}${fmtQty(n)}`
+}
+function varianceTone(item: StockMirrorItem): string {
+  if (item.varianceQuantity > 0) return 'text-success'
+  if (item.varianceQuantity < 0) return 'text-destructive'
+  return 'text-muted-foreground'
 }
 
 async function loadLevels() {
@@ -114,6 +128,23 @@ async function showMovements() {
       movements.value = await inv.movements()
       movementsLoaded.value = true
     } catch (e) {
+      console.error(e)
+    }
+  }
+}
+
+async function loadMirror() {
+  mirror.value = await inv.stockMirror()
+  mirrorLoaded.value = true
+}
+
+async function showMirror() {
+  tab.value = 'mirror'
+  if (!mirrorLoaded.value) {
+    try {
+      await loadMirror()
+    } catch (e) {
+      toast.error('Zrcadlo skladu se nepodařilo načíst.')
       console.error(e)
     }
   }
@@ -151,6 +182,7 @@ async function submitAction() {
     else await inv.correct(id, amount, actionForm.note.trim())
     await loadLevels()
     if (movementsLoaded.value) movements.value = await inv.movements()
+    if (mirrorLoaded.value) await loadMirror()
     actionOpen.value = false
     toast.success(`${ACTION_LABEL[actionMode.value]} uložen.`)
   } catch (e) {
@@ -184,6 +216,7 @@ async function submitStocktake() {
     await inv.stocktake(items, null)
     await loadLevels()
     if (movementsLoaded.value) movements.value = await inv.movements()
+    if (mirrorLoaded.value) await loadMirror()
     stocktakeOpen.value = false
     toast.success('Inventura uložena — stav srovnán.')
   } catch (e) {
@@ -240,11 +273,29 @@ async function submitStocktake() {
         >
           Pohyby
         </button>
+        <button
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+          :class="
+            tab === 'mirror'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted text-muted-foreground hover:bg-muted/70'
+          "
+          @click="showMirror"
+        >
+          <Scale class="h-4 w-4" /> Zrcadlo
+        </button>
         <span
           v-if="lowCount"
           class="ml-auto inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2 py-1 text-xs font-medium text-destructive"
         >
           <AlertTriangle class="h-3.5 w-3.5" /> {{ lowCount }} pod minimem
+        </span>
+        <span
+          v-else-if="mirrorVarianceCount"
+          class="ml-auto inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-300"
+        >
+          <AlertTriangle class="h-3.5 w-3.5" /> {{ mirrorVarianceCount }} rozdílů
         </span>
       </div>
 
@@ -261,7 +312,7 @@ async function submitStocktake() {
           <Input v-model="search" class="pl-9" placeholder="Hledat podle názvu nebo kódu…" />
         </div>
 
-        <div class="mt-4 overflow-hidden rounded-2xl border border-border bg-card">
+        <div class="mt-4 overflow-x-auto rounded-2xl border border-border bg-card">
           <div v-if="!rows.length" class="p-12 text-center text-muted-foreground">
             Žádné produkty. Přidejte je v sekci Sklad.
           </div>
@@ -316,7 +367,7 @@ async function submitStocktake() {
       </template>
 
       <!-- POHYBY -->
-      <template v-else>
+      <template v-else-if="tab === 'movements'">
         <div class="mt-4 overflow-hidden rounded-2xl border border-border bg-card">
           <div v-if="!movements.length" class="p-12 text-center text-muted-foreground">
             Zatím žádné skladové pohyby.
@@ -344,6 +395,70 @@ async function submitStocktake() {
                 <span class="w-16 text-right text-muted-foreground"
                   >= {{ fmtQty(m.quantityAfter) }}</span
                 >
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- ZRCADLO -->
+      <template v-else>
+        <div class="mt-4 overflow-hidden rounded-2xl border border-border bg-card">
+          <div v-if="!mirror" class="p-12 text-center text-muted-foreground">
+            <Loader2 class="mx-auto mb-3 h-5 w-5 animate-spin text-primary" />
+            Načítám skladové zrcadlo.
+          </div>
+          <div v-else-if="!mirror.items.length" class="p-12 text-center text-muted-foreground">
+            Zatím žádné skladové pohyby pro zrcadlo.
+          </div>
+          <div v-else>
+            <div
+              class="grid min-w-[620px] grid-cols-[minmax(160px,1.5fr)_repeat(4,minmax(90px,1fr))] gap-3 border-b border-border bg-muted/40 px-4 py-3 text-xs font-semibold uppercase text-muted-foreground"
+            >
+              <span>Produkt</span>
+              <span class="text-right">Příjem</span>
+              <span class="text-right">Prodej/výdej</span>
+              <span class="text-right">Očekáváno</span>
+              <span class="text-right">Rozdíl</span>
+            </div>
+            <div
+              v-for="item in mirror.items"
+              :key="item.productId"
+              class="grid min-w-[620px] grid-cols-[minmax(160px,1.5fr)_repeat(4,minmax(90px,1fr))] gap-3 border-b border-border px-4 py-3 text-sm last:border-0"
+            >
+              <div class="min-w-0">
+                <div class="truncate font-medium">{{ item.productName }}</div>
+                <div class="text-xs text-muted-foreground">
+                  {{ item.productSku }} • otevření {{ fmtQty(item.openingQuantity) }}
+                </div>
+              </div>
+              <div class="text-right tabular-nums">
+                <div class="font-semibold text-success">{{ fmtQty(item.receivedQuantity) }}</div>
+                <div v-if="item.stornoQuantity" class="text-xs text-muted-foreground">
+                  storno {{ fmtQty(item.stornoQuantity) }}
+                </div>
+              </div>
+              <div class="text-right tabular-nums">
+                <div class="font-semibold text-destructive">
+                  {{ fmtQty(item.soldQuantity + item.issuedQuantity) }}
+                </div>
+                <div class="text-xs text-muted-foreground">
+                  prodej {{ fmtQty(item.soldQuantity) }}
+                </div>
+              </div>
+              <div class="text-right tabular-nums">
+                <div class="font-semibold">{{ fmtQty(item.expectedQuantity) }}</div>
+                <div class="text-xs text-muted-foreground">
+                  skutečně {{ fmtQty(item.actualQuantity) }}
+                </div>
+              </div>
+              <div class="text-right tabular-nums">
+                <div class="font-semibold" :class="varianceTone(item)">
+                  {{ fmtSigned(item.varianceQuantity) }}
+                </div>
+                <div class="text-xs text-muted-foreground">
+                  kor. {{ fmtSigned(item.correctionQuantity + item.stocktakingQuantity) }}
+                </div>
               </div>
             </div>
           </div>
