@@ -1,10 +1,21 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { Plus, Search, Loader2, Pencil, Trash2, Package, Tags, Upload } from 'lucide-vue-next'
+import {
+  Plus,
+  Search,
+  Loader2,
+  Pencil,
+  Trash2,
+  Package,
+  Tags,
+  Upload,
+  ClipboardList,
+} from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import ProductRecipeDialog from '@/components/app/ProductRecipeDialog.vue'
 import {
   Dialog,
   DialogContent,
@@ -42,6 +53,8 @@ const dialogOpen = ref(false)
 const deleteId = ref<string | null>(null)
 const deleteOpen = ref(false)
 const submitting = ref(false)
+const recipeProduct = ref<Product | null>(null)
+const recipeDialogOpen = ref(false)
 
 function askDelete(id: string) {
   deleteId.value = id
@@ -53,6 +66,8 @@ const VAT_RATES = [0, 12, 21]
 type ProductForm = {
   name: string
   salePrice: number
+  purchasePrice: number | ''
+  minQuantity: number
   vatRate: number
   sku: string
   ean: string
@@ -62,6 +77,8 @@ type ProductForm = {
 const emptyForm: ProductForm = {
   name: '',
   salePrice: 0,
+  purchasePrice: '',
+  minQuantity: 0,
   vatRate: 21,
   sku: '',
   ean: '',
@@ -100,6 +117,16 @@ function openEdit(p: Product) {
   dialogOpen.value = true
 }
 
+function openRecipe(p: Product) {
+  recipeProduct.value = p
+  recipeDialogOpen.value = true
+}
+
+function optionalNumber(value: number | ''): number | null {
+  if (value === '') return null
+  return Number(value) || 0
+}
+
 watch(dialogOpen, (open) => {
   if (open) {
     if (editing.value) {
@@ -107,6 +134,8 @@ watch(dialogOpen, (open) => {
       Object.assign(form, {
         name: p.name,
         salePrice: p.salePrice,
+        purchasePrice: p.purchasePrice ?? '',
+        minQuantity: p.minQuantity,
         vatRate: p.vatRate,
         sku: p.sku,
         ean: p.ean ?? '',
@@ -134,8 +163,8 @@ async function onSubmit() {
     ean: form.ean.trim() || null,
     salePrice: Number(form.salePrice) || 0,
     vatRate: form.vatRate,
-    purchasePrice: null,
-    minQuantity: 0,
+    purchasePrice: optionalNumber(form.purchasePrice),
+    minQuantity: Number(form.minQuantity) || 0,
     categoryId: form.categoryId || null,
   }
   try {
@@ -237,6 +266,9 @@ async function onDelete() {
           <div class="flex items-center gap-3">
             <div class="font-semibold tabular-nums">{{ formatCZK(p.salePrice) }}</div>
             <div class="flex items-center gap-1">
+              <Button variant="ghost" size="icon" title="Receptura" @click="openRecipe(p)">
+                <ClipboardList class="h-4 w-4" />
+              </Button>
               <Button variant="ghost" size="icon" title="Upravit" @click="openEdit(p)">
                 <Pencil class="h-4 w-4" />
               </Button>
@@ -294,6 +326,30 @@ async function onDelete() {
 
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="space-y-2">
+              <Label for="p-purchase-price">Nákupní cena (Kč)</Label>
+              <Input
+                id="p-purchase-price"
+                v-model.number="form.purchasePrice"
+                type="number"
+                :min="0"
+                step="0.01"
+                placeholder="volitelné"
+              />
+            </div>
+            <div class="space-y-2">
+              <Label for="p-min-quantity">Min. zásoba</Label>
+              <Input
+                id="p-min-quantity"
+                v-model.number="form.minQuantity"
+                type="number"
+                :min="0"
+                step="0.001"
+              />
+            </div>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="space-y-2">
               <Label for="p-sku">Kód (SKU) *</Label>
               <Input id="p-sku" v-model="form.sku" required placeholder="ESP" />
             </div>
@@ -346,5 +402,11 @@ async function onDelete() {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    <ProductRecipeDialog
+      v-model:open="recipeDialogOpen"
+      :product="recipeProduct"
+      :products="products"
+    />
   </div>
 </template>

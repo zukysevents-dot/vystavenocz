@@ -20,6 +20,8 @@ Produktová roadmapa modulárního Vystaveno + gastro priority je v `docs/produc
 
 Modulární runtime základ: backend `/me` vrací `modules` + `features`; frontend je drží v `src/stores/auth.ts` a app shell filtruje navigaci/routy přes `src/lib/modules.ts`. Backend ukládá tenant-selected moduly v `company_modules`; staré firmy bez řádků mají fallback na všechny default moduly. Onboarding vybírá první modulový balíček podle typu podnikání a `Nastavení firmy` umožňuje pozdější změnu modulů přes `/company/modules`. Modul `core` je povinný a normalizace ho vždy doplní.
 
+Gastro receptury/BOM: editor je v `Sklad / katalog` jako akce u produktu (`ProductRecipeDialog.vue`) a volá `GET/PUT/DELETE /api/v1/products/{productId}/recipe`. Backend API/migrace žije ve `vystaveno-api`; automatické odečítání surovin při prodeji je navazující backend krok, ne frontend logika.
+
 ## Dva repozitáře, jeden produkt
 
 - **`vystavenocz`** (tento) — frontend (Vue).

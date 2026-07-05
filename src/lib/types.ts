@@ -145,6 +145,26 @@ export interface Product {
   categoryId: string | null
 }
 
+export interface ProductRecipeIngredient {
+  productId: string
+  productName: string
+  productSku: string
+  quantity: number
+  purchasePrice: number | null
+  estimatedCost: number
+}
+
+export interface ProductRecipe {
+  productId: string
+  ingredients: ProductRecipeIngredient[]
+  estimatedCost: number
+}
+
+export interface ProductRecipeInput {
+  productId: string
+  quantity: number
+}
+
 export type JobStatus = 'quote' | 'in_progress' | 'done' | 'invoiced'
 
 // Zakázka / výjezd (modul Zakázky) — materiál + hodiny → ziskovost.
