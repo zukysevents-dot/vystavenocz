@@ -14,6 +14,13 @@ export interface StocktakeItemInput {
   countedQuantity: number
 }
 
+export interface StockMirrorQuery {
+  from?: string
+  to?: string
+  locationId?: string | null
+  search?: string
+}
+
 // Sklad / zásoby (gastro/retail). Jen API mód — nad existujícím inventory backendem.
 export function useInventory() {
   async function levels(): Promise<StockLevel[]> {
@@ -47,8 +54,14 @@ export function useInventory() {
   function stocktake(items: StocktakeItemInput[], note: string | null): Promise<unknown> {
     return http.post('/inventory/stocktake', { items, note })
   }
-  function stockMirror(): Promise<StockMirror> {
-    return http.get('/inventory/stock-mirror')
+  function stockMirror(query: StockMirrorQuery = {}): Promise<StockMirror> {
+    const params = new URLSearchParams()
+    if (query.from) params.set('from', query.from)
+    if (query.to) params.set('to', query.to)
+    if (query.locationId) params.set('locationId', query.locationId)
+    if (query.search?.trim()) params.set('search', query.search.trim())
+    const qs = params.toString()
+    return http.get(`/inventory/stock-mirror${qs ? `?${qs}` : ''}`)
   }
   return {
     levels,

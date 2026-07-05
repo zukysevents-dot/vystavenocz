@@ -14,6 +14,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -23,14 +30,17 @@ import {
 } from '@/components/ui/dialog'
 import { useProducts } from '@/composables/useProducts'
 import { useInventory, type StocktakeItemInput } from '@/composables/useInventory'
+import { useLocations } from '@/composables/useLocations'
 import { isApiMode, ApiError } from '@/lib/http'
 import { formatDate } from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
 import type { StockMirror, StockMirrorItem, StockMovement, StockMovementType } from '@/lib/types'
 
 const { products, load: loadProducts } = useProducts()
+const { locations, load: loadLocations } = useLocations()
 const inv = useInventory()
 const apiMode = isApiMode()
+const ALL_LOCATIONS = '__all__'
 
 const loading = ref(true)
 const busy = ref(false)
@@ -41,6 +51,12 @@ const movements = ref<StockMovement[]>([])
 const movementsLoaded = ref(false)
 const mirror = ref<StockMirror | null>(null)
 const mirrorLoaded = ref(false)
+const mirrorLoading = ref(false)
+const today = todayISO()
+const mirrorFrom = ref(today)
+const mirrorTo = ref(today)
+const mirrorLocationId = ref(ALL_LOCATIONS)
+const mirrorSearch = ref('')
 
 const MOVE_LABEL: Record<StockMovementType, string> = {
   Receipt: 'Příjem',
@@ -133,6 +149,11 @@ function varianceTone(item: StockMirrorItem): string {
   if (item.varianceQuantity < 0) return 'text-destructive'
   return 'text-muted-foreground'
 }
+function todayISO(): string {
+  const d = new Date()
+  const off = d.getTimezoneOffset()
+  return new Date(d.getTime() - off * 60_000).toISOString().slice(0, 10)
+}
 
 async function loadLevels() {
   const levels = await inv.levels()
@@ -145,7 +166,7 @@ onMounted(async () => {
     return
   }
   try {
-    await loadProducts()
+    await Promise.all([loadProducts(), loadLocations()])
     await loadLevels()
   } catch (e) {
     console.error(e)
@@ -167,19 +188,27 @@ async function showMovements() {
 }
 
 async function loadMirror() {
-  mirror.value = await inv.stockMirror()
-  mirrorLoaded.value = true
+  mirrorLoading.value = true
+  try {
+    mirror.value = await inv.stockMirror({
+      from: mirrorFrom.value,
+      to: mirrorTo.value,
+      locationId: mirrorLocationId.value === ALL_LOCATIONS ? null : mirrorLocationId.value,
+      search: mirrorSearch.value,
+    })
+    mirrorLoaded.value = true
+  } catch (e) {
+    toast.error('Zrcadlo skladu se nepodařilo načíst.')
+    console.error(e)
+  } finally {
+    mirrorLoading.value = false
+  }
 }
 
 async function showMirror() {
   tab.value = 'mirror'
   if (!mirrorLoaded.value) {
-    try {
-      await loadMirror()
-    } catch (e) {
-      toast.error('Zrcadlo skladu se nepodařilo načíst.')
-      console.error(e)
-    }
+    await loadMirror()
   }
 }
 
@@ -487,10 +516,47 @@ async function submitStocktake() {
 
       <!-- ZRCADLO -->
       <template v-else>
+        <div
+          class="mt-4 flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card p-4"
+        >
+          <div class="grid gap-1.5">
+            <Label for="mirror-from">Od</Label>
+            <Input id="mirror-from" v-model="mirrorFrom" type="date" class="w-40" />
+          </div>
+          <div class="grid gap-1.5">
+            <Label for="mirror-to">Do</Label>
+            <Input id="mirror-to" v-model="mirrorTo" type="date" class="w-40" />
+          </div>
+          <div v-if="locations.length > 1" class="grid gap-1.5">
+            <Label for="mirror-location">Pobočka</Label>
+            <Select v-model="mirrorLocationId">
+              <SelectTrigger id="mirror-location" class="w-56">
+                <SelectValue placeholder="Všechny pobočky" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem :value="ALL_LOCATIONS">Všechny pobočky</SelectItem>
+                <SelectItem v-for="l in locations" :key="l.id" :value="l.id">
+                  {{ l.name }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div class="grid min-w-56 flex-1 gap-1.5">
+            <Label for="mirror-search">Položka</Label>
+            <Input id="mirror-search" v-model="mirrorSearch" placeholder="Název nebo SKU" />
+          </div>
+          <Button type="button" variant="outline" :disabled="mirrorLoading" @click="loadMirror">
+            <Loader2 v-if="mirrorLoading" class="h-4 w-4 animate-spin" />
+            Načíst zrcadlo
+          </Button>
+        </div>
         <div class="mt-4 overflow-hidden rounded-2xl border border-border bg-card">
-          <div v-if="!mirror" class="p-12 text-center text-muted-foreground">
+          <div v-if="mirrorLoading && !mirror" class="p-12 text-center text-muted-foreground">
             <Loader2 class="mx-auto mb-3 h-5 w-5 animate-spin text-primary" />
             Načítám skladové zrcadlo.
+          </div>
+          <div v-else-if="!mirror" class="p-12 text-center text-muted-foreground">
+            Zvolte filtr a načtěte skladové zrcadlo.
           </div>
           <div v-else-if="!mirror.items.length" class="p-12 text-center text-muted-foreground">
             Zatím žádné skladové pohyby pro zrcadlo.
