@@ -301,8 +301,8 @@ async function saveItemMeta() {
   }
 }
 
-// --- Split účtu — přiřazení položek (i po částech) osobám/skupinám. Čistě zobrazovací
-// rozpočet, NEmění platební tok — pay() pořád platí celý účet najednou. ---
+// --- Split účtu — přiřazení položek (i po částech) osobám/skupinám.
+// Uložený split je rozpočet nad účtem; tlačítka v dialogu umí zaplatit vybranou skupinu přes pay-items.
 const splitDialogOpen = ref(false)
 const splitGroups = ref<OrderSplitGroup[]>([])
 const savingSplit = ref(false)
@@ -375,6 +375,98 @@ function groupTotal(group: OrderSplitGroup): number {
     accountDiscountPercent.value,
     tipAmount.value,
   )
+}
+
+function splitPaymentItems(group: OrderSplitGroup) {
+  if (!currentOrder.value) return []
+  const byId = new Map(currentOrder.value.items.map((item) => [item.id, item]))
+  return group.items
+    .map((share) => {
+      const item = byId.get(share.itemId)
+      if (!item) return null
+      return {
+        itemId: item.id,
+        quantity: item.quantity * share.fraction,
+      }
+    })
+    .filter((item): item is { itemId: string; quantity: number } => !!item && item.quantity > 0)
+}
+
+function splitPaymentReceipt(group: OrderSplitGroup) {
+  if (!currentOrder.value) return null
+  const subtotal = round2(currentOrder.value.items.reduce((sum, item) => sum + item.lineTotal, 0))
+  const rows = group.items
+    .map((share) => {
+      const item = currentOrder.value!.items.find((i) => i.id === share.itemId)
+      if (!item) return null
+      return {
+        item,
+        quantity: round2(item.quantity * share.fraction),
+        gross: round2(item.lineTotal * share.fraction),
+      }
+    })
+    .filter(
+      (row): row is { item: OrderItemLine; quantity: number; gross: number } =>
+        !!row && row.quantity > 0,
+    )
+  const gross = round2(rows.reduce((sum, row) => sum + row.gross, 0))
+  const ratio = subtotal > 0 ? gross / subtotal : 0
+  const discountAmount = round2(gross * (clampPercent(accountDiscountPercent.value) / 100))
+  const tipShare = round2(clampAmount(tipAmount.value) * ratio)
+  return {
+    items: rows.map((row) => ({ name: row.item.name, qty: row.quantity, total: row.gross })),
+    discountAmount,
+    tipAmount: tipShare,
+    total: round2(gross - discountAmount + tipShare),
+  }
+}
+
+async function paySplitGroup(group: OrderSplitGroup, method: PaymentMethod) {
+  if (!currentOrder.value || busy.value) return
+  const items = splitPaymentItems(group)
+  if (!items.length) return
+  const tableName = selectedTable.value?.name
+  busy.value = true
+  try {
+    await flushDiscountUpdate()
+    if (!currentOrder.value) return
+    const orderId = currentOrder.value.id
+    const receipt = splitPaymentReceipt(group)
+    const updated = await ordersApi.payItems(orderId, method, items)
+    currentOrder.value = updated
+    syncDiscountFromOrder(updated)
+    splitGroups.value = []
+    splitDialogOpen.value = false
+    if (receipt) {
+      receiptData.value = buildReceipt({
+        company: companyStore.company,
+        items: receipt.items,
+        discountPercent: accountDiscountPercent.value,
+        discountAmount: receipt.discountAmount,
+        tipAmount: receipt.tipAmount,
+        total: receipt.total,
+        method,
+        id: orderId,
+        table: tableName,
+      })
+      receiptOpen.value = true
+    }
+    toast.success(`Zaplaceno ${formatCZK(receipt?.total ?? 0)} za ${group.label}.`)
+    await refreshOpen()
+    if (updated.status === 'Closed') backToMap()
+  } catch (e) {
+    if (e instanceof ApiError && (e.status === 404 || e.status === 409)) {
+      toast.error('Účet mezitím zaplatil nebo zrušil jiný terminál.')
+      splitDialogOpen.value = false
+      await refreshOpen()
+      backToMap()
+    } else {
+      toast.error('Platba vybrané části selhala.')
+    }
+    console.error(e)
+  } finally {
+    busy.value = false
+  }
 }
 
 async function saveSplit() {
@@ -1005,14 +1097,14 @@ const hasNewItems = computed(() =>
       </DialogContent>
     </Dialog>
 
-    <!-- Rozdělit účet — přiřazení položek (i po částech) osobám. Jen rozpočet, neplatí se zvlášť. -->
+    <!-- Rozdělit účet — přiřazení položek (i po částech) osobám a platba vybrané osoby. -->
     <Dialog v-model:open="splitDialogOpen">
       <DialogContent class="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Rozdělit účet</DialogTitle>
           <DialogDescription>
-            Ťukni u položky na osoby, které ji platí — cena se rozdělí rovným dílem. Nepřiřazené
-            položky zůstávají společné.
+            Ťukni u položky na osoby, které ji platí — cena se rozdělí rovným dílem. U osoby pak
+            můžeš zaplatit její část hotově nebo kartou.
           </DialogDescription>
         </DialogHeader>
 
@@ -1026,6 +1118,28 @@ const hasNewItems = computed(() =>
             <span class="whitespace-nowrap text-xs text-muted-foreground tabular-nums">{{
               formatCZK(groupTotal(g))
             }}</span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              class="h-6 w-6"
+              title="Zaplatit hotově"
+              :disabled="busy || splitPaymentItems(g).length === 0"
+              @click="paySplitGroup(g, 'Cash')"
+            >
+              <Banknote class="h-3 w-3" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              class="h-6 w-6"
+              title="Zaplatit kartou"
+              :disabled="busy || splitPaymentItems(g).length === 0"
+              @click="paySplitGroup(g, 'Card')"
+            >
+              <CreditCard class="h-3 w-3" />
+            </Button>
             <Button
               type="button"
               variant="ghost"

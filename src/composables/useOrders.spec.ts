@@ -93,6 +93,21 @@ describe('useOrders — payload položek (note/course)', () => {
     expect(http.post).toHaveBeenCalledWith('/orders/o1/pay', { paymentMethod: 'Cash' })
   })
 
+  it('payItems volá POST /orders/{id}/pay-items s vybraným množstvím položek', async () => {
+    vi.mocked(http.post).mockResolvedValue({} as never)
+    await useOrders().payItems('o1', 'Card', [
+      { itemId: 'i1', quantity: 1 },
+      { itemId: 'i2', quantity: 0.5 },
+    ])
+    expect(http.post).toHaveBeenCalledWith('/orders/o1/pay-items', {
+      paymentMethod: 'Card',
+      items: [
+        { itemId: 'i1', quantity: 1 },
+        { itemId: 'i2', quantity: 0.5 },
+      ],
+    })
+  })
+
   it('updateSplit volá PUT /orders/{id}/split s celým polem splitGroups (idempotentní nahrazení)', async () => {
     vi.mocked(http.put).mockResolvedValue({} as never)
     const splitGroups = [
