@@ -94,6 +94,13 @@ const lowCount = computed(() => rows.value.filter((r) => r.low).length)
 const mirrorVarianceCount = computed(
   () => mirror.value?.items.filter((i) => Math.abs(i.varianceQuantity) > 0.0001).length ?? 0,
 )
+const mirrorVarianceValue = computed(() => {
+  const values = mirror.value?.items
+    .map((i) => i.varianceValue)
+    .filter((value): value is number => value !== null && value !== undefined)
+  if (!values?.length) return null
+  return values.reduce((sum, value) => sum + value, 0)
+})
 
 function productName(id: string): string {
   return products.value.find((p) => p.id === id)?.name ?? '—'
@@ -103,6 +110,12 @@ function fmtQty(n: number): string {
 }
 function fmtSigned(n: number): string {
   return `${n > 0 ? '+' : ''}${fmtQty(n)}`
+}
+function fmtMoney(n: number): string {
+  return n.toLocaleString('cs-CZ', { style: 'currency', currency: 'CZK' })
+}
+function fmtSignedMoney(n: number): string {
+  return `${n > 0 ? '+' : ''}${fmtMoney(n)}`
 }
 function varianceTone(item: StockMirrorItem): string {
   if (item.varianceQuantity > 0) return 'text-success'
@@ -345,7 +358,11 @@ async function submitStocktake() {
           v-else-if="mirrorVarianceCount"
           class="ml-auto inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-300"
         >
-          <AlertTriangle class="h-3.5 w-3.5" /> {{ mirrorVarianceCount }} rozdílů
+          <AlertTriangle class="h-3.5 w-3.5" />
+          {{ mirrorVarianceCount }} rozdílů
+          <template v-if="mirrorVarianceValue !== null">
+            · {{ fmtSignedMoney(mirrorVarianceValue) }}
+          </template>
         </span>
       </div>
 
@@ -509,9 +526,19 @@ async function submitStocktake() {
                 <div class="font-semibold" :class="varianceTone(item)">
                   {{ fmtSigned(item.varianceQuantity) }}
                 </div>
+                <div
+                  v-if="item.varianceValue !== null"
+                  class="text-xs font-medium"
+                  :class="varianceTone(item)"
+                >
+                  {{ fmtSignedMoney(item.varianceValue) }}
+                </div>
                 <div class="text-xs text-muted-foreground">
                   kor. {{ fmtSigned(item.correctionQuantity) }} / inv.
                   {{ fmtSigned(item.stocktakingQuantity) }}
+                </div>
+                <div v-if="item.unitCost !== null" class="text-xs text-muted-foreground">
+                  nákup {{ fmtMoney(item.unitCost) }}/ks
                 </div>
               </div>
             </div>

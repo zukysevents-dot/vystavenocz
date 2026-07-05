@@ -495,6 +495,8 @@ export interface StockMirrorItem {
   expectedQuantity: number
   actualQuantity: number
   varianceQuantity: number
+  unitCost: number | null
+  varianceValue: number | null
 }
 
 export interface StockMirror {

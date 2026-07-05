@@ -22,7 +22,7 @@ Modulární runtime základ: backend `/me` vrací `modules` + `features`; fronte
 
 Gastro receptury/BOM: editor je v `Sklad / katalog` jako akce u produktu (`ProductRecipeDialog.vue`) a volá `GET/PUT/DELETE /api/v1/products/{productId}/recipe`. Backend API/migrace žije ve `vystaveno-api`; backend PR #153 zapíná odečet surovin při POS i restaurant payment prodeji. Produkt s recepturou odečítá suroviny, produkt bez receptury dál odečítá sám sebe; storno vrací původní skladové pohyby, ne aktuální recepturu.
 
-Skladové zrcadlo: backend PR #154 přidává `GET /api/v1/inventory/stock-mirror`; frontend panel je třetí tab `Zrcadlo` na stránce `Zásoby`. UI musí jasně ukazovat `Stav má být`, `Realita` a `Rozdíl`; rozdíl se skládá z korekcí a inventur.
+Skladové zrcadlo: backend PR #154 přidává `GET /api/v1/inventory/stock-mirror`; frontend panel je třetí tab `Zrcadlo` na stránce `Zásoby`. UI musí jasně ukazovat `Stav má být`, `Realita` a `Rozdíl`; rozdíl se skládá z korekcí a inventur. Backend PR #157 přidává `unitCost` a `varianceValue`; UI zobrazuje rozdíl v kusech i Kč. První Kč vrstva používá aktuální nákupní cenu produktu, vážený průměr z příjemek je follow-up.
 
 Inventura v `Zásoby` musí obsluze ukazovat stejný slovník jako zrcadlo: `Stav má být` = systémový stav před uložením, `Realita` = fyzicky napočítáno, `Rozdíl` = realita minus systém. Ukládá se celá inventura přes `/inventory/stocktake`; hledání v dialogu jen filtruje pohled.
 
