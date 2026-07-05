@@ -110,7 +110,8 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
 export function normalizeModules(input: readonly string[] | null | undefined): AppModuleId[] {
   if (!input?.length) return DEFAULT_ENABLED_MODULES
   const allowed = new Set<string>(APP_MODULES)
-  return input.filter((module): module is AppModuleId => allowed.has(module))
+  const modules = input.filter((module): module is AppModuleId => allowed.has(module))
+  return modules.includes('core') ? modules : ['core', ...modules]
 }
 
 export function isModuleEnabled(
