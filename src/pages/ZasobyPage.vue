@@ -9,6 +9,7 @@ import {
   SlidersHorizontal,
   AlertTriangle,
   Scale,
+  ArrowRightLeft,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -69,6 +70,8 @@ const MOVE_LABEL: Record<StockMovementType, string> = {
   Sale: 'Prodej',
   StornoSale: 'Storno',
   Stocktaking: 'Inventura',
+  TransferOut: 'Přesun ven',
+  TransferIn: 'Přesun dovnitř',
 }
 const ISSUE_TYPE_OPTIONS: Array<{ value: StockMovementType; label: string }> = [
   { value: 'Issue', label: 'Běžný výdej' },
@@ -131,6 +134,10 @@ const mirrorVarianceValue = computed(() => {
 
 function productName(id: string): string {
   return products.value.find((p) => p.id === id)?.name ?? '—'
+}
+function locationName(id: string | null): string | null {
+  if (!id) return null
+  return locations.value.find((l) => l.id === id)?.name ?? 'Neznámá pobočka'
 }
 function fmtQty(n: number): string {
   return Number(n).toLocaleString('cs-CZ', { maximumFractionDigits: 3 })
@@ -256,6 +263,65 @@ async function submitAction() {
   } catch (e) {
     if (e instanceof ApiError && e.status === 409) toast.error('Nedostatek zásoby na skladě.')
     else toast.error('Operace selhala.')
+    console.error(e)
+  } finally {
+    busy.value = false
+  }
+}
+
+// --- Přesun mezi provozovnami/sklady ---
+const transferOpen = ref(false)
+const transferProduct = ref<Row | null>(null)
+const transferForm = reactive({
+  amount: 0,
+  fromLocationId: '',
+  toLocationId: '',
+  note: '',
+})
+
+function openTransfer(row: Row) {
+  if (locations.value.length < 2) {
+    toast.error('Pro přesun založte alespoň dvě pobočky.')
+    return
+  }
+  transferProduct.value = row
+  transferForm.amount = 0
+  transferForm.fromLocationId = locations.value[0]?.id ?? ''
+  transferForm.toLocationId =
+    locations.value.find((l) => l.id !== transferForm.fromLocationId)?.id ?? ''
+  transferForm.note = ''
+  transferOpen.value = true
+}
+
+async function submitTransfer() {
+  const row = transferProduct.value
+  if (!row) return
+  const amount = Number(transferForm.amount)
+  if (amount <= 0) return toast.error('Zadejte kladné množství.')
+  if (!transferForm.fromLocationId || !transferForm.toLocationId)
+    return toast.error('Vyberte zdrojovou i cílovou pobočku.')
+  if (transferForm.fromLocationId === transferForm.toLocationId)
+    return toast.error('Zdroj a cíl musí být jiné pobočky.')
+
+  busy.value = true
+  try {
+    await inv.transfer(
+      row.id,
+      amount,
+      transferForm.fromLocationId,
+      transferForm.toLocationId,
+      transferForm.note.trim() || null,
+    )
+    await loadLevels()
+    if (movementsLoaded.value) movements.value = await inv.movements()
+    if (mirrorLoaded.value) await loadMirror()
+    transferOpen.value = false
+    toast.success('Přesun uložen.')
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 409) toast.error('Nedostatek zásoby na skladě.')
+    else if (e instanceof ApiError && e.status === 403)
+      toast.error('Přesun mimo vaši pobočku není povolen.')
+    else toast.error('Přesun selhal.')
     console.error(e)
   } finally {
     busy.value = false
@@ -472,6 +538,15 @@ async function submitStocktake() {
                   >
                     <SlidersHorizontal class="h-4 w-4" />
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    title="Přesun mezi pobočkami"
+                    :disabled="locations.length < 2"
+                    @click="openTransfer(r)"
+                  >
+                    <ArrowRightLeft class="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             </div>
@@ -495,6 +570,7 @@ async function submitStocktake() {
                 <div class="font-medium">{{ productName(m.productId) }}</div>
                 <div class="text-xs text-muted-foreground">
                   {{ MOVE_LABEL[m.type] }} • {{ formatDate(m.createdAt) }}
+                  <span v-if="locationName(m.locationId)"> • {{ locationName(m.locationId) }}</span>
                   <span v-if="m.note"> • {{ m.note }}</span>
                 </div>
               </div>
@@ -676,6 +752,67 @@ async function submitStocktake() {
             <Button type="button" variant="ghost" @click="actionOpen = false">Zrušit</Button>
             <Button type="submit" variant="coral" :disabled="busy">
               <Loader2 v-if="busy" class="h-4 w-4 animate-spin" /> Uložit
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Dialog přesun -->
+    <Dialog v-model:open="transferOpen">
+      <DialogContent class="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Přesun — {{ transferProduct?.name }}</DialogTitle>
+          <DialogDescription>
+            Přesuňte zásobu mezi pobočkami nebo sklady. Celkový stav firmy se nezmění.
+          </DialogDescription>
+        </DialogHeader>
+        <form class="space-y-4" @submit.prevent="submitTransfer">
+          <div class="space-y-2">
+            <Label for="transfer-amount">Množství</Label>
+            <Input
+              id="transfer-amount"
+              v-model.number="transferForm.amount"
+              type="number"
+              step="any"
+            />
+          </div>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div class="space-y-2">
+              <Label for="transfer-from">Odkud</Label>
+              <Select v-model="transferForm.fromLocationId">
+                <SelectTrigger id="transfer-from">
+                  <SelectValue placeholder="Zdroj" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="l in locations" :key="l.id" :value="l.id">
+                    {{ l.name }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div class="space-y-2">
+              <Label for="transfer-to">Kam</Label>
+              <Select v-model="transferForm.toLocationId">
+                <SelectTrigger id="transfer-to">
+                  <SelectValue placeholder="Cíl" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="l in locations" :key="l.id" :value="l.id">
+                    {{ l.name }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div class="space-y-2">
+            <Label for="transfer-note">Poznámka</Label>
+            <Input id="transfer-note" v-model="transferForm.note" placeholder="volitelné" />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" @click="transferOpen = false">Zrušit</Button>
+            <Button type="submit" variant="coral" :disabled="busy">
+              <Loader2 v-if="busy" class="h-4 w-4 animate-spin" /> Uložit přesun
             </Button>
           </DialogFooter>
         </form>

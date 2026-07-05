@@ -99,7 +99,7 @@ Must make the restaurant paperless:
 - recipes linked to menu items (product recipe API in `vystaveno-api`, editor in `Sklad / katalog`, and backend PR #153 sale-time ingredient deduction for POS/restaurant payments)
 - advanced stock deduction by recipes, including portions, variants, semi-products, waste, and yield
 - suppliers, purchase receipts, purchase prices, average cost, and price history (foundation: backend PR #156 and `Naskladnění` UI create auditable purchase receipt documents)
-- stock movements: receive, issue, adjust, write-off, staff meal, breakage, expiration, and transfer between warehouses/locations (foundation: backend PR #160 and `Zásoby` issue dialog categorize operational issue reasons; backend transfer API records paired `TransferOut`/`TransferIn` movements for stock mirror by location)
+- stock movements: receive, issue, adjust, write-off, staff meal, breakage, expiration, and transfer between warehouses/locations (foundation: backend PR #160 and `Zásoby` issue dialog categorize operational issue reasons; `Zásoby` transfer dialog records paired backend `TransferOut`/`TransferIn` movements for stock mirror by location)
 - inventory count by warehouse/category/product, with expected vs counted amount (foundation: `Zásoby` inventory dialog shows `Stav má být`, `Realita`, and `Rozdíl` before saving)
 - stock mirror for bars and kitchens (V1: ledger-based expected vs variance report via backend PR #154 and `Zásoby` tab; frontend filters by date, branch/location, and product search)
 - variance report in units and CZK (foundation: backend PR #157 returns varianceValue, backend PR #158 uses weighted receipt cost with product-price fallback, and `Zásoby` shows it)
