@@ -83,7 +83,7 @@ Gastro is the hardest workflow and the best proof that Vystaveno can beat legacy
 Must support a real service day:
 
 - POS sale with products, categories, notes, discounts, tips, cash/card payments, and storno
-- restaurant table map with open bills, moving items, merging bills, and splitting bills (foundation: `Restaurace` map opens, moves, and splits accounts; merging is wired via backend PR #165 `POST /orders/{targetOrderId}/merge` with `{ sourceOrderId }` and the `Restaurace` „Sloučit s jiným účtem" dialog — items move into the target account, the source table is freed, discount/tip stay on the target, and split is reset)
+- restaurant table map with open bills, moving items, merging bills, splitting bills, and partial group payments (foundation: `Restaurace` map opens/moves accounts, merges bills through backend PR #165, splits items among guests, and pays a selected split group through backend PR #168 `POST /orders/{id}/pay-items`; paid quantities become normal Sales, the unpaid remainder stays open, and split is reset for the remaining bill)
 - kitchen/bar tickets by category or station
 - receipt creation with VAT breakdown and payment history
 - shift opening and closing with cash balance, card summary, storno summary, and user ownership

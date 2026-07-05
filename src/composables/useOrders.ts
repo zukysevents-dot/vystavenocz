@@ -14,6 +14,11 @@ export interface OrderDiscountInput {
   tipAmount?: number
 }
 
+export interface OrderItemPaymentShare {
+  itemId: string
+  quantity: number
+}
+
 // Otevřené účty na stole (gastro). Jen API mód (restaurační provoz proti reálnému backendu).
 export function useOrders() {
   async function listOpen(): Promise<Order[]> {
@@ -71,6 +76,13 @@ export function useOrders() {
   function pay(orderId: string, method: PaymentMethod): Promise<Order> {
     return http.post<Order>(`/orders/${orderId}/pay`, { paymentMethod: method })
   }
+  function payItems(
+    orderId: string,
+    method: PaymentMethod,
+    items: OrderItemPaymentShare[],
+  ): Promise<Order> {
+    return http.post<Order>(`/orders/${orderId}/pay-items`, { paymentMethod: method, items })
+  }
   function cancel(orderId: string): Promise<Order> {
     return http.post<Order>(`/orders/${orderId}/cancel`)
   }
@@ -87,6 +99,7 @@ export function useOrders() {
     updateDiscount,
     updateSplit,
     pay,
+    payItems,
     cancel,
   }
 }
