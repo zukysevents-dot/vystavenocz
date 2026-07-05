@@ -102,7 +102,7 @@ Must make the restaurant paperless:
 - stock movements: receive, issue, transfer, adjust, write-off, staff meal, breakage, expiration
 - inventory count by warehouse/category/product, with expected vs counted amount (foundation: `Zásoby` inventory dialog shows `Stav má být`, `Realita`, and `Rozdíl` before saving)
 - stock mirror for bars and kitchens (V1: ledger-based expected vs variance report via backend PR #154 and `Zásoby` tab)
-- variance report in units and CZK
+- variance report in units and CZK (foundation: backend PR #157 returns varianceValue from product purchase price and `Zásoby` shows it)
 - food cost and margin per item
 - monthly close and accounting export
 
