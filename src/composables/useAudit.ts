@@ -6,6 +6,7 @@ export interface AuditListParams {
   page?: number
   pageSize?: number
   sort?: 'createdAt' | '-createdAt'
+  action?: string
 }
 
 export function useAudit() {
@@ -15,6 +16,7 @@ export function useAudit() {
       pageSize: String(params.pageSize ?? 20),
       sort: params.sort ?? '-createdAt',
     })
+    if (params.action) qs.set('action', params.action)
     return http.get<PagedResult<AuditEntry>>(`/company/audit?${qs.toString()}`)
   }
 
