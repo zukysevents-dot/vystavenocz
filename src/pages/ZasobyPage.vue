@@ -413,18 +413,19 @@ async function submitStocktake() {
           </div>
           <div v-else>
             <div
-              class="grid min-w-[620px] grid-cols-[minmax(160px,1.5fr)_repeat(4,minmax(90px,1fr))] gap-3 border-b border-border bg-muted/40 px-4 py-3 text-xs font-semibold uppercase text-muted-foreground"
+              class="grid min-w-[760px] grid-cols-[minmax(160px,1.5fr)_repeat(5,minmax(90px,1fr))] gap-3 border-b border-border bg-muted/40 px-4 py-3 text-xs font-semibold uppercase text-muted-foreground"
             >
               <span>Produkt</span>
               <span class="text-right">Příjem</span>
               <span class="text-right">Prodej/výdej</span>
-              <span class="text-right">Očekáváno</span>
+              <span class="text-right">Stav má být</span>
+              <span class="text-right">Realita</span>
               <span class="text-right">Rozdíl</span>
             </div>
             <div
               v-for="item in mirror.items"
               :key="item.productId"
-              class="grid min-w-[620px] grid-cols-[minmax(160px,1.5fr)_repeat(4,minmax(90px,1fr))] gap-3 border-b border-border px-4 py-3 text-sm last:border-0"
+              class="grid min-w-[760px] grid-cols-[minmax(160px,1.5fr)_repeat(5,minmax(90px,1fr))] gap-3 border-b border-border px-4 py-3 text-sm last:border-0"
             >
               <div class="min-w-0">
                 <div class="truncate font-medium">{{ item.productName }}</div>
@@ -448,16 +449,19 @@ async function submitStocktake() {
               </div>
               <div class="text-right tabular-nums">
                 <div class="font-semibold">{{ fmtQty(item.expectedQuantity) }}</div>
-                <div class="text-xs text-muted-foreground">
-                  skutečně {{ fmtQty(item.actualQuantity) }}
-                </div>
+                <div class="text-xs text-muted-foreground">podle pohybů</div>
+              </div>
+              <div class="text-right tabular-nums">
+                <div class="font-semibold">{{ fmtQty(item.actualQuantity) }}</div>
+                <div class="text-xs text-muted-foreground">po kontrole</div>
               </div>
               <div class="text-right tabular-nums">
                 <div class="font-semibold" :class="varianceTone(item)">
                   {{ fmtSigned(item.varianceQuantity) }}
                 </div>
                 <div class="text-xs text-muted-foreground">
-                  kor. {{ fmtSigned(item.correctionQuantity + item.stocktakingQuantity) }}
+                  kor. {{ fmtSigned(item.correctionQuantity) }} / inv.
+                  {{ fmtSigned(item.stocktakingQuantity) }}
                 </div>
               </div>
             </div>
