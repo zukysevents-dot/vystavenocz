@@ -9,6 +9,7 @@ import {
   ChefHat,
   ArrowLeft,
   ArrowLeftRight,
+  Combine,
   Package,
   Ban,
   StickyNote,
@@ -419,6 +420,40 @@ async function moveOrder(targetTableId: string) {
       await refreshOpen()
     } else {
       toast.error('Přesun účtu selhal.')
+    }
+    console.error(e)
+  } finally {
+    busy.value = false
+  }
+}
+
+// --- Sloučení účtů — položky z jiného obsazeného stolu se přesunou na tento (cílový) účet ---
+const mergeDialogOpen = ref(false)
+// Zdrojoví kandidáti = ostatní obsazené stoly na aktuálním patře (vyjma tohoto účtu).
+const otherOccupiedTables = computed(() =>
+  tables.value.filter((t) => occupancy.value.has(t.id) && t.id !== selectedTable.value?.id),
+)
+
+async function mergeOrder(sourceTableId: string) {
+  if (!currentOrder.value || busy.value) return
+  const source = occupancy.value.get(sourceTableId)
+  if (!source) return
+  busy.value = true
+  try {
+    // currentOrder = cíl; zdrojový účet se do něj sloučí a jeho stůl se uvolní.
+    // Backend zdroj nastaví na Cancelled a na cíli resetuje split (rozdělení účtu).
+    currentOrder.value = await ordersApi.merge(currentOrder.value.id, source.id)
+    syncDiscountFromOrder(currentOrder.value) // sleva/spropitné zůstávají na cílovém účtu
+    await refreshOpen() // zdrojový stůl zmizí jako obsazený
+    mergeDialogOpen.value = false
+    toast.success('Účty sloučeny. Rozdělení účtu (split) je potřeba nastavit znovu.')
+  } catch (e) {
+    // 404/409 = zdrojový nebo cílový účet mezitím zaplatil/zrušil jiný terminál.
+    if (e instanceof ApiError && (e.status === 404 || e.status === 409)) {
+      toast.error('Účet mezitím zaplatil nebo zrušil jiný terminál.')
+      await refreshOpen()
+    } else {
+      toast.error('Sloučení účtů selhalo.')
     }
     console.error(e)
   } finally {
@@ -845,6 +880,15 @@ const hasNewItems = computed(() =>
               <ArrowLeftRight class="h-4 w-4" /> Přesunout na jiný stůl
             </Button>
             <Button
+              v-if="otherOccupiedTables.length"
+              variant="ghost"
+              class="mt-2 w-full"
+              :disabled="busy"
+              @click="mergeDialogOpen = true"
+            >
+              <Combine class="h-4 w-4" /> Sloučit s jiným účtem
+            </Button>
+            <Button
               variant="ghost"
               class="mt-2 w-full text-destructive"
               :disabled="busy"
@@ -924,6 +968,39 @@ const hasNewItems = computed(() =>
         </div>
         <DialogFooter>
           <Button type="button" variant="ghost" @click="moveDialogOpen = false">Zrušit</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Sloučit účet — položky z vybraného stolu se přesunou na tento účet, druhý stůl se uvolní. -->
+    <Dialog v-model:open="mergeDialogOpen">
+      <DialogContent class="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Sloučit účet sem</DialogTitle>
+          <DialogDescription>
+            Vyberte stůl, jehož účet se sloučí na „{{ selectedTable?.name }}". Položky se přesunou
+            na tento účet a druhý stůl se uvolní. Rozdělení účtu (split) je potřeba po sloučení
+            nastavit znovu.
+          </DialogDescription>
+        </DialogHeader>
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <Button
+            v-for="t in otherOccupiedTables"
+            :key="t.id"
+            type="button"
+            variant="outline"
+            class="h-auto flex-col py-2"
+            :disabled="busy"
+            @click="mergeOrder(t.id)"
+          >
+            <span class="font-semibold">{{ t.name }}</span>
+            <span class="text-xs text-muted-foreground tabular-nums">{{
+              formatCZK(occupancy.get(t.id)!.total)
+            }}</span>
+          </Button>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="ghost" @click="mergeDialogOpen = false">Zrušit</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

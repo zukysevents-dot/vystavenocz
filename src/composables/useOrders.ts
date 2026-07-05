@@ -52,6 +52,12 @@ export function useOrders() {
   function move(orderId: string, tableId: string): Promise<Order> {
     return http.post<Order>(`/orders/${orderId}/move`, { tableId })
   }
+  // Sloučení dvou otevřených účtů: položky ze zdrojového účtu se přesunou do cílového.
+  // Vrací aktualizovaný CÍLOVÝ účet; zdrojový server nastaví na Cancelled (uvolní stůl).
+  // Sleva/spropitné zůstávají na cílovém účtu, split (rozpad účtu) se ruší — nastavuje se znovu.
+  function merge(targetOrderId: string, sourceOrderId: string): Promise<Order> {
+    return http.post<Order>(`/orders/${targetOrderId}/merge`, { sourceOrderId })
+  }
   // Sleva na účet a spropitné se ukládají průběžně (přežije refresh/přepnutí obsluhy),
   // ne až při platbě — pay() je bere z aktuálního serverového stavu Order.
   function updateDiscount(orderId: string, input: OrderDiscountInput): Promise<Order> {
@@ -77,6 +83,7 @@ export function useOrders() {
     removeItem,
     sendToKitchen,
     move,
+    merge,
     updateDiscount,
     updateSplit,
     pay,

@@ -46,6 +46,19 @@ describe('useOrders — payload položek (note/course)', () => {
     expect(http.post).toHaveBeenCalledWith('/orders/o1/move', { tableId: 't2' })
   })
 
+  it('merge volá POST /orders/{targetId}/merge s tělem { sourceOrderId } (položky jdou ze zdroje do cíle)', async () => {
+    vi.mocked(http.post).mockResolvedValue({} as never)
+    await useOrders().merge('target', 'source')
+    expect(http.post).toHaveBeenCalledWith('/orders/target/merge', { sourceOrderId: 'source' })
+  })
+
+  it('merge vrací aktualizovaný cílový Order z API (se sloučenými položkami)', async () => {
+    const mergedTarget = { id: 'target', status: 'Open', splitGroups: [], items: [{ id: 'i1' }] }
+    vi.mocked(http.post).mockResolvedValue(mergedTarget as never)
+    const result = await useOrders().merge('target', 'source')
+    expect(result).toEqual(mergedTarget)
+  })
+
   it('updateDiscount volá PATCH /orders/{id}/discount s discountPercent a tipAmount', async () => {
     vi.mocked(http.patch).mockResolvedValue({} as never)
     await useOrders().updateDiscount('o1', { discountPercent: 10, tipAmount: 50 })
