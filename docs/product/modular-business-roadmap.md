@@ -100,7 +100,7 @@ Must make the restaurant paperless:
 - advanced stock deduction by recipes, including portions, variants, semi-products, waste, and yield
 - suppliers, purchase receipts, purchase prices, average cost, and price history (foundation: backend PR #156 and `Naskladnění` UI create auditable purchase receipt documents)
 - stock movements: receive, issue, transfer, adjust, write-off, staff meal, breakage, expiration
-- inventory count by warehouse/category/product, with expected vs counted amount
+- inventory count by warehouse/category/product, with expected vs counted amount (foundation: `Zásoby` inventory dialog shows `Stav má být`, `Realita`, and `Rozdíl` before saving)
 - stock mirror for bars and kitchens (V1: ledger-based expected vs variance report via backend PR #154 and `Zásoby` tab)
 - variance report in units and CZK
 - food cost and margin per item

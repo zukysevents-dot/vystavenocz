@@ -65,6 +65,15 @@ interface Row {
   low: boolean
 }
 
+interface StocktakeRow {
+  id: string
+  name: string
+  sku: string
+  expectedQuantity: number
+  countedQuantity: number
+  differenceQuantity: number
+}
+
 const rows = computed<Row[]>(() => {
   const q = search.value.toLowerCase().trim()
   return products.value
@@ -196,24 +205,65 @@ async function submitAction() {
 
 // --- Inventura ---
 const stocktakeOpen = ref(false)
-const counts = ref<Record<string, number>>({})
+const stocktakeSearch = ref('')
+const stocktakeNote = ref('Inventura')
+const counts = ref<Record<string, number | ''>>({})
 
 function openStocktake() {
   counts.value = Object.fromEntries(
     products.value.map((p) => [p.id, levelMap.value.get(p.id) ?? 0]),
   )
+  stocktakeSearch.value = ''
+  stocktakeNote.value = 'Inventura'
   stocktakeOpen.value = true
 }
+
+function normalizeCount(value: number | ''): number {
+  if (value === '') return 0
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : 0
+}
+
+const allStocktakeRows = computed<StocktakeRow[]>(() =>
+  products.value.map((p) => {
+    const expectedQuantity = levelMap.value.get(p.id) ?? 0
+    const countedQuantity = normalizeCount(counts.value[p.id] ?? expectedQuantity)
+    return {
+      id: p.id,
+      name: p.name,
+      sku: p.sku,
+      expectedQuantity,
+      countedQuantity,
+      differenceQuantity: countedQuantity - expectedQuantity,
+    }
+  }),
+)
+
+const stocktakeRows = computed<StocktakeRow[]>(() => {
+  const q = stocktakeSearch.value.toLowerCase().trim()
+  if (!q) return allStocktakeRows.value
+  return allStocktakeRows.value.filter(
+    (r) => r.name.toLowerCase().includes(q) || r.sku.toLowerCase().includes(q),
+  )
+})
+
+const stocktakeChangedRows = computed(() =>
+  allStocktakeRows.value.filter((r) => Math.abs(r.differenceQuantity) > 0.0001),
+)
+
+const stocktakeDifferenceTotal = computed(() =>
+  stocktakeChangedRows.value.reduce((sum, row) => sum + row.differenceQuantity, 0),
+)
 
 async function submitStocktake() {
   const items: StocktakeItemInput[] = products.value.map((p) => ({
     productId: p.id,
-    countedQuantity: Number(counts.value[p.id]) || 0,
+    countedQuantity: normalizeCount(counts.value[p.id] ?? 0),
   }))
   if (!items.length) return toast.error('Žádné produkty k inventuře.')
   busy.value = true
   try {
-    await inv.stocktake(items, null)
+    await inv.stocktake(items, stocktakeNote.value.trim() || null)
     await loadLevels()
     if (movementsLoaded.value) movements.value = await inv.movements()
     if (mirrorLoaded.value) await loadMirror()
@@ -508,35 +558,115 @@ async function submitStocktake() {
 
     <!-- Dialog inventura -->
     <Dialog v-model:open="stocktakeOpen">
-      <DialogContent class="max-h-[90vh] max-w-lg overflow-y-auto">
+      <DialogContent class="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Inventura</DialogTitle>
           <DialogDescription>
-            Zadejte fyzicky napočítané množství. Rozdíly se srovnají korekčním pohybem.
+            Zadejte fyzicky napočítané množství. Systém uloží realitu a rozdíl promítne do
+            skladového zrcadla.
           </DialogDescription>
         </DialogHeader>
-        <div class="space-y-2">
-          <div
-            v-for="p in products"
-            :key="p.id"
-            class="flex items-center justify-between gap-3 border-b border-border py-2 last:border-0"
-          >
-            <div class="min-w-0">
-              <div class="truncate text-sm font-medium">{{ p.name }}</div>
-              <div class="text-xs text-muted-foreground">
-                evidováno {{ fmtQty(levelMap.get(p.id) ?? 0) }}
-              </div>
-            </div>
+
+        <div class="grid gap-3 sm:grid-cols-[1fr_220px]">
+          <div class="relative">
+            <Search
+              class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            />
             <Input
-              v-model.number="counts[p.id]"
-              type="number"
-              step="any"
-              :min="0"
-              class="w-24 text-right"
+              v-model="stocktakeSearch"
+              class="pl-9"
+              placeholder="Hledat položku pro počítání"
             />
           </div>
+          <Input v-model="stocktakeNote" placeholder="Poznámka k inventuře" />
         </div>
+
+        <div
+          class="grid gap-2 rounded-lg border border-border bg-muted/30 p-3 text-sm sm:grid-cols-3"
+        >
+          <div>
+            <div class="text-xs text-muted-foreground">Položek</div>
+            <div class="font-semibold tabular-nums">{{ allStocktakeRows.length }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-muted-foreground">Rozdílů</div>
+            <div class="font-semibold tabular-nums">{{ stocktakeChangedRows.length }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-muted-foreground">Rozdíl celkem</div>
+            <div
+              class="font-semibold tabular-nums"
+              :class="
+                stocktakeDifferenceTotal > 0
+                  ? 'text-success'
+                  : stocktakeDifferenceTotal < 0
+                    ? 'text-destructive'
+                    : ''
+              "
+            >
+              {{ fmtSigned(stocktakeDifferenceTotal) }}
+            </div>
+          </div>
+        </div>
+
+        <div class="overflow-hidden rounded-lg border border-border">
+          <div
+            class="hidden grid-cols-[minmax(0,1.4fr)_110px_130px_110px] gap-3 border-b border-border bg-muted/40 px-3 py-2 text-xs font-semibold uppercase text-muted-foreground sm:grid"
+          >
+            <span>Produkt</span>
+            <span class="text-right">Stav má být</span>
+            <span class="text-right">Realita</span>
+            <span class="text-right">Rozdíl</span>
+          </div>
+          <div v-if="!stocktakeRows.length" class="p-8 text-center text-sm text-muted-foreground">
+            Žádná položka neodpovídá hledání.
+          </div>
+          <div
+            v-for="row in stocktakeRows"
+            :key="row.id"
+            class="grid gap-3 border-b border-border px-3 py-3 text-sm last:border-0 sm:grid-cols-[minmax(0,1.4fr)_110px_130px_110px] sm:items-center"
+          >
+            <div class="min-w-0">
+              <div class="truncate font-medium">{{ row.name }}</div>
+              <div class="text-xs text-muted-foreground">{{ row.sku }}</div>
+            </div>
+            <div class="flex items-center justify-between gap-3 sm:block sm:text-right">
+              <span class="text-xs text-muted-foreground sm:hidden">Stav má být</span>
+              <span class="font-semibold tabular-nums">{{ fmtQty(row.expectedQuantity) }}</span>
+            </div>
+            <label class="space-y-1 text-xs font-medium text-muted-foreground sm:text-right">
+              <span class="sm:hidden">Realita</span>
+              <Input
+                v-model.number="counts[row.id]"
+                type="number"
+                step="any"
+                :min="0"
+                class="text-right"
+                aria-label="Napočítaná realita"
+              />
+            </label>
+            <div class="flex items-center justify-between gap-3 sm:block sm:text-right">
+              <span class="text-xs text-muted-foreground sm:hidden">Rozdíl</span>
+              <span
+                class="font-semibold tabular-nums"
+                :class="
+                  row.differenceQuantity > 0
+                    ? 'text-success'
+                    : row.differenceQuantity < 0
+                      ? 'text-destructive'
+                      : 'text-muted-foreground'
+                "
+              >
+                {{ fmtSigned(row.differenceQuantity) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
         <DialogFooter>
+          <span class="mr-auto text-xs text-muted-foreground">
+            Uloží se celá inventura, nejen filtrované řádky.
+          </span>
           <Button type="button" variant="ghost" @click="stocktakeOpen = false">Zrušit</Button>
           <Button variant="coral" :disabled="busy" @click="submitStocktake">
             <Loader2 v-if="busy" class="h-4 w-4 animate-spin" /> Uložit inventuru
