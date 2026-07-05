@@ -1,5 +1,6 @@
 import { ApiError, http } from '@/lib/http'
 import type { DayCloseResponse } from '@/lib/types'
+import type { PagedResult } from '@/composables/useApi'
 
 /**
  * Zavření obchodního dne + Z-report (Fáze 2). API-only — day-close existuje jen proti
@@ -17,6 +18,13 @@ export interface CloseDayPayload {
   cashOpening?: number | null
   cashCountedClosing?: number | null
   cashDrop?: number | null
+}
+
+/** Query pro GET /day-close — uzavřené Z-reporty v rozsahu. */
+export interface DayCloseListParams {
+  from?: string // 'YYYY-MM-DD'
+  to?: string // 'YYYY-MM-DD'
+  locationId?: string
 }
 
 /** Chyba zavření dne se srozumitelnou (českou) hláškou a HTTP statusem pro UI logiku. */
@@ -47,6 +55,21 @@ function toDayCloseError(e: unknown): DayCloseError {
 }
 
 export function useDayClose() {
+  /** Uzavřené Z-reporty v rozsahu. GET /day-close?from=…&to=…&locationId=… */
+  async function listDayCloses(params: DayCloseListParams): Promise<DayCloseResponse[]> {
+    const pageSize = 100
+    const first = await fetchDayClosePage(params, 1, pageSize)
+    const all = [...first.items]
+    const totalPages = Math.ceil(first.total / pageSize)
+
+    for (let page = 2; page <= totalPages; page++) {
+      const next = await fetchDayClosePage(params, page, pageSize)
+      all.push(...next.items)
+    }
+
+    return all
+  }
+
   /** Stav dne pro pobočku. GET /day-close/{date}?locationId=… */
   function getDayClose(date: string, locationId: string): Promise<DayCloseResponse> {
     return http
@@ -63,5 +86,24 @@ export function useDayClose() {
     })
   }
 
-  return { getDayClose, closeDay }
+  return { listDayCloses, getDayClose, closeDay }
+}
+
+function fetchDayClosePage(
+  params: DayCloseListParams,
+  page: number,
+  pageSize: number,
+): Promise<PagedResult<DayCloseResponse>> {
+  const qs = new URLSearchParams({
+    page: String(page),
+    pageSize: String(pageSize),
+    sort: 'date',
+  })
+  if (params.from) qs.set('from', params.from)
+  if (params.to) qs.set('to', params.to)
+  if (params.locationId) qs.set('locationId', params.locationId)
+
+  return http.get<PagedResult<DayCloseResponse>>(`/day-close?${qs.toString()}`).catch((e) => {
+    throw toDayCloseError(e)
+  })
 }

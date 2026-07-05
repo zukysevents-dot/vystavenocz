@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { buildDayCloseAccountingRows, DAY_CLOSE_ACCOUNTING_COLUMNS } from '@/lib/day-close-export'
+import {
+  buildDayCloseAccountingRows,
+  buildDayCloseAccountingRowsForReports,
+  DAY_CLOSE_ACCOUNTING_COLUMNS,
+} from '@/lib/day-close-export'
 import type { DayCloseResponse } from '@/lib/types'
 
 const CLOSED_REPORT: DayCloseResponse = {
@@ -118,5 +122,18 @@ describe('day-close accounting export', () => {
       'CZK',
       '',
     ])
+  })
+
+  it('sestaví účetní řádky pro více Z-reportů', () => {
+    const rows = buildDayCloseAccountingRowsForReports(
+      [
+        CLOSED_REPORT,
+        { ...CLOSED_REPORT, date: '2026-07-06', locationId: 'loc-2', zReportNumber: 13 },
+      ],
+      (locationId) => (locationId === 'loc-1' ? 'Bistro Praha' : 'Bar zahrada'),
+    )
+
+    expect(rows.some((r) => r[0] === '2026-07-05' && r[1] === 'Bistro Praha')).toBe(true)
+    expect(rows.some((r) => r[0] === '2026-07-06' && r[1] === 'Bar zahrada')).toBe(true)
   })
 })

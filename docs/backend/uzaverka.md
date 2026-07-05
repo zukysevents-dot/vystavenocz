@@ -96,6 +96,12 @@ UNIQUE(businessDate, locationId)
 Stav dne + zafixovaná čísla, pokud zavřeno. Když ještě ne: `{ status: 'Open', date, locationId }`.
 FE podle `status` ukáže buď tlačítko „Zavřít den", nebo hotový Z-report.
 
+### `GET /day-close?from=<YYYY-MM-DD>&to=<YYYY-MM-DD>&locationId=<uuid>&page=&pageSize=&sort=`
+
+Stránkovaný seznam pouze uzavřených Z-reportů pro účetní a měsíční export. FE používá rozsah podle
+vybraného měsíce a provozovny na stránce `Uzávěrka`. Backend respektuje tenant i location scope:
+scoped uživatel bez filtru vidí jen svoji provozovnu, cizí `locationId` vrací 403.
+
 ### `POST /day-close`
 
 ```jsonc
@@ -113,8 +119,8 @@ vč. `zReportNumber` a všech zafixovaných čísel. Autorizace: role Owner/Mana
 
 ### Z-report tisk/export
 
-CSV/PDF udělá FE z dat `GET /day-close/{date}` (projekt už umí CSV export + print CSS). Serverový PDF
-jen pokud chceš archivaci na BE.
+CSV/PDF udělá FE z dat `GET /day-close/{date}` a měsíční účetní CSV z `GET /day-close?from=&to=`.
+Serverový PDF jen pokud chceš archivaci na BE.
 
 ---
 
