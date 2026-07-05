@@ -441,7 +441,44 @@ export interface StockMovement {
   note: string | null
   relatedSaleId: string | null
   relatedStocktakeId: string | null
+  relatedPurchaseReceiptId: string | null
   createdAt: string
+}
+
+export interface PurchaseReceiptItem {
+  productId: string
+  productName: string
+  productSku: string
+  quantity: number
+  unitCost: number | null
+  lineCost: number | null
+}
+
+export interface PurchaseReceipt {
+  id: string
+  locationId: string | null
+  supplierName: string | null
+  documentNumber: string | null
+  receivedOn: string
+  note: string | null
+  totalCost: number | null
+  createdAt: string
+  items: PurchaseReceiptItem[]
+}
+
+export interface PurchaseReceiptItemInput {
+  productId: string
+  quantity: number
+  unitCost?: number | null
+}
+
+export interface CreatePurchaseReceiptRequest {
+  supplierName: string | null
+  documentNumber: string | null
+  receivedOn: string | null
+  note: string | null
+  locationId: string | null
+  items: PurchaseReceiptItemInput[]
 }
 
 export interface StockMirrorItem {
