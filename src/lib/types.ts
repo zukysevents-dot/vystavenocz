@@ -431,6 +431,8 @@ export type StockMovementType =
   | 'Sale'
   | 'StornoSale'
   | 'Stocktaking'
+  | 'TransferOut'
+  | 'TransferIn'
 
 export interface StockLevel {
   productId: string

@@ -33,4 +33,18 @@ describe('useInventory', () => {
       '/inventory/stock-mirror?from=2026-07-01&to=2026-07-05&locationId=loc-1&search=k%C3%A1va',
     )
   })
+
+  it('transfer pošle přesun mezi pobočkami na backend', async () => {
+    vi.mocked(http.post).mockResolvedValue([] as never)
+
+    await useInventory().transfer('prod-1', 3, 'bar-1', 'kitchen-1', 'doplnění kuchyně')
+
+    expect(http.post).toHaveBeenCalledWith('/inventory/transfers', {
+      productId: 'prod-1',
+      quantity: 3,
+      fromLocationId: 'bar-1',
+      toLocationId: 'kitchen-1',
+      note: 'doplnění kuchyně',
+    })
+  })
 })

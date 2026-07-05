@@ -51,6 +51,21 @@ export function useInventory() {
   function correct(productId: string, delta: number, note: string): Promise<unknown> {
     return http.post('/inventory/corrections', { productId, delta, note })
   }
+  function transfer(
+    productId: string,
+    quantity: number,
+    fromLocationId: string,
+    toLocationId: string,
+    note: string | null,
+  ): Promise<StockMovement[]> {
+    return http.post('/inventory/transfers', {
+      productId,
+      quantity,
+      fromLocationId,
+      toLocationId,
+      note,
+    })
+  }
   function stocktake(items: StocktakeItemInput[], note: string | null): Promise<unknown> {
     return http.post('/inventory/stocktake', { items, note })
   }
@@ -71,6 +86,7 @@ export function useInventory() {
     createPurchaseReceipt,
     issue,
     correct,
+    transfer,
     stocktake,
     stockMirror,
   }
