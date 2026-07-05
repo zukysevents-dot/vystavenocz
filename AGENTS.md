@@ -30,6 +30,8 @@ Nákupní příjemky: backend PR #156 přidává `POST/GET /api/v1/inventory/pur
 
 Uzávěrka: zavřený den na stránce `Uzávěrka` nabízí běžný čitelný CSV export Z-reportu i účetní CSV export (`src/lib/day-close-export.ts`) se stabilními sloupci pro DPH, platby, spropitné, slevy/storna, prodané produkty a hotovostní rozdíl. Tlačítko `Export měsíc účetní CSV` používá backend `GET /api/v1/day-close?from=&to=&locationId=` a stáhne všechny uzavřené Z-reporty z vybraného měsíce/provozovny do jednoho účetního souboru.
 
+Restaurace / sloučení účtů: `src/pages/RestauracePage.vue` řídí mapu stolů a otevřené účty přes `src/composables/useOrders.ts` (bez Pinia store — zdroj pravdy je backend, po každé akci se volá `refreshOpen()`). Sloučení účtů (backend PR #165) volá `POST /orders/{targetOrderId}/merge` s `{ sourceOrderId }`: položky ze zdrojového účtu se přesunou do cílového (`currentOrder`), zdroj backend nastaví na `Cancelled` a jeho stůl se uvolní, sleva/spropitné zůstávají na cíli a split (rozdělení účtu) se resetuje, takže ho obsluha po sloučení nastavuje znovu (success hláška to explicitně říká). Dialog „Sloučit s jiným účtem" nabízí jako zdroj jen ostatní obsazené stoly aktuálního patra.
+
 ## Dva repozitáře, jeden produkt
 
 - **`vystavenocz`** (tento) — frontend (Vue).
