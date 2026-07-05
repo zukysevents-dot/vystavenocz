@@ -32,6 +32,7 @@ import {
   Upload,
   Menu,
   X,
+  History,
 } from 'lucide-vue-next'
 import SiteLogo from '@/components/SiteLogo.vue'
 import { Button } from '@/components/ui/button'
@@ -51,6 +52,7 @@ const navIcons = {
   '/app/dochazka': Clock,
   '/app/smeny': CalendarClock,
   '/app/pobocky': Building2,
+  '/app/audit': History,
   '/app/konsolidace': BarChart3,
   '/app/uzaverka': Receipt,
   '/app/rezervace': CalendarDays,
