@@ -90,7 +90,7 @@ Must support a real service day:
 - day close with Z-report, receipts, sales, payment methods, VAT, storno, discounts, and sold products
 - basic stock item linking so selected sales create stock movements
 - role restrictions for dangerous actions
-- audit log for storno, discounts, price changes, day close, and cash corrections (foundation: backend PR #169 writes append-only audit rows for sale storno, open gastro order discount/tip changes, and day close/Z-report; backend PR #170 adds product sale/purchase price and VAT changes; cash pay-ins/pay-outs/drop/difference are covered through the audited day-close cash fields)
+- audit log for storno, discounts, price changes, day close, and cash corrections (foundation: backend PR #169 writes append-only audit rows for sale storno, open gastro order discount/tip changes, and day close/Z-report; backend PR #170 adds product sale/purchase price and VAT changes; `/app/audit` shows the paged audit log to Owner/Admin; cash pay-ins/pay-outs/drop/difference are covered through the audited day-close cash fields)
 
 ### Gastro V1
 

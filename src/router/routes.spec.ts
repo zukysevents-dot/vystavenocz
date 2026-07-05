@@ -8,4 +8,11 @@ describe('app routes — role gates', () => {
     expect(route?.meta.requiresRole).toEqual(['Owner', 'Admin', 'Manager'])
     expect(route?.meta.requiresModule).toBe('reporting')
   })
+
+  it('keeps Audit route aligned with backend company.manage permission', () => {
+    const route = router.getRoutes().find((r) => r.name === 'app-audit')
+
+    expect(route?.meta.requiresRole).toEqual(['Owner', 'Admin'])
+    expect(route?.meta.requiresModule).toBe('core')
+  })
 })

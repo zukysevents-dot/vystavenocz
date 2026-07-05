@@ -317,6 +317,18 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/app/audit',
+    name: 'app-audit',
+    component: () => import('@/pages/AuditPage.vue'),
+    meta: {
+      title: 'Audit',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'core',
+      requiresRole: ['Owner', 'Admin'],
+    },
+  },
+  {
     path: '/app/rezervace',
     name: 'app-rezervace',
     component: () => import('@/pages/RezervacePage.vue'),
