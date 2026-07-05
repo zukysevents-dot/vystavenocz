@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { ChefHat, Clock, Check, UtensilsCrossed, Printer, Wine, Flame } from 'lucide-vue-next'
+import {
+  ChefHat,
+  Clock,
+  Check,
+  UtensilsCrossed,
+  Printer,
+  Wine,
+  Flame,
+  History,
+  ListChecks,
+} from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { useKitchen } from '@/composables/useKitchen'
 import { isApiMode } from '@/lib/http'
@@ -14,6 +24,7 @@ const apiMode = isApiMode()
 const items = ref<KitchenQueueItem[]>([])
 const loadError = ref(false)
 const station = ref<CategoryKitchenSection>('None') // 'None' = vše
+const mode = ref<'live' | 'history'>('live')
 const now = ref(Date.now())
 const busy = ref(false)
 let timer: ReturnType<typeof setInterval> | null = null
@@ -38,6 +49,7 @@ interface Ticket {
   customerName: string | null
   fulfillment: KitchenQueueItem['fulfillment']
   sentAt: string | null
+  statusUpdatedAt: string | null
   items: KitchenQueueItem[]
   ready: boolean
   preparing: boolean
@@ -57,25 +69,38 @@ const tickets = computed<Ticket[]>(() => {
         customerName: it.customerName ?? null,
         fulfillment: it.fulfillment ?? null,
         sentAt: it.sentToKitchenAt,
+        statusUpdatedAt: it.kitchenStatusUpdatedAt,
         items: [],
-        ready: true,
+        ready: mode.value === 'history',
         preparing: false,
       }
       map.set(key, t)
     }
     t.items.push(it)
-    if (it.kitchenStatus !== 'Ready') t.ready = false
+    if (mode.value === 'live' && it.kitchenStatus !== 'Ready') t.ready = false
     if (it.kitchenStatus === 'Preparing') t.preparing = true
     if (it.sentToKitchenAt && (!t.sentAt || it.sentToKitchenAt < t.sentAt))
       t.sentAt = it.sentToKitchenAt
+    if (
+      it.kitchenStatusUpdatedAt &&
+      (!t.statusUpdatedAt || it.kitchenStatusUpdatedAt > t.statusUpdatedAt)
+    )
+      t.statusUpdatedAt = it.kitchenStatusUpdatedAt
   }
-  return [...map.values()].sort((a, b) => (a.sentAt ?? '').localeCompare(b.sentAt ?? ''))
+  return [...map.values()].sort((a, b) =>
+    mode.value === 'history'
+      ? (b.statusUpdatedAt ?? '').localeCompare(a.statusUpdatedAt ?? '')
+      : (a.sentAt ?? '').localeCompare(b.sentAt ?? ''),
+  )
 })
 
 async function refresh() {
   if (!apiMode) return
   try {
-    items.value = await kitchen.queue(station.value)
+    items.value =
+      mode.value === 'history'
+        ? await kitchen.history(station.value)
+        : await kitchen.queue(station.value)
     now.value = Date.now()
     loadError.value = false
   } catch (e) {
@@ -86,7 +111,7 @@ async function refresh() {
 }
 
 async function setAll(t: Ticket, status: 'Preparing' | 'Ready' | 'Served') {
-  if (busy.value) return
+  if (busy.value || mode.value === 'history') return
   busy.value = true
   try {
     const targets =
@@ -111,7 +136,18 @@ function minutesSince(iso: string | null): number {
   return Math.max(0, Math.floor((now.value - new Date(iso).getTime()) / 60000))
 }
 
+function minutesBetween(from: string | null, to: string | null): number | null {
+  if (!from || !to) return null
+  return Math.max(0, Math.floor((new Date(to).getTime() - new Date(from).getTime()) / 60000))
+}
+
+function formatShortTime(iso: string | null): string {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })
+}
+
 function slaClass(t: Ticket): string {
+  if (mode.value === 'history') return 'bg-success/10 text-success'
   const minutes = minutesSince(t.sentAt)
   const warn = t.section === 'Bar' ? 6 : 12
   const late = t.section === 'Bar' ? 10 : 20
@@ -127,10 +163,11 @@ function ticketTitle(t: Ticket): string {
 }
 
 function ticketSubtitle(t: Ticket): string {
-  if (t.tableName) return SECTION_LABEL[t.section]
-  if (t.fulfillment === 'delivery') return `${SECTION_LABEL[t.section]} - rozvoz`
-  if (t.fulfillment === 'pickup') return `${SECTION_LABEL[t.section]} - vyzvednutí`
-  return SECTION_LABEL[t.section]
+  const suffix = mode.value === 'history' ? ' - vydáno' : ''
+  if (t.tableName) return `${SECTION_LABEL[t.section]}${suffix}`
+  if (t.fulfillment === 'delivery') return `${SECTION_LABEL[t.section]} - rozvoz${suffix}`
+  if (t.fulfillment === 'pickup') return `${SECTION_LABEL[t.section]} - vyzvednutí${suffix}`
+  return `${SECTION_LABEL[t.section]}${suffix}`
 }
 
 function printTicket(t: Ticket) {
@@ -181,12 +218,18 @@ function escapeHtml(s: string): string {
   })
 }
 
-watch(station, refresh)
+watch([station, mode], refresh)
 
 onMounted(() => {
   if (!apiMode) return
   refresh()
-  timer = setInterval(refresh, 5000)
+  timer = setInterval(() => {
+    if (mode.value === 'live') {
+      refresh()
+    } else {
+      now.value = Date.now()
+    }
+  }, 5000)
 })
 onUnmounted(() => {
   if (timer) clearInterval(timer)
@@ -211,7 +254,33 @@ onUnmounted(() => {
             Objednávky z účtů. Po odeslání číšníkem sem „vyjede" lísteček.
           </p>
         </div>
-        <div class="flex gap-2">
+        <div class="flex flex-wrap justify-end gap-2">
+          <div class="flex gap-1 rounded-lg bg-muted p-1">
+            <button
+              type="button"
+              class="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+              :class="
+                mode === 'live'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              "
+              @click="mode = 'live'"
+            >
+              <ListChecks class="h-4 w-4" /> Živé
+            </button>
+            <button
+              type="button"
+              class="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+              :class="
+                mode === 'history'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              "
+              @click="mode = 'history'"
+            >
+              <History class="h-4 w-4" /> Historie
+            </button>
+          </div>
           <button
             v-for="s in STATIONS"
             :key="s.value"
@@ -240,8 +309,16 @@ onUnmounted(() => {
         class="flex flex-col items-center rounded-2xl border border-border bg-card p-12 text-center text-muted-foreground"
       >
         <UtensilsCrossed class="h-10 w-10" />
-        <p class="mt-3 font-semibold text-foreground">Žádné bony</p>
-        <p class="mt-1 text-sm">Nové objednávky se tu objeví automaticky.</p>
+        <p class="mt-3 font-semibold text-foreground">
+          {{ mode === 'history' ? 'Žádná historie' : 'Žádné bony' }}
+        </p>
+        <p class="mt-1 text-sm">
+          {{
+            mode === 'history'
+              ? 'Vydané bony za posledních 24 hodin se zobrazí tady.'
+              : 'Nové objednávky se tu objeví automaticky.'
+          }}
+        </p>
       </div>
 
       <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -269,7 +346,12 @@ onUnmounted(() => {
               class="flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold"
               :class="slaClass(t)"
             >
-              <Clock class="h-3 w-3" /> {{ minutesSince(t.sentAt) }}′
+              <Clock class="h-3 w-3" />
+              {{
+                mode === 'history'
+                  ? `${minutesSince(t.statusUpdatedAt)}′`
+                  : `${minutesSince(t.sentAt)}′`
+              }}
             </span>
           </div>
 
@@ -285,37 +367,55 @@ onUnmounted(() => {
             </li>
           </ul>
 
+          <div
+            v-if="mode === 'history'"
+            class="mb-2 rounded-lg bg-muted/60 px-2 py-1.5 text-[11px] text-muted-foreground"
+          >
+            <span>Odesláno {{ formatShortTime(t.sentAt) }}</span>
+            <span class="px-1">•</span>
+            <span>Vydáno {{ formatShortTime(t.statusUpdatedAt) }}</span>
+            <span v-if="minutesBetween(t.sentAt, t.statusUpdatedAt) !== null" class="px-1">•</span>
+            <span v-if="minutesBetween(t.sentAt, t.statusUpdatedAt) !== null">
+              {{ minutesBetween(t.sentAt, t.statusUpdatedAt) }} min
+            </span>
+          </div>
+
           <div class="flex gap-2">
             <Button variant="ghost" size="icon" title="Tisk bonu" @click="printTicket(t)">
               <Printer class="h-4 w-4" />
             </Button>
-            <Button
-              v-if="!t.preparing && !t.ready"
-              variant="outline"
-              class="flex-1"
-              :disabled="busy"
-              @click="setAll(t, 'Preparing')"
-            >
-              <Flame class="h-4 w-4" /> Připravit
+            <Button v-if="mode === 'history'" variant="outline" class="flex-1" disabled>
+              <Check class="h-4 w-4" /> Vydáno
             </Button>
-            <Button
-              v-if="t.preparing && !t.ready"
-              variant="outline"
-              class="flex-1"
-              :disabled="busy"
-              @click="setAll(t, 'Ready')"
-            >
-              <Check class="h-4 w-4" /> Hotovo
-            </Button>
-            <Button
-              v-else
-              variant="coral"
-              class="flex-1"
-              :disabled="busy"
-              @click="setAll(t, 'Served')"
-            >
-              <Check class="h-4 w-4" /> Vydat
-            </Button>
+            <template v-else>
+              <Button
+                v-if="!t.preparing && !t.ready"
+                variant="outline"
+                class="flex-1"
+                :disabled="busy"
+                @click="setAll(t, 'Preparing')"
+              >
+                <Flame class="h-4 w-4" /> Připravit
+              </Button>
+              <Button
+                v-else-if="t.preparing && !t.ready"
+                variant="outline"
+                class="flex-1"
+                :disabled="busy"
+                @click="setAll(t, 'Ready')"
+              >
+                <Check class="h-4 w-4" /> Hotovo
+              </Button>
+              <Button
+                v-else
+                variant="coral"
+                class="flex-1"
+                :disabled="busy"
+                @click="setAll(t, 'Served')"
+              >
+                <Check class="h-4 w-4" /> Vydat
+              </Button>
+            </template>
           </div>
         </div>
       </div>
