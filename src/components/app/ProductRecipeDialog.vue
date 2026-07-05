@@ -54,6 +54,14 @@ const estimatedCost = computed(() =>
     return sum + (Number(product?.purchasePrice) || 0) * (Number(row.quantity) || 0)
   }, 0),
 )
+const salePrice = computed(() => Number(props.product?.salePrice) || 0)
+const grossMargin = computed(() => salePrice.value - estimatedCost.value)
+const grossMarginPercent = computed(() =>
+  salePrice.value === 0 ? 0 : (grossMargin.value / salePrice.value) * 100,
+)
+const foodCostPercent = computed(() =>
+  salePrice.value === 0 ? 0 : (estimatedCost.value / salePrice.value) * 100,
+)
 
 function setOpen(open: boolean) {
   emit('update:open', open)
@@ -83,6 +91,13 @@ function productLabel(productId: string): string {
 function lineCost(row: RecipeRow): number {
   const product = props.products.find((p) => p.id === row.productId)
   return (Number(product?.purchasePrice) || 0) * (Number(row.quantity) || 0)
+}
+
+function formatPercent(value: number): string {
+  return `${new Intl.NumberFormat('cs-CZ', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)} %`
 }
 
 async function loadRecipe() {
@@ -276,10 +291,35 @@ watch(
           <Button type="button" variant="outline" @click="addIngredient">
             <Plus class="h-4 w-4" /> Přidat surovinu
           </Button>
-          <div class="text-right">
-            <div class="text-sm text-muted-foreground">Odhad nákladů</div>
-            <div class="text-xl font-semibold tabular-nums">
-              {{ formatCZK(estimatedCost) }}
+          <div
+            class="grid w-full grid-cols-2 gap-3 rounded-lg border border-border p-3 text-right sm:w-auto sm:min-w-[34rem] sm:grid-cols-4"
+          >
+            <div>
+              <div class="text-sm text-muted-foreground">Náklady</div>
+              <div class="text-lg font-semibold tabular-nums">
+                {{ formatCZK(estimatedCost) }}
+              </div>
+            </div>
+            <div>
+              <div class="text-sm text-muted-foreground">Prodej</div>
+              <div class="text-lg font-semibold tabular-nums">
+                {{ formatCZK(salePrice) }}
+              </div>
+            </div>
+            <div>
+              <div class="text-sm text-muted-foreground">Marže</div>
+              <div class="text-lg font-semibold tabular-nums">
+                {{ formatCZK(grossMargin) }}
+              </div>
+              <div class="text-xs text-muted-foreground tabular-nums">
+                {{ formatPercent(grossMarginPercent) }}
+              </div>
+            </div>
+            <div>
+              <div class="text-sm text-muted-foreground">Food cost</div>
+              <div class="text-lg font-semibold tabular-nums">
+                {{ formatPercent(foodCostPercent) }}
+              </div>
             </div>
           </div>
         </div>
