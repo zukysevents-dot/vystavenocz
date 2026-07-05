@@ -79,7 +79,11 @@ const hasCashClose = computed(
   () =>
     zReport.value != null &&
     (zReport.value.cashOpening != null ||
+      zReport.value.cashPayIns != null ||
+      zReport.value.cashPayOuts != null ||
       zReport.value.cashCountedClosing != null ||
+      zReport.value.cashDrop != null ||
+      zReport.value.cashDifference != null ||
       zReport.value.cashExpectedClosing != null),
 )
 
@@ -108,11 +112,15 @@ const closeOpen = ref(false)
 const closing = ref(false)
 // Volitelná hotovostní uzávěrka (prázdné pole = null, neposílá se).
 const cashOpening = ref<string>('')
+const cashPayIns = ref<string>('')
+const cashPayOuts = ref<string>('')
 const cashCounted = ref<string>('')
 const cashDrop = ref<string>('')
 
 function askClose(): void {
   cashOpening.value = ''
+  cashPayIns.value = ''
+  cashPayOuts.value = ''
   cashCounted.value = ''
   cashDrop.value = ''
   closeOpen.value = true
@@ -132,6 +140,8 @@ async function confirmClose(): Promise<void> {
     date,
     locationId,
     cashOpening: toNum(cashOpening.value),
+    cashPayIns: toNum(cashPayIns.value),
+    cashPayOuts: toNum(cashPayOuts.value),
     cashCountedClosing: toNum(cashCounted.value),
     cashDrop: toNum(cashDrop.value),
   }
@@ -189,6 +199,8 @@ function exportZReport(): void {
   }
   if (hasCashClose.value) {
     rows.push(['Počáteční hotovost', z.cashOpening ?? 0])
+    rows.push(['Vklady do pokladny', z.cashPayIns ?? 0])
+    rows.push(['Výběry z pokladny', z.cashPayOuts ?? 0])
     rows.push(['Spočítaná hotovost', z.cashCountedClosing ?? 0])
     rows.push(['Odvod hotovosti', z.cashDrop ?? 0])
     rows.push(['Očekávaná hotovost', z.cashExpectedClosing ?? 0])
@@ -525,6 +537,14 @@ watch([selectedDate, selectedLocationId], () => {
             <div class="mt-1 text-xl font-bold">{{ formatCZK(zReport.cashOpening ?? 0) }}</div>
           </div>
           <div class="rounded-xl border border-border bg-card p-4">
+            <div class="text-sm text-muted-foreground">Vklady do pokladny</div>
+            <div class="mt-1 text-xl font-bold">{{ formatCZK(zReport.cashPayIns ?? 0) }}</div>
+          </div>
+          <div class="rounded-xl border border-border bg-card p-4">
+            <div class="text-sm text-muted-foreground">Výběry z pokladny</div>
+            <div class="mt-1 text-xl font-bold">{{ formatCZK(zReport.cashPayOuts ?? 0) }}</div>
+          </div>
+          <div class="rounded-xl border border-border bg-card p-4">
             <div class="text-sm text-muted-foreground">Očekávaná hotovost</div>
             <div class="mt-1 text-xl font-bold">
               {{ formatCZK(zReport.cashExpectedClosing ?? 0) }}
@@ -795,6 +815,14 @@ watch([selectedDate, selectedLocationId], () => {
           <div class="grid gap-1.5">
             <Label for="cash-opening">Počáteční hotovost (Kč)</Label>
             <Input id="cash-opening" v-model="cashOpening" inputmode="decimal" placeholder="0" />
+          </div>
+          <div class="grid gap-1.5">
+            <Label for="cash-pay-ins">Vklady do pokladny (Kč)</Label>
+            <Input id="cash-pay-ins" v-model="cashPayIns" inputmode="decimal" placeholder="0" />
+          </div>
+          <div class="grid gap-1.5">
+            <Label for="cash-pay-outs">Výběry z pokladny (Kč)</Label>
+            <Input id="cash-pay-outs" v-model="cashPayOuts" inputmode="decimal" placeholder="0" />
           </div>
           <div class="grid gap-1.5">
             <Label for="cash-counted">Spočítaná hotovost v pokladně (Kč)</Label>

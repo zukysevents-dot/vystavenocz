@@ -18,6 +18,8 @@ export interface CloseDayPayload {
   cashOpening?: number | null
   cashCountedClosing?: number | null
   cashDrop?: number | null
+  cashPayIns?: number | null
+  cashPayOuts?: number | null
 }
 
 /** Query pro GET /day-close — uzavřené Z-reporty v rozsahu. */

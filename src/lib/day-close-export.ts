@@ -129,6 +129,8 @@ export function buildDayCloseAccountingRows(
 
   if (
     z.cashOpening != null ||
+    z.cashPayIns != null ||
+    z.cashPayOuts != null ||
     z.cashCountedClosing != null ||
     z.cashExpectedClosing != null ||
     z.cashDrop != null ||
@@ -145,6 +147,32 @@ export function buildDayCloseAccountingRows(
         null,
         null,
         amount(z.cashOpening),
+      ),
+    )
+    rows.push(
+      row(
+        z,
+        locationName,
+        'Hotovostní uzávěrka',
+        'Vklady do pokladny',
+        null,
+        null,
+        null,
+        null,
+        amount(z.cashPayIns),
+      ),
+    )
+    rows.push(
+      row(
+        z,
+        locationName,
+        'Hotovostní uzávěrka',
+        'Výběry z pokladny',
+        null,
+        null,
+        null,
+        null,
+        amount(z.cashPayOuts),
       ),
     )
     rows.push(

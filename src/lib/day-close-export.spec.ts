@@ -25,6 +25,8 @@ const CLOSED_REPORT: DayCloseResponse = {
   vatBreakdown: [{ vatRate: 21, net: 1000, vat: 210, gross: 1210 }],
   productBreakdown: [{ productId: 'prod-1', name: 'Espresso', quantity: 2, revenueGross: 120 }],
   cashOpening: 1000,
+  cashPayIns: 200,
+  cashPayOuts: 50,
   cashExpectedClosing: 1500,
   cashCountedClosing: 1490,
   cashDrop: 400,
@@ -107,6 +109,34 @@ describe('day-close accounting export', () => {
       120,
       'CZK',
       'prod-1',
+    ])
+    expect(rows).toContainEqual([
+      '2026-07-05',
+      'Bistro Praha',
+      12,
+      'Hotovostní uzávěrka',
+      'Vklady do pokladny',
+      '',
+      '',
+      '',
+      '',
+      200,
+      'CZK',
+      '',
+    ])
+    expect(rows).toContainEqual([
+      '2026-07-05',
+      'Bistro Praha',
+      12,
+      'Hotovostní uzávěrka',
+      'Výběry z pokladny',
+      '',
+      '',
+      '',
+      '',
+      50,
+      'CZK',
+      '',
     ])
     expect(rows).toContainEqual([
       '2026-07-05',
