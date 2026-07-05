@@ -1,0 +1,87 @@
+// Provozní přehled (manažerská analytika prodejů) — kontrakt s backend endpointy
+// GET /api/v1/pos-reports/summary a /revenue. Tvary sedí s PosSalesSummaryResponse / PosRevenueResponse.
+
+export interface PosVatLine {
+  vatRate: number
+  net: number
+  vat: number
+  gross: number
+}
+
+export interface PosProductLine {
+  productId: string | null
+  name: string
+  quantity: number
+  revenueGross: number
+}
+
+export interface PosSalesSummary {
+  from: string
+  to: string
+  currency: string
+  saleCount: number
+  total: number
+  totalNet: number
+  totalVat: number
+  cashTotal: number
+  cardTotal: number
+  tipTotal: number
+  discountTotal: number
+  cancelledCount: number
+  cancelledTotal: number
+  averageSale: number
+  vatBreakdown: PosVatLine[]
+  topProducts: PosProductLine[]
+}
+
+export interface PosRevenueBucket {
+  periodStart: string
+  periodEnd: string
+  total: number
+  saleCount: number
+}
+
+export interface PosRevenue {
+  from: string
+  to: string
+  granularity: string
+  currency: string
+  series: PosRevenueBucket[]
+}
+
+// Rychlé rozsahy období pro přehled. Hranice se počítají z LOKÁLNÍHO data (obchodní den obsluhy),
+// ne z UTC — jinak by se u půlnoci rozsah posunul o den.
+export type PosReportPreset = 'today' | 'last7' | 'last30' | 'thisMonth'
+
+export interface PosDateRange {
+  from: string // yyyy-MM-dd
+  to: string // yyyy-MM-dd
+}
+
+function isoLocal(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function addDays(d: Date, days: number): Date {
+  const copy = new Date(d)
+  copy.setDate(copy.getDate() + days)
+  return copy
+}
+
+// Rozsah [from, to] (inkluzivní) pro daný preset vůči „dnešku". `today` se předává kvůli testovatelnosti.
+export function posReportRange(preset: PosReportPreset, today: Date): PosDateRange {
+  const to = isoLocal(today)
+  switch (preset) {
+    case 'today':
+      return { from: to, to }
+    case 'last7':
+      return { from: isoLocal(addDays(today, -6)), to } // dnes + 6 předchozích = 7 dní
+    case 'last30':
+      return { from: isoLocal(addDays(today, -29)), to }
+    case 'thisMonth':
+      return { from: isoLocal(new Date(today.getFullYear(), today.getMonth(), 1)), to }
+  }
+}
