@@ -12,6 +12,7 @@ import {
   Info,
   Lock,
   Download,
+  CalendarDays,
 } from 'lucide-vue-next'
 import { formatCZK } from '@/lib/invoice'
 import { isApiMode } from '@/lib/http'
@@ -19,7 +20,10 @@ import { useSalesReport } from '@/composables/useSalesReport'
 import { useDayClose, DayCloseError } from '@/composables/useDayClose'
 import { useLocations } from '@/composables/useLocations'
 import { downloadCsv } from '@/lib/csv-export'
-import { downloadDayCloseAccountingCsv } from '@/lib/day-close-export'
+import {
+  downloadDayCloseAccountingCsv,
+  downloadDayCloseAccountingCsvForReports,
+} from '@/lib/day-close-export'
 import { toast } from '@/components/ui/sonner'
 import LoadError from '@/components/app/LoadError.vue'
 import { Button } from '@/components/ui/button'
@@ -47,7 +51,7 @@ import type { DayCloseResponse } from '@/lib/types'
 const apiMode = isApiMode()
 
 const { loading, error, summary, vatBreakdown, soldProducts, byCategory, reload } = useSalesReport()
-const { getDayClose, closeDay } = useDayClose()
+const { listDayCloses, getDayClose, closeDay } = useDayClose()
 const { locations, load: loadLocations } = useLocations()
 
 // --- Výběr dne + pobočky (Fáze 2) ---
@@ -67,6 +71,7 @@ const noLocations = computed(() => apiMode && locationsLoaded.value && locations
 const dayState = ref<DayCloseResponse | null>(null)
 const dayLoading = ref(false)
 const dayError = ref(false)
+const monthExporting = ref(false)
 
 const isClosed = computed(() => dayState.value?.status === 'Closed')
 const zReport = computed(() => (isClosed.value ? dayState.value : null))
@@ -196,8 +201,44 @@ function exportZReport(): void {
 function exportAccountingCsv(): void {
   const z = zReport.value
   if (!z) return
-  const loc = locations.value.find((l) => l.id === z.locationId)?.name ?? z.locationId
-  downloadDayCloseAccountingCsv(z, loc)
+  downloadDayCloseAccountingCsv(z, locationName(z.locationId))
+}
+
+function locationName(locationId: string): string {
+  return locations.value.find((l) => l.id === locationId)?.name ?? locationId
+}
+
+function pad2(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
+function monthBounds(dateIso: string): { month: string; from: string; to: string } {
+  const [yearRaw, monthRaw] = dateIso.split('-')
+  const year = Number(yearRaw)
+  const monthNumber = Number(monthRaw)
+  const lastDay = new Date(year, monthNumber, 0).getDate()
+  const month = `${yearRaw}-${monthRaw}`
+  return { month, from: `${month}-01`, to: `${month}-${pad2(lastDay)}` }
+}
+
+async function exportMonthlyAccountingCsv(): Promise<void> {
+  if (!selectedLocationId.value) return
+  const { month, from, to } = monthBounds(selectedDate.value)
+  monthExporting.value = true
+  try {
+    const reports = await listDayCloses({ from, to, locationId: selectedLocationId.value })
+    if (reports.length === 0) {
+      toast.error('V tomto měsíci nejsou žádné uzavřené Z-reporty.')
+      return
+    }
+    downloadDayCloseAccountingCsvForReports(reports, locationName, `z-reporty-ucetni-${month}`)
+    toast.success(`Exportováno ${reports.length} uzávěrek za ${month}.`)
+  } catch (e) {
+    if (e instanceof DayCloseError) toast.error(e.message)
+    else toast.error('Měsíční účetní export se nezdařil.')
+  } finally {
+    monthExporting.value = false
+  }
 }
 
 onMounted(async () => {
@@ -270,6 +311,15 @@ watch([selectedDate, selectedLocationId], () => {
           </SelectContent>
         </Select>
       </div>
+      <Button
+        variant="outline"
+        :disabled="monthExporting || !selectedLocationId"
+        @click="exportMonthlyAccountingCsv"
+      >
+        <Loader2 v-if="monthExporting" class="h-4 w-4 animate-spin" />
+        <CalendarDays v-else class="h-4 w-4" />
+        Export měsíc účetní CSV
+      </Button>
     </div>
 
     <!-- Stav dne se načítá -->

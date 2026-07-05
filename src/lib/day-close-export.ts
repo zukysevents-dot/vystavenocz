@@ -204,10 +204,29 @@ export function buildDayCloseAccountingRows(
   return rows
 }
 
+export function buildDayCloseAccountingRowsForReports(
+  reports: DayCloseResponse[],
+  locationNameById: (locationId: string) => string,
+): CsvValue[][] {
+  return reports.flatMap((z) => buildDayCloseAccountingRows(z, locationNameById(z.locationId)))
+}
+
 export function downloadDayCloseAccountingCsv(z: DayCloseResponse, locationName: string): void {
   downloadCsv(
     `z-report-ucetni-${z.date}`,
     DAY_CLOSE_ACCOUNTING_COLUMNS,
     buildDayCloseAccountingRows(z, locationName),
+  )
+}
+
+export function downloadDayCloseAccountingCsvForReports(
+  reports: DayCloseResponse[],
+  locationNameById: (locationId: string) => string,
+  filename: string,
+): void {
+  downloadCsv(
+    filename,
+    DAY_CLOSE_ACCOUNTING_COLUMNS,
+    buildDayCloseAccountingRowsForReports(reports, locationNameById),
   )
 }
