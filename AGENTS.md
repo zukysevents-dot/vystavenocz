@@ -28,6 +28,8 @@ Inventura v `Zásoby` musí obsluze ukazovat stejný slovník jako zrcadlo: `Sta
 
 Nákupní příjemky: backend PR #156 přidává `POST/GET /api/v1/inventory/purchase-receipts` jako atomický skladový doklad. Frontend `Naskladnění` ukládá hlavičku příjemky, řádky s množstvím a volitelnou nákupní cenou; sklad se mění přes příjemku, ne přes anonymní ruční příjem.
 
+Uzávěrka: zavřený den na stránce `Uzávěrka` nabízí běžný čitelný CSV export Z-reportu i účetní CSV export (`src/lib/day-close-export.ts`) se stabilními sloupci pro DPH, platby, spropitné, slevy/storna, prodané produkty a hotovostní rozdíl.
+
 ## Dva repozitáře, jeden produkt
 
 - **`vystavenocz`** (tento) — frontend (Vue).

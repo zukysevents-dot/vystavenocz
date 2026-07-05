@@ -19,6 +19,7 @@ import { useSalesReport } from '@/composables/useSalesReport'
 import { useDayClose, DayCloseError } from '@/composables/useDayClose'
 import { useLocations } from '@/composables/useLocations'
 import { downloadCsv } from '@/lib/csv-export'
+import { downloadDayCloseAccountingCsv } from '@/lib/day-close-export'
 import { toast } from '@/components/ui/sonner'
 import LoadError from '@/components/app/LoadError.vue'
 import { Button } from '@/components/ui/button'
@@ -191,6 +192,14 @@ function exportZReport(): void {
   downloadCsv(`z-report-${z.date}`, ['Položka', 'Hodnota'], rows)
 }
 
+/** Export Z-reportu ve sloupcích pro účetní import/kontrolu. */
+function exportAccountingCsv(): void {
+  const z = zReport.value
+  if (!z) return
+  const loc = locations.value.find((l) => l.id === z.locationId)?.name ?? z.locationId
+  downloadDayCloseAccountingCsv(z, loc)
+}
+
 onMounted(async () => {
   if (apiMode) {
     await loadLocations()
@@ -287,9 +296,14 @@ watch([selectedDate, selectedLocationId], () => {
             </div>
           </div>
         </div>
-        <Button variant="outline" @click="exportZReport">
-          <Download class="h-4 w-4" /> Export CSV
-        </Button>
+        <div class="flex flex-wrap gap-2">
+          <Button variant="outline" @click="exportZReport">
+            <Download class="h-4 w-4" /> Export CSV
+          </Button>
+          <Button variant="outline" @click="exportAccountingCsv">
+            <Download class="h-4 w-4" /> Export účetní CSV
+          </Button>
+        </div>
       </div>
 
       <!-- Zafixovaná KPI Z-reportu -->
