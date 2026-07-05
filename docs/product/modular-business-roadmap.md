@@ -97,7 +97,7 @@ Must support a real service day:
 Must make the restaurant paperless:
 
 - recipes linked to menu items (product recipe API in `vystaveno-api`, editor in `Sklad / katalog`, and backend PR #153 sale-time ingredient deduction for POS/restaurant payments)
-- advanced stock deduction by recipes, including portions, variants, semi-products, waste, and yield
+- advanced stock deduction by recipes, including portions, variants, semi-products, waste, and yield (foundation: recipe rows support `wastePercent` and show effective stock consumption in the recipe dialog)
 - suppliers, purchase receipts, purchase prices, average cost, and price history (foundation: backend PR #156 and `Naskladnění` UI create auditable purchase receipt documents)
 - stock movements: receive, issue, adjust, write-off, staff meal, breakage, expiration, and transfer between warehouses/locations (foundation: backend PR #160 and `Zásoby` issue dialog categorize operational issue reasons; `Zásoby` transfer dialog records paired backend `TransferOut`/`TransferIn` movements for stock mirror by location)
 - inventory count by warehouse/category/product, with expected vs counted amount (foundation: `Zásoby` inventory dialog shows `Stav má být`, `Realita`, and `Rozdíl` before saving)
@@ -203,7 +203,7 @@ Vystaveno should win through:
 1. Stabilize module capability resolver, permissions, navigation rules, and module settings.
 2. Make Gastro MVP reliable: POS, tables, kitchen, receipts, shifts, day close.
 3. Add stock movements from sales and protect financial/POS audit integrity.
-4. Merge/deploy recipe stock deduction, then extend recipes with portions, variants, semi-products, waste, and yield.
+4. Extend recipes with portions, variants, and semi-products on top of the existing ingredient stock deduction and waste/yield foundation.
 5. Build purchase receipts, enrich inventory counts, and extend stock mirror with warehouses/CZK variance.
 6. Add food cost, margin, variance, and manager reports.
 7. Add modular onboarding and templates per business type.
