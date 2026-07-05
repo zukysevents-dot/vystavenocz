@@ -1,5 +1,5 @@
 import { http } from '@/lib/http'
-import type { StockLevel, StockMovement } from '@/lib/types'
+import type { StockLevel, StockMirror, StockMovement } from '@/lib/types'
 import type { PagedResult } from '@/composables/useApi'
 
 export interface StocktakeItemInput {
@@ -27,5 +27,8 @@ export function useInventory() {
   function stocktake(items: StocktakeItemInput[], note: string | null): Promise<unknown> {
     return http.post('/inventory/stocktake', { items, note })
   }
-  return { levels, movements, receive, issue, correct, stocktake }
+  function stockMirror(): Promise<StockMirror> {
+    return http.get('/inventory/stock-mirror')
+  }
+  return { levels, movements, receive, issue, correct, stocktake, stockMirror }
 }

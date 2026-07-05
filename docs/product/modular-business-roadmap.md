@@ -101,7 +101,7 @@ Must make the restaurant paperless:
 - suppliers, purchase receipts, purchase prices, average cost, and price history
 - stock movements: receive, issue, transfer, adjust, write-off, staff meal, breakage, expiration
 - inventory count by warehouse/category/product, with expected vs counted amount
-- stock mirror for bars and kitchens: opening state + purchases - theoretical sales - write-offs = expected closing state
+- stock mirror for bars and kitchens (V1: ledger-based expected vs variance report via backend PR #154 and `Zásoby` tab)
 - variance report in units and CZK
 - food cost and margin per item
 - monthly close and accounting export
@@ -204,7 +204,7 @@ Vystaveno should win through:
 2. Make Gastro MVP reliable: POS, tables, kitchen, receipts, shifts, day close.
 3. Add stock movements from sales and protect financial/POS audit integrity.
 4. Merge/deploy recipe stock deduction, then extend recipes with portions, variants, semi-products, waste, and yield.
-5. Build purchase receipts, inventory counts, and stock mirror.
+5. Build purchase receipts, enrich inventory counts, and extend stock mirror with warehouses/CZK variance.
 6. Add food cost, margin, variance, and manager reports.
 7. Add modular onboarding and templates per business type.
 8. Add services and jobs as the next non-gastro verticals.
