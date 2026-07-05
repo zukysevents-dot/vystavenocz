@@ -45,11 +45,22 @@ const mirrorLoaded = ref(false)
 const MOVE_LABEL: Record<StockMovementType, string> = {
   Receipt: 'Příjem',
   Issue: 'Výdej',
+  WriteOff: 'Odpis',
+  StaffMeal: 'Staff meal',
+  Breakage: 'Rozbito',
+  Expiration: 'Expirace',
   Correction: 'Korekce',
   Sale: 'Prodej',
   StornoSale: 'Storno',
   Stocktaking: 'Inventura',
 }
+const ISSUE_TYPE_OPTIONS: Array<{ value: StockMovementType; label: string }> = [
+  { value: 'Issue', label: 'Běžný výdej' },
+  { value: 'WriteOff', label: 'Odpis' },
+  { value: 'StaffMeal', label: 'Staff meal' },
+  { value: 'Breakage', label: 'Rozbito' },
+  { value: 'Expiration', label: 'Expirace' },
+]
 const ACTION_LABEL: Record<'receive' | 'issue' | 'correct', string> = {
   receive: 'Příjem',
   issue: 'Výdej',
@@ -176,13 +187,18 @@ async function showMirror() {
 const actionOpen = ref(false)
 const actionMode = ref<'receive' | 'issue' | 'correct'>('receive')
 const actionProduct = ref<Row | null>(null)
-const actionForm = reactive({ amount: 0, note: '' })
+const actionForm = reactive<{ amount: number; note: string; issueType: StockMovementType }>({
+  amount: 0,
+  note: '',
+  issueType: 'Issue',
+})
 
 function openAction(row: Row, mode: 'receive' | 'issue' | 'correct') {
   actionProduct.value = row
   actionMode.value = mode
   actionForm.amount = 0
   actionForm.note = ''
+  actionForm.issueType = 'Issue'
   actionOpen.value = true
 }
 
@@ -200,7 +216,8 @@ async function submitAction() {
   try {
     const id = row.id
     if (actionMode.value === 'receive') await inv.receive(id, amount, actionForm.note || null)
-    else if (actionMode.value === 'issue') await inv.issue(id, amount, actionForm.note || null)
+    else if (actionMode.value === 'issue')
+      await inv.issue(id, amount, actionForm.note || null, actionForm.issueType)
     else await inv.correct(id, amount, actionForm.note.trim())
     await loadLevels()
     if (movementsLoaded.value) movements.value = await inv.movements()
@@ -568,6 +585,22 @@ async function submitStocktake() {
               step="any"
               :placeholder="actionMode === 'correct' ? 'např. -2 nebo 5' : '0'"
             />
+          </div>
+          <div v-if="actionMode === 'issue'" class="space-y-2">
+            <Label for="issue-type">Důvod výdeje</Label>
+            <select
+              id="issue-type"
+              v-model="actionForm.issueType"
+              class="flex h-10 w-full rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option
+                v-for="option in ISSUE_TYPE_OPTIONS"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
+            </select>
           </div>
           <div class="space-y-2">
             <Label for="note">Poznámka{{ actionMode === 'correct' ? ' (důvod) *' : '' }}</Label>

@@ -5,6 +5,7 @@ import type {
   StockLevel,
   StockMirror,
   StockMovement,
+  StockMovementType,
 } from '@/lib/types'
 import type { PagedResult } from '@/composables/useApi'
 
@@ -32,8 +33,13 @@ export function useInventory() {
   function createPurchaseReceipt(request: CreatePurchaseReceiptRequest): Promise<PurchaseReceipt> {
     return http.post('/inventory/purchase-receipts', request)
   }
-  function issue(productId: string, quantity: number, note: string | null): Promise<unknown> {
-    return http.post('/inventory/issues', { productId, quantity, note })
+  function issue(
+    productId: string,
+    quantity: number,
+    note: string | null,
+    type: StockMovementType = 'Issue',
+  ): Promise<unknown> {
+    return http.post('/inventory/issues', { productId, quantity, note, type })
   }
   function correct(productId: string, delta: number, note: string): Promise<unknown> {
     return http.post('/inventory/corrections', { productId, delta, note })
