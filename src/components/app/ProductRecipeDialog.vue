@@ -22,6 +22,7 @@ type RecipeRow = {
   id: string
   productId: string
   quantity: number
+  wastePercent: number
 }
 
 const props = defineProps<{
@@ -51,7 +52,7 @@ const ingredientProducts = computed(() =>
 const estimatedCost = computed(() =>
   rows.value.reduce((sum, row) => {
     const product = props.products.find((p) => p.id === row.productId)
-    return sum + (Number(product?.purchasePrice) || 0) * (Number(row.quantity) || 0)
+    return sum + (Number(product?.purchasePrice) || 0) * effectiveQuantity(row)
   }, 0),
 )
 const salePrice = computed(() => Number(props.product?.salePrice) || 0)
@@ -75,6 +76,7 @@ function addIngredient() {
     id: crypto.randomUUID(),
     productId: firstAvailable?.id ?? '',
     quantity: 1,
+    wastePercent: 0,
   })
 }
 
@@ -90,7 +92,20 @@ function productLabel(productId: string): string {
 
 function lineCost(row: RecipeRow): number {
   const product = props.products.find((p) => p.id === row.productId)
-  return (Number(product?.purchasePrice) || 0) * (Number(row.quantity) || 0)
+  return (Number(product?.purchasePrice) || 0) * effectiveQuantity(row)
+}
+
+function effectiveQuantity(row: RecipeRow): number {
+  const quantity = Number(row.quantity) || 0
+  const wastePercent = Number(row.wastePercent) || 0
+  return Math.round(quantity * (1 + wastePercent / 100) * 1000) / 1000
+}
+
+function formatQuantity(value: number): string {
+  return new Intl.NumberFormat('cs-CZ', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+  }).format(value)
 }
 
 function formatPercent(value: number): string {
@@ -115,6 +130,7 @@ async function loadRecipe() {
         id: crypto.randomUUID(),
         productId: ingredient.productId,
         quantity: ingredient.quantity,
+        wastePercent: ingredient.wastePercent ?? 0,
       })) ?? []
   } catch (e) {
     toast.error('Recepturu se nepodařilo načíst.')
@@ -150,6 +166,10 @@ function validateRows(): boolean {
       toast.error('Množství suroviny musí být kladné.')
       return false
     }
+    if (Number(row.wastePercent) < 0 || Number(row.wastePercent) > 100) {
+      toast.error('Odpad musí být mezi 0 a 100 %.')
+      return false
+    }
     selected.add(row.productId)
   }
   return true
@@ -163,7 +183,11 @@ async function saveRecipe() {
   try {
     await recipesApi.upsert(
       product.id,
-      rows.value.map((row) => ({ productId: row.productId, quantity: Number(row.quantity) })),
+      rows.value.map((row) => ({
+        productId: row.productId,
+        quantity: Number(row.quantity),
+        wastePercent: Number(row.wastePercent) || 0,
+      })),
     )
     toast.success('Receptura uložena.')
     setOpen(false)
@@ -223,12 +247,14 @@ watch(
       </div>
 
       <div v-else class="space-y-5">
-        <div class="rounded-lg border border-border">
+        <div class="overflow-x-auto rounded-lg border border-border">
           <div
-            class="grid grid-cols-[1fr_8rem_6rem_2.5rem] gap-3 border-b border-border px-3 py-2 text-sm text-muted-foreground"
+            class="grid min-w-[42rem] grid-cols-[1fr_7rem_6rem_7rem_6rem_2.5rem] gap-3 border-b border-border px-3 py-2 text-sm text-muted-foreground"
           >
             <div>Surovina</div>
             <div>Množství</div>
+            <div>Odpad</div>
+            <div class="text-right">Spotřeba</div>
             <div class="text-right">Náklad</div>
             <div />
           </div>
@@ -240,7 +266,7 @@ watch(
           <div
             v-for="row in rows"
             :key="row.id"
-            class="grid grid-cols-[1fr_8rem_6rem_2.5rem] items-end gap-3 border-b border-border px-3 py-3 last:border-b-0"
+            class="grid min-w-[42rem] grid-cols-[1fr_7rem_6rem_7rem_6rem_2.5rem] items-end gap-3 border-b border-border px-3 py-3 last:border-b-0"
           >
             <div class="space-y-2">
               <Label :for="`ingredient-${row.id}`" class="sr-only">Surovina</Label>
@@ -269,6 +295,22 @@ watch(
                 min="0"
                 step="0.001"
               />
+            </div>
+
+            <div class="space-y-2">
+              <Label :for="`waste-${row.id}`" class="sr-only">Odpad %</Label>
+              <Input
+                :id="`waste-${row.id}`"
+                v-model.number="row.wastePercent"
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+              />
+            </div>
+
+            <div class="pb-2 text-right text-sm font-medium tabular-nums">
+              {{ formatQuantity(effectiveQuantity(row)) }}
             </div>
 
             <div class="pb-2 text-right text-sm font-medium tabular-nums">

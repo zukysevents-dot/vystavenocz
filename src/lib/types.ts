@@ -150,6 +150,8 @@ export interface ProductRecipeIngredient {
   productName: string
   productSku: string
   quantity: number
+  wastePercent: number
+  effectiveQuantity: number
   purchasePrice: number | null
   estimatedCost: number
 }
@@ -167,6 +169,7 @@ export interface ProductRecipe {
 export interface ProductRecipeInput {
   productId: string
   quantity: number
+  wastePercent?: number
 }
 
 export type JobStatus = 'quote' | 'in_progress' | 'done' | 'invoiced'
