@@ -84,7 +84,7 @@ Must support a real service day:
 
 - POS sale with products, categories, notes, discounts, tips, cash/card payments, and storno
 - restaurant table map with open bills, moving items, merging bills, splitting bills, and partial group payments (foundation: `Restaurace` map opens/moves accounts, merges bills through backend PR #165, splits items among guests, and pays a selected split group through backend PR #168 `POST /orders/{id}/pay-items`; paid quantities become normal Sales, the unpaid remainder stays open, and split is reset for the remaining bill)
-- kitchen/bar tickets by category or station
+- kitchen/bar tickets by category or station (foundation: `Kuchyně` KDS groups sent order items into station tickets, filters Kitchen/Bar, supports print, preparation timer/SLA colors, public pickup/delivery labels, and the Sent → Preparing → Ready → Served workflow)
 - receipt creation with VAT breakdown and payment history
 - shift opening and closing with cash balance, card summary, storno summary, and user ownership
 - day close with Z-report, receipts, sales, payment methods, VAT, storno, discounts, and sold products
@@ -114,7 +114,7 @@ Must make Vystaveno smarter than a classic POS:
 - staff performance: revenue per hour, storno rate, discount rate, cash differences
 - stock purchase suggestions from sales, recipes, minimum levels, and seasonality
 - QR table ordering, payment, tip, review, and loyalty without installing an app
-- kitchen display with preparation time, SLA colors, station filters, and history
+- kitchen display with preparation time, SLA colors, station filters, and history (foundation: preparation timer, SLA color thresholds, station filters, ticket printing, and Preparing/Ready/Served actions exist; persistent KDS history still to come)
 - multi-location central stock, shared price lists, and branch comparisons
 - approval workflows for inventory corrections, large write-offs, and manager storno
 

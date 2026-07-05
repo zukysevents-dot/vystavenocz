@@ -366,6 +366,7 @@ export interface Category {
 
 export type OrderStatus = 'Open' | 'Closed' | 'Cancelled'
 export type KitchenStatus = 'New' | 'Sent' | 'Preparing' | 'Ready' | 'Served'
+export type OrderFulfillment = 'pickup' | 'delivery'
 
 export interface OrderItemLine {
   id: string
@@ -414,6 +415,8 @@ export interface KitchenQueueItem {
   itemId: string
   orderId: string
   tableName: string | null
+  customerName?: string | null
+  fulfillment?: OrderFulfillment | null
   productName: string
   quantity: number
   course: string | null

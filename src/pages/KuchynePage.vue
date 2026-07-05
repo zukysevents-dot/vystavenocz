@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { ChefHat, Clock, Check, UtensilsCrossed, Printer, Wine } from 'lucide-vue-next'
+import { ChefHat, Clock, Check, UtensilsCrossed, Printer, Wine, Flame } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { useKitchen } from '@/composables/useKitchen'
 import { isApiMode } from '@/lib/http'
@@ -35,9 +35,12 @@ interface Ticket {
   orderId: string
   section: CategoryKitchenSection
   tableName: string | null
+  customerName: string | null
+  fulfillment: KitchenQueueItem['fulfillment']
   sentAt: string | null
   items: KitchenQueueItem[]
   ready: boolean
+  preparing: boolean
 }
 
 const tickets = computed<Ticket[]>(() => {
@@ -51,14 +54,18 @@ const tickets = computed<Ticket[]>(() => {
         orderId: it.orderId,
         section: it.kitchenSection,
         tableName: it.tableName,
+        customerName: it.customerName ?? null,
+        fulfillment: it.fulfillment ?? null,
         sentAt: it.sentToKitchenAt,
         items: [],
         ready: true,
+        preparing: false,
       }
       map.set(key, t)
     }
     t.items.push(it)
     if (it.kitchenStatus !== 'Ready') t.ready = false
+    if (it.kitchenStatus === 'Preparing') t.preparing = true
     if (it.sentToKitchenAt && (!t.sentAt || it.sentToKitchenAt < t.sentAt))
       t.sentAt = it.sentToKitchenAt
   }
@@ -78,14 +85,18 @@ async function refresh() {
   }
 }
 
-async function setAll(t: Ticket, status: 'Ready' | 'Served') {
+async function setAll(t: Ticket, status: 'Preparing' | 'Ready' | 'Served') {
   if (busy.value) return
   busy.value = true
   try {
     const targets =
-      status === 'Ready' ? t.items.filter((i) => i.kitchenStatus !== 'Ready') : t.items
+      status === 'Preparing'
+        ? t.items.filter((i) => i.kitchenStatus === 'Sent')
+        : status === 'Ready'
+          ? t.items.filter((i) => i.kitchenStatus !== 'Ready')
+          : t.items
     await Promise.all(targets.map((i) => kitchen.setStatus(i.itemId, status)))
-    if (status === 'Served') toast.success(`Vydáno: ${t.tableName ?? 'účet'}`)
+    if (status === 'Served') toast.success(`Vydáno: ${ticketTitle(t)}`)
     await refresh()
   } catch (e) {
     toast.error('Změna stavu selhala.')
@@ -98,6 +109,28 @@ async function setAll(t: Ticket, status: 'Ready' | 'Served') {
 function minutesSince(iso: string | null): number {
   if (!iso) return 0
   return Math.max(0, Math.floor((now.value - new Date(iso).getTime()) / 60000))
+}
+
+function slaClass(t: Ticket): string {
+  const minutes = minutesSince(t.sentAt)
+  const warn = t.section === 'Bar' ? 6 : 12
+  const late = t.section === 'Bar' ? 10 : 20
+  if (minutes >= late) return 'bg-destructive/15 text-destructive'
+  if (minutes >= warn) return 'bg-amber-500/15 text-amber-700'
+  return 'bg-muted text-muted-foreground'
+}
+
+function ticketTitle(t: Ticket): string {
+  if (t.tableName) return t.tableName
+  if (t.customerName) return t.customerName
+  return 'Bez stolu'
+}
+
+function ticketSubtitle(t: Ticket): string {
+  if (t.tableName) return SECTION_LABEL[t.section]
+  if (t.fulfillment === 'delivery') return `${SECTION_LABEL[t.section]} - rozvoz`
+  if (t.fulfillment === 'pickup') return `${SECTION_LABEL[t.section]} - vyzvednutí`
+  return SECTION_LABEL[t.section]
 }
 
 function printTicket(t: Ticket) {
@@ -126,7 +159,7 @@ function printTicket(t: Ticket) {
       .note{font-size:13px;padding-left:18px}
     </style></head><body>
     <h2>${SECTION_LABEL[t.section].toUpperCase()}</h2>
-    <div class="sub">${escapeHtml(t.tableName ?? 'Bez stolu')} • ${new Date().toLocaleTimeString('cs-CZ')}</div>
+    <div class="sub">${escapeHtml(ticketTitle(t))} • ${escapeHtml(ticketSubtitle(t))} • ${new Date().toLocaleTimeString('cs-CZ')}</div>
     <hr>${rows}<hr>
     </body></html>`)
   w.document.close()
@@ -223,22 +256,18 @@ onUnmounted(() => {
             class="flex items-start justify-between gap-2 border-b border-dashed border-border pb-2"
           >
             <div>
-              <div class="text-lg font-bold leading-tight">{{ t.tableName ?? 'Bez stolu' }}</div>
+              <div class="text-lg font-bold leading-tight">{{ ticketTitle(t) }}</div>
               <span
                 class="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground"
               >
                 <Wine v-if="t.section === 'Bar'" class="h-3 w-3" />
                 <ChefHat v-else class="h-3 w-3" />
-                {{ SECTION_LABEL[t.section] }}
+                {{ ticketSubtitle(t) }}
               </span>
             </div>
             <span
               class="flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold"
-              :class="
-                minutesSince(t.sentAt) >= 15
-                  ? 'bg-destructive/15 text-destructive'
-                  : 'bg-muted text-muted-foreground'
-              "
+              :class="slaClass(t)"
             >
               <Clock class="h-3 w-3" /> {{ minutesSince(t.sentAt) }}′
             </span>
@@ -261,7 +290,16 @@ onUnmounted(() => {
               <Printer class="h-4 w-4" />
             </Button>
             <Button
-              v-if="!t.ready"
+              v-if="!t.preparing && !t.ready"
+              variant="outline"
+              class="flex-1"
+              :disabled="busy"
+              @click="setAll(t, 'Preparing')"
+            >
+              <Flame class="h-4 w-4" /> Připravit
+            </Button>
+            <Button
+              v-if="t.preparing && !t.ready"
               variant="outline"
               class="flex-1"
               :disabled="busy"
