@@ -538,7 +538,7 @@ async function submitStocktake() {
                   {{ fmtSigned(item.stocktakingQuantity) }}
                 </div>
                 <div v-if="item.unitCost !== null" class="text-xs text-muted-foreground">
-                  nákup {{ fmtMoney(item.unitCost) }}/ks
+                  náklad {{ fmtMoney(item.unitCost) }}/ks
                 </div>
               </div>
             </div>
