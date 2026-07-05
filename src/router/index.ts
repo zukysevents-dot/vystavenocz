@@ -160,6 +160,18 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/app/provozni-prehled',
+    name: 'app-provozni-prehled',
+    component: () => import('@/pages/ProvozniPrehledPage.vue'),
+    meta: {
+      title: 'Provozní přehled',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'reporting',
+      requiresRole: ['Owner', 'Manager'],
+    },
+  },
+  {
     path: '/app/uzaverka',
     name: 'app-uzaverka',
     component: () => import('@/pages/UzaverkaPage.vue'),

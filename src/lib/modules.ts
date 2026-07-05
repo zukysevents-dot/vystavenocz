@@ -86,6 +86,12 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
   { to: '/app/smeny', label: 'Směny', module: 'attendance' },
   { to: '/app/pobocky', label: 'Pobočky', module: 'core', hiddenForRoles: ['Employee'] },
   {
+    to: '/app/provozni-prehled',
+    label: 'Provozní přehled',
+    module: 'reporting',
+    hiddenForRoles: ['Employee'],
+  },
+  {
     to: '/app/konsolidace',
     label: 'Konsolidace',
     module: 'reporting',
