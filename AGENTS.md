@@ -24,7 +24,7 @@ Modulární runtime základ: backend `/me` vrací `modules` + `features`; fronte
 
 Veřejný slug firmy: `Nastavení firmy` ukládá `Company.publicSlug` přes `/company`; frontend ho normalizuje na malá ASCII písmena, čísla a pomlčky. Slug je sdílený základ pro `/objednavka/:slug`, veřejné rezervace a QR odkazy ke stolům.
 
-QR objednávka ke stolu: veřejná route `/objednavka/:slug?table=<tableId>&name=<tableName>` schová výdej/rozvoz, odešle `tableId` přes `usePublicOrders` a backend objednávku připíše do dine-in účtu stolu. E2E `e2e/public-order-table.spec.ts` ověřuje hostovský table-link flow bez JWT.
+QR objednávka ke stolu: veřejná route `/objednavka/:slug?table=<tableId>&name=<tableName>` schová výdej/rozvoz, odešle `tableId` přes `usePublicOrders` a backend objednávku připíše do dine-in účtu stolu. Na mobilu `PublicOrderPage` po přidání položek ukazuje sticky spodní košík s počtem položek, totalem a skokem na checkout. E2E `e2e/public-order-table.spec.ts` ověřuje hostovský table-link flow bez JWT.
 
 Gastro receptury/BOM: editor je v `Sklad / katalog` jako akce u produktu (`ProductRecipeDialog.vue`) a volá `GET/PUT/DELETE /api/v1/products/{productId}/recipe`. Backend API/migrace žije ve `vystaveno-api`; backend PR #153 zapíná odečet surovin při POS i restaurant payment prodeji. Produkt s recepturou odečítá suroviny, produkt bez receptury dál odečítá sám sebe; storno vrací původní skladové pohyby, ne aktuální recepturu. Řádek receptury má `quantity` (čistá porce), `wastePercent` (odpad/výtěžnost navíc) a `effectiveQuantity` (skladová spotřeba). Dialog receptury počítá živě náklady, prodejní cenu, marži a food cost z effective quantity pro okamžitou kontrolu profitability.
 

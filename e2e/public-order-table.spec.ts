@@ -27,6 +27,7 @@ async function seedApiMode(page: Page): Promise<void> {
 test('QR objednávka ke stolu odešle tableId a nepoužije rozvozový tok', async ({ page }) => {
   let postedOrder: unknown = null
 
+  await page.setViewportSize({ width: 390, height: 844 })
   await seedApiMode(page)
   await page.route(API, async (route: Route) => {
     const request = route.request()
@@ -58,6 +59,8 @@ test('QR objednávka ke stolu odešle tableId a nepoužije rozvozový tok', asyn
 
   await page.getByRole('button', { name: 'Přidat' }).click()
   await page.getByRole('button', { name: 'Přidat' }).click()
+  await expect(page.getByText('2 položky v košíku')).toBeVisible()
+  await page.getByRole('button', { name: /^Košík$/ }).click()
   await expect(page.getByText('2 × 59,00 Kč')).toBeVisible()
 
   await page.getByLabel('Jméno').fill('Host u stolu')
