@@ -536,6 +536,7 @@ export interface StockLevel {
   productName: string
   productSku: string
   quantity: number
+  locationId: string | null
 }
 
 export interface StockMovement {

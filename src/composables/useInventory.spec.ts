@@ -11,6 +11,78 @@ beforeEach(() => {
 })
 
 describe('useInventory', () => {
+  it('levels bez filtru volá základní stránkovaný endpoint', async () => {
+    vi.mocked(http.get).mockResolvedValue({ items: [] } as never)
+
+    await useInventory().levels()
+
+    expect(http.get).toHaveBeenCalledWith('/inventory/stock-levels?pageSize=200')
+  })
+
+  it('levels posílá pobočku jako query', async () => {
+    vi.mocked(http.get).mockResolvedValue({ items: [] } as never)
+
+    await useInventory().levels({ locationId: 'bar-1' })
+
+    expect(http.get).toHaveBeenCalledWith('/inventory/stock-levels?pageSize=200&locationId=bar-1')
+  })
+
+  it('receive posílá pobočku do těla příjmu', async () => {
+    vi.mocked(http.post).mockResolvedValue({} as never)
+
+    await useInventory().receive('prod-1', 5, 'bar', 'bar-1')
+
+    expect(http.post).toHaveBeenCalledWith('/inventory/receipts', {
+      productId: 'prod-1',
+      quantity: 5,
+      note: 'bar',
+      locationId: 'bar-1',
+    })
+  })
+
+  it('issue posílá pobočku do těla výdeje', async () => {
+    vi.mocked(http.post).mockResolvedValue({} as never)
+
+    await useInventory().issue('prod-1', 2, 'rozbito', 'Breakage', 'bar-1')
+
+    expect(http.post).toHaveBeenCalledWith('/inventory/issues', {
+      productId: 'prod-1',
+      quantity: 2,
+      note: 'rozbito',
+      type: 'Breakage',
+      locationId: 'bar-1',
+    })
+  })
+
+  it('correct posílá pobočku do těla korekce', async () => {
+    vi.mocked(http.post).mockResolvedValue({} as never)
+
+    await useInventory().correct('prod-1', -1, 'kontrola', 'bar-1')
+
+    expect(http.post).toHaveBeenCalledWith('/inventory/corrections', {
+      productId: 'prod-1',
+      delta: -1,
+      note: 'kontrola',
+      locationId: 'bar-1',
+    })
+  })
+
+  it('stocktake posílá pobočku do těla inventury', async () => {
+    vi.mocked(http.post).mockResolvedValue({} as never)
+
+    await useInventory().stocktake(
+      [{ productId: 'prod-1', countedQuantity: 3 }],
+      'inventura',
+      'bar-1',
+    )
+
+    expect(http.post).toHaveBeenCalledWith('/inventory/stocktake', {
+      items: [{ productId: 'prod-1', countedQuantity: 3 }],
+      note: 'inventura',
+      locationId: 'bar-1',
+    })
+  })
+
   it('stockMirror bez filtru volá základní endpoint', async () => {
     vi.mocked(http.get).mockResolvedValue({ items: [] } as never)
 

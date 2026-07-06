@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import {
   Plus,
   Minus,
@@ -62,6 +62,7 @@ const mirrorTo = ref(today)
 const mirrorLocationId = ref(ALL_LOCATIONS)
 const mirrorSearch = ref('')
 const expandedMirrorProductId = ref<string | null>(null)
+const stockLocationId = ref(ALL_LOCATIONS)
 
 const MOVE_LABEL: Record<StockMovementType, string> = {
   Receipt: 'Příjem',
@@ -120,11 +121,22 @@ const rows = computed<Row[]>(() => {
         sku: p.sku,
         min: p.minQuantity,
         qty,
-        low: p.minQuantity > 0 && qty <= p.minQuantity,
+        low: p.minQuantity > 0 && qty < p.minQuantity,
       }
     })
 })
 const lowCount = computed(() => rows.value.filter((r) => r.low).length)
+const stockFilterLocationId = computed(() =>
+  stockLocationId.value === ALL_LOCATIONS ? null : stockLocationId.value,
+)
+const actionLocationId = computed(() => {
+  if (stockLocationId.value !== ALL_LOCATIONS) return stockLocationId.value
+  return locations.value.length === 1 ? (locations.value[0]?.id ?? null) : null
+})
+const stockLocationLabel = computed(() => {
+  if (stockLocationId.value === ALL_LOCATIONS) return 'Všechny pobočky'
+  return locationName(stockLocationId.value) ?? 'Vybraná pobočka'
+})
 const mirrorVarianceCount = computed(
   () => mirror.value?.items.filter((i) => Math.abs(i.varianceQuantity) > 0.0001).length ?? 0,
 )
@@ -186,9 +198,25 @@ function todayISO(): string {
 }
 
 async function loadLevels() {
-  const levels = await inv.levels()
-  levelMap.value = new Map(levels.map((l) => [l.productId, l.quantity]))
+  const levels = await inv.levels({ locationId: stockFilterLocationId.value })
+  const totals = new Map<string, number>()
+  for (const level of levels) {
+    totals.set(level.productId, (totals.get(level.productId) ?? 0) + level.quantity)
+  }
+  levelMap.value = totals
 }
+
+watch(stockLocationId, async (locationId) => {
+  if (!apiMode || loading.value) return
+  try {
+    mirrorLocationId.value = locationId
+    await loadLevels()
+    if (mirrorLoaded.value) await loadMirror()
+  } catch (e) {
+    toast.error('Stav zásob pro pobočku se nepodařilo načíst.')
+    console.error(e)
+  }
+})
 
 onMounted(async () => {
   if (!apiMode) {
@@ -254,6 +282,10 @@ const actionForm = reactive<{ amount: number; note: string; issueType: StockMove
 })
 
 function openAction(row: Row, mode: 'receive' | 'issue' | 'correct') {
+  if (locations.value.length > 1 && stockLocationId.value === ALL_LOCATIONS) {
+    toast.error('Nejdřív vyberte konkrétní pobočku skladu.')
+    return
+  }
   actionProduct.value = row
   actionMode.value = mode
   actionForm.amount = 0
@@ -275,15 +307,23 @@ async function submitAction() {
   busy.value = true
   try {
     const id = row.id
-    if (actionMode.value === 'receive') await inv.receive(id, amount, actionForm.note || null)
+    const locationId = actionLocationId.value
+    if (actionMode.value === 'receive')
+      await inv.receive(id, amount, actionForm.note || null, locationId)
     else if (actionMode.value === 'issue') {
-      const result = await inv.issue(id, amount, actionForm.note || null, actionForm.issueType)
+      const result = await inv.issue(
+        id,
+        amount,
+        actionForm.note || null,
+        actionForm.issueType,
+        locationId,
+      )
       if (isApprovalRequest(result)) {
         actionOpen.value = false
         toast.success('Výdej čeká na schválení managerem.')
         return
       }
-    } else await inv.correct(id, amount, actionForm.note.trim())
+    } else await inv.correct(id, amount, actionForm.note.trim(), locationId)
     await loadLevels()
     if (movementsLoaded.value) movements.value = await inv.movements()
     if (mirrorLoaded.value) await loadMirror()
@@ -315,7 +355,8 @@ function openTransfer(row: Row) {
   }
   transferProduct.value = row
   transferForm.amount = 0
-  transferForm.fromLocationId = locations.value[0]?.id ?? ''
+  transferForm.fromLocationId =
+    stockLocationId.value !== ALL_LOCATIONS ? stockLocationId.value : (locations.value[0]?.id ?? '')
   transferForm.toLocationId =
     locations.value.find((l) => l.id !== transferForm.fromLocationId)?.id ?? ''
   transferForm.note = ''
@@ -364,6 +405,10 @@ const stocktakeNote = ref('Inventura')
 const counts = ref<Record<string, number | ''>>({})
 
 function openStocktake() {
+  if (locations.value.length > 1 && stockLocationId.value === ALL_LOCATIONS) {
+    toast.error('Inventuru spusťte pro konkrétní pobočku.')
+    return
+  }
   counts.value = Object.fromEntries(
     products.value.map((p) => [p.id, levelMap.value.get(p.id) ?? 0]),
   )
@@ -417,7 +462,11 @@ async function submitStocktake() {
   if (!items.length) return toast.error('Žádné produkty k inventuře.')
   busy.value = true
   try {
-    const result = await inv.stocktake(items, stocktakeNote.value.trim() || null)
+    const result = await inv.stocktake(
+      items,
+      stocktakeNote.value.trim() || null,
+      actionLocationId.value,
+    )
     if (isApprovalRequest(result)) {
       stocktakeOpen.value = false
       toast.success('Inventura čeká na schválení managerem.')
@@ -510,6 +559,30 @@ async function submitStocktake() {
             · {{ fmtSignedMoney(mirrorVarianceValue) }}
           </template>
         </span>
+      </div>
+
+      <div
+        v-if="locations.length > 1"
+        class="mt-4 flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card p-4"
+      >
+        <div class="grid gap-1.5">
+          <Label for="stock-location">Pobočka skladu</Label>
+          <Select v-model="stockLocationId">
+            <SelectTrigger id="stock-location" class="w-64">
+              <SelectValue placeholder="Všechny pobočky" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem :value="ALL_LOCATIONS">Všechny pobočky</SelectItem>
+              <SelectItem v-for="l in locations" :key="l.id" :value="l.id">
+                {{ l.name }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div class="max-w-xl text-sm text-muted-foreground">
+          Stav zásob a minimum se přepočítá podle vybrané pobočky. Příjem, výdej, korekce a
+          inventura vyžadují konkrétní pobočku.
+        </div>
       </div>
 
       <div v-if="loading" class="mt-6 flex justify-center p-12">
@@ -820,7 +893,7 @@ async function submitStocktake() {
         <DialogHeader>
           <DialogTitle>{{ ACTION_LABEL[actionMode] }} — {{ actionProduct?.name }}</DialogTitle>
           <DialogDescription>
-            Aktuální stav: {{ fmtQty(actionProduct?.qty ?? 0) }}
+            {{ stockLocationLabel }} · aktuální stav: {{ fmtQty(actionProduct?.qty ?? 0) }}
           </DialogDescription>
         </DialogHeader>
         <form class="space-y-4" @submit.prevent="submitAction">
@@ -933,8 +1006,8 @@ async function submitStocktake() {
         <DialogHeader>
           <DialogTitle>Inventura</DialogTitle>
           <DialogDescription>
-            Zadejte fyzicky napočítané množství. Systém uloží realitu a rozdíl promítne do
-            skladového zrcadla.
+            {{ stockLocationLabel }} · zadejte fyzicky napočítané množství. Systém uloží realitu a
+            rozdíl promítne do skladového zrcadla.
           </DialogDescription>
         </DialogHeader>
 
