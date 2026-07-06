@@ -153,6 +153,30 @@ describe('useInventory', () => {
     )
   })
 
+  it('stockByLocation volá centrální endpoint s pageSize', async () => {
+    vi.mocked(http.get).mockResolvedValue({
+      locations: [],
+      products: { items: [], total: 0, page: 1, pageSize: 200 },
+    } as never)
+
+    await useInventory().stockByLocation()
+
+    expect(http.get).toHaveBeenCalledWith('/inventory/stock-by-location?pageSize=200')
+  })
+
+  it('stockByLocation posílá hledání jako query', async () => {
+    vi.mocked(http.get).mockResolvedValue({
+      locations: [],
+      products: { items: [], total: 0, page: 1, pageSize: 200 },
+    } as never)
+
+    await useInventory().stockByLocation('  káva  ')
+
+    expect(http.get).toHaveBeenCalledWith(
+      '/inventory/stock-by-location?pageSize=200&search=k%C3%A1va',
+    )
+  })
+
   it('createPurchaseReceipt pošle pobočku v těle dokladu', async () => {
     vi.mocked(http.post).mockResolvedValue({} as never)
 

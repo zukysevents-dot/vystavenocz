@@ -539,6 +539,37 @@ export interface StockLevel {
   locationId: string | null
 }
 
+// Centrální sklad: přehled zásob napříč pobočkami (matice produkt × provozovna).
+// `locationId: null` (a `locationName: null`) = nezařazený sklad → UI „Nezařazeno".
+export interface StockLocationColumn {
+  locationId: string | null
+  locationName: string | null
+}
+
+export interface StockByLocationCell {
+  locationId: string | null
+  quantity: number
+}
+
+export interface StockByLocationRow {
+  productId: string
+  productName: string
+  productSku: string
+  totalQuantity: number
+  cells: StockByLocationCell[]
+}
+
+export interface StockByLocationResponse {
+  locations: StockLocationColumn[]
+  // Mirror PagedResult<StockByLocationRow> (inline, ať types.ts nezávisí na composables).
+  products: {
+    items: StockByLocationRow[]
+    total: number
+    page: number
+    pageSize: number
+  }
+}
+
 export interface StockMovement {
   id: string
   productId: string

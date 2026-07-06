@@ -70,8 +70,9 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 1. `Zásoby` ukazují aktuální stav produktů.
 2. Pokud má firma víc poboček nebo skladů, nejdřív vyberte `Pobočka skladu`.
 3. `Všechny pobočky` slouží jen pro přehled celkového stavu. Příjem, výdej, korekce a inventura se vždy zapisují na konkrétní pobočku.
-4. Ruční výdej vždy vyberte podle důvodu: běžný výdej, odpis, jídlo personálu, rozbití nebo expirace.
-5. Přesun mezi barem, kuchyní nebo skladem zapisujte přes přesun. Celkový sklad firmy se nemění, mění se jen místo.
+4. Máte-li víc poboček, tab `Podle poboček` ukáže přehlednou tabulku: u každého produktu vidíte, kolik ho je na které provozovně, plus celkový součet. Zboží bez přiřazené pobočky je ve sloupci `Nezařazeno`.
+5. Ruční výdej vždy vyberte podle důvodu: běžný výdej, odpis, jídlo personálu, rozbití nebo expirace.
+6. Přesun mezi barem, kuchyní nebo skladem zapisujte přes přesun. Celkový sklad firmy se nemění, mění se jen místo.
 
 ## Schvalování
 
