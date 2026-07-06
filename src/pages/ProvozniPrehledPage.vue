@@ -603,12 +603,13 @@ function selectPreset(id: PosReportPreset): void {
               </h2>
             </div>
             <div class="text-sm text-muted-foreground tabular-nums">
-              {{ staff.saleCount }} účtů · {{ formatCZK(staff.total) }}
+              {{ staff.saleCount }} účtů · {{ formatCZK(staff.total) }} · storno
+              {{ formatPercent(staff.cancellationRatePercent) }}
             </div>
           </div>
 
           <div v-if="staff.staff.length" class="mt-4 overflow-x-auto">
-            <table class="w-full min-w-[760px] text-sm">
+            <table class="w-full min-w-[920px] text-sm">
               <thead class="text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <tr class="border-b border-border">
                   <th class="py-2 pr-4 font-medium">Obsluha</th>
@@ -619,7 +620,9 @@ function selectPreset(id: PosReportPreset): void {
                   <th class="px-3 py-2 text-right font-medium">Kartou</th>
                   <th class="px-3 py-2 text-right font-medium">Tip</th>
                   <th class="px-3 py-2 text-right font-medium">Slevy</th>
-                  <th class="py-2 pl-3 text-right font-medium">Storna</th>
+                  <th class="px-3 py-2 text-right font-medium">Sleva %</th>
+                  <th class="px-3 py-2 text-right font-medium">Storna</th>
+                  <th class="py-2 pl-3 text-right font-medium">Storno %</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-border">
@@ -649,11 +652,17 @@ function selectPreset(id: PosReportPreset): void {
                   <td class="px-3 py-3 text-right tabular-nums">
                     {{ formatCZK(row.discountTotal) }}
                   </td>
-                  <td class="py-3 pl-3 text-right tabular-nums">
+                  <td class="px-3 py-3 text-right tabular-nums">
+                    {{ formatPercent(row.discountRatePercent) }}
+                  </td>
+                  <td class="px-3 py-3 text-right tabular-nums">
                     <span class="font-medium">{{ row.cancelledCount }}</span>
                     <span class="ml-1 text-muted-foreground">
                       {{ formatCZK(row.cancelledTotal) }}
                     </span>
+                  </td>
+                  <td class="py-3 pl-3 text-right tabular-nums">
+                    {{ formatPercent(row.cancellationRatePercent) }}
                   </td>
                 </tr>
               </tbody>
