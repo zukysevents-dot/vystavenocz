@@ -136,7 +136,7 @@ These are non-negotiable before claiming serious gastro readiness:
 
 - fast POS sale
 - table map and open bills
-- mobile waiter/tablet flow
+- mobile waiter/tablet flow (foundation: `Restaurace` keeps the visual table map on desktop and adds a compact mobile/tablet table list plus a sticky waiter action bar on open orders with table name, item count, total, send-to-kitchen, and pay actions. Remaining work: deeper handheld/tablet e2e coverage and optional native/mobile app shell.)
 - kitchen/bar ticketing
 - receipt, storno, discount, tip, split payment
 - stock cards, suppliers, purchase receipts, inventory, recipes, and stock mirror

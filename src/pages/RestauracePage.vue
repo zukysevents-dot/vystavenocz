@@ -666,10 +666,13 @@ async function cancelOrder() {
 const hasNewItems = computed(() =>
   (currentOrder.value?.items ?? []).some((i) => i.kitchenStatus === 'New'),
 )
+const currentItemCount = computed(() =>
+  (currentOrder.value?.items ?? []).reduce((sum, item) => sum + item.quantity, 0),
+)
 </script>
 
 <template>
-  <div class="p-4 sm:p-6">
+  <div class="p-4 sm:p-6" :class="mode === 'order' && currentOrder ? 'pb-28 lg:pb-6' : ''">
     <div
       v-if="!apiMode"
       class="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground"
@@ -710,8 +713,39 @@ const hasNewItems = computed(() =>
           </button>
         </div>
 
+        <div v-if="tables.length" class="grid gap-2 lg:hidden">
+          <button
+            v-for="t in tables"
+            :key="t.id"
+            type="button"
+            class="flex min-h-16 items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 text-left shadow-sm transition-colors active:scale-[0.99]"
+            :class="
+              occupancy.get(t.id)
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border hover:border-primary'
+            "
+            @click="selectTable(t)"
+          >
+            <span class="min-w-0">
+              <span class="block truncate font-semibold">{{ t.name }}</span>
+              <span
+                class="mt-0.5 block text-xs"
+                :class="
+                  occupancy.get(t.id) ? 'text-primary-foreground/80' : 'text-muted-foreground'
+                "
+              >
+                {{ occupancy.get(t.id) ? 'obsazeno' : 'volný' }}
+              </span>
+            </span>
+            <span class="shrink-0 text-sm font-bold tabular-nums">
+              {{ occupancy.get(t.id) ? formatCZK(occupancy.get(t.id)!.total) : '—' }}
+            </span>
+          </button>
+        </div>
+
         <div
-          class="relative min-h-[560px] overflow-hidden rounded-2xl border border-border bg-muted/20"
+          v-if="tables.length"
+          class="relative hidden min-h-[560px] overflow-hidden rounded-2xl border border-border bg-muted/20 lg:block"
           style="
             background-image:
               linear-gradient(to right, rgba(120, 120, 120, 0.12) 1px, transparent 1px),
@@ -745,13 +779,13 @@ const hasNewItems = computed(() =>
             </span>
             <span v-else class="mt-1 text-[10px] text-muted-foreground">volný</span>
           </button>
+        </div>
 
-          <div
-            v-if="!tables.length"
-            class="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground"
-          >
-            V této místnosti nejsou stoly.
-          </div>
+        <div
+          v-else
+          class="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground"
+        >
+          V této místnosti nejsou stoly.
         </div>
       </template>
     </template>
@@ -1020,6 +1054,39 @@ const hasNewItems = computed(() =>
               <Ban class="h-4 w-4" /> Zrušit účet
             </Button>
           </div>
+        </div>
+      </div>
+
+      <div
+        class="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-4 py-3 shadow-2xl backdrop-blur lg:hidden"
+      >
+        <div class="mx-auto flex max-w-3xl items-center gap-3">
+          <div class="min-w-0 flex-1">
+            <div class="truncate text-sm font-semibold">{{ selectedTable?.name }}</div>
+            <div class="text-xs text-muted-foreground">
+              {{ currentItemCount }} {{ currentItemCount === 1 ? 'položka' : 'položek' }} ·
+              {{ formatCZK(totals?.total ?? currentOrder.total) }}
+            </div>
+          </div>
+          <Button
+            v-if="hasNewItems"
+            variant="outline"
+            size="sm"
+            class="shrink-0"
+            :disabled="busy"
+            @click="sendToKitchen"
+          >
+            <ChefHat class="h-4 w-4" /> Odeslat
+          </Button>
+          <Button
+            variant="coral"
+            size="sm"
+            class="shrink-0"
+            :disabled="busy || !currentOrder.items.length"
+            @click="openPayment()"
+          >
+            <Banknote class="h-4 w-4" /> Zaplatit
+          </Button>
         </div>
       </div>
     </template>
