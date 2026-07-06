@@ -18,6 +18,7 @@ Migrace ze staré React appky (zazálohovaná ve větvi `legacy-react`, nevracet
 
 Produktová roadmapa modulárního Vystaveno + gastro priority je v `docs/product/modular-business-roadmap.md`. Při změně zásadního produktového směru ji aktualizuj společně s tímto kontextem.
 Jednoduchý uživatelský manuál pro gastro je v `docs/product/gastro-user-manual.md`; při každé uživatelsky viditelné gastro změně ho aktualizuj tak, aby obsluha pochopila workflow bez technických znalostí.
+Claude Code continuation prompt pro samostatnou pipeline práci nad gastro roadmapou je v `docs/agent-workflow/claude-gastro-pipeline-prompt.md`; používej ho při předávání práce do Claude Code nebo po delší pauze.
 
 Modulární runtime základ: backend `/me` vrací `modules` + `features`; frontend je drží v `src/stores/auth.ts` a app shell filtruje navigaci/routy přes `src/lib/modules.ts`. Backend ukládá tenant-selected moduly v `company_modules`; staré firmy bez řádků mají fallback na všechny default moduly. Onboarding vybírá první modulový balíček podle typu podnikání a `Nastavení firmy` umožňuje pozdější změnu modulů přes `/company/modules`. Modul `core` je povinný a normalizace ho vždy doplní.
 
