@@ -10,6 +10,7 @@ import {
 } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import { Button } from '@/components/ui/button'
+import { vReveal } from '@/lib/reveal'
 
 type Module = {
   icon: typeof ShoppingCart
@@ -24,19 +25,19 @@ const modules: Module[] = [
   {
     icon: ShoppingCart,
     title: 'Pokladna (POS)',
-    desc: 'Dotyková prodejní obrazovka, dlaždice produktů, platba hotově i kartou, účtenka na ťuk.',
+    desc: 'Dotyková prodejní obrazovka, platba hotově i kartou, účtenka na ťuk a tržby okamžitě v přehledu.',
     span: 'sm:col-span-2 lg:col-span-2',
     featured: true,
   },
   {
     icon: UtensilsCrossed,
     title: 'Restaurace & kuchyně',
-    desc: 'Mapa stolů, účty na stůl, bony do kuchyně i na bar — provoz jako v Dotykačce.',
+    desc: 'Mapa stolů, účty na stůl, rozdělení účtu mezi hosty a bony do kuchyně i na bar (KDS).',
   },
   {
     icon: Package,
     title: 'Sklad & zásoby',
-    desc: 'Příjem, výdej, inventura, hlídání nízkých zásob. Sklad se odečítá automaticky při prodeji.',
+    desc: 'Příjemky, výdeje, receptury a inventury. Skladové zrcadlo ukáže, co má být, co je — a rozdíl.',
   },
   {
     icon: CalendarDays,
@@ -51,7 +52,7 @@ const modules: Module[] = [
   {
     icon: FileText,
     title: 'Fakturace',
-    desc: 'Faktury, klienti, DPH, QR platby. Doklad z prodeje vystavíš jedním klikem.',
+    desc: 'Faktury, klienti, DPH, QR platby. Doklad z prodeje vystavíte jedním klikem.',
     span: 'sm:col-span-2 lg:col-span-3',
     featured: true,
     formats: ['PDF', 'ISDOC', 'XML', 'QR platba'],
@@ -62,7 +63,7 @@ const modules: Module[] = [
 <template>
   <section class="bg-background py-20 sm:py-28">
     <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-      <div class="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+      <div v-reveal class="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
         <div class="max-w-2xl">
           <p
             class="flex items-center gap-3 font-mono text-[0.7rem] font-medium uppercase tracking-[0.22em] text-muted-foreground"
@@ -91,8 +92,9 @@ const modules: Module[] = [
         <article
           v-for="(m, i) in modules"
           :key="m.title"
+          v-reveal="{ delay: i * 70 }"
           :class="[
-            'group relative flex flex-col rounded-2xl border p-6 transition-colors',
+            'group relative flex flex-col rounded-2xl border p-6 transition-all hover:-translate-y-0.5 hover:shadow-card',
             m.featured
               ? 'border-coral/20 bg-gradient-to-br from-card to-accent/50 hover:border-coral/45'
               : 'border-border bg-card hover:border-coral/40',
@@ -125,6 +127,14 @@ const modules: Module[] = [
           </ul>
         </article>
       </div>
+
+      <p v-reveal class="mt-8 text-sm text-muted-foreground">
+        A až porostete, přidáte oborové nástavby — zakázky a výjezdy, věrnost, pobočky, rozvoz,
+        směny nebo klientskou zónu.
+        <RouterLink to="/cenik" class="font-medium text-coral underline-offset-2 hover:underline">
+          Celý přehled najdete v ceníku.
+        </RouterLink>
+      </p>
     </div>
   </section>
 </template>

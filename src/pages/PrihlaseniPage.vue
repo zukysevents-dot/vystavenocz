@@ -77,7 +77,7 @@ async function onSubmit() {
         <p class="mt-6 text-center text-sm text-muted-foreground">
           Nemáte účet?
           <RouterLink to="/registrace" class="font-semibold text-primary hover:underline">
-            Zaregistrujte se zdarma
+            Vytvořit účet
           </RouterLink>
         </p>
       </div>

@@ -5,13 +5,14 @@ import { Menu, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import SiteLogo from '@/components/SiteLogo.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
+import { DEMO_MAILTO } from '@/lib/landing-cta'
 
 const links = [
   { to: '/funkce', label: 'Moduly' },
   { to: '/srovnani', label: 'Srovnání' },
   { to: '/cenik', label: 'Ceník' },
   { to: '/clanky', label: 'Články' },
-  { to: '/akce', label: 'Akce' },
+  { to: '/akce', label: 'Early access' },
   { to: '/nase-sliby', label: 'Naše sliby' },
   { to: '/faq', label: 'FAQ' },
 ]
@@ -47,13 +48,11 @@ watch(
         </RouterLink>
       </nav>
 
+      <!-- Aplikace zatím není veřejně spuštěná — login/registraci nepropagujeme, CTA vede na demo. -->
       <div class="hidden shrink-0 items-center gap-2 lg:flex">
         <ThemeToggle />
-        <Button variant="ghost" size="sm" as-child>
-          <RouterLink to="/prihlaseni">Přihlásit se</RouterLink>
-        </Button>
         <Button variant="coral" size="sm" as-child>
-          <RouterLink to="/registrace">Vyzkoušet zdarma</RouterLink>
+          <a :href="DEMO_MAILTO">Chci demo</a>
         </Button>
       </div>
 
@@ -91,11 +90,8 @@ watch(
             {{ l.label }}
           </RouterLink>
           <div class="mt-2 flex flex-col gap-2 border-t border-border pt-3">
-            <Button variant="ghost" size="sm" as-child>
-              <RouterLink to="/prihlaseni">Přihlásit se</RouterLink>
-            </Button>
             <Button variant="coral" size="sm" as-child>
-              <RouterLink to="/registrace">Vyzkoušet zdarma</RouterLink>
+              <a :href="DEMO_MAILTO">Chci demo</a>
             </Button>
           </div>
         </nav>

@@ -4,6 +4,7 @@ import { useRoute, RouterLink } from 'vue-router'
 import { getArticleBySlug, getRelatedArticles } from '@/lib/articles'
 import { Clock, ArrowLeft, ArrowRight, Lightbulb, AlertTriangle } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { DEMO_MAILTO } from '@/lib/landing-cta'
 import {
   Accordion,
   AccordionContent,
@@ -135,13 +136,13 @@ const formattedDate = computed(() =>
 
       <!-- CTA — využít to, že čtenář dočetl -->
       <div class="mt-12 rounded-2xl border border-border bg-card p-8 text-center">
-        <h3 class="text-xl font-bold text-foreground">Vystav fakturu za 30 sekund</h3>
+        <h3 class="text-xl font-bold text-foreground">Faktury, pokladna i sklad v jednom</h3>
         <p class="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-          Vyzkoušej Vystaveno.cz zdarma na 14 dní. Bez karty, bez závazků.
+          Vystaveno spouštíme pro první provozy. Napište si o ukázku — zdarma a bez závazku.
         </p>
         <Button variant="coral" size="lg" class="group mt-5" as-child>
-          <a href="/registrace">
-            Začít zdarma
+          <a :href="DEMO_MAILTO">
+            Chci demo
             <ArrowRight class="transition-transform group-hover:translate-x-0.5" />
           </a>
         </Button>

@@ -8,7 +8,7 @@ import CtaSection from '@/components/landing/CtaSection.vue'
   <PageHeader
     eyebrow="Časté otázky"
     title="Na co se nejčastěji ptáte"
-    subtitle="Moduly, ceník, pokladna, rezervace, sklad i fakturace. Pokud tu odpověď nenajdete, napište nám — během chvilky vám odepíšeme."
+    subtitle="Moduly, ceník, early access, pokladna, sklad, receptury i fakturace. Pokud tu odpověď nenajdete, napište nám — během chvilky vám odepíšeme."
   />
   <FaqSection />
   <CtaSection />

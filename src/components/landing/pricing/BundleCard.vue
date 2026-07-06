@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { RouterLink } from 'vue-router'
 import { Check, Sparkles, ArrowDown } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { PRICING_MODULES, MODULAR_PRICING, yearlyPerMonth } from '@/lib/pricing'
+import { moduleInterestMailto } from '@/lib/landing-cta'
 
 const props = defineProps<{
   yearly: boolean
@@ -86,7 +86,7 @@ const OUTCOMES = [
 
       <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <Button variant="coral" size="lg" class="w-full sm:w-auto" as-child>
-          <RouterLink to="/registrace">Vyzkoušet kompletní balík zdarma</RouterLink>
+          <a :href="moduleInterestMailto('Kompletní balík')">Mám zájem o kompletní balík</a>
         </Button>
         <button
           v-if="!allSelected"
@@ -107,7 +107,7 @@ const OUTCOMES = [
       </div>
 
       <p class="mt-4 text-xs text-muted-foreground">
-        Bez karty · {{ MODULAR_PRICING.trialDays }} dní zdarma · zrušení jedním klikem
+        Ceny orientační do spuštění · bez závazku · zrušení jedním klikem
       </p>
     </div>
   </div>

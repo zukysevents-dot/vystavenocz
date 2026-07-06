@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Check, Clock, Sparkles } from 'lucide-vue-next'
+import { vReveal } from '@/lib/reveal'
 
 type Status = 'done' | 'soon' | 'planned'
 
@@ -12,12 +13,27 @@ const items: { title: string; desc: string; status: Status; when?: string }[] = 
   },
   {
     title: 'Restaurace a kuchyně',
-    desc: 'Mapa stolů, účty na stůl, bony do kuchyně i na bar (KDS).',
+    desc: 'Mapa stolů, účty na stůl, rozdělení účtu, bony do kuchyně i na bar (KDS).',
     status: 'done',
   },
   {
-    title: 'Sklad a zásoby',
-    desc: 'Příjem, výdej, korekce, inventura a hlídání nízkých zásob.',
+    title: 'Sklad, příjemky a zásoby',
+    desc: 'Nákupní příjemky, výdeje, hlídání minim a doporučené doobjednání.',
+    status: 'done',
+  },
+  {
+    title: 'Receptury a food cost',
+    desc: 'Prodej odečte suroviny podle receptury; marže a food cost u každého produktu.',
+    status: 'done',
+  },
+  {
+    title: 'Skladové zrcadlo a inventury',
+    desc: 'Stav má být vs. realita vs. rozdíl — v kusech i korunách, po pobočkách.',
+    status: 'done',
+  },
+  {
+    title: 'Uzávěrky a Z-report',
+    desc: 'Denní uzávěrka s kontrolou hotovosti, DPH a exportem pro účetní.',
     status: 'done',
   },
   {
@@ -38,20 +54,33 @@ const items: { title: string; desc: string; status: Status; when?: string }[] = 
   {
     title: 'Modulární zapínání per firma',
     desc: 'Každá firma si zapne a platí jen moduly, které opravdu používá.',
+    status: 'done',
+  },
+  {
+    title: 'Provozní přehled pro majitele',
+    desc: 'Tržby, marže, výkon obsluhy, ztráty skladu a ležáky — na jedné obrazovce.',
+    status: 'done',
+  },
+  {
+    title: 'QR objednávky ke stolu',
+    desc: 'Host si objedná mobilem přes QR kód — objednávka jde rovnou do kuchyně.',
+    status: 'done',
+  },
+  {
+    title: 'Veřejné spuštění a online registrace',
+    desc: 'Teď jedeme early access s osobním nasazením — napište si o přístup.',
     status: 'soon',
-    when: 'Q3 2026',
   },
   {
     title: 'Mobilní aplikace',
-    desc: 'Nativní appka pro telefon i tablet, ať máš provoz po ruce.',
+    desc: 'Nativní appka pro telefon i tablet. Už dnes běží vše v prohlížeči (PWA).',
     status: 'soon',
-    when: 'Q3 2026',
+    when: 'Q4 2026',
   },
   {
-    title: 'EET a tisk účtenek',
-    desc: 'Elektronická evidence tržeb a tisk účtenek na pokladní tiskárně.',
+    title: 'EET 2.0',
+    desc: 'Přidáme, jakmile bude evidence tržeb znovu legislativně aktuální.',
     status: 'planned',
-    when: 'Q4 2026',
   },
 ]
 
@@ -74,7 +103,7 @@ const upcoming = computed(() => items.filter((i) => i.status !== 'done'))
 <template>
   <section class="bg-surface-soft py-20 sm:py-28">
     <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-      <div class="max-w-2xl">
+      <div v-reveal class="max-w-2xl">
         <p
           class="flex items-center gap-3 font-mono text-[0.7rem] font-medium uppercase tracking-[0.22em] text-muted-foreground"
         >
@@ -94,7 +123,7 @@ const upcoming = computed(() => items.filter((i) => i.status !== 'done'))
 
       <div class="mt-12 grid gap-x-6 gap-y-10 lg:grid-cols-3">
         <!-- Done — the proof block (dominant). -->
-        <div class="lg:col-span-2">
+        <div v-reveal class="lg:col-span-2">
           <div class="flex items-center gap-2.5">
             <span
               :class="`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${statusMap.done.chip}`"
@@ -122,7 +151,7 @@ const upcoming = computed(() => items.filter((i) => i.status !== 'done'))
         </div>
 
         <!-- Upcoming — sidebar. -->
-        <div class="space-y-3">
+        <div v-reveal="{ delay: 140 }" class="space-y-3">
           <ul class="space-y-3">
             <li
               v-for="item in upcoming"

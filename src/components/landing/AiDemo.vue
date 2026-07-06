@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { Sparkles, Send, User, Check } from 'lucide-vue-next'
+import { vReveal } from '@/lib/reveal'
 
 type InvoiceState = {
   client: string
@@ -237,7 +238,7 @@ onUnmounted(clearTimers)
 <template>
   <section class="relative overflow-hidden bg-surface py-20 sm:py-28">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-      <div class="mx-auto max-w-2xl text-center">
+      <div v-reveal class="mx-auto max-w-2xl text-center">
         <p
           class="mb-4 inline-flex items-center justify-center gap-2 font-mono text-[0.7rem] font-medium uppercase tracking-[0.22em] text-muted-foreground"
         >
@@ -250,9 +251,9 @@ onUnmounted(clearTimers)
           Napište, co chcete — faktura se vystaví sama
         </h2>
         <p class="mt-4 text-lg text-muted-foreground">
-          V modulu fakturace pomáhá AI: „Vystav fakturu Alze na 10 000 za IT služby." Dotáhne IČO z
-          ARESu, spočítá DPH a vyplní celý formulář. Klikat můžete pořád ručně — AI je bonus, když
-          spěcháte.
+          Součást modulu Fakturace &amp; klienti: napíšete „Vystav fakturu Alze na 10 000 za IT
+          služby" a AI dotáhne IČO z ARESu, spočítá DPH a vyplní celý formulář. Klikat můžete pořád
+          ručně — AI je bonus, když spěcháte.
         </p>
 
         <!-- Scenario indicator -->
@@ -273,6 +274,7 @@ onUnmounted(clearTimers)
       </div>
 
       <div
+        v-reveal="{ delay: 120 }"
         class="mx-auto mt-12 grid max-w-5xl grid-cols-1 gap-4 md:grid-cols-2 md:gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]"
       >
         <!-- Chat panel -->
