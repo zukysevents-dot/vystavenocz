@@ -86,6 +86,8 @@ export interface PosStaffPerformanceLine {
   discountTotal: number
   cancelledCount: number
   cancelledTotal: number
+  discountRatePercent: number
+  cancellationRatePercent: number
   averageSale: number
 }
 
@@ -99,6 +101,8 @@ export interface PosStaffPerformance {
   discountTotal: number
   cancelledCount: number
   cancelledTotal: number
+  discountRatePercent: number
+  cancellationRatePercent: number
   staff: PosStaffPerformanceLine[]
 }
 
