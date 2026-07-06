@@ -7,12 +7,14 @@ describe('http — veřejná varianta bez auth', () => {
   let fetchMock: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
+    window.__VYSTAVENO_API_URL__ = '/api/v1'
     setTokens({ accessToken: 'ACCESS', refreshToken: 'REFRESH' })
     fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({}) }))
     vi.stubGlobal('fetch', fetchMock)
   })
   afterEach(() => {
     setTokens(null)
+    delete window.__VYSTAVENO_API_URL__
     vi.unstubAllGlobals()
   })
 

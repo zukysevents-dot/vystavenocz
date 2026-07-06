@@ -98,6 +98,7 @@ Z úkolů udělej ověřitelné cíle. V tomhle projektu (frontend) ověření t
 - **Lint projde:** `npm run lint` bez chyb.
 - **Testy projdou:** `npm run test` (vitest unit) a u UI flows `npm run test:e2e` (Playwright).
 - **Vypadá to správně:** stránka naběhne v prohlížeči bez chyb v konzoli.
+- API e2e flow může před načtením appky nastavit `window.__VYSTAVENO_API_URL__ = '/api/v1'`; produkce dál používá build-time `VITE_API_URL`.
 
 Když task výslovně přidává testy, pak platí: „napiš test, který stav reprodukuje, a doveď ho k zelené."
 

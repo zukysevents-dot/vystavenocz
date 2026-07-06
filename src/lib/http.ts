@@ -11,6 +11,12 @@
 const API_URL = import.meta.env.VITE_API_URL as string | undefined
 const TOKENS_KEY = 'vystaveno.auth.tokens.v1'
 
+declare global {
+  interface Window {
+    __VYSTAVENO_API_URL__?: string
+  }
+}
+
 export interface Tokens {
   accessToken: string
   refreshToken: string
@@ -18,7 +24,11 @@ export interface Tokens {
 
 /** True = napojeno na reálné API; false = mock localStorage režim. */
 export function isApiMode(): boolean {
-  return Boolean(API_URL)
+  return Boolean(apiUrl())
+}
+
+function apiUrl(): string | undefined {
+  return API_URL || (typeof window !== 'undefined' ? window.__VYSTAVENO_API_URL__ : undefined)
 }
 
 export function getTokens(): Tokens | null {
@@ -55,9 +65,11 @@ let refreshing: Promise<Tokens | null> | null = null
 function refreshTokens(): Promise<Tokens | null> {
   const current = getTokens()
   if (!current?.refreshToken) return Promise.resolve(null)
+  const baseUrl = apiUrl()
+  if (!baseUrl) return Promise.resolve(null)
   refreshing ??= (async () => {
     try {
-      const res = await fetch(`${API_URL}/auth/refresh`, {
+      const res = await fetch(`${baseUrl}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken: current.refreshToken }),
@@ -85,6 +97,8 @@ async function request<T>(
   retry = true,
   isPublic = false,
 ): Promise<T> {
+  const baseUrl = apiUrl()
+  if (!baseUrl) throw new ApiError(0, 'API URL není nastavené.')
   // Veřejná volání (klientský portál, rezervace) MUSÍ jít bez Authorization —
   // jinak by se na public endpoint přiložil JWT náhodně přihlášeného operátora.
   const tokens = isPublic ? null : getTokens()
@@ -92,7 +106,7 @@ async function request<T>(
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   if (tokens?.accessToken) headers.Authorization = `Bearer ${tokens.accessToken}`
 
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${baseUrl}${path}`, {
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
