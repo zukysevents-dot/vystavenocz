@@ -1,5 +1,6 @@
 import { http } from '@/lib/http'
 import type {
+  ApprovalRequest,
   CreatePurchaseReceiptRequest,
   PurchaseReceipt,
   PurchaseSuggestionsResponse,
@@ -7,6 +8,7 @@ import type {
   StockMirror,
   StockMovement,
   StockMovementType,
+  Stocktake,
 } from '@/lib/types'
 import type { PagedResult } from '@/composables/useApi'
 
@@ -70,7 +72,7 @@ export function useInventory() {
     note: string | null,
     type: StockMovementType = 'Issue',
     locationId?: string | null,
-  ): Promise<unknown> {
+  ): Promise<StockMovement | ApprovalRequest> {
     return http.post('/inventory/issues', {
       productId,
       quantity,
@@ -111,7 +113,7 @@ export function useInventory() {
     items: StocktakeItemInput[],
     note: string | null,
     locationId?: string | null,
-  ): Promise<unknown> {
+  ): Promise<Stocktake | ApprovalRequest> {
     return http.post('/inventory/stocktake', { items, note, locationId: locationId || null })
   }
   function stockMirror(query: StockMirrorQuery = {}): Promise<StockMirror> {

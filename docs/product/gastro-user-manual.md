@@ -61,6 +61,13 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 4. Ruční výdej vždy vyberte podle důvodu: běžný výdej, odpis, jídlo personálu, rozbití nebo expirace.
 5. Přesun mezi barem, kuchyní nebo skladem zapisujte přes přesun. Celkový sklad firmy se nemění, mění se jen místo.
 
+## Schvalování
+
+1. Pokud storno, výdej/odpis nebo inventura překročí nastavený limit, systém akci neprovede hned a založí žádost o schválení.
+2. Obsluha uvidí hlášku, že akce čeká na schválení managerem.
+3. Majitel, admin nebo manager otevře `Schvalování`, zkontroluje částku a žádost schválí nebo zamítne.
+4. Po schválení systém provede původní akci; po zamítnutí se nic nezmění.
+
 ## Inventura a zrcadlo
 
 1. Inventura porovnává `Stav má být` se skutečně napočítanou `Realitou`.

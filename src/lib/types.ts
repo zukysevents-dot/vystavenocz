@@ -281,6 +281,48 @@ export interface DailySalesSummary {
   cardTotal: number
 }
 
+// --- Schvalování rizikových akcí ---
+
+export type ApprovalType = 'SaleStorno' | 'StockIssue' | 'Stocktake'
+export type ApprovalStatus = 'Pending' | 'Approved' | 'Rejected'
+
+export interface ApprovalRequest {
+  id: string
+  type: ApprovalType
+  status: ApprovalStatus
+  summary: string
+  estimatedValue: number
+  locationId: string | null
+  requestedByUserId: string
+  requestedByName: string | null
+  createdAt: string
+  resolvedByUserId: string | null
+  resolvedByName: string | null
+  resolvedAt: string | null
+  resolutionNote: string | null
+}
+
+export interface ApprovalSettings {
+  stornoLimit: number | null
+  writeOffLimit: number | null
+  stocktakeLimit: number | null
+}
+
+export function isApprovalRequest(value: unknown): value is ApprovalRequest {
+  const candidate = value as Partial<ApprovalRequest> | null
+  return Boolean(
+    candidate &&
+    typeof candidate.id === 'string' &&
+    typeof candidate.summary === 'string' &&
+    (candidate.type === 'SaleStorno' ||
+      candidate.type === 'StockIssue' ||
+      candidate.type === 'Stocktake') &&
+    (candidate.status === 'Pending' ||
+      candidate.status === 'Approved' ||
+      candidate.status === 'Rejected'),
+  )
+}
+
 // --- Uzávěrka: zavření dne / Z-report (Fáze 2) ---
 
 /** Řádek rozpadu DPH v Z-reportu — zafixovaný v okamžiku zavření dne. */
@@ -509,6 +551,21 @@ export interface StockMovement {
   relatedStocktakeId: string | null
   relatedPurchaseReceiptId: string | null
   createdAt: string
+}
+
+export interface StocktakeItem {
+  productId: string
+  systemQuantity: number
+  countedQuantity: number
+  difference: number
+}
+
+export interface Stocktake {
+  id: string
+  locationId: string | null
+  note: string | null
+  createdAt: string
+  items: StocktakeItem[]
 }
 
 export interface PurchaseReceiptItem {

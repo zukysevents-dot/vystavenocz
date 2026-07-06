@@ -33,6 +33,7 @@ import {
   Menu,
   X,
   History,
+  ShieldCheck,
 } from 'lucide-vue-next'
 import SiteLogo from '@/components/SiteLogo.vue'
 import { Button } from '@/components/ui/button'
@@ -53,6 +54,7 @@ const navIcons = {
   '/app/smeny': CalendarClock,
   '/app/pobocky': Building2,
   '/app/audit': History,
+  '/app/schvalovani': ShieldCheck,
   '/app/konsolidace': BarChart3,
   '/app/uzaverka': Receipt,
   '/app/rezervace': CalendarDays,

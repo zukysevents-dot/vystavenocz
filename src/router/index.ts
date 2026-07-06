@@ -335,6 +335,18 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/app/schvalovani',
+    name: 'app-schvalovani',
+    component: () => import('@/pages/SchvalovaniPage.vue'),
+    meta: {
+      title: 'Schvalování',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'core',
+      requiresRole: ['Owner', 'Admin', 'Manager'],
+    },
+  },
+  {
     path: '/app/rezervace',
     name: 'app-rezervace',
     component: () => import('@/pages/RezervacePage.vue'),
