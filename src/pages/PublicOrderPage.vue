@@ -45,6 +45,7 @@ const submitError = ref(false)
 const confirmation = ref<PublicOrderConfirmation | null>(null)
 const categories = ref<PublicMenuCategory[]>([])
 const products = ref<PublicMenuProduct[]>([])
+const checkoutPanel = ref<HTMLElement | null>(null)
 const cart = reactive<Record<string, number>>({})
 
 const form = reactive<{
@@ -96,6 +97,13 @@ const cartItems = computed(() =>
 const itemCount = computed(() =>
   cartItems.value.reduce((sum, row) => sum + Number(row.quantity || 0), 0),
 )
+const itemCountWord = computed(() =>
+  itemCount.value === 1
+    ? 'položka'
+    : itemCount.value >= 2 && itemCount.value <= 4
+      ? 'položky'
+      : 'položek',
+)
 const total = computed(() =>
   cartItems.value.reduce((sum, row) => sum + row.product.priceWithVat * row.quantity, 0),
 )
@@ -104,6 +112,14 @@ const canSubmit = computed(
     itemCount.value > 0 &&
     !!form.customerName.trim() &&
     (tableMode.value || form.fulfillment === 'pickup' || !!form.address.trim()),
+)
+const showMobileCartBar = computed(
+  () =>
+    !loading.value &&
+    !loadError.value &&
+    !confirmation.value &&
+    products.value.length > 0 &&
+    itemCount.value > 0,
 )
 
 onMounted(async () => {
@@ -132,6 +148,10 @@ function remove(productId: string) {
   delete cart[productId]
 }
 
+function scrollToCheckout() {
+  checkoutPanel.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 async function submit() {
   if (submitting.value || !canSubmit.value) return
   submitting.value = true
@@ -158,7 +178,7 @@ async function submit() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-6xl px-4 py-8 sm:py-10">
+  <div class="mx-auto max-w-6xl px-4 py-8 sm:py-10" :class="showMobileCartBar ? 'pb-28' : ''">
     <div class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">
@@ -246,7 +266,10 @@ async function submit() {
         </section>
       </div>
 
-      <aside class="h-fit rounded-lg border border-border bg-card p-4 lg:sticky lg:top-24">
+      <aside
+        ref="checkoutPanel"
+        class="h-fit rounded-lg border border-border bg-card p-4 lg:sticky lg:top-24"
+      >
         <h2 class="flex items-center gap-2 font-semibold">
           <ShoppingBasket class="h-4 w-4 text-primary" />
           Košík
@@ -358,6 +381,24 @@ async function submit() {
           </Button>
         </form>
       </aside>
+    </div>
+
+    <div
+      v-if="showMobileCartBar"
+      class="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-4 py-3 shadow-2xl backdrop-blur lg:hidden"
+    >
+      <div class="mx-auto flex max-w-6xl items-center gap-3">
+        <div class="min-w-0 flex-1">
+          <div class="truncate text-sm font-semibold">
+            {{ itemCount }} {{ itemCountWord }} v košíku
+          </div>
+          <div class="text-xs text-muted-foreground">{{ formatCZK(total) }}</div>
+        </div>
+        <Button type="button" variant="coral" size="sm" class="shrink-0" @click="scrollToCheckout">
+          <ShoppingBasket class="h-4 w-4" />
+          Košík
+        </Button>
+      </div>
     </div>
   </div>
 </template>
