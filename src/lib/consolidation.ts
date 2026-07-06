@@ -1,5 +1,12 @@
 import type { Sale, Location } from './types'
 import { round2 } from './invoice'
+import type {
+  PosCostSummary,
+  PosDateRange,
+  PosDeadItems,
+  PosLossSummary,
+  PosSalesSummary,
+} from './posReports'
 
 /**
  * Konsolidace poboček — čistá logika nad prodeji (POS Sale), seskupená po pobočkách.
@@ -26,6 +33,30 @@ export interface ConsolidationSummary {
   totalSales: number
   locationCount: number // počet POBOČEK s aspoň jedním prodejem (Nepřiřazeno se nepočítá)
   topLocationName: string | null
+}
+
+export interface LocationOperationalSnapshot {
+  locationId: string
+  locationName: string
+  summary: PosSalesSummary
+  costs: PosCostSummary
+  losses: PosLossSummary
+  deadItems: PosDeadItems
+}
+
+export interface LocationOperationalComparison {
+  locationId: string
+  locationName: string
+  revenue: number
+  saleCount: number
+  averageSale: number
+  grossMargin: number
+  grossMarginPercent: number
+  foodCostPercent: number
+  lossValue: number
+  deadStockValue: number
+  marginAfterLoss: number
+  missingCostProductCount: number
 }
 
 /** Do tržeb se počítá jen dokončený prodej; stornovaný ne. */
@@ -108,4 +139,50 @@ export function consolidationSummary(rows: LocationRevenue[]): ConsolidationSumm
     locationCount: assigned.length,
     topLocationName: top?.locationName ?? null,
   }
+}
+
+export function consolidationReportRange(sales: Sale[], period: string): PosDateRange | null {
+  if (period !== 'all') {
+    const [year, month] = period.split('-').map(Number)
+    if (!year || !month) return null
+    const lastDay = new Date(year, month, 0).getDate()
+    return { from: `${period}-01`, to: `${period}-${String(lastDay).padStart(2, '0')}` }
+  }
+
+  const dates = sales
+    .filter(isRevenueSale)
+    .map((s) => (s.soldAt || '').slice(0, 10))
+    .filter(Boolean)
+    .sort()
+
+  if (!dates.length) return null
+  return { from: dates[0], to: dates[dates.length - 1] }
+}
+
+export function buildLocationOperationalComparison(
+  snapshots: LocationOperationalSnapshot[],
+): LocationOperationalComparison[] {
+  return snapshots
+    .map((s) => {
+      const lossValue = round2(s.losses.totalLossValue)
+      const grossMargin = round2(s.costs.grossMargin)
+      return {
+        locationId: s.locationId,
+        locationName: s.locationName,
+        revenue: round2(s.summary.total),
+        saleCount: s.summary.saleCount,
+        averageSale: round2(s.summary.averageSale),
+        grossMargin,
+        grossMarginPercent: round2(s.costs.grossMarginPercent),
+        foodCostPercent: round2(s.costs.foodCostPercent),
+        lossValue,
+        deadStockValue: round2(s.deadItems.knownStockValue),
+        marginAfterLoss: round2(grossMargin - lossValue),
+        missingCostProductCount:
+          s.costs.missingCostProductCount +
+          s.losses.missingCostProductCount +
+          s.deadItems.missingCostProductCount,
+      }
+    })
+    .sort((a, b) => b.revenue - a.revenue || b.marginAfterLoss - a.marginAfterLoss)
 }

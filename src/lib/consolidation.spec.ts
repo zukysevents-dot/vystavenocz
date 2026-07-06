@@ -1,11 +1,19 @@
 import { describe, it, expect } from 'vitest'
 import {
   availablePeriods,
+  buildLocationOperationalComparison,
   buildLocationRevenue,
   consolidationSummary,
+  consolidationReportRange,
   UNASSIGNED_LABEL,
 } from '@/lib/consolidation'
 import type { Sale, Location } from '@/lib/types'
+import type {
+  PosCostSummary,
+  PosDeadItems,
+  PosLossSummary,
+  PosSalesSummary,
+} from '@/lib/posReports'
 
 function sale(over: Partial<Sale> = {}): Sale {
   return {
@@ -29,6 +37,74 @@ function loc(id: string, name: string): Location {
 }
 
 const LOCATIONS = [loc('l1', 'Praha'), loc('l2', 'Brno')]
+
+function posSummary(over: Partial<PosSalesSummary> = {}): PosSalesSummary {
+  return {
+    from: '2026-06-01',
+    to: '2026-06-30',
+    currency: 'CZK',
+    saleCount: 0,
+    total: 0,
+    totalNet: 0,
+    totalVat: 0,
+    cashTotal: 0,
+    cardTotal: 0,
+    tipTotal: 0,
+    discountTotal: 0,
+    cancelledCount: 0,
+    cancelledTotal: 0,
+    averageSale: 0,
+    vatBreakdown: [],
+    topProducts: [],
+    ...over,
+  }
+}
+
+function posCosts(over: Partial<PosCostSummary> = {}): PosCostSummary {
+  return {
+    from: '2026-06-01',
+    to: '2026-06-30',
+    currency: 'CZK',
+    productRevenueGross: 0,
+    unlinkedRevenueGross: 0,
+    estimatedCost: 0,
+    grossMargin: 0,
+    grossMarginPercent: 0,
+    foodCostPercent: 0,
+    missingCostProductCount: 0,
+    products: [],
+    ...over,
+  }
+}
+
+function posLosses(over: Partial<PosLossSummary> = {}): PosLossSummary {
+  return {
+    from: '2026-06-01',
+    to: '2026-06-30',
+    currency: 'CZK',
+    operationalLossValue: 0,
+    inventoryLossValue: 0,
+    inventoryGainValue: 0,
+    totalLossValue: 0,
+    missingCostProductCount: 0,
+    reasons: [],
+    products: [],
+    ...over,
+  }
+}
+
+function posDeadItems(over: Partial<PosDeadItems> = {}): PosDeadItems {
+  return {
+    from: '2026-06-01',
+    to: '2026-06-30',
+    currency: 'CZK',
+    productCount: 0,
+    knownStockValue: 0,
+    missingCostProductCount: 0,
+    products: [],
+    ...over,
+  }
+}
 
 describe('buildLocationRevenue', () => {
   it('seskupí tržby po pobočkách, dopočítá průměr a podíl', () => {
@@ -287,5 +363,101 @@ describe('availablePeriods', () => {
   it('žádné dokončené prodeje → prázdné pole', () => {
     expect(availablePeriods([])).toEqual([])
     expect(availablePeriods([sale({ status: 'Cancelled' })])).toEqual([])
+  })
+})
+
+describe('consolidationReportRange', () => {
+  it('pro konkrétní měsíc vrátí první a poslední den měsíce', () => {
+    expect(consolidationReportRange([], '2026-02')).toEqual({
+      from: '2026-02-01',
+      to: '2026-02-28',
+    })
+    expect(consolidationReportRange([], '2028-02')).toEqual({
+      from: '2028-02-01',
+      to: '2028-02-29',
+    })
+  })
+
+  it('pro all vezme rozsah dokončených prodejů', () => {
+    const sales = [
+      sale({ soldAt: '2026-06-10T10:00:00Z' }),
+      sale({ soldAt: '2026-05-01T10:00:00Z' }),
+      sale({ soldAt: '2026-04-01T10:00:00Z', status: 'Cancelled' }),
+    ]
+    expect(consolidationReportRange(sales, 'all')).toEqual({
+      from: '2026-05-01',
+      to: '2026-06-10',
+    })
+  })
+
+  it('bez dokončených prodejů pro all vrátí null', () => {
+    expect(consolidationReportRange([sale({ status: 'Cancelled' })], 'all')).toBeNull()
+  })
+})
+
+describe('buildLocationOperationalComparison', () => {
+  it('spojí reporty poboček do provozního srovnání a seřadí podle tržby', () => {
+    const rows = buildLocationOperationalComparison([
+      {
+        locationId: 'l2',
+        locationName: 'Brno',
+        summary: posSummary({ total: 500, saleCount: 5, averageSale: 100 }),
+        costs: posCosts({
+          grossMargin: 220,
+          grossMarginPercent: 44,
+          foodCostPercent: 56,
+          missingCostProductCount: 1,
+        }),
+        losses: posLosses({ totalLossValue: 20, missingCostProductCount: 2 }),
+        deadItems: posDeadItems({ knownStockValue: 90, missingCostProductCount: 3 }),
+      },
+      {
+        locationId: 'l1',
+        locationName: 'Praha',
+        summary: posSummary({ total: 1000, saleCount: 4, averageSale: 250 }),
+        costs: posCosts({ grossMargin: 650, grossMarginPercent: 65, foodCostPercent: 35 }),
+        losses: posLosses({ totalLossValue: 50 }),
+        deadItems: posDeadItems({ knownStockValue: 120 }),
+      },
+    ])
+
+    expect(rows.map((r) => r.locationName)).toEqual(['Praha', 'Brno'])
+    expect(rows[0]).toMatchObject({
+      revenue: 1000,
+      saleCount: 4,
+      averageSale: 250,
+      grossMargin: 650,
+      grossMarginPercent: 65,
+      foodCostPercent: 35,
+      lossValue: 50,
+      deadStockValue: 120,
+      marginAfterLoss: 600,
+      missingCostProductCount: 0,
+    })
+    expect(rows[1].marginAfterLoss).toBe(200)
+    expect(rows[1].missingCostProductCount).toBe(6)
+  })
+
+  it('při stejné tržbě rozhodne marže po ztrátách', () => {
+    const rows = buildLocationOperationalComparison([
+      {
+        locationId: 'a',
+        locationName: 'A',
+        summary: posSummary({ total: 100 }),
+        costs: posCosts({ grossMargin: 20 }),
+        losses: posLosses({ totalLossValue: 5 }),
+        deadItems: posDeadItems(),
+      },
+      {
+        locationId: 'b',
+        locationName: 'B',
+        summary: posSummary({ total: 100 }),
+        costs: posCosts({ grossMargin: 40 }),
+        losses: posLosses({ totalLossValue: 10 }),
+        deadItems: posDeadItems(),
+      },
+    ])
+
+    expect(rows.map((r) => r.locationName)).toEqual(['B', 'A'])
   })
 })

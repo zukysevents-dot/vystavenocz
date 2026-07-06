@@ -92,6 +92,13 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 2. Sleduje tržby, food cost, marži, výkon obsluhy, storna, slevy, ztráty skladu a ležáky.
 3. Pokud číslo nesedí, hledejte souvislost v uzávěrce, auditu a skladovém zrcadle.
 
+## Konsolidace poboček
+
+1. `Konsolidace` používá majitel nebo vedení při více pobočkách.
+2. První tabulka porovnává pobočky podle tržeb, počtu prodejů, průměrného účtu a spropitného.
+3. `Provozní srovnání poboček` přidává marži, food cost, ztráty skladu, mrtvý sklad a marži po ztrátách.
+4. Export CSV slouží pro účetní, poradu nebo kontrolu manažerů bez ručního přepisování.
+
 ## Audit
 
 Audit ukazuje důležité zásahy: storna, slevy, změny cen, uzávěrky a další citlivé akce. Každá důležitá změna má mít čas, uživatele a dohledatelný důvod.
