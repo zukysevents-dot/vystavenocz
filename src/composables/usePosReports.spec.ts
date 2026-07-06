@@ -58,4 +58,12 @@ describe('usePosReports', () => {
       '/pos-reports/staff?from=2026-07-01&to=2026-07-05&locationId=loc1',
     )
   })
+
+  it('losses volá GET /pos-reports/losses a přibalí locationId', async () => {
+    vi.mocked(http.get).mockResolvedValue({} as never)
+    await usePosReports().losses(range, 'loc1')
+    expect(http.get).toHaveBeenCalledWith(
+      '/pos-reports/losses?from=2026-07-01&to=2026-07-05&locationId=loc1',
+    )
+  })
 })

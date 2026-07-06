@@ -27,6 +27,8 @@ import {
   type PosRevenue,
   type PosCostSummary,
   type PosStaffPerformance,
+  type PosLossSummary,
+  type PosLossType,
 } from '@/lib/posReports'
 
 const apiMode = isApiMode()
@@ -49,6 +51,7 @@ const summary = ref<PosSalesSummary | null>(null)
 const revenue = ref<PosRevenue | null>(null)
 const costs = ref<PosCostSummary | null>(null)
 const staff = ref<PosStaffPerformance | null>(null)
+const losses = ref<PosLossSummary | null>(null)
 const percentFormatter = new Intl.NumberFormat('cs-CZ', {
   minimumFractionDigits: 0,
   maximumFractionDigits: 2,
@@ -67,6 +70,19 @@ function formatPercent(value: number): string {
   return `${percentFormatter.format(value)} %`
 }
 
+function lossTypeLabel(type: PosLossType): string {
+  const labels: Record<PosLossType, string> = {
+    Issue: 'Výdej',
+    WriteOff: 'Odpis',
+    StaffMeal: 'Personálka',
+    Breakage: 'Rozbití',
+    Expiration: 'Expirace',
+    Correction: 'Korekce',
+    Stocktaking: 'Inventura',
+  }
+  return labels[type]
+}
+
 async function load(): Promise<void> {
   if (!apiMode) {
     loading.value = false
@@ -77,16 +93,18 @@ async function load(): Promise<void> {
   try {
     const range = posReportRange(preset.value, new Date())
     const loc = locationId.value || undefined
-    const [sum, rev, cost, staffReport] = await Promise.all([
+    const [sum, rev, cost, staffReport, lossReport] = await Promise.all([
       reportsApi.summary(range, loc),
       reportsApi.revenue(range, 'Day', loc),
       reportsApi.costs(range, loc),
       reportsApi.staff(range, loc),
+      reportsApi.losses(range, loc),
     ])
     summary.value = sum
     revenue.value = rev
     costs.value = cost
     staff.value = staffReport
+    losses.value = lossReport
   } catch (e) {
     console.warn('Načtení provozního přehledu selhalo:', e)
     loadError.value = true
@@ -322,6 +340,132 @@ function selectPreset(id: PosReportPreset): void {
             <p v-else class="mt-4 text-sm text-muted-foreground">
               Za zvolené období nejsou žádné katalogové prodeje.
             </p>
+          </div>
+        </div>
+
+        <!-- Ztráty / nálezy skladu -->
+        <div v-if="losses" class="mt-6">
+          <div class="flex items-center gap-2">
+            <Ban class="h-4 w-4 text-destructive" />
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Ztráty skladu
+            </h2>
+          </div>
+
+          <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="rounded-xl border border-border bg-card p-4">
+              <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                <Ban class="h-4 w-4" /> Ztráty celkem
+              </div>
+              <div class="mt-1 text-xl font-semibold tabular-nums">
+                {{ formatCZK(losses.totalLossValue) }}
+              </div>
+              <div class="text-xs text-muted-foreground">Bez započtení nálezů</div>
+            </div>
+            <div class="rounded-xl border border-border bg-card p-4">
+              <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                <Package class="h-4 w-4" /> Provozní ztráty
+              </div>
+              <div class="mt-1 text-xl font-semibold tabular-nums">
+                {{ formatCZK(losses.operationalLossValue) }}
+              </div>
+              <div class="text-xs text-muted-foreground">Odpisy, rozbití, expirace</div>
+            </div>
+            <div class="rounded-xl border border-border bg-card p-4">
+              <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                <Receipt class="h-4 w-4" /> Inventurní ztráty
+              </div>
+              <div class="mt-1 text-xl font-semibold tabular-nums">
+                {{ formatCZK(losses.inventoryLossValue) }}
+              </div>
+              <div class="text-xs text-muted-foreground">Korekce a inventury</div>
+            </div>
+            <div class="rounded-xl border border-border bg-card p-4">
+              <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                <TrendingUp class="h-4 w-4" /> Nálezy
+              </div>
+              <div class="mt-1 text-xl font-semibold tabular-nums">
+                {{ formatCZK(losses.inventoryGainValue) }}
+              </div>
+              <div class="text-xs text-muted-foreground">Kladné korekce a inventury</div>
+            </div>
+          </div>
+
+          <div class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
+            <div class="rounded-xl border border-border bg-card p-4 sm:p-6">
+              <h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Důvody
+              </h3>
+              <div v-if="losses.reasons.length" class="mt-4 divide-y divide-border">
+                <div
+                  v-for="reason in losses.reasons"
+                  :key="reason.type"
+                  class="flex items-center gap-3 py-3 text-sm"
+                >
+                  <div class="min-w-0 flex-1">
+                    <div class="font-medium">{{ lossTypeLabel(reason.type) }}</div>
+                    <div class="text-xs text-muted-foreground tabular-nums">
+                      {{ reason.movementCount }} pohybů · ztráta {{ reason.quantityLost }}
+                      <span v-if="reason.quantityGained > 0">
+                        · nález {{ reason.quantityGained }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div class="font-semibold tabular-nums">
+                      {{ formatCZK(reason.lossValue) }}
+                    </div>
+                    <div
+                      v-if="reason.gainValue > 0"
+                      class="text-xs text-muted-foreground tabular-nums"
+                    >
+                      +{{ formatCZK(reason.gainValue) }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <p v-else class="mt-4 text-sm text-muted-foreground">
+                Za zvolené období nejsou žádné skladové ztráty.
+              </p>
+            </div>
+
+            <div class="rounded-xl border border-border bg-card p-4 sm:p-6">
+              <h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Největší ztráty podle položek
+              </h3>
+              <p
+                v-if="losses.missingCostProductCount > 0"
+                class="mt-1 text-xs text-muted-foreground"
+              >
+                {{ losses.missingCostProductCount }} položek nemá nákladovou cenu.
+              </p>
+              <div v-if="losses.products.length" class="mt-4 divide-y divide-border">
+                <div
+                  v-for="p in losses.products"
+                  :key="`${p.productId}-${p.type}`"
+                  class="grid gap-2 py-3 text-sm md:grid-cols-[minmax(0,1fr)_auto_auto]"
+                >
+                  <div class="min-w-0">
+                    <div class="truncate font-medium">{{ p.name }}</div>
+                    <div class="text-xs text-muted-foreground tabular-nums">
+                      {{ p.sku }} · {{ lossTypeLabel(p.type) }}
+                      <span v-if="!p.hasCostBasis"> · chybí nákupní cena</span>
+                    </div>
+                  </div>
+                  <div class="tabular-nums md:text-right">
+                    <span class="text-muted-foreground md:hidden">Množství </span>
+                    {{ p.quantityLost }}
+                  </div>
+                  <div class="font-semibold tabular-nums md:text-right">
+                    <span class="text-muted-foreground md:hidden">Ztráta </span>
+                    {{ formatCZK(p.lossValue) }}
+                  </div>
+                </div>
+              </div>
+              <p v-else class="mt-4 text-sm text-muted-foreground">
+                Za zvolené období nejsou žádné položkové ztráty.
+              </p>
+            </div>
           </div>
         </div>
 

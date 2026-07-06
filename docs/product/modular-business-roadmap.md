@@ -110,7 +110,7 @@ Must make the restaurant paperless:
 
 Must make Vystaveno smarter than a classic POS:
 
-- manager dashboards for revenue, margin, food cost, staff performance, dead items, losses, and suspicious actions (foundation: `Provozní přehled` page + backend `GET /api/v1/pos-reports/summary`, `/revenue`, `/costs`, and `/staff` aggregate completed sales for a period/location — revenue, average check, payment split, discounts, tips, cancellations, top products, revenue-by-day chart, estimated cost, gross margin, food-cost product lines, and staff revenue/check/payment/storno rows; gated by the `pos.reports` permission for Owner/Admin/Manager; dead-item/loss panels still to come)
+- manager dashboards for revenue, margin, food cost, staff performance, losses, dead items, and suspicious actions (foundation: `Provozní přehled` page + backend `GET /api/v1/pos-reports/summary`, `/revenue`, `/costs`, `/staff`, and `/losses` aggregate completed sales and stock-ledger losses for a period/location — revenue, average check, payment split, discounts, tips, cancellations, top products, revenue-by-day chart, estimated cost, gross margin, food-cost product lines, staff revenue/check/payment/storno rows, and stock losses/gains by reason/product in CZK; gated by the `pos.reports` permission for Owner/Admin/Manager; dead-item panels still to come)
 - staff performance: revenue per hour, storno rate, discount rate, cash differences (foundation: `/staff` and `Výkon obsluhy` show revenue, check count, average check, payment split, tips, discounts, and storno totals per employee)
 - stock purchase suggestions from sales, recipes, minimum levels, and seasonality
 - QR table ordering, payment, tip, review, and loyalty without installing an app
