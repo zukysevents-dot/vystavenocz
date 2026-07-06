@@ -2,6 +2,7 @@ import { http } from '@/lib/http'
 import type {
   CreatePurchaseReceiptRequest,
   PurchaseReceipt,
+  PurchaseSuggestionsResponse,
   StockLevel,
   StockMirror,
   StockMovement,
@@ -19,6 +20,13 @@ export interface StockMirrorQuery {
   to?: string
   locationId?: string | null
   search?: string
+}
+
+export interface PurchaseSuggestionsQuery {
+  from?: string
+  to?: string
+  daysAhead?: number
+  locationId?: string | null
 }
 
 // Sklad / zásoby (gastro/retail). Jen API mód — nad existujícím inventory backendem.
@@ -78,6 +86,17 @@ export function useInventory() {
     const qs = params.toString()
     return http.get(`/inventory/stock-mirror${qs ? `?${qs}` : ''}`)
   }
+  function purchaseSuggestions(
+    query: PurchaseSuggestionsQuery = {},
+  ): Promise<PurchaseSuggestionsResponse> {
+    const params = new URLSearchParams()
+    if (query.from) params.set('from', query.from)
+    if (query.to) params.set('to', query.to)
+    if (query.daysAhead != null) params.set('daysAhead', String(query.daysAhead))
+    if (query.locationId) params.set('locationId', query.locationId)
+    const qs = params.toString()
+    return http.get(`/inventory/purchase-suggestions${qs ? `?${qs}` : ''}`)
+  }
   return {
     levels,
     movements,
@@ -89,5 +108,6 @@ export function useInventory() {
     transfer,
     stocktake,
     stockMirror,
+    purchaseSuggestions,
   }
 }

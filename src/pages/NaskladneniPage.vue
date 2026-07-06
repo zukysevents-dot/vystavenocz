@@ -19,7 +19,7 @@ import { useInventory } from '@/composables/useInventory'
 import { isApiMode } from '@/lib/http'
 import { toast } from '@/components/ui/sonner'
 import { reorderSuggestions, findByEan } from '@/lib/reorder'
-import type { Product, PurchaseReceipt } from '@/lib/types'
+import type { Product, PurchaseReceipt, PurchaseSuggestionItem } from '@/lib/types'
 
 const { products, load: loadProducts } = useProducts()
 const inv = useInventory()
@@ -30,6 +30,8 @@ const loadError = ref(false)
 const submitting = ref(false)
 const levelMap = ref(new Map<string, number>())
 const recentReceipts = ref<PurchaseReceipt[]>([])
+const apiSuggestions = ref<PurchaseSuggestionItem[]>([])
+const apiSuggestionsLoaded = ref(false)
 
 const scanEan = ref('')
 const search = ref('')
@@ -67,12 +69,24 @@ async function loadRecentReceipts() {
   recentReceipts.value = await inv.purchaseReceipts()
 }
 
+async function loadPurchaseSuggestions() {
+  try {
+    const response = await inv.purchaseSuggestions({ daysAhead: 7 })
+    apiSuggestions.value = response.items
+    apiSuggestionsLoaded.value = true
+  } catch (e) {
+    console.warn('Načtení nákupních doporučení selhalo:', e)
+    apiSuggestions.value = []
+    apiSuggestionsLoaded.value = false
+  }
+}
+
 async function reload() {
   loading.value = true
   loadError.value = false
   try {
     await loadProducts()
-    await Promise.all([loadLevels(), loadRecentReceipts()])
+    await Promise.all([loadLevels(), loadRecentReceipts(), loadPurchaseSuggestions()])
   } catch (e) {
     console.warn('Načtení skladu selhalo:', e)
     loadError.value = true
@@ -201,24 +215,85 @@ async function submit() {
     lines.value = []
     documentNumber.value = ''
     note.value = ''
-    await Promise.all([loadLevels(), loadRecentReceipts()])
+    await Promise.all([loadLevels(), loadRecentReceipts(), loadPurchaseSuggestions()])
     toast.success(`Příjemka uložena: ${receipt.items.length} položek.`)
     focusScan()
   } catch (e) {
     console.error(e)
     toast.error('Příjemka se neuložila. Sklad zůstal beze změny.')
-    await Promise.all([loadLevels(), loadRecentReceipts()])
+    await Promise.all([loadLevels(), loadRecentReceipts(), loadPurchaseSuggestions()])
   } finally {
     submitting.value = false
   }
 }
 
 // --- Návrhy k doobjednání ---
-const suggestions = computed(() => reorderSuggestions(products.value, levelMap.value))
+interface SuggestionRow {
+  productId: string
+  name: string
+  sku: string
+  current: number
+  min: number
+  suggested: number
+  averageDailyUsage: number | null
+  estimatedCost: number | null
+  daysOfStockRemaining: number | null
+  purchasePrice: number | null
+}
 
-function addSuggestion(productId: string, suggested: number) {
-  const p = products.value.find((x) => x.id === productId)
-  if (p) addProduct(p, suggested)
+const suggestions = computed<SuggestionRow[]>(() => {
+  if (apiSuggestionsLoaded.value) {
+    return apiSuggestions.value.map((s) => ({
+      productId: s.productId,
+      name: s.productName,
+      sku: s.productSku,
+      current: s.currentQuantity,
+      min: s.minQuantity,
+      suggested: s.recommendedOrderQuantity,
+      averageDailyUsage: s.averageDailyUsage,
+      estimatedCost: s.estimatedCost,
+      daysOfStockRemaining: s.daysOfStockRemaining,
+      purchasePrice: s.purchasePrice,
+    }))
+  }
+  return reorderSuggestions(products.value, levelMap.value).map((s) => ({
+    ...s,
+    averageDailyUsage: null,
+    estimatedCost: null,
+    daysOfStockRemaining: null,
+    purchasePrice: products.value.find((p) => p.id === s.productId)?.purchasePrice ?? null,
+  }))
+})
+
+const suggestionsSubtitle = computed(() =>
+  apiSuggestionsLoaded.value
+    ? 'Podle spotřeby, receptur a minima na dalších 7 dní.'
+    : 'Zboží na/pod minimem podle lokálního stavu.',
+)
+
+const emptySuggestionsText = computed(() =>
+  apiSuggestionsLoaded.value
+    ? 'Na dalších 7 dní není potřeba nic doobjednat.'
+    : 'Vše je nad minimem.',
+)
+
+function addSuggestion(suggestion: SuggestionRow) {
+  const p = products.value.find((x) => x.id === suggestion.productId)
+  if (p) addProduct(p, suggestion.suggested)
+  else {
+    lines.value.push({
+      productId: suggestion.productId,
+      name: suggestion.name,
+      sku: suggestion.sku,
+      quantity: suggestion.suggested,
+      unitCost: suggestion.purchasePrice ?? '',
+    })
+  }
+}
+
+function fmtQuantity(value: number | null): string {
+  if (value == null) return '—'
+  return value.toLocaleString('cs-CZ', { maximumFractionDigits: 3 })
 }
 </script>
 
@@ -392,10 +467,10 @@ function addSuggestion(productId: string, suggested: number) {
           <h2 class="flex items-center gap-1.5 font-semibold">
             <AlertTriangle class="h-4 w-4 text-destructive" /> K doobjednání
           </h2>
-          <p class="mt-0.5 text-xs text-muted-foreground">Zboží na/pod minimem.</p>
+          <p class="mt-0.5 text-xs text-muted-foreground">{{ suggestionsSubtitle }}</p>
 
           <div v-if="suggestions.length === 0" class="mt-4 text-sm text-muted-foreground">
-            Vše je nad minimem.
+            {{ emptySuggestionsText }}
           </div>
           <div v-else class="mt-3 space-y-2">
             <div
@@ -407,15 +482,20 @@ function addSuggestion(productId: string, suggested: number) {
               <div
                 class="mt-0.5 flex items-center justify-between gap-2 text-xs text-muted-foreground"
               >
-                <span>stav {{ s.current }} / min {{ s.min }}</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  class="h-7 shrink-0"
-                  @click="addSuggestion(s.productId, s.suggested)"
-                >
-                  + {{ s.suggested }} ks
+                <span>stav {{ fmtQuantity(s.current) }} / min {{ fmtQuantity(s.min) }}</span>
+                <Button variant="outline" size="sm" class="h-7 shrink-0" @click="addSuggestion(s)">
+                  + {{ fmtQuantity(s.suggested) }} ks
                 </Button>
+              </div>
+              <div
+                v-if="apiSuggestionsLoaded"
+                class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground"
+              >
+                <span>Denně {{ fmtQuantity(s.averageDailyUsage) }} ks</span>
+                <span v-if="s.daysOfStockRemaining != null">
+                  Zásoba {{ fmtQuantity(s.daysOfStockRemaining) }} dní
+                </span>
+                <span v-if="s.estimatedCost != null">Odhad {{ fmtMoney(s.estimatedCost) }}</span>
               </div>
             </div>
           </div>

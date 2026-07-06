@@ -113,6 +113,7 @@ Must make Vystaveno smarter than a classic POS:
 - manager dashboards for revenue, margin, food cost, staff performance, losses, dead items, and suspicious actions (foundation: `Provozní přehled` page + backend `GET /api/v1/pos-reports/summary`, `/revenue`, `/costs`, `/staff`, `/losses`, and `/dead-items` aggregate completed sales and stock-ledger inventory signals for a period/location — revenue, average check, payment split, discounts, tips, cancellations, top products, revenue-by-day chart, estimated cost, gross margin, food-cost product lines, staff revenue/check/payment/storno rows, stock losses/gains by reason/product in CZK, and stocked products with no completed sale in the selected period; gated by the `pos.reports` permission for Owner/Admin/Manager)
 - staff performance: revenue per hour, storno rate, discount rate, cash differences (foundation: `/staff` and `Výkon obsluhy` show revenue, check count, average check, payment split, tips, discounts, storno totals, discount rate, and storno rate per employee)
 - stock purchase suggestions from sales, recipes, minimum levels, and seasonality
+- simple user-facing gastro manual that stays updated with each workflow so restaurants can train staff without paper notes
 - QR table ordering, payment, tip, review, and loyalty without installing an app
 - kitchen display with preparation time, SLA colors, station filters, and history (foundation: preparation timer, SLA color thresholds, station filters, ticket printing, Preparing/Ready/Served actions, and persistent Served history via `GET /api/v1/kitchen/history`)
 - multi-location central stock, shared price lists, and branch comparisons
@@ -159,6 +160,7 @@ Vystaveno should win through:
 - modern onboarding templates for cafe, bistro, restaurant, bar, food truck, salon, plumber, shop
 - readable integration status for accounting and payment systems
 - no paper as source of truth; paper is only an export or printout
+- simple Czech user guidance inside `docs/product/gastro-user-manual.md`, kept in sync as features land
 
 ## Non-gastro modules
 
