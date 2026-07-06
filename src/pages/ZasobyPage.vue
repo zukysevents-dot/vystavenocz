@@ -6,6 +6,8 @@ import {
   Loader2,
   Search,
   ClipboardCheck,
+  ChevronDown,
+  ChevronUp,
   SlidersHorizontal,
   AlertTriangle,
   Scale,
@@ -58,6 +60,7 @@ const mirrorFrom = ref(today)
 const mirrorTo = ref(today)
 const mirrorLocationId = ref(ALL_LOCATIONS)
 const mirrorSearch = ref('')
+const expandedMirrorProductId = ref<string | null>(null)
 
 const MOVE_LABEL: Record<StockMovementType, string> = {
   Receipt: 'Příjem',
@@ -156,6 +159,25 @@ function varianceTone(item: StockMirrorItem): string {
   if (item.varianceQuantity < 0) return 'text-destructive'
   return 'text-muted-foreground'
 }
+function toggleMirrorDetail(productId: string) {
+  expandedMirrorProductId.value = expandedMirrorProductId.value === productId ? null : productId
+}
+function mirrorConsumption(item: StockMirrorItem): number {
+  return item.soldQuantity + item.issuedQuantity
+}
+function mirrorVarianceExplanation(item: StockMirrorItem): string {
+  if (Math.abs(item.varianceQuantity) <= 0.0001) {
+    return 'Rozdíl je nulový: realita odpovídá systému po započtení všech pohybů.'
+  }
+  const reasons: string[] = []
+  if (item.correctionQuantity !== 0) reasons.push(`korekce ${fmtSigned(item.correctionQuantity)}`)
+  if (item.stocktakingQuantity !== 0)
+    reasons.push(`inventura ${fmtSigned(item.stocktakingQuantity)}`)
+  if (!reasons.length) {
+    return 'Rozdíl je nenulový, ale zrcadlo nemá samostatný korekční nebo inventurní pohyb. Zkontrolujte historii pohybů položky.'
+  }
+  return `Rozdíl vzniká z: ${reasons.join(' + ')}. Prodeje, výdeje a přesuny už jsou započtené ve stavu „má být".`
+}
 function todayISO(): string {
   const d = new Date()
   const off = d.getTimezoneOffset()
@@ -203,6 +225,7 @@ async function loadMirror() {
       locationId: mirrorLocationId.value === ALL_LOCATIONS ? null : mirrorLocationId.value,
       search: mirrorSearch.value,
     })
+    expandedMirrorProductId.value = null
     mirrorLoaded.value = true
   } catch (e) {
     toast.error('Zrcadlo skladu se nepodařilo načíst.')
@@ -648,56 +671,130 @@ async function submitStocktake() {
               <span class="text-right">Realita</span>
               <span class="text-right">Rozdíl</span>
             </div>
-            <div
-              v-for="item in mirror.items"
-              :key="item.productId"
-              class="grid min-w-[760px] grid-cols-[minmax(160px,1.5fr)_repeat(5,minmax(90px,1fr))] gap-3 border-b border-border px-4 py-3 text-sm last:border-0"
-            >
-              <div class="min-w-0">
-                <div class="truncate font-medium">{{ item.productName }}</div>
-                <div class="text-xs text-muted-foreground">
-                  {{ item.productSku }} • otevření {{ fmtQty(item.openingQuantity) }}
+            <div v-for="item in mirror.items" :key="item.productId" class="border-b last:border-0">
+              <div
+                class="grid min-w-[760px] grid-cols-[minmax(160px,1.5fr)_repeat(5,minmax(90px,1fr))] gap-3 px-4 py-3 text-sm"
+              >
+                <div class="min-w-0">
+                  <div class="truncate font-medium">{{ item.productName }}</div>
+                  <div class="text-xs text-muted-foreground">
+                    {{ item.productSku }} • otevření {{ fmtQty(item.openingQuantity) }}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    class="mt-2 h-7 px-2 text-xs"
+                    :aria-expanded="expandedMirrorProductId === item.productId"
+                    @click="toggleMirrorDetail(item.productId)"
+                  >
+                    <ChevronUp
+                      v-if="expandedMirrorProductId === item.productId"
+                      class="h-3.5 w-3.5"
+                    />
+                    <ChevronDown v-else class="h-3.5 w-3.5" />
+                    Detail zrcadla
+                  </Button>
+                </div>
+                <div class="text-right tabular-nums">
+                  <div class="font-semibold text-success">{{ fmtQty(item.receivedQuantity) }}</div>
+                  <div v-if="item.stornoQuantity" class="text-xs text-muted-foreground">
+                    storno {{ fmtQty(item.stornoQuantity) }}
+                  </div>
+                </div>
+                <div class="text-right tabular-nums">
+                  <div class="font-semibold text-destructive">
+                    {{ fmtQty(mirrorConsumption(item)) }}
+                  </div>
+                  <div class="text-xs text-muted-foreground">
+                    prodej {{ fmtQty(item.soldQuantity) }}
+                  </div>
+                </div>
+                <div class="text-right tabular-nums">
+                  <div class="font-semibold">{{ fmtQty(item.expectedQuantity) }}</div>
+                  <div class="text-xs text-muted-foreground">podle pohybů</div>
+                </div>
+                <div class="text-right tabular-nums">
+                  <div class="font-semibold">{{ fmtQty(item.actualQuantity) }}</div>
+                  <div class="text-xs text-muted-foreground">po kontrole</div>
+                </div>
+                <div class="text-right tabular-nums">
+                  <div class="font-semibold" :class="varianceTone(item)">
+                    {{ fmtSigned(item.varianceQuantity) }}
+                  </div>
+                  <div
+                    v-if="item.varianceValue !== null"
+                    class="text-xs font-medium"
+                    :class="varianceTone(item)"
+                  >
+                    {{ fmtSignedMoney(item.varianceValue) }}
+                  </div>
+                  <div class="text-xs text-muted-foreground">
+                    kor. {{ fmtSigned(item.correctionQuantity) }} / inv.
+                    {{ fmtSigned(item.stocktakingQuantity) }}
+                  </div>
+                  <div v-if="item.unitCost !== null" class="text-xs text-muted-foreground">
+                    náklad {{ fmtMoney(item.unitCost) }}/ks
+                  </div>
                 </div>
               </div>
-              <div class="text-right tabular-nums">
-                <div class="font-semibold text-success">{{ fmtQty(item.receivedQuantity) }}</div>
-                <div v-if="item.stornoQuantity" class="text-xs text-muted-foreground">
-                  storno {{ fmtQty(item.stornoQuantity) }}
-                </div>
-              </div>
-              <div class="text-right tabular-nums">
-                <div class="font-semibold text-destructive">
-                  {{ fmtQty(item.soldQuantity + item.issuedQuantity) }}
-                </div>
-                <div class="text-xs text-muted-foreground">
-                  prodej {{ fmtQty(item.soldQuantity) }}
-                </div>
-              </div>
-              <div class="text-right tabular-nums">
-                <div class="font-semibold">{{ fmtQty(item.expectedQuantity) }}</div>
-                <div class="text-xs text-muted-foreground">podle pohybů</div>
-              </div>
-              <div class="text-right tabular-nums">
-                <div class="font-semibold">{{ fmtQty(item.actualQuantity) }}</div>
-                <div class="text-xs text-muted-foreground">po kontrole</div>
-              </div>
-              <div class="text-right tabular-nums">
-                <div class="font-semibold" :class="varianceTone(item)">
-                  {{ fmtSigned(item.varianceQuantity) }}
-                </div>
-                <div
-                  v-if="item.varianceValue !== null"
-                  class="text-xs font-medium"
-                  :class="varianceTone(item)"
-                >
-                  {{ fmtSignedMoney(item.varianceValue) }}
-                </div>
-                <div class="text-xs text-muted-foreground">
-                  kor. {{ fmtSigned(item.correctionQuantity) }} / inv.
-                  {{ fmtSigned(item.stocktakingQuantity) }}
-                </div>
-                <div v-if="item.unitCost !== null" class="text-xs text-muted-foreground">
-                  náklad {{ fmtMoney(item.unitCost) }}/ks
+              <div
+                v-if="expandedMirrorProductId === item.productId"
+                class="min-w-[760px] border-t border-border bg-muted/20 px-4 py-3 text-xs text-muted-foreground"
+              >
+                <div class="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
+                  <div>
+                    <div class="font-semibold text-foreground">Výpočet stavu má být</div>
+                    <div class="mt-2 grid grid-cols-6 gap-2 text-center tabular-nums">
+                      <div>
+                        <div class="text-[11px] uppercase">Otevření</div>
+                        <div class="font-semibold text-foreground">
+                          {{ fmtQty(item.openingQuantity) }}
+                        </div>
+                      </div>
+                      <div>
+                        <div class="text-[11px] uppercase">+ Příjem</div>
+                        <div class="font-semibold text-success">
+                          {{ fmtQty(item.receivedQuantity) }}
+                        </div>
+                      </div>
+                      <div>
+                        <div class="text-[11px] uppercase">+ Storno</div>
+                        <div class="font-semibold text-success">
+                          {{ fmtQty(item.stornoQuantity) }}
+                        </div>
+                      </div>
+                      <div>
+                        <div class="text-[11px] uppercase">- Prodej</div>
+                        <div class="font-semibold text-destructive">
+                          {{ fmtQty(item.soldQuantity) }}
+                        </div>
+                      </div>
+                      <div>
+                        <div class="text-[11px] uppercase">- Výdej</div>
+                        <div class="font-semibold text-destructive">
+                          {{ fmtQty(item.issuedQuantity) }}
+                        </div>
+                      </div>
+                      <div>
+                        <div class="text-[11px] uppercase">= Má být</div>
+                        <div class="font-semibold text-foreground">
+                          {{ fmtQty(item.expectedQuantity) }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="font-semibold text-foreground">Vysvětlení rozdílu</div>
+                    <p class="mt-2 leading-relaxed">{{ mirrorVarianceExplanation(item) }}</p>
+                    <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 tabular-nums">
+                      <span>Korekce {{ fmtSigned(item.correctionQuantity) }}</span>
+                      <span>Inventura {{ fmtSigned(item.stocktakingQuantity) }}</span>
+                      <span :class="varianceTone(item)">
+                        Rozdíl {{ fmtSigned(item.varianceQuantity) }}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
