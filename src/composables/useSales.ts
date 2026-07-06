@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { http } from '@/lib/http'
-import type { DailySalesSummary, PaymentMethod, Sale } from '@/lib/types'
+import type { ApprovalRequest, DailySalesSummary, PaymentMethod, Sale } from '@/lib/types'
 import type { PagedResult } from '@/composables/useApi'
 
 // Pokladní prodej není prostý CRUD (má /summary, /storno, /receipt) → vlastní composable nad http.
@@ -54,8 +54,8 @@ export function useSales() {
   }
 
   // Storno prodeje — vrátí zboží na sklad, prodej dostane stav Cancelled.
-  function storno(id: string): Promise<Sale> {
-    return http.post<Sale>(`/sales/${id}/storno`)
+  function storno(id: string): Promise<Sale | ApprovalRequest> {
+    return http.post<Sale | ApprovalRequest>(`/sales/${id}/storno`)
   }
 
   return { lastSale, create, summaryToday, list, storno }

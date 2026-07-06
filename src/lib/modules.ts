@@ -92,6 +92,12 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
     hiddenForRoles: ['Employee', 'Manager'],
   },
   {
+    to: '/app/schvalovani',
+    label: 'Schvalování',
+    module: 'core',
+    hiddenForRoles: ['Employee', 'Accountant'],
+  },
+  {
     to: '/app/provozni-prehled',
     label: 'Provozní přehled',
     module: 'reporting',
