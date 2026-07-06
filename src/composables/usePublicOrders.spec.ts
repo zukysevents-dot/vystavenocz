@@ -44,4 +44,32 @@ describe('usePublicOrders', () => {
       address: null,
     })
   })
+
+  it('order umí odeslat QR objednávku ke stolu', async () => {
+    vi.mocked(http.postPublic).mockResolvedValue({
+      orderId: 'order-1',
+      total: 189,
+      currency: 'CZK',
+    } as never)
+
+    await usePublicOrders().order('bistro', {
+      items: [{ productId: 'prod-1', quantity: 1 }],
+      customerName: 'Host',
+      customerPhone: null,
+      note: null,
+      fulfillment: 'pickup',
+      address: null,
+      tableId: 'table-1',
+    })
+
+    expect(http.postPublic).toHaveBeenCalledWith('/public/bistro/orders', {
+      items: [{ productId: 'prod-1', quantity: 1 }],
+      customerName: 'Host',
+      customerPhone: null,
+      note: null,
+      fulfillment: 'pickup',
+      address: null,
+      tableId: 'table-1',
+    })
+  })
 })

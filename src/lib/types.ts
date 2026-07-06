@@ -47,6 +47,7 @@ export interface Company {
   invoiceNumberFormat: string | null
   nextInvoiceSeq: number
   defaultPaymentDays: number
+  publicSlug: string | null
 }
 
 export interface InvoiceItem {
@@ -459,6 +460,7 @@ export interface PublicOrderRequest {
   note?: string | null
   fulfillment: OrderFulfillment
   address?: string | null
+  tableId?: string | null
 }
 
 export interface PublicOrderConfirmation {

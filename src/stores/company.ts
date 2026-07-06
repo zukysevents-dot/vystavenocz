@@ -34,6 +34,7 @@ interface CompanySettingsResponse {
   currency: string
   address: AddressDto | null
   bankAccount: BankAccountDto | null
+  publicSlug: string | null
 }
 interface CreateCompanyResponse {
   company: { id: string; name: string }
@@ -65,6 +66,7 @@ function emptyCompany(email: string, fullName: string | null): Company {
     invoiceNumberFormat: null,
     nextInvoiceSeq: 1,
     defaultPaymentDays: 14,
+    publicSlug: null,
   }
 }
 
@@ -85,6 +87,7 @@ function fromResponse(r: CompanySettingsResponse): Partial<Company> {
     bankAccount: r.bankAccount?.accountNumber ?? null,
     iban: r.bankAccount?.iban ?? null,
     swift: r.bankAccount?.bic ?? null,
+    publicSlug: r.publicSlug,
   }
 }
 
@@ -101,6 +104,7 @@ function toUpdateRequest(c: Company) {
     currency: 'CZK',
     address: { street: c.street, city: c.city, postalCode: c.zip, country: c.country },
     bankAccount: { accountNumber: c.bankAccount, iban: c.iban, bic: c.swift },
+    publicSlug: c.publicSlug,
   }
 }
 

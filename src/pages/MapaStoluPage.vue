@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import QRCode from 'qrcode'
 import {
+  Copy,
+  ExternalLink,
   Plus,
   Save,
   Loader2,
@@ -10,6 +13,7 @@ import {
   Circle,
   RotateCw,
   LayoutGrid,
+  QrCode,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,10 +40,12 @@ import { useFloors } from '@/composables/useFloors'
 import { useTables } from '@/composables/useTables'
 import { isApiMode } from '@/lib/http'
 import { toast } from '@/components/ui/sonner'
+import { useCompanyStore } from '@/stores/company'
 import type { DiningTable, Floor, TableShape } from '@/lib/types'
 
 const floorsApi = useFloors()
 const tablesApi = useTables()
+const companyStore = useCompanyStore()
 const apiMode = isApiMode()
 
 const loading = ref(true)
@@ -61,9 +67,16 @@ const editingTable = ref<DiningTable | null>(null)
 const tableForm = reactive({ name: '', seats: 4, shape: 'Rect' as TableShape })
 const deleteTableId = ref<string | null>(null)
 const deleteTableOpen = ref(false)
+const qrDialogOpen = ref(false)
+const qrCodeUrl = ref('')
+const qrLoading = ref(false)
 
 const currentFloor = computed(() => floors.value.find((f) => f.id === currentFloorId.value) ?? null)
 const selectedTable = computed(() => tables.value.find((t) => t.id === selectedId.value) ?? null)
+const publicSlug = computed(() => companyStore.company?.publicSlug?.trim() ?? '')
+const selectedTableOrderUrl = computed(() =>
+  selectedTable.value && publicSlug.value ? tableOrderUrl(selectedTable.value) : '',
+)
 
 onMounted(async () => {
   if (!apiMode) {
@@ -71,6 +84,7 @@ onMounted(async () => {
     return
   }
   try {
+    await companyStore.load()
     floors.value = await floorsApi.list()
     if (!currentFloorId.value && floors.value.length) currentFloorId.value = floors.value[0].id
     if (currentFloorId.value) await loadTables()
@@ -261,6 +275,48 @@ async function saveLayout() {
     console.error(e)
   } finally {
     saving.value = false
+  }
+}
+
+function tableOrderUrl(table: DiningTable): string {
+  const url = new URL(`/objednavka/${publicSlug.value}`, window.location.origin)
+  url.searchParams.set('table', table.id)
+  url.searchParams.set('name', table.name)
+  return url.toString()
+}
+
+async function openQrDialog() {
+  const table = selectedTable.value
+  if (!table) return
+  if (!publicSlug.value) {
+    toast.error('Nejdřív nastavte veřejný slug firmy v nastavení.')
+    return
+  }
+  qrDialogOpen.value = true
+  qrLoading.value = true
+  qrCodeUrl.value = ''
+  try {
+    qrCodeUrl.value = await QRCode.toDataURL(tableOrderUrl(table), {
+      width: 320,
+      margin: 2,
+      color: { dark: '#111111', light: '#ffffff' },
+    })
+  } catch (e) {
+    toast.error('Vygenerování QR kódu selhalo.')
+    console.error(e)
+  } finally {
+    qrLoading.value = false
+  }
+}
+
+async function copyOrderUrl() {
+  if (!selectedTableOrderUrl.value) return
+  try {
+    await navigator.clipboard.writeText(selectedTableOrderUrl.value)
+    toast.success('Odkaz zkopírován.')
+  } catch (e) {
+    toast.error('Kopírování odkazu selhalo.')
+    console.error(e)
   }
 }
 
@@ -478,6 +534,9 @@ function onCanvasPointerDown(e: PointerEvent) {
               >
             </div>
             <div class="flex flex-wrap gap-2 pt-2">
+              <Button variant="coral" size="sm" @click="openQrDialog">
+                <QrCode class="h-4 w-4" /> QR objednávka
+              </Button>
               <Button variant="outline" size="sm" @click="openEditTable">
                 <Pencil class="h-4 w-4" /> Upravit
               </Button>
@@ -563,6 +622,69 @@ function onCanvasPointerDown(e: PointerEvent) {
             <Button type="submit" variant="coral">Uložit změny</Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+
+    <!-- QR objednávka ke stolu -->
+    <Dialog v-model:open="qrDialogOpen">
+      <DialogContent class="max-w-md">
+        <DialogHeader>
+          <DialogTitle>QR objednávka ke stolu</DialogTitle>
+          <DialogDescription>
+            {{ selectedTable?.name }} otevře veřejné menu a objednávka se připíše k tomuto stolu.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="space-y-4">
+          <div
+            class="flex min-h-80 items-center justify-center rounded-lg border border-border bg-white p-4"
+          >
+            <Loader2 v-if="qrLoading" class="h-6 w-6 animate-spin text-primary" />
+            <img
+              v-else-if="qrCodeUrl"
+              :src="qrCodeUrl"
+              alt="QR kód objednávky ke stolu"
+              class="h-72 w-72"
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <Label for="table-order-url">Odkaz</Label>
+            <div class="flex gap-2">
+              <Input
+                id="table-order-url"
+                :model-value="selectedTableOrderUrl"
+                readonly
+                class="font-mono text-xs"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                title="Zkopírovat"
+                @click="copyOrderUrl"
+              >
+                <Copy class="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                title="Otevřít"
+                :disabled="!selectedTableOrderUrl"
+                as-child
+              >
+                <a :href="selectedTableOrderUrl" target="_blank" rel="noreferrer">
+                  <ExternalLink class="h-4 w-4" />
+                </a>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="ghost" @click="qrDialogOpen = false">Zavřít</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
 
