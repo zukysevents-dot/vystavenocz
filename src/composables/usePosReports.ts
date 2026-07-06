@@ -1,5 +1,5 @@
 import { http } from '@/lib/http'
-import type { PosDateRange, PosRevenue, PosSalesSummary } from '@/lib/posReports'
+import type { PosCostSummary, PosDateRange, PosRevenue, PosSalesSummary } from '@/lib/posReports'
 
 // Provozní přehled (manažerská analytika prodejů). Jen API režim — čte agregace z backendu
 // (/pos-reports/*). Oprávnění pos.reports řeší backend (Owner/Admin/Manager); FE routu gatuje modul reporting.
@@ -18,5 +18,9 @@ export function usePosReports() {
       `/pos-reports/revenue?from=${range.from}&to=${range.to}&granularity=${granularity}${loc}`,
     )
   }
-  return { summary, revenue }
+  function costs(range: PosDateRange, locationId?: string): Promise<PosCostSummary> {
+    const loc = locationId ? `&locationId=${locationId}` : ''
+    return http.get<PosCostSummary>(`/pos-reports/costs?from=${range.from}&to=${range.to}${loc}`)
+  }
+  return { summary, revenue, costs }
 }

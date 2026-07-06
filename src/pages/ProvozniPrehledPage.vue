@@ -24,6 +24,7 @@ import {
   type PosReportPreset,
   type PosSalesSummary,
   type PosRevenue,
+  type PosCostSummary,
 } from '@/lib/posReports'
 
 const apiMode = isApiMode()
@@ -44,6 +45,11 @@ const locationId = ref<string>('') // '' = všechny provozovny
 
 const summary = ref<PosSalesSummary | null>(null)
 const revenue = ref<PosRevenue | null>(null)
+const costs = ref<PosCostSummary | null>(null)
+const percentFormatter = new Intl.NumberFormat('cs-CZ', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+})
 
 // Graf: tržby po dnech. Popisek osy X = den v měsíci (např. „5.7."), aby šla řada přečíst.
 const revenueBars = computed(() =>
@@ -53,6 +59,10 @@ const revenueBars = computed(() =>
   }),
 )
 const hasRevenue = computed(() => revenueBars.value.some((b) => b.total > 0))
+
+function formatPercent(value: number): string {
+  return `${percentFormatter.format(value)} %`
+}
 
 async function load(): Promise<void> {
   if (!apiMode) {
@@ -64,12 +74,14 @@ async function load(): Promise<void> {
   try {
     const range = posReportRange(preset.value, new Date())
     const loc = locationId.value || undefined
-    const [sum, rev] = await Promise.all([
+    const [sum, rev, cost] = await Promise.all([
       reportsApi.summary(range, loc),
       reportsApi.revenue(range, 'Day', loc),
+      reportsApi.costs(range, loc),
     ])
     summary.value = sum
     revenue.value = rev
+    costs.value = cost
   } catch (e) {
     console.warn('Načtení provozního přehledu selhalo:', e)
     loadError.value = true
@@ -107,7 +119,7 @@ function selectPreset(id: PosReportPreset): void {
         <div>
           <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Provozní přehled</h1>
           <p class="mt-1 text-muted-foreground">
-            Tržby, platby a nejprodávanější položky za období.
+            Tržby, platby, marže a nejprodávanější položky za období.
           </p>
         </div>
       </div>
@@ -211,6 +223,100 @@ function selectPreset(id: PosReportPreset): void {
             </div>
             <div class="mt-1 text-xl font-semibold tabular-nums">{{ summary.cancelledCount }}</div>
             <div class="text-xs text-muted-foreground">{{ formatCZK(summary.cancelledTotal) }}</div>
+          </div>
+        </div>
+
+        <!-- Marže / food cost -->
+        <div v-if="costs" class="mt-6">
+          <div class="flex items-center gap-2">
+            <Percent class="h-4 w-4 text-primary" />
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Marže a food cost
+            </h2>
+          </div>
+
+          <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="rounded-xl border border-border bg-card p-4">
+              <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                <TrendingUp class="h-4 w-4" /> Hrubá marže
+              </div>
+              <div class="mt-1 text-xl font-semibold tabular-nums">
+                {{ formatCZK(costs.grossMargin) }}
+              </div>
+              <div class="text-xs text-muted-foreground">
+                {{ formatPercent(costs.grossMarginPercent) }}
+              </div>
+            </div>
+            <div class="rounded-xl border border-border bg-card p-4">
+              <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                <Percent class="h-4 w-4" /> Food cost
+              </div>
+              <div class="mt-1 text-xl font-semibold tabular-nums">
+                {{ formatPercent(costs.foodCostPercent) }}
+              </div>
+              <div class="text-xs text-muted-foreground">
+                {{ formatCZK(costs.estimatedCost) }}
+              </div>
+            </div>
+            <div class="rounded-xl border border-border bg-card p-4">
+              <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                <Receipt class="h-4 w-4" /> Katalogové tržby
+              </div>
+              <div class="mt-1 text-xl font-semibold tabular-nums">
+                {{ formatCZK(costs.productRevenueGross) }}
+              </div>
+              <div class="text-xs text-muted-foreground">
+                {{ costs.products.length }} položek v přehledu
+              </div>
+            </div>
+            <div class="rounded-xl border border-border bg-card p-4">
+              <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                <Package class="h-4 w-4" /> Mimo katalog
+              </div>
+              <div class="mt-1 text-xl font-semibold tabular-nums">
+                {{ formatCZK(costs.unlinkedRevenueGross) }}
+              </div>
+              <div class="text-xs text-muted-foreground">Ručně zadané položky</div>
+            </div>
+          </div>
+
+          <div class="mt-4 rounded-xl border border-border bg-card p-4 sm:p-6">
+            <h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Produkty s nejvyšším food costem
+            </h3>
+            <p v-if="costs.missingCostProductCount > 0" class="mt-1 text-xs text-muted-foreground">
+              {{ costs.missingCostProductCount }} produktů nemá kompletní nákupní cenu.
+            </p>
+            <div v-if="costs.products.length" class="mt-4 divide-y divide-border">
+              <div
+                v-for="p in costs.products"
+                :key="p.productId"
+                class="grid gap-2 py-3 text-sm md:grid-cols-[minmax(0,1fr)_auto_auto_auto]"
+              >
+                <div class="min-w-0">
+                  <div class="truncate font-medium">{{ p.name }}</div>
+                  <div class="text-xs text-muted-foreground tabular-nums">
+                    {{ p.quantity }}× · náklad {{ formatCZK(p.estimatedCost) }}
+                    <span v-if="!p.hasCostBasis"> · chybí nákupní cena</span>
+                  </div>
+                </div>
+                <div class="tabular-nums md:text-right">
+                  <span class="text-muted-foreground md:hidden">Tržba </span>
+                  {{ formatCZK(p.revenueGross) }}
+                </div>
+                <div class="tabular-nums md:text-right">
+                  <span class="text-muted-foreground md:hidden">Marže </span>
+                  {{ formatCZK(p.grossMargin) }}
+                </div>
+                <div class="font-semibold tabular-nums md:text-right">
+                  <span class="text-muted-foreground md:hidden">Food cost </span>
+                  {{ formatPercent(p.foodCostPercent) }}
+                </div>
+              </div>
+            </div>
+            <p v-else class="mt-4 text-sm text-muted-foreground">
+              Za zvolené období nejsou žádné katalogové prodeje.
+            </p>
           </div>
         </div>
 
