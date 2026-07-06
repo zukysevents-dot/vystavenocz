@@ -427,6 +427,46 @@ export interface KitchenQueueItem {
   kitchenStatusUpdatedAt: string | null
 }
 
+export interface PublicMenuCategory {
+  id: string
+  name: string
+  sortOrder: number
+}
+
+export interface PublicMenuProduct {
+  id: string
+  name: string
+  categoryId: string | null
+  priceWithVat: number
+  vatRate: number
+  available: boolean
+}
+
+export interface PublicMenuResponse {
+  categories: PublicMenuCategory[]
+  products: PublicMenuProduct[]
+}
+
+export interface PublicOrderItemInput {
+  productId: string
+  quantity: number
+}
+
+export interface PublicOrderRequest {
+  items: PublicOrderItemInput[]
+  customerName: string
+  customerPhone?: string | null
+  note?: string | null
+  fulfillment: OrderFulfillment
+  address?: string | null
+}
+
+export interface PublicOrderConfirmation {
+  orderId: string
+  total: number
+  currency: string
+}
+
 // --- Sklad / zásoby ---
 
 export type StockMovementType =
