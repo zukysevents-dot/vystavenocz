@@ -12,6 +12,7 @@ import {
   Ban,
   Package,
   Trophy,
+  Users,
 } from 'lucide-vue-next'
 import { BarChart } from '@/components/ui/chart'
 import LoadError from '@/components/app/LoadError.vue'
@@ -25,6 +26,7 @@ import {
   type PosSalesSummary,
   type PosRevenue,
   type PosCostSummary,
+  type PosStaffPerformance,
 } from '@/lib/posReports'
 
 const apiMode = isApiMode()
@@ -46,6 +48,7 @@ const locationId = ref<string>('') // '' = všechny provozovny
 const summary = ref<PosSalesSummary | null>(null)
 const revenue = ref<PosRevenue | null>(null)
 const costs = ref<PosCostSummary | null>(null)
+const staff = ref<PosStaffPerformance | null>(null)
 const percentFormatter = new Intl.NumberFormat('cs-CZ', {
   minimumFractionDigits: 0,
   maximumFractionDigits: 2,
@@ -74,14 +77,16 @@ async function load(): Promise<void> {
   try {
     const range = posReportRange(preset.value, new Date())
     const loc = locationId.value || undefined
-    const [sum, rev, cost] = await Promise.all([
+    const [sum, rev, cost, staffReport] = await Promise.all([
       reportsApi.summary(range, loc),
       reportsApi.revenue(range, 'Day', loc),
       reportsApi.costs(range, loc),
+      reportsApi.staff(range, loc),
     ])
     summary.value = sum
     revenue.value = rev
     costs.value = cost
+    staff.value = staffReport
   } catch (e) {
     console.warn('Načtení provozního přehledu selhalo:', e)
     loadError.value = true
@@ -336,6 +341,77 @@ function selectPreset(id: PosReportPreset): void {
           />
           <p v-else class="mt-4 text-sm text-muted-foreground">
             Za zvolené období zatím nejsou žádné tržby.
+          </p>
+        </div>
+
+        <!-- Výkon obsluhy -->
+        <div v-if="staff" class="mt-6 rounded-xl border border-border bg-card p-4 sm:p-6">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <Users class="h-4 w-4 text-primary" />
+              <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Výkon obsluhy
+              </h2>
+            </div>
+            <div class="text-sm text-muted-foreground tabular-nums">
+              {{ staff.saleCount }} účtů · {{ formatCZK(staff.total) }}
+            </div>
+          </div>
+
+          <div v-if="staff.staff.length" class="mt-4 overflow-x-auto">
+            <table class="w-full min-w-[760px] text-sm">
+              <thead class="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <tr class="border-b border-border">
+                  <th class="py-2 pr-4 font-medium">Obsluha</th>
+                  <th class="px-3 py-2 text-right font-medium">Účtů</th>
+                  <th class="px-3 py-2 text-right font-medium">Tržba</th>
+                  <th class="px-3 py-2 text-right font-medium">Průměr</th>
+                  <th class="px-3 py-2 text-right font-medium">Hotově</th>
+                  <th class="px-3 py-2 text-right font-medium">Kartou</th>
+                  <th class="px-3 py-2 text-right font-medium">Tip</th>
+                  <th class="px-3 py-2 text-right font-medium">Slevy</th>
+                  <th class="py-2 pl-3 text-right font-medium">Storna</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border">
+                <tr v-for="row in staff.staff" :key="row.employeeId ?? 'unassigned'">
+                  <td class="py-3 pr-4">
+                    <div class="font-medium">{{ row.employeeName }}</div>
+                    <div v-if="row.employeeId === null" class="text-xs text-muted-foreground">
+                      Prodeje bez přiřazené obsluhy
+                    </div>
+                  </td>
+                  <td class="px-3 py-3 text-right tabular-nums">{{ row.saleCount }}</td>
+                  <td class="px-3 py-3 text-right font-semibold tabular-nums">
+                    {{ formatCZK(row.total) }}
+                  </td>
+                  <td class="px-3 py-3 text-right tabular-nums">
+                    {{ formatCZK(row.averageSale) }}
+                  </td>
+                  <td class="px-3 py-3 text-right tabular-nums">
+                    {{ formatCZK(row.cashTotal) }}
+                  </td>
+                  <td class="px-3 py-3 text-right tabular-nums">
+                    {{ formatCZK(row.cardTotal) }}
+                  </td>
+                  <td class="px-3 py-3 text-right tabular-nums">
+                    {{ formatCZK(row.tipTotal) }}
+                  </td>
+                  <td class="px-3 py-3 text-right tabular-nums">
+                    {{ formatCZK(row.discountTotal) }}
+                  </td>
+                  <td class="py-3 pl-3 text-right tabular-nums">
+                    <span class="font-medium">{{ row.cancelledCount }}</span>
+                    <span class="ml-1 text-muted-foreground">
+                      {{ formatCZK(row.cancelledTotal) }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p v-else class="mt-4 text-sm text-muted-foreground">
+            Za zvolené období nejsou žádné tržby podle obsluhy.
           </p>
         </div>
 

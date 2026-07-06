@@ -50,4 +50,12 @@ describe('usePosReports', () => {
       '/pos-reports/costs?from=2026-07-01&to=2026-07-05&locationId=loc1',
     )
   })
+
+  it('staff volá GET /pos-reports/staff a přibalí locationId', async () => {
+    vi.mocked(http.get).mockResolvedValue({} as never)
+    await usePosReports().staff(range, 'loc1')
+    expect(http.get).toHaveBeenCalledWith(
+      '/pos-reports/staff?from=2026-07-01&to=2026-07-05&locationId=loc1',
+    )
+  })
 })
