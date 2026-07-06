@@ -50,7 +50,9 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 1. Inventura porovnává `Stav má být` se skutečně napočítanou `Realitou`.
 2. `Rozdíl` znamená realita minus systém.
 3. Skladové zrcadlo vysvětluje, z čeho se stav skládá: příjem, prodej, storno, výdej, korekce, inventura a přesuny.
-4. Rozdíly sledujte v kusech i v Kč.
+4. U položky ve zrcadle otevřete `Detail zrcadla`, pokud potřebujete vidět výpočet: otevření + příjem + storno - prodej - výdej = stav má být.
+5. Rozdíl vzniká z korekcí a inventur. Prodeje, výdeje a přesuny jsou už započtené ve stavu `Stav má být`.
+6. Rozdíly sledujte v kusech i v Kč.
 
 ## Uzávěrka
 

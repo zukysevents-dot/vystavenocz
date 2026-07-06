@@ -101,7 +101,7 @@ Must make the restaurant paperless:
 - suppliers, purchase receipts, purchase prices, average cost, and price history (foundation: backend PR #156 and `Naskladnění` UI create auditable purchase receipt documents)
 - stock movements: receive, issue, adjust, write-off, staff meal, breakage, expiration, and transfer between warehouses/locations (foundation: backend PR #160 and `Zásoby` issue dialog categorize operational issue reasons; `Zásoby` transfer dialog records paired backend `TransferOut`/`TransferIn` movements for stock mirror by location)
 - inventory count by warehouse/category/product, with expected vs counted amount (foundation: `Zásoby` inventory dialog shows `Stav má být`, `Realita`, and `Rozdíl` before saving)
-- stock mirror for bars and kitchens (V1: ledger-based expected vs variance report via backend PR #154 and `Zásoby` tab; frontend filters by date, branch/location, and product search)
+- stock mirror for bars and kitchens (V1: ledger-based expected vs variance report via backend PR #154 and `Zásoby` tab; frontend filters by date, branch/location, and product search; row detail explains the expected-state formula and why the variance comes from corrections/inventory counts)
 - variance report in units and CZK (foundation: backend PR #157 returns varianceValue, backend PR #158 uses weighted receipt cost with product-price fallback, and `Zásoby` shows it)
 - food cost and margin per item (foundation: backend PR #159 adds recipe margin metrics and the recipe dialog shows live cost, sale price, margin, and food cost)
 - monthly close and accounting export (foundation: closed-day `Uzávěrka` exports readable Z-report CSV and accounting CSV rows; `Export měsíc účetní CSV` uses closed Z-reports from `GET /api/v1/day-close?from=&to=&locationId=`)
@@ -155,7 +155,7 @@ Vystaveno should win through:
 - POS + invoicing + stock + light ERP in one product
 - clean module selection for each business type
 - live profitability: recipe cost, purchase price, waste, margin, recommended sale price
-- smarter stock mirror with variance explanations
+- smarter stock mirror with variance explanations (foundation: `Zásoby > Zrcadlo` row detail explains opening + receipt + storno - sale - issue = expected state, and correction + stocktake = variance)
 - AI assistant that explains losses, anomalies, and next actions
 - modern onboarding templates for cafe, bistro, restaurant, bar, food truck, salon, plumber, shop
 - readable integration status for accounting and payment systems
