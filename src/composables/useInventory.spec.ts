@@ -47,4 +47,19 @@ describe('useInventory', () => {
       note: 'doplnění kuchyně',
     })
   })
+
+  it('purchaseSuggestions posílá období, horizont a pobočku jako query', async () => {
+    vi.mocked(http.get).mockResolvedValue({ items: [] } as never)
+
+    await useInventory().purchaseSuggestions({
+      from: '2026-07-01',
+      to: '2026-07-05',
+      daysAhead: 14,
+      locationId: 'bar-1',
+    })
+
+    expect(http.get).toHaveBeenCalledWith(
+      '/inventory/purchase-suggestions?from=2026-07-01&to=2026-07-05&daysAhead=14&locationId=bar-1',
+    )
+  })
 })

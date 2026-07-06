@@ -500,6 +500,29 @@ export interface CreatePurchaseReceiptRequest {
   items: PurchaseReceiptItemInput[]
 }
 
+export interface PurchaseSuggestionItem {
+  productId: string
+  productName: string
+  productSku: string
+  currentQuantity: number
+  minQuantity: number
+  consumedQuantity: number
+  averageDailyUsage: number
+  targetQuantity: number
+  recommendedOrderQuantity: number
+  purchasePrice: number | null
+  estimatedCost: number | null
+  daysOfStockRemaining: number | null
+}
+
+export interface PurchaseSuggestionsResponse {
+  from: string
+  to: string
+  daysAhead: number
+  locationId: string | null
+  items: PurchaseSuggestionItem[]
+}
+
 export interface StockMirrorItem {
   productId: string
   productName: string

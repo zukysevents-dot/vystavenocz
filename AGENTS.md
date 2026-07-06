@@ -17,6 +17,7 @@ Tento repozitář = **frontend**: Vue 3 (`<script setup>` SFC) + Vite + TypeScri
 Migrace ze staré React appky (zazálohovaná ve větvi `legacy-react`, nevracet do working tree).
 
 Produktová roadmapa modulárního Vystaveno + gastro priority je v `docs/product/modular-business-roadmap.md`. Při změně zásadního produktového směru ji aktualizuj společně s tímto kontextem.
+Jednoduchý uživatelský manuál pro gastro je v `docs/product/gastro-user-manual.md`; při každé uživatelsky viditelné gastro změně ho aktualizuj tak, aby obsluha pochopila workflow bez technických znalostí.
 
 Modulární runtime základ: backend `/me` vrací `modules` + `features`; frontend je drží v `src/stores/auth.ts` a app shell filtruje navigaci/routy přes `src/lib/modules.ts`. Backend ukládá tenant-selected moduly v `company_modules`; staré firmy bez řádků mají fallback na všechny default moduly. Onboarding vybírá první modulový balíček podle typu podnikání a `Nastavení firmy` umožňuje pozdější změnu modulů přes `/company/modules`. Modul `core` je povinný a normalizace ho vždy doplní.
 
@@ -27,6 +28,8 @@ Skladové zrcadlo: backend PR #154 přidává `GET /api/v1/inventory/stock-mirro
 Inventura v `Zásoby` musí obsluze ukazovat stejný slovník jako zrcadlo: `Stav má být` = systémový stav před uložením, `Realita` = fyzicky napočítáno, `Rozdíl` = realita minus systém. Ukládá se celá inventura přes `/inventory/stocktake`; hledání v dialogu jen filtruje pohled.
 
 Nákupní příjemky: backend PR #156 přidává `POST/GET /api/v1/inventory/purchase-receipts` jako atomický skladový doklad. Frontend `Naskladnění` ukládá hlavičku příjemky, řádky s množstvím a volitelnou nákupní cenou; sklad se mění přes příjemku, ne přes anonymní ruční příjem.
+
+Nákupní doporučení: backend `GET /api/v1/inventory/purchase-suggestions` doporučuje doobjednání z aktuálního skladu, minim, skutečné spotřeby a receptur; frontend `Naskladnění` používá backend doporučení pro blok `K doobjednání` a umí položku rovnou přidat na příjemku. Když endpoint není dostupný, stránka nespadne a použije starý minimový fallback.
 
 Uzávěrka: zavřený den na stránce `Uzávěrka` nabízí běžný čitelný CSV export Z-reportu i účetní CSV export (`src/lib/day-close-export.ts`) se stabilními sloupci pro DPH, platby, spropitné, slevy/storna, prodané produkty a hotovostní rozdíl. Hotovostní uzávěrka posílá na backend `cashOpening`, `cashPayIns`, `cashPayOuts`, `cashCountedClosing`, `cashDrop`; backend počítá očekávanou hotovost jako počátek + hotovostní tržby + vklady - výběry - odvod. Tlačítko `Export měsíc účetní CSV` používá backend `GET /api/v1/day-close?from=&to=&locationId=` a stáhne všechny uzavřené Z-reporty z vybraného měsíce/provozovny do jednoho účetního souboru.
 
