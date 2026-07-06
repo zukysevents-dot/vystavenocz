@@ -42,7 +42,8 @@ const steps = [
 <template>
   <PageHeader
     eyebrow="Early access"
-    title="Buďte u toho od začátku"
+    title="Buďte u toho"
+    title-accent="od začátku"
     subtitle="Vystaveno teď spouštíme pro první provozy. Místo anonymní registrace dostanete osobní nasazení, pomoc s daty a podmínky, které s veřejným spuštěním zmizí."
   />
 

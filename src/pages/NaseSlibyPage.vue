@@ -49,7 +49,8 @@ const limits = [
 <template>
   <PageHeader
     eyebrow="Naše sliby"
-    title="Férově, bez závazku"
+    title="Férově,"
+    title-accent="bez závazku"
     subtitle="Žádné hvězdičky drobným písmem. Tady je seznam všeho, co vám slibujeme – a kde jsou naše limity."
   />
 

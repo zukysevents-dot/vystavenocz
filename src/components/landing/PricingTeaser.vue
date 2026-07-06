@@ -27,7 +27,7 @@ const czk = (n: number) => n.toLocaleString('cs-CZ')
         <span class="h-px w-7 bg-coral" aria-hidden="true" />
       </p>
       <h2 class="mt-5 font-display text-3xl font-black tracking-tight text-foreground sm:text-4xl">
-        Zaplatíte jen za to, co používáte.
+        Zaplatíte jen za to, <span class="text-gradient-heading">co používáte.</span>
       </h2>
       <p class="mx-auto mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">
         Žádný předražený kolos. Poskládejte si systém z modulů, které váš provoz reálně potřebuje —

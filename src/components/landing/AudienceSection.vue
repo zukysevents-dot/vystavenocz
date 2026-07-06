@@ -72,7 +72,7 @@ const audiences: Audience[] = [
         <h2
           class="mt-5 font-display text-3xl font-black leading-[1.02] tracking-[-0.02em] text-foreground sm:text-[2.75rem]"
         >
-          Každý provoz si zapne jen svoje moduly
+          Každý provoz si zapne <span class="text-gradient-heading">jen svoje moduly</span>
         </h2>
         <p class="mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">
           Gastro jede naplno se stoly a kuchyní, řemeslník začne fakturami a zakázkami. Všichni v
