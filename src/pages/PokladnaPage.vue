@@ -49,6 +49,7 @@ import { formatCZK, round2 } from '@/lib/invoice'
 import { buildReceipt, type ReceiptInfo } from '@/lib/receipt'
 import { calcPosTotals, clampAmount, clampPercent } from '@/lib/posCalc'
 import { ApiError, isApiMode } from '@/lib/http'
+import { isApprovalRequest } from '@/lib/types'
 import { useCompanyStore } from '@/stores/company'
 import { toast } from '@/components/ui/sonner'
 import type { Category, DailySalesSummary, PaymentMethod, Product, Sale } from '@/lib/types'
@@ -275,8 +276,12 @@ async function doStorno() {
   stornoId.value = null
   storning.value = true
   try {
-    await sales.storno(id)
-    toast.success('Prodej stornován, zboží vráceno na sklad.')
+    const result = await sales.storno(id)
+    if (isApprovalRequest(result)) {
+      toast.success('Storno čeká na schválení managerem.')
+    } else {
+      toast.success('Prodej stornován, zboží vráceno na sklad.')
+    }
   } catch (e) {
     if (e instanceof ApiError && e.status === 409) toast.error('Prodej je už stornovaný.')
     else toast.error('Storno selhalo.')
