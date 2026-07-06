@@ -4,6 +4,7 @@ import type {
   CreatePurchaseReceiptRequest,
   PurchaseReceipt,
   PurchaseSuggestionsResponse,
+  StockByLocationResponse,
   StockLevel,
   StockMirror,
   StockMovement,
@@ -44,6 +45,12 @@ export function useInventory() {
   }
   async function movements(): Promise<StockMovement[]> {
     return (await http.get<PagedResult<StockMovement>>('/inventory/movements?pageSize=100')).items
+  }
+  // Centrální sklad: přehled zásob napříč pobočkami (matice produkt × provozovna).
+  function stockByLocation(search = ''): Promise<StockByLocationResponse> {
+    const params = new URLSearchParams({ pageSize: '200' })
+    if (search.trim()) params.set('search', search.trim())
+    return http.get<StockByLocationResponse>(`/inventory/stock-by-location?${params}`)
   }
   function receive(
     productId: string,
@@ -141,6 +148,7 @@ export function useInventory() {
   return {
     levels,
     movements,
+    stockByLocation,
     receive,
     purchaseReceipts,
     createPurchaseReceipt,

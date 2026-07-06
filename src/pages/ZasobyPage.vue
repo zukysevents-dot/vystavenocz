@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   Scale,
   ArrowRightLeft,
+  Building2,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,7 +39,14 @@ import { isApiMode, ApiError } from '@/lib/http'
 import { isApprovalRequest } from '@/lib/types'
 import { formatDate } from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
-import type { StockMirror, StockMirrorItem, StockMovement, StockMovementType } from '@/lib/types'
+import type {
+  StockByLocationResponse,
+  StockLocationColumn,
+  StockMirror,
+  StockMirrorItem,
+  StockMovement,
+  StockMovementType,
+} from '@/lib/types'
 
 const { products, load: loadProducts } = useProducts()
 const { locations, load: loadLocations } = useLocations()
@@ -48,7 +56,7 @@ const ALL_LOCATIONS = '__all__'
 
 const loading = ref(true)
 const busy = ref(false)
-const tab = ref<'levels' | 'movements' | 'mirror'>('levels')
+const tab = ref<'levels' | 'movements' | 'mirror' | 'byLocation'>('levels')
 const search = ref('')
 const levelMap = ref(new Map<string, number>())
 const movements = ref<StockMovement[]>([])
@@ -63,6 +71,26 @@ const mirrorLocationId = ref(ALL_LOCATIONS)
 const mirrorSearch = ref('')
 const expandedMirrorProductId = ref<string | null>(null)
 const stockLocationId = ref(ALL_LOCATIONS)
+
+// Centrální sklad (přehled napříč pobočkami) — lazy load.
+const byLocation = ref<StockByLocationResponse | null>(null)
+const byLocationLoaded = ref(false)
+const byLocationLoading = ref(false)
+const byLocationSearch = ref('')
+const NULL_COL = '__null__'
+const colKey = (locationId: string | null): string => locationId ?? NULL_COL
+// null id = skutečně nezařazený sklad; id bez jména = archivovaná pobočka se zbytkem (ať se labely nepletou).
+const colLabel = (col: StockLocationColumn): string =>
+  col.locationName ?? (col.locationId ? 'Archivovaná pobočka' : 'Nezařazeno')
+const byLocationColumns = computed(() => byLocation.value?.locations ?? [])
+// Řídké buňky → mapa množství podle sloupce, ať se v tabulce chybějící buňka doplní na 0.
+const byLocationRows = computed(() =>
+  (byLocation.value?.products.items ?? []).map((r) => {
+    const q: Record<string, number> = {}
+    for (const c of r.cells) q[colKey(c.locationId)] = c.quantity
+    return { ...r, q }
+  }),
+)
 
 const MOVE_LABEL: Record<StockMovementType, string> = {
   Receipt: 'Příjem',
@@ -269,6 +297,24 @@ async function showMirror() {
   if (!mirrorLoaded.value) {
     await loadMirror()
   }
+}
+
+async function loadByLocation() {
+  byLocationLoading.value = true
+  try {
+    byLocation.value = await inv.stockByLocation(byLocationSearch.value)
+    byLocationLoaded.value = true
+  } catch (e) {
+    toast.error('Přehled zásob po pobočkách se nepodařilo načíst.')
+    console.error(e)
+  } finally {
+    byLocationLoading.value = false
+  }
+}
+
+async function showByLocation() {
+  tab.value = 'byLocation'
+  if (!byLocationLoaded.value) await loadByLocation()
 }
 
 // --- Akce: příjem / výdej / korekce ---
@@ -543,6 +589,19 @@ async function submitStocktake() {
         >
           <Scale class="h-4 w-4" /> Zrcadlo
         </button>
+        <button
+          v-if="locations.length > 1"
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+          :class="
+            tab === 'byLocation'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted text-muted-foreground hover:bg-muted/70'
+          "
+          @click="showByLocation"
+        >
+          <Building2 class="h-4 w-4" /> Podle poboček
+        </button>
         <span
           v-if="lowCount"
           class="ml-auto inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2 py-1 text-xs font-medium text-destructive"
@@ -698,7 +757,7 @@ async function submitStocktake() {
       </template>
 
       <!-- ZRCADLO -->
-      <template v-else>
+      <template v-else-if="tab === 'mirror'">
         <div
           class="mt-4 flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card p-4"
         >
@@ -882,6 +941,85 @@ async function submitStocktake() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- Podle poboček: matice produkt × pobočka (centrální sklad) -->
+      <template v-else-if="tab === 'byLocation'">
+        <div class="mt-4 rounded-2xl border border-border bg-card p-4">
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="relative min-w-48 flex-1">
+              <Search
+                class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                v-model="byLocationSearch"
+                placeholder="Hledat produkt (název / SKU)…"
+                class="pl-9"
+                @keyup.enter="loadByLocation"
+              />
+            </div>
+            <Button variant="outline" :disabled="byLocationLoading" @click="loadByLocation">
+              <Loader2 v-if="byLocationLoading" class="h-4 w-4 animate-spin" />
+              Načíst
+            </Button>
+          </div>
+
+          <div v-if="byLocationLoading && !byLocation" class="mt-8 flex justify-center">
+            <Loader2 class="h-6 w-6 animate-spin text-primary" />
+          </div>
+          <div
+            v-else-if="byLocationRows.length === 0"
+            class="mt-8 text-center text-sm text-muted-foreground"
+          >
+            Žádné zásoby k zobrazení.
+          </div>
+          <div v-else class="mt-4 overflow-x-auto">
+            <table class="w-full min-w-[640px] border-collapse text-sm">
+              <thead>
+                <tr
+                  class="border-b border-border text-xs uppercase tracking-wide text-muted-foreground"
+                >
+                  <th class="py-2 pr-4 text-left font-medium">Produkt</th>
+                  <th
+                    v-for="col in byLocationColumns"
+                    :key="colKey(col.locationId)"
+                    class="px-3 py-2 text-right font-medium"
+                  >
+                    {{ colLabel(col) }}
+                  </th>
+                  <th class="px-3 py-2 text-right font-semibold text-foreground">Celkem</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="row in byLocationRows"
+                  :key="row.productId"
+                  class="border-b border-border/60"
+                >
+                  <td class="py-2 pr-4">
+                    <div class="font-medium text-foreground">{{ row.productName }}</div>
+                    <div class="text-xs text-muted-foreground">{{ row.productSku }}</div>
+                  </td>
+                  <td
+                    v-for="col in byLocationColumns"
+                    :key="colKey(col.locationId)"
+                    class="px-3 py-2 text-right tabular-nums"
+                    :class="
+                      (row.q[colKey(col.locationId)] ?? 0) === 0
+                        ? 'text-muted-foreground/50'
+                        : 'text-foreground'
+                    "
+                  >
+                    {{ fmtQty(row.q[colKey(col.locationId)] ?? 0) }}
+                  </td>
+                  <td class="px-3 py-2 text-right font-semibold tabular-nums text-foreground">
+                    {{ fmtQty(row.totalQuantity) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </template>
