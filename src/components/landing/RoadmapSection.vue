@@ -113,7 +113,7 @@ const upcoming = computed(() => items.filter((i) => i.status !== 'done'))
         <h2
           class="mt-5 font-display text-3xl font-black leading-[1.02] tracking-[-0.02em] text-foreground sm:text-[2.75rem]"
         >
-          Co už umíme a co chystáme
+          Co už umíme <span class="text-gradient-heading">a co chystáme</span>
         </h2>
         <p class="mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">
           Vystaveno se vyvíjí každý týden podle zpětné vazby od skutečných provozů. Tady je, na čem

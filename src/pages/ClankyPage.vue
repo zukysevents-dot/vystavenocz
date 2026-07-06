@@ -10,7 +10,8 @@ const articles = getArticlesSortedByDate()
 <template>
   <PageHeader
     eyebrow="Akademie"
-    title="Články a rady pro OSVČ"
+    title="Články a rady"
+    title-accent="pro OSVČ"
     subtitle="Praktické návody bez vaty — od založení živnosti přes fakturaci až po daně. Vše ověřeno podle aktuální české legislativy."
   />
 

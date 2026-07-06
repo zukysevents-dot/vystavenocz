@@ -21,7 +21,7 @@ import { vReveal } from '@/lib/reveal'
           <h2
             class="mt-4 font-display text-2xl font-black leading-[1.05] tracking-[-0.02em] text-foreground sm:text-3xl"
           >
-            Co napíšete, to brzo uvidíte
+            Co napíšete, to <span class="text-gradient-heading">brzo uvidíte</span>
           </h2>
           <p class="mt-3 text-base leading-relaxed text-muted-foreground">
             Drobná vylepšení napříč moduly obvykle nasadíme do pár dní. Když vám něco v provozu

@@ -74,7 +74,7 @@ const modules: Module[] = [
           <h2
             class="mt-5 font-display text-3xl font-black leading-[1.02] tracking-[-0.02em] text-foreground sm:text-[2.75rem]"
           >
-            Jeden systém. Všechny moduly.
+            Jeden systém. <span class="text-gradient-heading">Všechny moduly.</span>
           </h2>
           <p class="mt-4 text-base text-muted-foreground sm:text-lg">
             Zapneš jen ty, které potřebuješ — a platíš jen za ně.

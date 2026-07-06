@@ -20,7 +20,7 @@ const signals = [
 
 <template>
   <section class="relative overflow-hidden">
-    <!-- Base nechává prosvítat bg-landing gradient z PublicLayoutu; mesh jen dokresluje. -->
+    <!-- Base nechává prosvítat landing-aura plátno z PublicLayoutu; mesh jen dokresluje. -->
     <div class="absolute inset-0 -z-10 bg-mesh opacity-[0.16]" aria-hidden="true" />
     <!-- Liquid aura blobs — pomalý organický drift. Wrapper drží pozici (translate),
          vnitřek animuje transform, aby se pozice a animace nepřepsaly. -->
@@ -50,7 +50,7 @@ const signals = [
         class="hero-rise mt-6 font-display font-black leading-[0.95] tracking-[-0.03em] text-foreground text-[clamp(2.8rem,8vw,5.5rem)] [animation-delay:90ms]"
       >
         Jeden systém místo
-        <span class="text-gradient-primary text-gradient-animated">pěti aplikací.</span>
+        <span class="text-gradient-heading text-gradient-animated">pěti aplikací.</span>
       </h1>
 
       <p
