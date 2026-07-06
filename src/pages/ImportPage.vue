@@ -123,7 +123,7 @@ function onDrop(e: DragEvent): void {
             Přetáhněte sem soubor (CSV, XLSX, Fakturoid XML) nebo klikněte
           </div>
           <p class="mt-1 text-sm text-muted-foreground">
-            Export z Fakturoidu, Dotykačky, Reservia nebo libovolné tabulky.
+            Export z Fakturoidu, Dotykačky, Storyous/Teya, iKelp nebo libovolné tabulky.
           </p>
         </div>
       </label>

@@ -1,9 +1,16 @@
 import type { ImportEntity, ImportSourceAdapter } from '../types'
 import { genericClients } from './generic-clients'
 import { genericProducts } from './generic-products'
+import { dotykackaProducts, ikelpProducts, storyousProducts } from './pos-products'
 
 /** Registr všech importních adaptérů. Nový zdroj = přidat sem jeden řádek. */
-export const ADAPTERS: ImportSourceAdapter<unknown>[] = [genericClients, genericProducts]
+export const ADAPTERS: ImportSourceAdapter<unknown>[] = [
+  dotykackaProducts,
+  storyousProducts,
+  ikelpProducts,
+  genericClients,
+  genericProducts,
+]
 
 export function adaptersFor(entity: ImportEntity): ImportSourceAdapter<unknown>[] {
   return ADAPTERS.filter((a) => a.entity === entity)

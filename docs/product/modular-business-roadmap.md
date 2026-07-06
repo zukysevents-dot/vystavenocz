@@ -146,7 +146,7 @@ These are non-negotiable before claiming serious gastro readiness:
 - payment terminal integration (foundation: shared PaymentDialog gives one payment flow for POS/tables/split — cash with received amount + change via `cashReceived`/`cashChange`, card through a manual-confirmation terminal step that a real terminal integration will replace; no fake payments are stored before confirmation)
 - accounting exports to systems such as POHODA and Flexi
 - EET 2.0 readiness once the technical specification is final
-- import path from existing POS systems
+- import path from existing POS systems (foundation: frontend import wizard recognizes product/menu CSV/XLSX exports from Dotykacka, Storyous/Teya, and iKelp, maps product name, PLU/SKU, EAN, sale price, VAT, purchase price, category, and stock quantity, then commits through existing product/category/stock flows. Remaining work: sales history, receipts, table maps, modifiers, allergens, multi-price levels, and live POS sync.)
 
 ## Differentiators
 

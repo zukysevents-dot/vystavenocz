@@ -53,6 +53,14 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 5. Uložte příjemku. Sklad se mění přes příjemku, ne přes anonymní ruční příjem.
 6. Blok `K doobjednání` doporučuje množství podle minim, skutečné spotřeby a receptur.
 
+## Import katalogu z jiné pokladny
+
+1. Otevřete `Import dat` a zvolte `Produkty`, pokud systém typ souboru nerozpozná sám.
+2. Nahrajte CSV nebo XLSX export katalogu/menu z Dotykačky, Storyous/Teya, iKelp nebo běžné tabulky.
+3. Zkontrolujte mapování sloupců: název, PLU/SKU, EAN, cena, DPH, nákupní cena, kategorie a sklad.
+4. V náhledu vyřešte duplicity. Produkt se stejným SKU, EAN nebo názvem můžete přeskočit nebo přepsat.
+5. Import katalogu nepřenáší historické účtenky ani mapu stolů. Slouží k rychlému založení sortimentu bez ručního přepisování.
+
 ## Zásoby, výdeje a přesuny
 
 1. `Zásoby` ukazují aktuální stav produktů.

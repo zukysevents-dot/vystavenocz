@@ -61,4 +61,13 @@ describe('applyMapping (generic-products)', () => {
       applyMapping(t2, genericProducts.defaultMapping, genericProducts)[0].value,
     ).toMatchObject({ vatRate: 21 })
   })
+
+  it('nečíselná sazba DPH spadne na default 21', () => {
+    const t: RawTable = { headers: ['name', 'vatRate'], rows: [{ name: 'A', vatRate: 'N/A' }] }
+    expect(applyMapping(t, genericProducts.defaultMapping, genericProducts)[0].value).toMatchObject(
+      {
+        vatRate: 21,
+      },
+    )
+  })
 })
