@@ -56,17 +56,20 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 ## Zásoby, výdeje a přesuny
 
 1. `Zásoby` ukazují aktuální stav produktů.
-2. Ruční výdej vždy vyberte podle důvodu: běžný výdej, odpis, jídlo personálu, rozbití nebo expirace.
-3. Přesun mezi barem, kuchyní nebo skladem zapisujte přes přesun. Celkový sklad firmy se nemění, mění se jen místo.
+2. Pokud má firma víc poboček nebo skladů, nejdřív vyberte `Pobočka skladu`.
+3. `Všechny pobočky` slouží jen pro přehled celkového stavu. Příjem, výdej, korekce a inventura se vždy zapisují na konkrétní pobočku.
+4. Ruční výdej vždy vyberte podle důvodu: běžný výdej, odpis, jídlo personálu, rozbití nebo expirace.
+5. Přesun mezi barem, kuchyní nebo skladem zapisujte přes přesun. Celkový sklad firmy se nemění, mění se jen místo.
 
 ## Inventura a zrcadlo
 
 1. Inventura porovnává `Stav má být` se skutečně napočítanou `Realitou`.
-2. `Rozdíl` znamená realita minus systém.
-3. Skladové zrcadlo vysvětluje, z čeho se stav skládá: příjem, prodej, storno, výdej, korekce, inventura a přesuny.
-4. U položky ve zrcadle otevřete `Detail zrcadla`, pokud potřebujete vidět výpočet: otevření + příjem + storno - prodej - výdej = stav má být.
-5. Rozdíl vzniká z korekcí a inventur. Prodeje, výdeje a přesuny jsou už započtené ve stavu `Stav má být`.
-6. Rozdíly sledujte v kusech i v Kč.
+2. Inventuru dělejte pro konkrétní pobočku/sklad, ne za všechny pobočky najednou.
+3. `Rozdíl` znamená realita minus systém.
+4. Skladové zrcadlo vysvětluje, z čeho se stav skládá: příjem, prodej, storno, výdej, korekce, inventura a přesuny.
+5. U položky ve zrcadle otevřete `Detail zrcadla`, pokud potřebujete vidět výpočet: otevření + příjem + storno - prodej - výdej = stav má být.
+6. Rozdíl vzniká z korekcí a inventur. Prodeje, výdeje a přesuny jsou už započtené ve stavu `Stav má být`.
+7. Rozdíly sledujte v kusech i v Kč.
 
 ## Uzávěrka
 

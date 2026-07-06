@@ -99,8 +99,8 @@ Must make the restaurant paperless:
 - recipes linked to menu items (product recipe API in `vystaveno-api`, editor in `Sklad / katalog`, and backend PR #153 sale-time ingredient deduction for POS/restaurant payments)
 - advanced stock deduction by recipes, including portions, variants, semi-products, waste, and yield (foundation: recipe rows support `wastePercent` and show effective stock consumption in the recipe dialog)
 - suppliers, purchase receipts, purchase prices, average cost, and price history (foundation: backend PR #156 and `Naskladnění` UI create auditable purchase receipt documents)
-- stock movements: receive, issue, adjust, write-off, staff meal, breakage, expiration, and transfer between warehouses/locations (foundation: backend PR #160 and `Zásoby` issue dialog categorize operational issue reasons; `Zásoby` transfer dialog records paired backend `TransferOut`/`TransferIn` movements for stock mirror by location)
-- inventory count by warehouse/category/product, with expected vs counted amount (foundation: `Zásoby` inventory dialog shows `Stav má být`, `Realita`, and `Rozdíl` before saving)
+- stock movements: receive, issue, adjust, write-off, staff meal, breakage, expiration, and transfer between warehouses/locations (foundation: backend PR #160 and `Zásoby` issue dialog categorize operational issue reasons; `Zásoby` transfer dialog records paired backend `TransferOut`/`TransferIn` movements for stock mirror by location; backend location-stock foundation stores stock levels per `locationId` and `Zásoby` sends `locationId` for receipt/issue/correction/stocktake)
+- inventory count by warehouse/category/product, with expected vs counted amount (foundation: `Zásoby` inventory dialog shows `Stav má být`, `Realita`, and `Rozdíl` before saving; multi-branch tenants must choose a concrete branch before stocktake)
 - stock mirror for bars and kitchens (V1: ledger-based expected vs variance report via backend PR #154 and `Zásoby` tab; frontend filters by date, branch/location, and product search; row detail explains the expected-state formula and why the variance comes from corrections/inventory counts)
 - variance report in units and CZK (foundation: backend PR #157 returns varianceValue, backend PR #158 uses weighted receipt cost with product-price fallback, and `Zásoby` shows it)
 - food cost and margin per item (foundation: backend PR #159 adds recipe margin metrics and the recipe dialog shows live cost, sale price, margin, and food cost)
@@ -116,7 +116,7 @@ Must make Vystaveno smarter than a classic POS:
 - simple user-facing gastro manual that stays updated with each workflow so restaurants can train staff without paper notes
 - QR/public ordering, payment, tip, review, and loyalty without installing an app (foundation: `/objednavka/:slug` public menu + pickup/delivery order submission into KDS; QR table links from `Mapa stolů` use `/objednavka/:slug?table=<tableId>&name=<tableName>` and backend PR #182 appends items to the open dine-in table order)
 - kitchen display with preparation time, SLA colors, station filters, and history (foundation: preparation timer, SLA color thresholds, station filters, ticket printing, Preparing/Ready/Served actions, and persistent Served history via `GET /api/v1/kitchen/history`)
-- multi-location central stock, shared price lists, and branch comparisons
+- multi-location central stock, shared price lists, and branch comparisons (foundation: stock levels can be filtered by branch in `Zásoby`; cross-branch comparison dashboard is still follow-up)
 - approval workflows for inventory corrections, large write-offs, and manager storno
 
 ## Competitor benchmark

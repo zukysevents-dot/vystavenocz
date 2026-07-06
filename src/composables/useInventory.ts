@@ -15,6 +15,10 @@ export interface StocktakeItemInput {
   countedQuantity: number
 }
 
+export interface StockLevelQuery {
+  locationId?: string | null
+}
+
 export interface StockMirrorQuery {
   from?: string
   to?: string
@@ -31,14 +35,26 @@ export interface PurchaseSuggestionsQuery {
 
 // Sklad / zásoby (gastro/retail). Jen API mód — nad existujícím inventory backendem.
 export function useInventory() {
-  async function levels(): Promise<StockLevel[]> {
-    return (await http.get<PagedResult<StockLevel>>('/inventory/stock-levels?pageSize=200')).items
+  async function levels(query: StockLevelQuery = {}): Promise<StockLevel[]> {
+    const params = new URLSearchParams({ pageSize: '200' })
+    if (query.locationId) params.set('locationId', query.locationId)
+    return (await http.get<PagedResult<StockLevel>>(`/inventory/stock-levels?${params}`)).items
   }
   async function movements(): Promise<StockMovement[]> {
     return (await http.get<PagedResult<StockMovement>>('/inventory/movements?pageSize=100')).items
   }
-  function receive(productId: string, quantity: number, note: string | null): Promise<unknown> {
-    return http.post('/inventory/receipts', { productId, quantity, note })
+  function receive(
+    productId: string,
+    quantity: number,
+    note: string | null,
+    locationId?: string | null,
+  ): Promise<unknown> {
+    return http.post('/inventory/receipts', {
+      productId,
+      quantity,
+      note,
+      locationId: locationId || null,
+    })
   }
   function purchaseReceipts(): Promise<PurchaseReceipt[]> {
     return http
@@ -53,11 +69,28 @@ export function useInventory() {
     quantity: number,
     note: string | null,
     type: StockMovementType = 'Issue',
+    locationId?: string | null,
   ): Promise<unknown> {
-    return http.post('/inventory/issues', { productId, quantity, note, type })
+    return http.post('/inventory/issues', {
+      productId,
+      quantity,
+      note,
+      type,
+      locationId: locationId || null,
+    })
   }
-  function correct(productId: string, delta: number, note: string): Promise<unknown> {
-    return http.post('/inventory/corrections', { productId, delta, note })
+  function correct(
+    productId: string,
+    delta: number,
+    note: string,
+    locationId?: string | null,
+  ): Promise<unknown> {
+    return http.post('/inventory/corrections', {
+      productId,
+      delta,
+      note,
+      locationId: locationId || null,
+    })
   }
   function transfer(
     productId: string,
@@ -74,8 +107,12 @@ export function useInventory() {
       note,
     })
   }
-  function stocktake(items: StocktakeItemInput[], note: string | null): Promise<unknown> {
-    return http.post('/inventory/stocktake', { items, note })
+  function stocktake(
+    items: StocktakeItemInput[],
+    note: string | null,
+    locationId?: string | null,
+  ): Promise<unknown> {
+    return http.post('/inventory/stocktake', { items, note, locationId: locationId || null })
   }
   function stockMirror(query: StockMirrorQuery = {}): Promise<StockMirror> {
     const params = new URLSearchParams()
