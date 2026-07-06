@@ -117,7 +117,7 @@ Must make Vystaveno smarter than a classic POS:
 - QR/public ordering, payment, tip, review, and loyalty without installing an app (foundation: `/objednavka/:slug` public menu + pickup/delivery order submission into KDS; QR table links from `Mapa stolů` use `/objednavka/:slug?table=<tableId>&name=<tableName>` and backend PR #182 appends items to the open dine-in table order)
 - kitchen display with preparation time, SLA colors, station filters, and history (foundation: preparation timer, SLA color thresholds, station filters, ticket printing, Preparing/Ready/Served actions, and persistent Served history via `GET /api/v1/kitchen/history`)
 - multi-location central stock, shared price lists, and branch comparisons
-- approval workflows for inventory corrections, large write-offs, and manager storno
+- approval workflows for inventory corrections, large write-offs, and manager storno (foundation: backend `feat/approval-workflow` adds approval limits and `/api/v1/approvals`; frontend `Schvalování` shows pending/approved/rejected requests, manages limits, and POS storno / stock issue / stocktake show `čeká na schválení` when backend returns `202 Accepted`)
 
 ## Competitor benchmark
 

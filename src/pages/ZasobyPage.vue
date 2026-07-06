@@ -35,6 +35,7 @@ import { useProducts } from '@/composables/useProducts'
 import { useInventory, type StocktakeItemInput } from '@/composables/useInventory'
 import { useLocations } from '@/composables/useLocations'
 import { isApiMode, ApiError } from '@/lib/http'
+import { isApprovalRequest } from '@/lib/types'
 import { formatDate } from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
 import type { StockMirror, StockMirrorItem, StockMovement, StockMovementType } from '@/lib/types'
@@ -275,9 +276,14 @@ async function submitAction() {
   try {
     const id = row.id
     if (actionMode.value === 'receive') await inv.receive(id, amount, actionForm.note || null)
-    else if (actionMode.value === 'issue')
-      await inv.issue(id, amount, actionForm.note || null, actionForm.issueType)
-    else await inv.correct(id, amount, actionForm.note.trim())
+    else if (actionMode.value === 'issue') {
+      const result = await inv.issue(id, amount, actionForm.note || null, actionForm.issueType)
+      if (isApprovalRequest(result)) {
+        actionOpen.value = false
+        toast.success('Výdej čeká na schválení managerem.')
+        return
+      }
+    } else await inv.correct(id, amount, actionForm.note.trim())
     await loadLevels()
     if (movementsLoaded.value) movements.value = await inv.movements()
     if (mirrorLoaded.value) await loadMirror()
@@ -411,7 +417,12 @@ async function submitStocktake() {
   if (!items.length) return toast.error('Žádné produkty k inventuře.')
   busy.value = true
   try {
-    await inv.stocktake(items, stocktakeNote.value.trim() || null)
+    const result = await inv.stocktake(items, stocktakeNote.value.trim() || null)
+    if (isApprovalRequest(result)) {
+      stocktakeOpen.value = false
+      toast.success('Inventura čeká na schválení managerem.')
+      return
+    }
     await loadLevels()
     if (movementsLoaded.value) movements.value = await inv.movements()
     if (mirrorLoaded.value) await loadMirror()
