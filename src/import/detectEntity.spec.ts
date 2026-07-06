@@ -10,6 +10,12 @@ describe('detectEntity', () => {
     expect(detectEntity(['nazev', 'sku', 'ean', 'cena', 'dph', 'skladem'])).toBe('products')
   })
 
+  it('rozpozná POS export produktů podle PLU a produktové skupiny', () => {
+    expect(detectEntity(['PLU', 'Název položky', 'Produktová skupina', 'Cena s DPH'])).toBe(
+      'products',
+    )
+  })
+
   it('zvládá diakritiku a velikost písmen v hlavičkách', () => {
     expect(detectEntity(['Název', 'Kategorie', 'Množství', 'Cena'])).toBe('products')
   })

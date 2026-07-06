@@ -2,6 +2,27 @@ import type { ProductInput } from '@/composables/useProducts'
 import type { ImportSourceAdapter } from '../types'
 import { trimOrNull, parsePrice } from '../normalize'
 
+function parseVatRate(value: string | null | undefined): number {
+  if (!value || !/\d/.test(value)) return 21
+  return parsePrice(value)
+}
+
+export function transformProductImportRow(
+  _row: Record<string, string>,
+  m: Record<string, string>,
+): Partial<ProductInput> {
+  return {
+    name: (m.name ?? '').trim(),
+    sku: trimOrNull(m.sku) ?? '',
+    ean: trimOrNull(m.ean),
+    salePrice: parsePrice(m.salePrice),
+    vatRate: parseVatRate(m.vatRate),
+    purchasePrice: m.purchasePrice ? parsePrice(m.purchasePrice) : null,
+    minQuantity: 0,
+    categoryId: null,
+  }
+}
+
 /** Univerzální adaptér pro produkty z libovolného CSV/XLSX (hlavičky = názvy polí). */
 export const genericProducts: ImportSourceAdapter<ProductInput> = {
   id: 'generic-products',
@@ -29,17 +50,5 @@ export const genericProducts: ImportSourceAdapter<ProductInput> = {
     category: ['kategorie', 'category', 'skupina'],
     quantity: ['skladem', 'mnozstvi', 'quantity', 'qty', 'stock', 'pocet'],
   },
-  transform: (_row, m) => {
-    const vr = (m.vatRate ?? '').replace(/[^\d]/g, '')
-    return {
-      name: (m.name ?? '').trim(),
-      sku: trimOrNull(m.sku) ?? '',
-      ean: trimOrNull(m.ean),
-      salePrice: parsePrice(m.salePrice),
-      vatRate: vr === '' ? 21 : Number(vr),
-      purchasePrice: m.purchasePrice ? parsePrice(m.purchasePrice) : null,
-      minQuantity: 0,
-      categoryId: null,
-    }
-  },
+  transform: transformProductImportRow,
 }
