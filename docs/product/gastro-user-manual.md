@@ -36,6 +36,9 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 2. Vybere položky z menu, zvolí `Výdej` nebo `Rozvoz`, vyplní kontakt a odešle objednávku.
 3. Ceny počítá server podle katalogu, ne zákaznický prohlížeč.
 4. Objednávka bez stolu se po odeslání objeví rovnou v `Kuchyně` jako veřejný bon se jménem zákazníka.
+5. QR objednávku ke stolu vytvoříte v `Mapa stolů`: vyberte stůl, otevřete `QR objednávka` a použijte QR kód nebo odkaz.
+6. Host po načtení QR kódu objednává ke konkrétnímu stolu. Položky se připíšou do otevřeného účtu stolu; pokud účet ještě neexistuje, systém ho založí.
+7. Obsluha QR objednávku zaplatí běžným způsobem v `Restaurace`, stejně jako ostatní položky na stole.
 
 ## Naskladnění
 

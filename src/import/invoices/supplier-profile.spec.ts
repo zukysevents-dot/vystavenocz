@@ -38,6 +38,7 @@ function company(overrides: Partial<Company> = {}): Company {
     invoiceNumberFormat: null,
     nextInvoiceSeq: 1,
     defaultPaymentDays: 14,
+    publicSlug: null,
     ...overrides,
   }
 }

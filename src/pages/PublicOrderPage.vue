@@ -5,6 +5,7 @@ import {
   Bike,
   CheckCircle2,
   Loader2,
+  MapPin,
   Minus,
   PackageCheck,
   Plus,
@@ -26,6 +27,15 @@ import type {
 
 const route = useRoute()
 const slug = computed(() => String(route.params.slug ?? ''))
+const tableId = computed(() => {
+  const value = route.query.table
+  return typeof value === 'string' && value.trim() ? value.trim() : null
+})
+const tableName = computed(() => {
+  const value = route.query.name
+  return typeof value === 'string' && value.trim() ? value.trim() : 'váš stůl'
+})
+const tableMode = computed(() => !!tableId.value)
 const publicOrders = usePublicOrders()
 
 const loading = ref(true)
@@ -93,7 +103,7 @@ const canSubmit = computed(
   () =>
     itemCount.value > 0 &&
     !!form.customerName.trim() &&
-    (form.fulfillment === 'pickup' || !!form.address.trim()),
+    (tableMode.value || form.fulfillment === 'pickup' || !!form.address.trim()),
 )
 
 onMounted(async () => {
@@ -136,7 +146,8 @@ async function submit() {
       customerPhone: form.customerPhone.trim() || null,
       note: form.note.trim() || null,
       fulfillment: form.fulfillment,
-      address: form.fulfillment === 'delivery' ? form.address.trim() : null,
+      address: !tableMode.value && form.fulfillment === 'delivery' ? form.address.trim() : null,
+      tableId: tableId.value,
     })
   } catch {
     submitError.value = true
@@ -150,10 +161,23 @@ async function submit() {
   <div class="mx-auto max-w-6xl px-4 py-8 sm:py-10">
     <div class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Online objednávka</h1>
+        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">
+          {{ tableMode ? 'Objednávka ke stolu' : 'Online objednávka' }}
+        </h1>
         <p class="mt-1 text-sm text-muted-foreground">
-          Vyberte jídlo, zvolte vyzvednutí nebo rozvoz a objednávka půjde rovnou do kuchyně.
+          {{
+            tableMode
+              ? 'Vyberte jídlo a objednávka půjde rovnou do kuchyně k vašemu stolu.'
+              : 'Vyberte jídlo, zvolte vyzvednutí nebo rozvoz a objednávka půjde rovnou do kuchyně.'
+          }}
         </p>
+        <div
+          v-if="tableMode"
+          class="mt-3 inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium"
+        >
+          <MapPin class="h-4 w-4 text-primary" />
+          {{ tableName }}
+        </div>
       </div>
       <div
         class="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm"
@@ -179,7 +203,12 @@ async function submit() {
       <CheckCircle2 class="mx-auto h-12 w-12 text-success" />
       <h2 class="mt-4 text-lg font-semibold">Objednávka přijata</h2>
       <p class="mt-1 text-sm text-muted-foreground">
-        Celkem {{ formatCZK(confirmation.total) }}. Objednávka už je v provozu.
+        Celkem {{ formatCZK(confirmation.total) }}.
+        {{
+          tableMode
+            ? 'Objednávka už je v kuchyni a zaplatíte ji u obsluhy.'
+            : 'Objednávka už je v provozu.'
+        }}
       </p>
       <p class="mt-2 text-xs text-muted-foreground">ID objednávky: {{ confirmation.orderId }}</p>
     </div>
@@ -275,7 +304,7 @@ async function submit() {
         </div>
 
         <form class="mt-4 space-y-4 border-t border-border pt-4" @submit.prevent="submit">
-          <div class="grid grid-cols-2 gap-2">
+          <div v-if="!tableMode" class="grid grid-cols-2 gap-2">
             <Button
               type="button"
               :variant="form.fulfillment === 'pickup' ? 'coral' : 'outline'"
