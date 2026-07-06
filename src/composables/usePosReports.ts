@@ -2,6 +2,7 @@ import { http } from '@/lib/http'
 import type {
   PosCostSummary,
   PosDateRange,
+  PosDeadItems,
   PosLossSummary,
   PosRevenue,
   PosSalesSummary,
@@ -39,5 +40,9 @@ export function usePosReports() {
     const loc = locationId ? `&locationId=${locationId}` : ''
     return http.get<PosLossSummary>(`/pos-reports/losses?from=${range.from}&to=${range.to}${loc}`)
   }
-  return { summary, revenue, costs, staff, losses }
+  function deadItems(range: PosDateRange, locationId?: string): Promise<PosDeadItems> {
+    const loc = locationId ? `&locationId=${locationId}` : ''
+    return http.get<PosDeadItems>(`/pos-reports/dead-items?from=${range.from}&to=${range.to}${loc}`)
+  }
+  return { summary, revenue, costs, staff, losses, deadItems }
 }

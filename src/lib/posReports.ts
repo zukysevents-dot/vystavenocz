@@ -1,5 +1,5 @@
 // Provozní přehled (manažerská analytika prodejů) — kontrakt s backend endpointy
-// GET /api/v1/pos-reports/summary, /revenue, /costs, /staff a /losses.
+// GET /api/v1/pos-reports/summary, /revenue, /costs, /staff, /losses a /dead-items.
 
 export interface PosVatLine {
   vatRate: number
@@ -141,6 +141,27 @@ export interface PosLossSummary {
   missingCostProductCount: number
   reasons: PosLossReasonLine[]
   products: PosLossProductLine[]
+}
+
+export interface PosDeadItemLine {
+  productId: string
+  name: string
+  sku: string
+  stockQuantity: number
+  unitCost: number | null
+  stockValue: number | null
+  lastSoldAt: string | null
+  daysSinceLastSale: number | null
+}
+
+export interface PosDeadItems {
+  from: string
+  to: string
+  currency: string
+  productCount: number
+  knownStockValue: number
+  missingCostProductCount: number
+  products: PosDeadItemLine[]
 }
 
 // Rychlé rozsahy období pro přehled. Hranice se počítají z LOKÁLNÍHO data (obchodní den obsluhy),

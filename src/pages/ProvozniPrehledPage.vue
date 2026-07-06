@@ -28,6 +28,7 @@ import {
   type PosCostSummary,
   type PosStaffPerformance,
   type PosLossSummary,
+  type PosDeadItems,
   type PosLossType,
 } from '@/lib/posReports'
 
@@ -52,9 +53,20 @@ const revenue = ref<PosRevenue | null>(null)
 const costs = ref<PosCostSummary | null>(null)
 const staff = ref<PosStaffPerformance | null>(null)
 const losses = ref<PosLossSummary | null>(null)
+const deadItems = ref<PosDeadItems | null>(null)
 const percentFormatter = new Intl.NumberFormat('cs-CZ', {
   minimumFractionDigits: 0,
   maximumFractionDigits: 2,
+})
+const quantityFormatter = new Intl.NumberFormat('cs-CZ', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 3,
+})
+const dateTimeFormatter = new Intl.DateTimeFormat('cs-CZ', {
+  day: 'numeric',
+  month: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
 })
 
 // Graf: tržby po dnech. Popisek osy X = den v měsíci (např. „5.7."), aby šla řada přečíst.
@@ -68,6 +80,15 @@ const hasRevenue = computed(() => revenueBars.value.some((b) => b.total > 0))
 
 function formatPercent(value: number): string {
   return `${percentFormatter.format(value)} %`
+}
+
+function formatQuantity(value: number): string {
+  return quantityFormatter.format(value)
+}
+
+function formatLastSale(value: string | null): string {
+  if (!value) return 'Nikdy'
+  return dateTimeFormatter.format(new Date(value))
 }
 
 function lossTypeLabel(type: PosLossType): string {
@@ -93,18 +114,20 @@ async function load(): Promise<void> {
   try {
     const range = posReportRange(preset.value, new Date())
     const loc = locationId.value || undefined
-    const [sum, rev, cost, staffReport, lossReport] = await Promise.all([
+    const [sum, rev, cost, staffReport, lossReport, deadItemsReport] = await Promise.all([
       reportsApi.summary(range, loc),
       reportsApi.revenue(range, 'Day', loc),
       reportsApi.costs(range, loc),
       reportsApi.staff(range, loc),
       reportsApi.losses(range, loc),
+      reportsApi.deadItems(range, loc),
     ])
     summary.value = sum
     revenue.value = rev
     costs.value = cost
     staff.value = staffReport
     losses.value = lossReport
+    deadItems.value = deadItemsReport
   } catch (e) {
     console.warn('Načtení provozního přehledu selhalo:', e)
     loadError.value = true
@@ -341,6 +364,88 @@ function selectPreset(id: PosReportPreset): void {
               Za zvolené období nejsou žádné katalogové prodeje.
             </p>
           </div>
+        </div>
+
+        <!-- Ležáky skladu -->
+        <div v-if="deadItems" class="mt-6">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <Package class="h-4 w-4 text-primary" />
+              <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Ležáky skladu
+              </h2>
+            </div>
+            <div class="text-sm text-muted-foreground tabular-nums">
+              {{ deadItems.productCount }} položek · {{ formatCZK(deadItems.knownStockValue) }}
+            </div>
+          </div>
+
+          <div class="mt-4 grid gap-4 sm:grid-cols-3">
+            <div class="rounded-xl border border-border bg-background p-4">
+              <div class="text-sm text-muted-foreground">Položek bez prodeje</div>
+              <div class="mt-1 text-xl font-semibold tabular-nums">
+                {{ deadItems.productCount }}
+              </div>
+            </div>
+            <div class="rounded-xl border border-border bg-background p-4">
+              <div class="text-sm text-muted-foreground">Známá skladová hodnota</div>
+              <div class="mt-1 text-xl font-semibold tabular-nums">
+                {{ formatCZK(deadItems.knownStockValue) }}
+              </div>
+            </div>
+            <div class="rounded-xl border border-border bg-background p-4">
+              <div class="text-sm text-muted-foreground">Bez nákladové ceny</div>
+              <div class="mt-1 text-xl font-semibold tabular-nums">
+                {{ deadItems.missingCostProductCount }}
+              </div>
+            </div>
+          </div>
+
+          <div
+            v-if="deadItems.products.length"
+            class="mt-4 overflow-x-auto rounded-xl border border-border bg-card p-4 sm:p-6"
+          >
+            <table class="w-full min-w-[760px] text-sm">
+              <thead class="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <tr class="border-b border-border">
+                  <th class="py-2 pr-4 font-medium">Položka</th>
+                  <th class="px-3 py-2 text-right font-medium">Sklad</th>
+                  <th class="px-3 py-2 text-right font-medium">Náklad / ks</th>
+                  <th class="px-3 py-2 text-right font-medium">Hodnota</th>
+                  <th class="py-2 pl-3 text-right font-medium">Poslední prodej</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border">
+                <tr v-for="p in deadItems.products" :key="p.productId">
+                  <td class="py-3 pr-4">
+                    <div class="max-w-[260px] truncate font-medium">{{ p.name }}</div>
+                    <div class="text-xs text-muted-foreground tabular-nums">
+                      {{ p.sku || 'bez SKU' }}
+                      <span v-if="p.unitCost === null"> · chybí nákupní cena</span>
+                    </div>
+                  </td>
+                  <td class="px-3 py-3 text-right tabular-nums">
+                    {{ formatQuantity(p.stockQuantity) }}
+                  </td>
+                  <td class="px-3 py-3 text-right tabular-nums">
+                    {{ p.unitCost === null ? '-' : formatCZK(p.unitCost) }}
+                  </td>
+                  <td class="px-3 py-3 text-right font-semibold tabular-nums">
+                    {{ p.stockValue === null ? '-' : formatCZK(p.stockValue) }}
+                  </td>
+                  <td class="py-3 pl-3 text-right tabular-nums">
+                    <div>{{ formatLastSale(p.lastSoldAt) }}</div>
+                    <div v-if="p.daysSinceLastSale !== null" class="text-xs text-muted-foreground">
+                      {{ p.daysSinceLastSale }} dní
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p v-else class="mt-4 text-sm text-muted-foreground">
+            Ve zvoleném období nejsou žádné skladové ležáky.
+          </p>
         </div>
 
         <!-- Ztráty / nálezy skladu -->
