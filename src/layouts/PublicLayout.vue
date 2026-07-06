@@ -5,7 +5,8 @@ import StickyMobileCta from '@/components/landing/StickyMobileCta.vue'
 </script>
 
 <template>
-  <div class="flex min-h-svh flex-col bg-background text-foreground">
+  <!-- bg-landing: značkový aura gradient místo plochého pozadí (viz main.css). -->
+  <div class="bg-landing flex min-h-svh flex-col text-foreground">
     <SiteNavbar />
     <main class="flex-1">
       <slot />

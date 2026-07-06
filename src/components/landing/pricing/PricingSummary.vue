@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { RouterLink } from 'vue-router'
 import { Button } from '@/components/ui/button'
-import { MODULAR_PRICING, bundleSavingMonthly } from '@/lib/pricing'
+import { bundleSavingMonthly } from '@/lib/pricing'
+import { pricingSelectionMailto } from '@/lib/landing-cta'
 
 const props = defineProps<{
   selectedCount: number
+  /** Názvy vybraných modulů — pro předvyplnění poptávkového e-mailu. */
+  selectedNames: readonly string[]
   perMonth: number
   yearly: boolean
   yearlyTotal: number
@@ -26,6 +28,8 @@ const modulesWord = computed(() => {
   if (n >= 2 && n <= 4) return 'moduly'
   return 'modulů'
 })
+
+const interestMailto = computed(() => pricingSelectionMailto(props.selectedNames, props.perMonth))
 </script>
 
 <template>
@@ -79,11 +83,15 @@ const modulesWord = computed(() => {
       moduly.
     </p>
 
-    <Button variant="coral" size="lg" class="mt-5 w-full" :disabled="selectedCount === 0" as-child>
-      <RouterLink to="/registrace">Vyzkoušet zdarma {{ MODULAR_PRICING.trialDays }} dní</RouterLink>
+    <!-- as-child + disabled na <a> nefunguje — prázdná sestava renderuje skutečný disabled button. -->
+    <Button v-if="selectedCount === 0" variant="coral" size="lg" class="mt-5 w-full" disabled>
+      Chci tuhle sestavu — early access
+    </Button>
+    <Button v-else variant="coral" size="lg" class="mt-5 w-full" as-child>
+      <a :href="interestMailto">Chci tuhle sestavu — early access</a>
     </Button>
     <p class="mt-3 text-center text-xs text-muted-foreground">
-      Bez karty · Zrušení jedním klikem · Ceny bez DPH (neplátce)
+      Ceny orientační do spuštění · bez závazku · ceny bez DPH (neplátce)
     </p>
   </div>
 </template>

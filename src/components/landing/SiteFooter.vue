@@ -6,10 +6,10 @@ import SiteLogo from '@/components/SiteLogo.vue'
 import { openCookieSettings } from '@/lib/cookie-consent'
 
 const productLinks = [
-  { to: '/funkce', label: 'Funkce' },
+  { to: '/funkce', label: 'Moduly a funkce' },
   { to: '/cenik', label: 'Ceník' },
   { to: '/clanky', label: 'Články' },
-  { to: '/akce', label: 'Akce do 1. 6.' },
+  { to: '/akce', label: 'Early access' },
   { to: '/nase-sliby', label: 'Naše sliby' },
   { to: '/srovnani', label: 'Srovnání' },
   { to: '/faq', label: 'FAQ' },
@@ -19,14 +19,14 @@ const year = computed(() => new Date().getFullYear())
 </script>
 
 <template>
-  <footer class="border-t border-border bg-surface-soft">
+  <footer class="border-t border-border bg-surface/50">
     <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
         <div>
           <SiteLogo />
           <p class="mt-4 max-w-xs text-sm text-muted-foreground">
-            Jeden systém pro celý provoz — pokladna, fakturace i rezervace. České, postavené v
-            Praze.
+            Modulární provozní systém pro gastro, služby, řemeslo i obchod — pokladna, kuchyně,
+            sklad, rezervace i fakturace. České, postavené v Praze.
           </p>
         </div>
 

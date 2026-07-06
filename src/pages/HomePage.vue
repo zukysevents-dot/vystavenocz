@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import HeroSection from '@/components/landing/HeroSection.vue'
 import TrustBar from '@/components/landing/TrustBar.vue'
-import AiDemo from '@/components/landing/AiDemo.vue'
-import InlineCta from '@/components/landing/InlineCta.vue'
 import LifecycleStrip from '@/components/landing/LifecycleStrip.vue'
 import HighlightFeatures from '@/components/landing/HighlightFeatures.vue'
-import TestimonialsSection from '@/components/landing/TestimonialsSection.vue'
+import InlineCta from '@/components/landing/InlineCta.vue'
+import AudienceSection from '@/components/landing/AudienceSection.vue'
 import RapidUpdatesShort from '@/components/landing/RapidUpdatesShort.vue'
 import RoadmapSection from '@/components/landing/RoadmapSection.vue'
 import PricingTeaser from '@/components/landing/PricingTeaser.vue'
@@ -16,24 +15,17 @@ import CtaSection from '@/components/landing/CtaSection.vue'
   <HeroSection />
   <!-- Trust bar hned pod Hero — důvěryhodné mikrosignály ještě před scrollováním. -->
   <TrustBar />
-  <!-- AI sekce jako hlavní wow moment — živá ukázka schopností. -->
-  <AiDemo />
-  <!-- CTA po AI sekci — uživatel právě viděl value, pojď ho registrovat. -->
-  <InlineCta title="Zní to jednoduše? Zkus to na vlastní faktuře." />
-  <!-- Lifecycle — krátké připomenutí, že pokrýváme celý život faktury. -->
+  <!-- Provozní tok jako první obsahová sekce — hlavní odlišení od „jen pokladny". -->
   <LifecycleStrip />
-  <!-- Hlavní funkce v krátké podobě (3 karty). -->
+  <!-- Hlavní moduly v krátké podobě. -->
   <HighlightFeatures />
-  <!-- CTA po funkcích — klasické rozhodovací místo. -->
-  <InlineCta
-    title="Máš všechno, co potřebuješ. Otestuj to zdarma."
-    hint="Žádná karta · plný přístup 14 dní"
-  />
-  <!-- Social proof před závěrečným CTA. -->
-  <TestimonialsSection />
+  <!-- CTA po modulech — uživatel právě viděl šíři systému. -->
+  <InlineCta title="Zní to dobře? Ukážeme vám Vystaveno na vašem provozu." />
+  <!-- Pro koho systém stavíme — konkrétní use-cases místo generických frází. -->
+  <AudienceSection />
   <!-- Krátký důkaz, že produkt rychle vylepšujeme. -->
   <RapidUpdatesShort />
-  <!-- Roadmapa — řeší námitku „chybí mi feature X" a buduje důvěru. -->
+  <!-- Roadmapa — poctivě: co je hotové, co připravujeme. -->
   <RoadmapSection />
   <!-- Ceník teaser před závěrečným CTA — cena až po hodnotě/důvěře; detail je na /cenik. -->
   <PricingTeaser />

@@ -11,6 +11,7 @@ import {
 } from 'lucide-vue-next'
 import type { LucideIcon } from 'lucide-vue-next'
 import { PRICING_ADDONS, ADDON_CATEGORIES, type AddonCategory } from '@/lib/pricing'
+import { moduleInterestMailto } from '@/lib/landing-cta'
 
 const props = defineProps<{
   /** Add-ony doporučené vybraným segmentem (zvýrazní se). */
@@ -36,8 +37,6 @@ const visible = computed(() =>
 
 const czk = (n: number) => n.toLocaleString('cs-CZ')
 const isHighlighted = (key: string) => props.highlight.includes(key)
-const mailto = (name: string) =>
-  `mailto:patrik@vystaveno.cz?subject=${encodeURIComponent(`Mám zájem o modul ${name}`)}`
 </script>
 
 <template>
@@ -117,7 +116,7 @@ const mailto = (name: string) =>
             + {{ czk(a.perExtra.monthly) }} Kč {{ a.perExtra.label }}
           </p>
           <a
-            :href="mailto(a.name)"
+            :href="moduleInterestMailto(a.name)"
             class="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-coral transition-colors hover:text-coral/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             Mám zájem

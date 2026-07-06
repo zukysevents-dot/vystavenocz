@@ -8,7 +8,7 @@ import CtaSection from '@/components/landing/CtaSection.vue'
   <PageHeader
     eyebrow="Srovnání"
     title="Celý provoz v jednom, modulárně."
-    subtitle="Postavili jsme Vystaveno vedle Dotykačky, Storyous a Fakturoidu. Posuďte sami."
+    subtitle="Pokladní systémy řeší prodej, fakturační nástroje doklady — a na sklad, rezervace či docházku potřebujete další aplikace. Postavili jsme Vystaveno vedle Dotykačky, Storyous a Fakturoidu. Posuďte sami."
   />
   <ComparisonSection />
   <CtaSection />

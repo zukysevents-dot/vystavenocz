@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
-import { ShieldCheck, Lock, Clock, Heart, Sparkles, AlertTriangle } from 'lucide-vue-next'
+import { ShieldCheck, Database, Clock, Heart, Sparkles, Map, AlertTriangle } from 'lucide-vue-next'
 import PageHeader from '@/components/landing/PageHeader.vue'
 import { Button } from '@/components/ui/button'
+import { DEMO_MAILTO } from '@/lib/landing-cta'
 
 const promises = [
   {
@@ -16,14 +17,19 @@ const promises = [
     text: 'Ceny máte přehledně v ceníku, kde si rovnou poskládáte svůj systém. Žádné skryté poplatky ani hvězdičky drobným písmem.',
   },
   {
-    icon: Lock,
-    title: 'Žádná platební karta na začátku',
-    text: '14 dní zkoušíte zdarma, kartu zadáváte až když se rozhodnete pokračovat. Žádné automatické stržení po zkušebce.',
+    icon: Map,
+    title: 'Poctivá roadmapa',
+    text: 'Co není hotové, označujeme „připravujeme". Neslibujeme funkce, které neexistují — na webu i v ukázce vidíte skutečný stav.',
   },
   {
     icon: Clock,
     title: 'Bez závazku, zrušení jedním kliknutím',
-    text: 'Předplatné i jednotlivé moduly zrušíte sami v nastavení – bez e-mailů, bez telefonátů, bez výpovědních lhůt.',
+    text: 'Předplatné i jednotlivé moduly zrušíte sami – bez e-mailů, bez telefonátů, bez výpovědních lhůt.',
+  },
+  {
+    icon: Database,
+    title: 'Vaše data jsou vaše',
+    text: 'Doklady, uzávěrky i docházku si kdykoliv vyexportujete (CSV, ISDOC, XML). Žádné držení dat jako rukojmí.',
   },
   {
     icon: Heart,
@@ -33,8 +39,9 @@ const promises = [
 ]
 
 const limits = [
+  'Aplikace zatím běží v režimu early access — veřejnou online registraci připravujeme, přístup teď domlouváme osobně.',
   'Termíny vývoje nových funkcí orientačně dodržujeme, ale závisí na změnách legislativy a třetích stranách (např. banky, ARES).',
-  'Ceny modulů jsou orientační a můžeme je do budoucna upravit; změnu vždy oznámíme dopředu a nikdy ji nezavádíme zpětně.',
+  'Ceny modulů jsou orientační do veřejného spuštění; změnu vždy oznámíme dopředu a nikdy ji nezavádíme zpětně.',
   'Vrácení peněz za nevyčerpané období nenárokujeme automaticky, ale píšete-li nám férový důvod, řešíme individuálně.',
 ]
 </script>
@@ -46,7 +53,7 @@ const limits = [
     subtitle="Žádné hvězdičky drobným písmem. Tady je seznam všeho, co vám slibujeme – a kde jsou naše limity."
   />
 
-  <section class="bg-background py-16 sm:py-20">
+  <section class="py-16 sm:py-20">
     <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
       <ul class="grid gap-5 sm:grid-cols-2">
         <li
@@ -81,7 +88,7 @@ const limits = [
 
       <div class="mt-10 flex flex-col items-center gap-3 text-center">
         <Button variant="coral" size="lg" as-child>
-          <RouterLink to="/registrace">Vyzkoušet zdarma</RouterLink>
+          <a :href="DEMO_MAILTO">Chci demo</a>
         </Button>
         <RouterLink
           to="/cenik"

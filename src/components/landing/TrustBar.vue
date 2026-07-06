@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ShieldCheck, CreditCard, MapPin, ToggleRight } from 'lucide-vue-next'
+import { ShieldCheck, MonitorSmartphone, MapPin, ToggleRight } from 'lucide-vue-next'
+import { vReveal } from '@/lib/reveal'
 
 const items = [
-  { icon: ShieldCheck, label: '14 dní zdarma' },
-  { icon: CreditCard, label: 'Bez platební karty' },
-  { icon: MapPin, label: 'České, podle zákona' },
-  { icon: ToggleRight, label: 'Modulární — platíš jen co používáš' },
+  { icon: ToggleRight, label: 'Modulární — platíte jen co používáte' },
+  { icon: MonitorSmartphone, label: 'Počítač, tablet i mobil' },
+  { icon: ShieldCheck, label: 'České, podle zákona' },
+  { icon: MapPin, label: 'Postavené v Praze' },
 ]
 </script>
 
@@ -15,9 +16,10 @@ const items = [
     Záměrně bez velkých marginů — funguje jako důvěryhodný proužek,
     ne jako další full-blown sekce.
   -->
-  <section class="border-y border-border/60 bg-surface py-5 sm:py-6">
+  <section class="border-y border-border/60 bg-surface/50 py-5 sm:py-6">
     <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
       <ul
+        v-reveal
         class="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs font-medium text-muted-foreground sm:gap-x-12 sm:text-sm"
       >
         <li v-for="it in items" :key="it.label" class="flex items-center gap-2">

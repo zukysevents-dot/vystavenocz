@@ -249,6 +249,55 @@
   .bg-hero {
     background-image: var(--gradient-hero);
   }
+  /* Podklad celého veřejného webu — místo plochého pozadí jemné aura záře
+     (gold → coral → violet z loga) rozprostřené po délce stránky. Pozice v %,
+     takže se škálují s výškou stránky; funguje ve světlém i tmavém režimu. */
+  .bg-landing {
+    background-color: var(--background);
+    background-image:
+      radial-gradient(
+        60rem 42rem at 12% 0%,
+        color-mix(in oklab, var(--coral) 14%, transparent),
+        transparent 62%
+      ),
+      radial-gradient(
+        52rem 38rem at 95% 12%,
+        color-mix(in oklab, #7a1fe0 18%, transparent),
+        transparent 64%
+      ),
+      radial-gradient(
+        56rem 40rem at 4% 42%,
+        color-mix(in oklab, #ff8a2b 11%, transparent),
+        transparent 60%
+      ),
+      radial-gradient(
+        58rem 42rem at 96% 68%,
+        color-mix(in oklab, var(--coral) 12%, transparent),
+        transparent 62%
+      ),
+      radial-gradient(
+        64rem 46rem at 30% 100%,
+        color-mix(in oklab, #7a1fe0 15%, transparent),
+        transparent 62%
+      );
+  }
+  /* Tmavé „ink" kotvy (provozní tok, závěrečné CTA) — plum → ink s aura zářemi,
+     aby ani tmavé sekce nebyly čistě černé. */
+  .bg-ink-gradient {
+    background-color: #0a0411;
+    background-image:
+      radial-gradient(
+        44rem 30rem at 88% -12%,
+        color-mix(in oklab, #7a1fe0 34%, transparent),
+        transparent 65%
+      ),
+      radial-gradient(
+        38rem 28rem at 6% 112%,
+        color-mix(in oklab, #ff2e9a 22%, transparent),
+        transparent 62%
+      ),
+      linear-gradient(180deg, #1a0730 0%, #0f0519 55%, #0a0411 100%);
+  }
   /* Žhavá aura jako pozadí (hero, klíčové momenty). */
   .bg-aura {
     background-image: var(--gradient-aura);
@@ -270,6 +319,87 @@
   }
   .shadow-glow {
     box-shadow: var(--shadow-glow);
+  }
+}
+
+/* ——— Landing animace ———
+   Liquid blob tvary, hero intro a scroll-reveal (v-reveal direktiva, src/lib/reveal.ts).
+   Vše jen s povoleným pohybem — při prefers-reduced-motion je obsah rovnou viditelný
+   a statický. Animuje se pouze transform/opacity (compositor-friendly). */
+.blob {
+  border-radius: 42% 58% 62% 38% / 48% 42% 58% 52%;
+}
+.blob-2 {
+  border-radius: 58% 42% 38% 62% / 42% 58% 46% 54%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes liquid-drift {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+    }
+    33% {
+      transform: translate3d(3%, -4%, 0) rotate(10deg) scale(1.08);
+    }
+    66% {
+      transform: translate3d(-3%, 3%, 0) rotate(-8deg) scale(0.94);
+    }
+  }
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(26px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes gradient-pan {
+    from {
+      background-position: 0% 50%;
+    }
+    to {
+      background-position: 100% 50%;
+    }
+  }
+
+  .animate-liquid {
+    animation: liquid-drift 18s ease-in-out infinite;
+    will-change: transform;
+  }
+  .animate-liquid-slow {
+    animation: liquid-drift 26s ease-in-out infinite reverse;
+    will-change: transform;
+  }
+
+  /* Hero intro — jednorázový vstup, stagger přes animation-delay utility. */
+  .hero-rise {
+    animation-name: rise-in;
+    animation-duration: 0.9s;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    animation-fill-mode: both;
+  }
+
+  /* Jemný shimmer brand gradientu (jen headline span). */
+  .text-gradient-animated {
+    background-size: 200% 200%;
+    animation: gradient-pan 7s ease-in-out infinite alternate;
+  }
+
+  /* Scroll reveal — třídy řídí v-reveal direktiva (bez JS zůstává obsah viditelný). */
+  .reveal-init {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+  .reveal-in {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--reveal-delay, 0ms);
   }
 }
 

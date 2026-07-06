@@ -53,8 +53,12 @@ async function onSubmit() {
         <SiteLogo />
       </div>
       <div class="rounded-2xl border border-border bg-card p-8 shadow-card">
-        <h1 class="text-2xl font-bold tracking-tight">Začněte zdarma</h1>
-        <p class="mt-1 text-sm text-muted-foreground">14 dní bez karty. Plné funkce.</p>
+        <h1 class="text-2xl font-bold tracking-tight">Vytvořit účet</h1>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Vystaveno běží v režimu early access — účty zakládáme prvním zákazníkům po domluvě na
+          <a href="mailto:patrik@vystaveno.cz" class="font-medium underline">patrik@vystaveno.cz</a
+          >.
+        </p>
 
         <form class="mt-6 space-y-4" @submit.prevent="onSubmit">
           <div class="space-y-2">
