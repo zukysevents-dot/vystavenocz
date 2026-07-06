@@ -72,6 +72,7 @@ Datový kontrakt: `src/lib/types.ts` (FE) musí sedět s DTO na backendu; sdíle
 
 - `VITE_API_URL` prázdné → **mock režim** (localStorage). Takhle běží e2e testy i offline demo.
 - `VITE_API_URL` nastavené → **API režim** (reálný backend). POS / Pokladna / Uzávěrka fungují jen v API režimu (v mocku zobrazí „potřebuje server").
+- E2E může před načtením appky vynutit API režim přes `window.__VYSTAVENO_API_URL__ = '/api/v1'`, aby šlo mockovat serverové endpointy bez produkčního env buildu.
 
 ## Build / lint / test
 
