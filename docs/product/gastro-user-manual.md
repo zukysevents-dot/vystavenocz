@@ -22,9 +22,11 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 
 1. Otevřete `Restaurace`.
 2. Vyberte stůl a přidejte položky.
-3. Položky můžete přesouvat, účty slučovat, rozdělit mezi hosty a zaplatit jen vybranou část.
-4. Placení spustíte tlačítkem `Zaplatit` (celý účet) nebo ikonou bankovky u osoby v rozdělení účtu. Hotovost počítá vrácení, karta jde přes terminálový krok.
-5. Po zaplacení zůstane otevřený jen nezaplacený zbytek účtu.
+3. Na mobilu nebo tabletu můžete stůl vybrat i ze seznamu stolů; na větším displeji zůstává vizuální mapa.
+4. Položky můžete přesouvat, účty slučovat, rozdělit mezi hosty a zaplatit jen vybranou část.
+5. Na mobilu zůstává dole rychlá lišta s aktuálním stolem, počtem položek, celkem a hlavními akcemi.
+6. Placení spustíte tlačítkem `Zaplatit` (celý účet) nebo ikonou bankovky u osoby v rozdělení účtu. Hotovost počítá vrácení, karta jde přes terminálový krok.
+7. Po zaplacení zůstane otevřený jen nezaplacený zbytek účtu.
 
 ## Kuchyně a bar
 
