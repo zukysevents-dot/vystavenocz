@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { Menu, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -24,11 +24,28 @@ watch(
   () => route.fullPath,
   () => (open.value = false),
 )
+
+// Liquid glass: nahoře panel splývá se stránkou, po scrollu se změní na průsvitné
+// „sklo" (blur + saturace + jemný stín). Blur běží pořád — plynule se mění jen barvy.
+const scrolled = ref(false)
+function onScroll() {
+  scrolled.value = window.scrollY > 8
+}
+onMounted(() => {
+  onScroll()
+  window.addEventListener('scroll', onScroll, { passive: true })
+})
+onUnmounted(() => window.removeEventListener('scroll', onScroll))
 </script>
 
 <template>
   <header
-    class="sticky top-0 z-40 w-full border-b border-border/60 bg-background/70 backdrop-blur-xl"
+    class="sticky top-0 z-40 w-full border-b backdrop-blur-xl backdrop-saturate-150 transition-[background-color,border-color,box-shadow] duration-300"
+    :class="
+      scrolled || open
+        ? 'border-border/50 bg-background/55 shadow-[0_12px_32px_-20px_rgba(10,4,17,0.55)]'
+        : 'border-transparent bg-transparent'
+    "
   >
     <div
       class="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8"

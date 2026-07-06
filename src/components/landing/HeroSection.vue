@@ -28,13 +28,13 @@ const signals = [
       class="pointer-events-none absolute -top-44 left-1/2 -z-10 h-[30rem] w-[30rem] -translate-x-[85%] sm:h-[36rem] sm:w-[36rem]"
       aria-hidden="true"
     >
-      <div class="blob animate-liquid h-full w-full bg-aura opacity-20 blur-3xl" />
+      <div class="blob animate-liquid h-full w-full bg-aura opacity-30 blur-3xl" />
     </div>
     <div
       class="pointer-events-none absolute -right-40 top-40 -z-10 h-[24rem] w-[24rem] sm:h-[30rem] sm:w-[30rem]"
       aria-hidden="true"
     >
-      <div class="blob-2 animate-liquid-slow h-full w-full bg-aura opacity-[0.15] blur-3xl" />
+      <div class="blob-2 animate-liquid-slow h-full w-full bg-aura opacity-[0.22] blur-3xl" />
     </div>
 
     <div class="mx-auto max-w-4xl px-4 pb-24 pt-16 text-center sm:px-6 lg:pb-32 lg:pt-24">
