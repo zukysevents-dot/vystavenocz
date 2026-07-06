@@ -66,4 +66,12 @@ describe('usePosReports', () => {
       '/pos-reports/losses?from=2026-07-01&to=2026-07-05&locationId=loc1',
     )
   })
+
+  it('deadItems volá GET /pos-reports/dead-items a přibalí locationId', async () => {
+    vi.mocked(http.get).mockResolvedValue({} as never)
+    await usePosReports().deadItems(range, 'loc1')
+    expect(http.get).toHaveBeenCalledWith(
+      '/pos-reports/dead-items?from=2026-07-01&to=2026-07-05&locationId=loc1',
+    )
+  })
 })
