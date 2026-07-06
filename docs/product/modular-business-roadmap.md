@@ -114,7 +114,7 @@ Must make Vystaveno smarter than a classic POS:
 - staff performance: revenue per hour, storno rate, discount rate, cash differences (foundation: `/staff` and `Výkon obsluhy` show revenue, check count, average check, payment split, tips, discounts, storno totals, discount rate, and storno rate per employee)
 - stock purchase suggestions from sales, recipes, minimum levels, and seasonality
 - simple user-facing gastro manual that stays updated with each workflow so restaurants can train staff without paper notes
-- QR table ordering, payment, tip, review, and loyalty without installing an app
+- QR/public ordering, payment, tip, review, and loyalty without installing an app (foundation: `/objednavka/:slug` public menu + pickup/delivery order submission into KDS)
 - kitchen display with preparation time, SLA colors, station filters, and history (foundation: preparation timer, SLA color thresholds, station filters, ticket printing, Preparing/Ready/Served actions, and persistent Served history via `GET /api/v1/kitchen/history`)
 - multi-location central stock, shared price lists, and branch comparisons
 - approval workflows for inventory corrections, large write-offs, and manager storno

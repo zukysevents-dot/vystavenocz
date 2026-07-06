@@ -30,6 +30,13 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 3. Stav bonu postupuje `Odesláno` → `Připravuje se` → `Hotovo` → `Vydáno`.
 4. Historie vydaných bonů je jen pro kontrolu, nemění stav objednávky.
 
+## Online objednávky
+
+1. Zákazník otevře veřejný odkaz `/objednavka/:slug`.
+2. Vybere položky z menu, zvolí `Výdej` nebo `Rozvoz`, vyplní kontakt a odešle objednávku.
+3. Ceny počítá server podle katalogu, ne zákaznický prohlížeč.
+4. Objednávka bez stolu se po odeslání objeví rovnou v `Kuchyně` jako veřejný bon se jménem zákazníka.
+
 ## Naskladnění
 
 1. Otevřete `Naskladnění`.
