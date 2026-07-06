@@ -58,9 +58,11 @@ export function useInventory() {
       locationId: locationId || null,
     })
   }
-  function purchaseReceipts(): Promise<PurchaseReceipt[]> {
+  function purchaseReceipts(query: StockLevelQuery = {}): Promise<PurchaseReceipt[]> {
+    const params = new URLSearchParams({ pageSize: '50' })
+    if (query.locationId) params.set('locationId', query.locationId)
     return http
-      .get<PagedResult<PurchaseReceipt>>('/inventory/purchase-receipts?pageSize=50')
+      .get<PagedResult<PurchaseReceipt>>(`/inventory/purchase-receipts?${params}`)
       .then((r) => r.items)
   }
   function createPurchaseReceipt(request: CreatePurchaseReceiptRequest): Promise<PurchaseReceipt> {

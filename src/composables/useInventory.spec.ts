@@ -134,4 +134,44 @@ describe('useInventory', () => {
       '/inventory/purchase-suggestions?from=2026-07-01&to=2026-07-05&daysAhead=14&locationId=bar-1',
     )
   })
+
+  it('purchaseReceipts bez filtru volá základní stránkovaný endpoint', async () => {
+    vi.mocked(http.get).mockResolvedValue({ items: [] } as never)
+
+    await useInventory().purchaseReceipts()
+
+    expect(http.get).toHaveBeenCalledWith('/inventory/purchase-receipts?pageSize=50')
+  })
+
+  it('purchaseReceipts posílá pobočku jako query', async () => {
+    vi.mocked(http.get).mockResolvedValue({ items: [] } as never)
+
+    await useInventory().purchaseReceipts({ locationId: 'bar-1' })
+
+    expect(http.get).toHaveBeenCalledWith(
+      '/inventory/purchase-receipts?pageSize=50&locationId=bar-1',
+    )
+  })
+
+  it('createPurchaseReceipt pošle pobočku v těle dokladu', async () => {
+    vi.mocked(http.post).mockResolvedValue({} as never)
+
+    await useInventory().createPurchaseReceipt({
+      supplierName: 'Makro',
+      documentNumber: 'DL-1',
+      receivedOn: '2026-07-06',
+      note: null,
+      locationId: 'bar-1',
+      items: [{ productId: 'prod-1', quantity: 4, unitCost: 12 }],
+    })
+
+    expect(http.post).toHaveBeenCalledWith('/inventory/purchase-receipts', {
+      supplierName: 'Makro',
+      documentNumber: 'DL-1',
+      receivedOn: '2026-07-06',
+      note: null,
+      locationId: 'bar-1',
+      items: [{ productId: 'prod-1', quantity: 4, unitCost: 12 }],
+    })
+  })
 })

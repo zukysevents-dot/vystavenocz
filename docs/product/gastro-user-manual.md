@@ -50,11 +50,12 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 ## Naskladnění
 
 1. Otevřete `Naskladnění`.
-2. Vyplňte dodavatele, číslo dokladu a datum příjmu.
-3. Přidejte zboží skenerem, kamerou nebo vyhledáním produktu.
-4. Zadejte množství a volitelně nákupní cenu.
-5. Uložte příjemku. Sklad se mění přes příjemku, ne přes anonymní ruční příjem.
-6. Blok `K doobjednání` doporučuje množství podle minim, skutečné spotřeby a receptur.
+2. Máte-li víc poboček, vyberte nahoře `Pobočka skladu` — stav, doporučení i poslední příjemky se filtrují podle ní a novou příjemku uložíte na konkrétní sklad. `Všechny pobočky` slouží jen k přehledu; příjemku na ně uložit nelze.
+3. Vyplňte dodavatele, číslo dokladu a datum příjmu.
+4. Přidejte zboží skenerem, kamerou nebo vyhledáním produktu.
+5. Zadejte množství a volitelně nákupní cenu.
+6. Uložte příjemku. Sklad se mění přes příjemku, ne přes anonymní ruční příjem.
+7. Blok `K doobjednání` doporučuje množství podle minim, skutečné spotřeby a receptur (pro vybranou pobočku).
 
 ## Import katalogu z jiné pokladny
 
