@@ -16,7 +16,7 @@ const items = [
     Záměrně bez velkých marginů — funguje jako důvěryhodný proužek,
     ne jako další full-blown sekce.
   -->
-  <section class="border-y border-border/60 bg-surface py-5 sm:py-6">
+  <section class="border-y border-border/60 bg-surface/50 py-5 sm:py-6">
     <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
       <ul
         v-reveal

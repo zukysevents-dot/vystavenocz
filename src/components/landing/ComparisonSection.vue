@@ -67,13 +67,6 @@ const ourFeatures: Row[] = [
     storyous: false,
     fakturoid: false,
   },
-  {
-    label: 'AI pomocník u faktur (česky)',
-    us: true,
-    dotykacka: false,
-    storyous: false,
-    fakturoid: false,
-  },
 ]
 
 const standardFeatures: Row[] = [
@@ -184,7 +177,7 @@ const sections: { title: string; subtitle?: string; data: Row[] }[] = [
 </script>
 
 <template>
-  <section id="srovnani" class="bg-surface-soft py-16 sm:py-20">
+  <section id="srovnani" class="bg-surface/40 py-16 sm:py-20">
     <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
       <div v-reveal class="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
         <div class="overflow-x-auto">

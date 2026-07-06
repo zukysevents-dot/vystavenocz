@@ -101,7 +101,7 @@ const upcoming = computed(() => items.filter((i) => i.status !== 'done'))
 </script>
 
 <template>
-  <section class="bg-surface-soft py-20 sm:py-28">
+  <section class="bg-surface/40 py-20 sm:py-28">
     <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
       <div v-reveal class="max-w-2xl">
         <p

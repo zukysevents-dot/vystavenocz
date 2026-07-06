@@ -249,6 +249,55 @@
   .bg-hero {
     background-image: var(--gradient-hero);
   }
+  /* Podklad celého veřejného webu — místo plochého pozadí jemné aura záře
+     (gold → coral → violet z loga) rozprostřené po délce stránky. Pozice v %,
+     takže se škálují s výškou stránky; funguje ve světlém i tmavém režimu. */
+  .bg-landing {
+    background-color: var(--background);
+    background-image:
+      radial-gradient(
+        60rem 42rem at 12% 0%,
+        color-mix(in oklab, var(--coral) 9%, transparent),
+        transparent 62%
+      ),
+      radial-gradient(
+        52rem 38rem at 95% 12%,
+        color-mix(in oklab, #7a1fe0 12%, transparent),
+        transparent 64%
+      ),
+      radial-gradient(
+        56rem 40rem at 4% 42%,
+        color-mix(in oklab, #ff8a2b 7%, transparent),
+        transparent 60%
+      ),
+      radial-gradient(
+        58rem 42rem at 96% 68%,
+        color-mix(in oklab, var(--coral) 8%, transparent),
+        transparent 62%
+      ),
+      radial-gradient(
+        64rem 46rem at 30% 100%,
+        color-mix(in oklab, #7a1fe0 10%, transparent),
+        transparent 62%
+      );
+  }
+  /* Tmavé „ink" kotvy (provozní tok, závěrečné CTA) — plum → ink s aura zářemi,
+     aby ani tmavé sekce nebyly čistě černé. */
+  .bg-ink-gradient {
+    background-color: #0a0411;
+    background-image:
+      radial-gradient(
+        44rem 30rem at 88% -12%,
+        color-mix(in oklab, #7a1fe0 26%, transparent),
+        transparent 65%
+      ),
+      radial-gradient(
+        38rem 28rem at 6% 112%,
+        color-mix(in oklab, #ff2e9a 16%, transparent),
+        transparent 62%
+      ),
+      linear-gradient(180deg, #1a0730 0%, #0f0519 55%, #0a0411 100%);
+  }
   /* Žhavá aura jako pozadí (hero, klíčové momenty). */
   .bg-aura {
     background-image: var(--gradient-aura);

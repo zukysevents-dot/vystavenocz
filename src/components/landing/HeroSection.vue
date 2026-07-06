@@ -20,9 +20,7 @@ const signals = [
 
 <template>
   <section class="relative overflow-hidden">
-    <!-- Soft paper-to-background base. -->
-    <div class="absolute inset-0 -z-20 bg-hero" aria-hidden="true" />
-    <!-- Very faint brand mesh — atmosphere, not a wash. -->
+    <!-- Base nechává prosvítat bg-landing gradient z PublicLayoutu; mesh jen dokresluje. -->
     <div class="absolute inset-0 -z-10 bg-mesh opacity-[0.16]" aria-hidden="true" />
     <!-- Liquid aura blobs — pomalý organický drift. Wrapper drží pozici (translate),
          vnitřek animuje transform, aby se pozice a animace nepřepsaly. -->

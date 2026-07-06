@@ -5,7 +5,7 @@ import { vReveal } from '@/lib/reveal'
 </script>
 
 <template>
-  <section class="bg-background py-16 sm:py-20">
+  <section class="py-16 sm:py-20">
     <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
       <div
         v-reveal

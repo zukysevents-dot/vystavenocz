@@ -9,7 +9,7 @@ withDefaults(defineProps<{ eyebrow: string; title: string; subtitle?: string; ct
 </script>
 
 <template>
-  <section class="relative overflow-hidden border-b border-border bg-hero">
+  <section class="relative overflow-hidden border-b border-border/60">
     <div class="absolute inset-0 bg-mesh opacity-60" aria-hidden="true" />
     <div class="relative mx-auto max-w-4xl px-4 py-16 text-center sm:px-6 sm:py-20 lg:px-8">
       <p class="hero-rise mb-3 text-sm font-semibold uppercase tracking-wider text-primary">

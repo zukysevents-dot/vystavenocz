@@ -41,7 +41,7 @@ const stages = [
 <template>
   <!-- Dark anchor section: token-flip via `.dark` so it stays ink in light mode too. -->
   <section
-    class="dark relative isolate overflow-hidden bg-background py-20 text-foreground sm:py-28"
+    class="dark bg-ink-gradient relative isolate overflow-hidden py-20 text-foreground sm:py-28"
   >
     <div class="absolute inset-0 -z-10 bg-mesh opacity-50" aria-hidden="true" />
     <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">

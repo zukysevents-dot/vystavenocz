@@ -7,12 +7,12 @@ import { vReveal } from '@/lib/reveal'
 </script>
 
 <template>
-  <section class="bg-background py-20 sm:py-28">
+  <section class="py-20 sm:py-28">
     <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
       <!-- Dark anchor + signature aura: the page closes with confidence. -->
       <div
         v-reveal
-        class="dark relative isolate overflow-hidden rounded-[2rem] bg-background px-6 py-20 text-center text-foreground sm:px-16 sm:py-28"
+        class="dark bg-ink-gradient relative isolate overflow-hidden rounded-[2rem] px-6 py-20 text-center text-foreground sm:px-16 sm:py-28"
       >
         <div
           class="pointer-events-none absolute left-1/2 top-[62%] -z-10 aspect-square w-[130%] max-w-3xl -translate-x-1/2 -translate-y-1/2"

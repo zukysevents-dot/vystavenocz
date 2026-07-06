@@ -53,7 +53,7 @@ const limits = [
     subtitle="Žádné hvězdičky drobným písmem. Tady je seznam všeho, co vám slibujeme – a kde jsou naše limity."
   />
 
-  <section class="bg-background py-16 sm:py-20">
+  <section class="py-16 sm:py-20">
     <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
       <ul class="grid gap-5 sm:grid-cols-2">
         <li

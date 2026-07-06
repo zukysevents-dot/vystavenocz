@@ -67,7 +67,7 @@ const modulesWord = computed(() => {
 </script>
 
 <template>
-  <section id="cenik" class="bg-background py-16 sm:py-20">
+  <section id="cenik" class="py-16 sm:py-20">
     <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
       <!-- Segment / typ provozu -->
       <SegmentPicker v-model="segment" />

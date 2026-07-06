@@ -10,7 +10,7 @@ import { vReveal } from '@/lib/reveal'
 </script>
 
 <template>
-  <section id="faq" class="bg-surface-soft py-16 sm:py-20">
+  <section id="faq" class="bg-surface/40 py-16 sm:py-20">
     <div v-reveal class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
       <Accordion
         type="single"

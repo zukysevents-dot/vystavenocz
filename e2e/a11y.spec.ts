@@ -12,8 +12,8 @@ async function blockingViolations(page: Page) {
     .map((v) => ({ id: v.id, impact: v.impact, nodes: v.nodes.length, help: v.help }))
 }
 
-// Pozn.: scope na stabilní produktové obrazovky (app + auth). Landing má animovaný AiDemo
-// (nedeterministický obsah) → do automatického a11y gate nepatří, řeší se samostatně.
+// Pozn.: scope na stabilní produktové obrazovky (app + auth). Landing má scroll-reveal
+// animace (nedeterministický stav) → do automatického a11y gate nepatří, řeší se samostatně.
 test.describe('a11y (axe) — bez serious/critical porušení', () => {
   test('přihlášení', async ({ page }) => {
     await page.goto('/prihlaseni')

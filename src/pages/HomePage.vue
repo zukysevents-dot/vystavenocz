@@ -5,7 +5,6 @@ import LifecycleStrip from '@/components/landing/LifecycleStrip.vue'
 import HighlightFeatures from '@/components/landing/HighlightFeatures.vue'
 import InlineCta from '@/components/landing/InlineCta.vue'
 import AudienceSection from '@/components/landing/AudienceSection.vue'
-import AiDemo from '@/components/landing/AiDemo.vue'
 import RapidUpdatesShort from '@/components/landing/RapidUpdatesShort.vue'
 import RoadmapSection from '@/components/landing/RoadmapSection.vue'
 import PricingTeaser from '@/components/landing/PricingTeaser.vue'
@@ -24,8 +23,6 @@ import CtaSection from '@/components/landing/CtaSection.vue'
   <InlineCta title="Zní to dobře? Ukážeme vám Vystaveno na vašem provozu." />
   <!-- Pro koho systém stavíme — konkrétní use-cases místo generických frází. -->
   <AudienceSection />
-  <!-- AI ukázka fakturace — wow moment pro fakturační část. -->
-  <AiDemo />
   <!-- Krátký důkaz, že produkt rychle vylepšujeme. -->
   <RapidUpdatesShort />
   <!-- Roadmapa — poctivě: co je hotové, co připravujeme. -->

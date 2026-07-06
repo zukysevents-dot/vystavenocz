@@ -61,7 +61,7 @@ const modules: Module[] = [
 </script>
 
 <template>
-  <section class="bg-background py-20 sm:py-28">
+  <section class="py-20 sm:py-28">
     <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
       <div v-reveal class="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
         <div class="max-w-2xl">

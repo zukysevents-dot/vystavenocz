@@ -11,7 +11,7 @@ const czk = (n: number) => n.toLocaleString('cs-CZ')
 </script>
 
 <template>
-  <section id="cenik" class="relative overflow-hidden bg-background py-16 sm:py-20">
+  <section id="cenik" class="relative overflow-hidden py-16 sm:py-20">
     <div
       class="pointer-events-none absolute left-1/2 top-0 -z-10 aspect-square w-[120%] max-w-3xl -translate-x-1/2 -translate-y-1/3"
       aria-hidden="true"

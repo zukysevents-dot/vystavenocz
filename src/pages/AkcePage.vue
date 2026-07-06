@@ -46,7 +46,7 @@ const steps = [
     subtitle="Vystaveno teď spouštíme pro první provozy. Místo anonymní registrace dostanete osobní nasazení, pomoc s daty a podmínky, které s veřejným spuštěním zmizí."
   />
 
-  <section class="bg-background py-16 sm:py-20">
+  <section class="py-16 sm:py-20">
     <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
       <!-- Co early access znamená -->
       <div class="rounded-3xl border-2 border-coral bg-card p-8 shadow-glow">

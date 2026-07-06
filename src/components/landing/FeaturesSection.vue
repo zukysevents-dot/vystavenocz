@@ -160,7 +160,7 @@ const features = [
 </script>
 
 <template>
-  <section id="funkce" class="bg-background py-16 sm:py-20">
+  <section id="funkce" class="py-16 sm:py-20">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <div

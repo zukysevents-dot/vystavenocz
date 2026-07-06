@@ -37,8 +37,8 @@ const formattedDate = computed(() =>
     </Button>
   </div>
 
-  <article v-else class="bg-background">
-    <header class="relative overflow-hidden border-b border-border bg-hero">
+  <article v-else>
+    <header class="relative overflow-hidden border-b border-border/60">
       <div class="absolute inset-0 bg-mesh opacity-50" aria-hidden />
       <div class="relative mx-auto max-w-3xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
         <RouterLink
@@ -150,7 +150,7 @@ const formattedDate = computed(() =>
     </div>
 
     <!-- Related -->
-    <section v-if="related.length > 0" class="border-t border-border bg-surface-soft py-14">
+    <section v-if="related.length > 0" class="border-t border-border bg-surface/40 py-14">
       <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <h2 class="mb-6 text-xl font-bold text-foreground">Mohlo by tě zajímat</h2>
         <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
