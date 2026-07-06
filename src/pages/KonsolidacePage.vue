@@ -1,12 +1,32 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { Building2, TrendingUp, ShoppingCart, Trophy, Loader2, Download } from 'lucide-vue-next'
+import { computed, onMounted, ref, watch } from 'vue'
+import {
+  Building2,
+  TrendingUp,
+  ShoppingCart,
+  Trophy,
+  Loader2,
+  Download,
+  Percent,
+  AlertTriangle,
+  PackageX,
+  BadgeDollarSign,
+} from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { useApi, LIST_ALL_MAX } from '@/composables/useApi'
 import { useLocations } from '@/composables/useLocations'
+import { usePosReports } from '@/composables/usePosReports'
 import { downloadCsv } from '@/lib/csv-export'
 import { formatCZK } from '@/lib/invoice'
-import { availablePeriods, buildLocationRevenue, consolidationSummary } from '@/lib/consolidation'
+import { isApiMode } from '@/lib/http'
+import {
+  availablePeriods,
+  buildLocationOperationalComparison,
+  buildLocationRevenue,
+  consolidationReportRange,
+  consolidationSummary,
+  type LocationOperationalComparison,
+} from '@/lib/consolidation'
 import LoadError from '@/components/app/LoadError.vue'
 import type { Sale } from '@/lib/types'
 
@@ -14,10 +34,15 @@ import type { Sale } from '@/lib/types'
 // v mocku čtou seed z localStorage. locationId plní backend podle pobočky/terminálu.
 const salesApi = useApi<Sale>('sales')
 const { locations, load: loadLocations } = useLocations()
+const reportsApi = usePosReports()
+const apiMode = isApiMode()
 
 const sales = ref<Sale[]>([])
 const loading = ref(true)
 const loadError = ref(false)
+const operationalLoading = ref(false)
+const operationalLoadError = ref(false)
+const operationalRows = ref<LocationOperationalComparison[]>([])
 const period = ref('all')
 
 async function reload(): Promise<void> {
@@ -25,6 +50,7 @@ async function reload(): Promise<void> {
   loadError.value = false
   try {
     await Promise.all([loadLocations(), salesApi.listAll().then((s) => (sales.value = s))])
+    await loadOperationalComparison()
   } catch (e) {
     console.warn('Načtení dat konsolidace selhalo:', e)
     loadError.value = true
@@ -41,10 +67,64 @@ const summary = computed(() => consolidationSummary(rows.value))
 // ještě většího objemu čísla nemusí být úplná (pak je namístě serverová agregace).
 const truncated = computed(() => sales.value.length >= LIST_ALL_MAX)
 const maxSalesLabel = LIST_ALL_MAX.toLocaleString('cs-CZ')
+const operationalRange = computed(() => consolidationReportRange(sales.value, period.value))
+const showOperationalComparison = computed(
+  () => apiMode && (operationalRows.value.length > 0 || operationalLoading.value),
+)
+const percentFormatter = new Intl.NumberFormat('cs-CZ', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+})
+
+async function loadOperationalComparison(): Promise<void> {
+  operationalRows.value = []
+  operationalLoadError.value = false
+
+  if (!apiMode) return
+  const range = operationalRange.value
+  const activeLocations = locations.value.filter((l) => l.isActive)
+  if (!range || activeLocations.length < 2) return
+
+  operationalLoading.value = true
+  try {
+    const snapshots = await Promise.all(
+      activeLocations.map(async (location) => {
+        const [sum, cost, lossReport, deadItemsReport] = await Promise.all([
+          reportsApi.summary(range, location.id),
+          reportsApi.costs(range, location.id),
+          reportsApi.losses(range, location.id),
+          reportsApi.deadItems(range, location.id),
+        ])
+        return {
+          locationId: location.id,
+          locationName: location.name,
+          summary: sum,
+          costs: cost,
+          losses: lossReport,
+          deadItems: deadItemsReport,
+        }
+      }),
+    )
+    operationalRows.value = buildLocationOperationalComparison(snapshots)
+  } catch (e) {
+    console.warn('Načtení provozního srovnání poboček selhalo:', e)
+    operationalLoadError.value = true
+  } finally {
+    operationalLoading.value = false
+  }
+}
+
+watch(period, () => {
+  void loadOperationalComparison()
+})
 
 function periodLabel(p: string): string {
   const [y, m] = p.split('-')
   return `${m}/${y}`
+}
+
+function formatPercent(value: number): string {
+  return `${percentFormatter.format(value)} %`
 }
 
 function exportConsolidation() {
@@ -58,6 +138,38 @@ function exportConsolidation() {
       r.saleCount,
       r.avgSale,
       r.sharePercent,
+    ]),
+  )
+}
+
+function exportOperationalComparison() {
+  downloadCsv(
+    'provozni-srovnani-pobocek.csv',
+    [
+      'Pobočka',
+      'Tržba',
+      'Účtů',
+      'Průměr',
+      'Hrubá marže',
+      'Marže %',
+      'Food cost %',
+      'Ztráty',
+      'Mrtvý sklad',
+      'Marže po ztrátách',
+      'Chybí náklady',
+    ],
+    operationalRows.value.map((r) => [
+      r.locationName,
+      r.revenue,
+      r.saleCount,
+      r.averageSale,
+      r.grossMargin,
+      r.grossMarginPercent,
+      r.foodCostPercent,
+      r.lossValue,
+      r.deadStockValue,
+      r.marginAfterLoss,
+      r.missingCostProductCount,
     ]),
   )
 }
@@ -221,6 +333,134 @@ function exportConsolidation() {
           </tbody>
         </table>
       </div>
+
+      <div
+        v-if="operationalLoadError"
+        class="mt-6 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+      >
+        Provozní srovnání se nepodařilo načíst. Tržby po pobočkách zůstávají dostupné.
+      </div>
+
+      <section v-if="showOperationalComparison" class="mt-8">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-semibold">Provozní srovnání poboček</h2>
+            <p class="mt-1 text-sm text-muted-foreground">
+              Marže, food cost, ztráty a mrtvý sklad za stejné období.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            :disabled="operationalLoading || !operationalRows.length"
+            @click="exportOperationalComparison"
+          >
+            <Download class="h-4 w-4" /> Export CSV
+          </Button>
+        </div>
+
+        <div v-if="operationalLoading" class="mt-6 flex justify-center rounded-xl border p-8">
+          <Loader2 class="h-5 w-5 animate-spin text-primary" />
+        </div>
+
+        <template v-else>
+          <div class="mt-3 grid gap-3 sm:hidden">
+            <div
+              v-for="r in operationalRows"
+              :key="r.locationId"
+              class="rounded-xl border border-border bg-card p-4"
+            >
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0 font-semibold">{{ r.locationName }}</div>
+                <span class="shrink-0 text-sm font-medium">{{ formatCZK(r.revenue) }}</span>
+              </div>
+              <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <div class="flex items-center gap-1.5 text-muted-foreground">
+                    <BadgeDollarSign class="h-4 w-4" /> Marže
+                  </div>
+                  <div class="mt-0.5 font-semibold">{{ formatCZK(r.grossMargin) }}</div>
+                </div>
+                <div>
+                  <div class="flex items-center gap-1.5 text-muted-foreground">
+                    <Percent class="h-4 w-4" /> Food cost
+                  </div>
+                  <div class="mt-0.5 font-semibold">{{ formatPercent(r.foodCostPercent) }}</div>
+                </div>
+                <div>
+                  <div class="flex items-center gap-1.5 text-muted-foreground">
+                    <AlertTriangle class="h-4 w-4" /> Ztráty
+                  </div>
+                  <div class="mt-0.5 font-semibold">{{ formatCZK(r.lossValue) }}</div>
+                </div>
+                <div>
+                  <div class="flex items-center gap-1.5 text-muted-foreground">
+                    <PackageX class="h-4 w-4" /> Mrtvý sklad
+                  </div>
+                  <div class="mt-0.5 font-semibold">{{ formatCZK(r.deadStockValue) }}</div>
+                </div>
+              </div>
+              <div class="mt-3 border-t border-border pt-3 text-sm">
+                <span class="text-muted-foreground">Marže po ztrátách</span>
+                <span class="float-right font-semibold">{{ formatCZK(r.marginAfterLoss) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3 hidden overflow-x-auto rounded-xl border border-border bg-card sm:block">
+            <table class="w-full min-w-[980px] text-sm">
+              <thead
+                class="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground"
+              >
+                <tr>
+                  <th class="px-4 py-3 text-left">Pobočka</th>
+                  <th class="px-4 py-3 text-right">Tržba</th>
+                  <th class="px-4 py-3 text-right">Účtů</th>
+                  <th class="px-4 py-3 text-right">Průměr</th>
+                  <th class="px-4 py-3 text-right">Marže</th>
+                  <th class="px-4 py-3 text-right">Marže %</th>
+                  <th class="px-4 py-3 text-right">Food cost</th>
+                  <th class="px-4 py-3 text-right">Ztráty</th>
+                  <th class="px-4 py-3 text-right">Mrtvý sklad</th>
+                  <th class="px-4 py-3 text-right">Po ztrátách</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="r in operationalRows"
+                  :key="r.locationId"
+                  class="border-b border-border last:border-0 hover:bg-muted/30"
+                >
+                  <td class="px-4 py-3 font-medium">{{ r.locationName }}</td>
+                  <td class="px-4 py-3 text-right font-semibold">{{ formatCZK(r.revenue) }}</td>
+                  <td class="px-4 py-3 text-right text-muted-foreground">{{ r.saleCount }}</td>
+                  <td class="px-4 py-3 text-right text-muted-foreground">
+                    {{ formatCZK(r.averageSale) }}
+                  </td>
+                  <td class="px-4 py-3 text-right">{{ formatCZK(r.grossMargin) }}</td>
+                  <td class="px-4 py-3 text-right text-muted-foreground">
+                    {{ formatPercent(r.grossMarginPercent) }}
+                  </td>
+                  <td class="px-4 py-3 text-right text-muted-foreground">
+                    {{ formatPercent(r.foodCostPercent) }}
+                  </td>
+                  <td
+                    class="px-4 py-3 text-right"
+                    :class="r.lossValue > 0 ? 'text-destructive' : 'text-muted-foreground'"
+                  >
+                    {{ formatCZK(r.lossValue) }}
+                  </td>
+                  <td class="px-4 py-3 text-right text-muted-foreground">
+                    {{ formatCZK(r.deadStockValue) }}
+                  </td>
+                  <td class="px-4 py-3 text-right font-semibold">
+                    {{ formatCZK(r.marginAfterLoss) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+      </section>
     </template>
   </div>
 </template>
