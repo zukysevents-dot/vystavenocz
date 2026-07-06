@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import {
   ScanBarcode,
   Search,
@@ -9,21 +9,48 @@ import {
   AlertTriangle,
   Camera,
   FileText,
+  Building2,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import CameraScanner from '@/components/app/CameraScanner.vue'
 import LoadError from '@/components/app/LoadError.vue'
 import { useProducts } from '@/composables/useProducts'
 import { useInventory } from '@/composables/useInventory'
+import { useLocations } from '@/composables/useLocations'
 import { isApiMode } from '@/lib/http'
 import { toast } from '@/components/ui/sonner'
 import { reorderSuggestions, findByEan } from '@/lib/reorder'
 import type { Product, PurchaseReceipt, PurchaseSuggestionItem } from '@/lib/types'
 
 const { products, load: loadProducts } = useProducts()
+const { locations, load: loadLocations } = useLocations()
 const inv = useInventory()
 const apiMode = isApiMode()
+const ALL_LOCATIONS = '__all__'
+
+// Vybraná pobočka skladu. Reads se filtrují dle výběru; uložení příjemky vyžaduje
+// konkrétní pobočku (u víc poboček nelze uložit na „Všechny").
+const receiveLocationId = ref(ALL_LOCATIONS)
+const filterLocationId = computed(() =>
+  receiveLocationId.value === ALL_LOCATIONS ? null : receiveLocationId.value,
+)
+const actionLocationId = computed(() => {
+  if (receiveLocationId.value !== ALL_LOCATIONS) return receiveLocationId.value
+  return locations.value.length === 1 ? (locations.value[0]?.id ?? null) : null
+})
+function locationName(id: string | null): string | null {
+  if (!id) return null
+  return locations.value.find((l) => l.id === id)?.name ?? 'Neznámá pobočka'
+}
 
 const loading = ref(true)
 const loadError = ref(false)
@@ -61,17 +88,20 @@ function todayInputValue(): string {
 }
 
 async function loadLevels() {
-  const levels = await inv.levels()
+  const levels = await inv.levels({ locationId: filterLocationId.value })
   levelMap.value = new Map(levels.map((l) => [l.productId, l.quantity]))
 }
 
 async function loadRecentReceipts() {
-  recentReceipts.value = await inv.purchaseReceipts()
+  recentReceipts.value = await inv.purchaseReceipts({ locationId: filterLocationId.value })
 }
 
 async function loadPurchaseSuggestions() {
   try {
-    const response = await inv.purchaseSuggestions({ daysAhead: 7 })
+    const response = await inv.purchaseSuggestions({
+      daysAhead: 7,
+      locationId: filterLocationId.value,
+    })
     apiSuggestions.value = response.items
     apiSuggestionsLoaded.value = true
   } catch (e) {
@@ -85,7 +115,7 @@ async function reload() {
   loading.value = true
   loadError.value = false
   try {
-    await loadProducts()
+    await Promise.all([loadProducts(), loadLocations()])
     await Promise.all([loadLevels(), loadRecentReceipts(), loadPurchaseSuggestions()])
   } catch (e) {
     console.warn('Načtení skladu selhalo:', e)
@@ -95,6 +125,18 @@ async function reload() {
     if (!loadError.value) focusScan()
   }
 }
+
+// Změna pobočky → přenačíst stav, poslední příjemky a doporučení pro danou pobočku.
+// Ošetření chyb konzistentně se `Zásoby`: guard na běžící init + toast při selhání.
+watch(receiveLocationId, async () => {
+  if (!apiMode || loading.value) return
+  try {
+    await Promise.all([loadLevels(), loadRecentReceipts(), loadPurchaseSuggestions()])
+  } catch (e) {
+    toast.error('Data pro pobočku se nepodařilo načíst.')
+    console.error(e)
+  }
+})
 
 onMounted(() => {
   if (!apiMode) {
@@ -198,6 +240,9 @@ async function submit() {
     return toast.error('U všech položek zadejte kladné množství.')
   if (lines.value.some((l) => normalizeUnitCost(l.unitCost) !== null && Number(l.unitCost) < 0))
     return toast.error('Nákupní cena nesmí být záporná.')
+  // U víc poboček musí obsluha vybrat konkrétní sklad (příjemka se zapíše na něj).
+  if (locations.value.length > 1 && receiveLocationId.value === ALL_LOCATIONS)
+    return toast.error('Vyberte konkrétní pobočku, na kterou příjemku uložit.')
   submitting.value = true
   try {
     const receipt = await inv.createPurchaseReceipt({
@@ -205,7 +250,7 @@ async function submit() {
       documentNumber: documentNumber.value.trim() || null,
       receivedOn: receivedOn.value || null,
       note: note.value.trim() || null,
-      locationId: null,
+      locationId: actionLocationId.value,
       items: lines.value.map((l) => ({
         productId: l.productId,
         quantity: Number(l.quantity),
@@ -321,211 +366,250 @@ function fmtQuantity(value: number | null): string {
 
     <LoadError v-else-if="loadError" class="mt-6" :retrying="loading" @retry="reload" />
 
-    <div v-else class="mt-6 grid gap-4 lg:grid-cols-[1fr_340px]">
-      <!-- Příjemka -->
-      <div class="space-y-4">
-        <!-- Hlavička dokladu -->
-        <div class="rounded-2xl border border-border bg-card p-4">
-          <h2 class="flex items-center gap-1.5 font-semibold">
-            <FileText class="h-4 w-4 text-primary" /> Příjemka
-          </h2>
-          <div class="mt-4 grid gap-3 sm:grid-cols-2">
-            <label class="space-y-1.5 text-sm font-medium">
-              <span>Dodavatel</span>
-              <Input v-model="supplierName" placeholder="Např. Makro" />
-            </label>
-            <label class="space-y-1.5 text-sm font-medium">
-              <span>Číslo dokladu</span>
-              <Input v-model="documentNumber" placeholder="Faktura / dodací list" />
-            </label>
-            <label class="space-y-1.5 text-sm font-medium">
-              <span>Datum příjmu</span>
-              <Input v-model="receivedOn" type="date" />
-            </label>
-            <label class="space-y-1.5 text-sm font-medium">
-              <span>Poznámka</span>
-              <Input v-model="note" placeholder="Volitelné" />
-            </label>
-          </div>
+    <div v-else class="mt-6 space-y-4">
+      <!-- Pobočka skladu — jen u víc poboček; filtruje stav/doporučení/příjemky a určuje, kam uložit -->
+      <div
+        v-if="locations.length > 1"
+        class="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card p-4"
+      >
+        <div class="grid gap-1.5">
+          <Label for="receive-location" class="flex items-center gap-1.5">
+            <Building2 class="h-4 w-4 text-primary" /> Pobočka skladu
+          </Label>
+          <Select v-model="receiveLocationId">
+            <SelectTrigger id="receive-location" class="w-64">
+              <SelectValue placeholder="Všechny pobočky" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem :value="ALL_LOCATIONS">Všechny pobočky</SelectItem>
+              <SelectItem v-for="l in locations" :key="l.id" :value="l.id">
+                {{ l.name }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-
-        <!-- Sken -->
-        <div class="rounded-2xl border border-border bg-card p-4">
-          <label class="mb-1.5 flex items-center gap-1.5 text-sm font-medium" for="scan">
-            <ScanBarcode class="h-4 w-4 text-primary" /> Sken / EAN
-          </label>
-          <div class="flex gap-2">
-            <Input
-              id="scan"
-              ref="scanInput"
-              v-model="scanEan"
-              placeholder="Naskenuj kód nebo zadej EAN a stiskni Enter"
-              class="flex-1"
-              @keyup.enter="onScan"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              class="shrink-0"
-              title="Skenovat kamerou"
-              @click="scannerOpen = true"
-            >
-              <Camera class="h-4 w-4" /> Kamera
-            </Button>
-          </div>
-
-          <!-- Ruční vyhledání -->
-          <div class="relative mt-3">
-            <Search
-              class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input v-model="search" placeholder="…nebo hledej podle názvu / SKU" class="pl-9" />
-            <div
-              v-if="searchResults.length"
-              class="mt-1 overflow-hidden rounded-lg border border-border"
-            >
-              <button
-                v-for="p in searchResults"
-                :key="p.id"
-                type="button"
-                class="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-muted/50"
-                @click="pick(p)"
-              >
-                <span class="truncate">{{ p.name }}</span>
-                <span class="ml-2 shrink-0 text-xs text-muted-foreground">{{ p.sku }}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Řádky příjemky -->
-        <div class="rounded-2xl border border-border bg-card">
-          <div v-if="lines.length === 0" class="p-8 text-center text-sm text-muted-foreground">
-            Naskenuj nebo přidej produkty. Řádky příjemky se objeví tady.
-          </div>
-          <div v-else class="divide-y divide-border">
-            <div
-              v-for="l in lines"
-              :key="l.productId"
-              class="grid gap-3 p-3 sm:grid-cols-[minmax(0,1fr)_96px_128px_40px] sm:items-end"
-            >
-              <div class="min-w-0">
-                <div class="truncate font-medium">{{ l.name }}</div>
-                <div class="text-xs text-muted-foreground">{{ l.sku }}</div>
-              </div>
-              <label class="space-y-1 text-xs font-medium text-muted-foreground">
-                <span>Množství</span>
-                <Input
-                  v-model.number="l.quantity"
-                  type="number"
-                  min="0"
-                  class="h-9 text-center"
-                  aria-label="Množství"
-                />
-              </label>
-              <label class="space-y-1 text-xs font-medium text-muted-foreground">
-                <span>Nákup / ks</span>
-                <Input
-                  v-model.number="l.unitCost"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  class="h-9 text-right"
-                  aria-label="Nákupní cena za kus"
-                />
-              </label>
-              <Button
-                variant="ghost"
-                size="icon"
-                class="self-end"
-                title="Odebrat"
-                @click="removeLine(l.productId)"
-              >
-                <Trash2 class="h-4 w-4 text-destructive" />
-              </Button>
-            </div>
-          </div>
-
-          <div
-            class="flex flex-col gap-3 border-t border-border p-4 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <span class="text-sm text-muted-foreground">
-              {{ lines.length }} položek · {{ totalUnits }} ks
-              <template v-if="hasAnyCost"> · nákup {{ fmtMoney(totalCost) }}</template>
-            </span>
-            <Button variant="coral" :disabled="lines.length === 0 || submitting" @click="submit">
-              <Loader2 v-if="submitting" class="h-4 w-4 animate-spin" />
-              <PackagePlus v-else class="h-4 w-4" /> Uložit příjemku
-            </Button>
-          </div>
+        <div class="max-w-md text-sm text-muted-foreground">
+          Stav, doporučení i poslední příjemky se filtrují podle pobočky. Novou příjemku uložíte
+          vždy na konkrétní pobočku.
         </div>
       </div>
 
-      <div class="space-y-4">
-        <!-- Návrhy k doobjednání -->
-        <div class="rounded-2xl border border-border bg-card p-4">
-          <h2 class="flex items-center gap-1.5 font-semibold">
-            <AlertTriangle class="h-4 w-4 text-destructive" /> K doobjednání
-          </h2>
-          <p class="mt-0.5 text-xs text-muted-foreground">{{ suggestionsSubtitle }}</p>
-
-          <div v-if="suggestions.length === 0" class="mt-4 text-sm text-muted-foreground">
-            {{ emptySuggestionsText }}
+      <div class="grid gap-4 lg:grid-cols-[1fr_340px]">
+        <!-- Příjemka -->
+        <div class="space-y-4">
+          <!-- Hlavička dokladu -->
+          <div class="rounded-2xl border border-border bg-card p-4">
+            <h2 class="flex items-center gap-1.5 font-semibold">
+              <FileText class="h-4 w-4 text-primary" /> Příjemka
+            </h2>
+            <div class="mt-4 grid gap-3 sm:grid-cols-2">
+              <label class="space-y-1.5 text-sm font-medium">
+                <span>Dodavatel</span>
+                <Input v-model="supplierName" placeholder="Např. Makro" />
+              </label>
+              <label class="space-y-1.5 text-sm font-medium">
+                <span>Číslo dokladu</span>
+                <Input v-model="documentNumber" placeholder="Faktura / dodací list" />
+              </label>
+              <label class="space-y-1.5 text-sm font-medium">
+                <span>Datum příjmu</span>
+                <Input v-model="receivedOn" type="date" />
+              </label>
+              <label class="space-y-1.5 text-sm font-medium">
+                <span>Poznámka</span>
+                <Input v-model="note" placeholder="Volitelné" />
+              </label>
+            </div>
           </div>
-          <div v-else class="mt-3 space-y-2">
-            <div
-              v-for="s in suggestions"
-              :key="s.productId"
-              class="rounded-lg border border-border p-2.5"
-            >
-              <div class="truncate text-sm font-medium">{{ s.name }}</div>
-              <div
-                class="mt-0.5 flex items-center justify-between gap-2 text-xs text-muted-foreground"
+
+          <!-- Sken -->
+          <div class="rounded-2xl border border-border bg-card p-4">
+            <label class="mb-1.5 flex items-center gap-1.5 text-sm font-medium" for="scan">
+              <ScanBarcode class="h-4 w-4 text-primary" /> Sken / EAN
+            </label>
+            <div class="flex gap-2">
+              <Input
+                id="scan"
+                ref="scanInput"
+                v-model="scanEan"
+                placeholder="Naskenuj kód nebo zadej EAN a stiskni Enter"
+                class="flex-1"
+                @keyup.enter="onScan"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                class="shrink-0"
+                title="Skenovat kamerou"
+                @click="scannerOpen = true"
               >
-                <span>stav {{ fmtQuantity(s.current) }} / min {{ fmtQuantity(s.min) }}</span>
-                <Button variant="outline" size="sm" class="h-7 shrink-0" @click="addSuggestion(s)">
-                  + {{ fmtQuantity(s.suggested) }} ks
+                <Camera class="h-4 w-4" /> Kamera
+              </Button>
+            </div>
+
+            <!-- Ruční vyhledání -->
+            <div class="relative mt-3">
+              <Search
+                class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input v-model="search" placeholder="…nebo hledej podle názvu / SKU" class="pl-9" />
+              <div
+                v-if="searchResults.length"
+                class="mt-1 overflow-hidden rounded-lg border border-border"
+              >
+                <button
+                  v-for="p in searchResults"
+                  :key="p.id"
+                  type="button"
+                  class="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-muted/50"
+                  @click="pick(p)"
+                >
+                  <span class="truncate">{{ p.name }}</span>
+                  <span class="ml-2 shrink-0 text-xs text-muted-foreground">{{ p.sku }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Řádky příjemky -->
+          <div class="rounded-2xl border border-border bg-card">
+            <div v-if="lines.length === 0" class="p-8 text-center text-sm text-muted-foreground">
+              Naskenuj nebo přidej produkty. Řádky příjemky se objeví tady.
+            </div>
+            <div v-else class="divide-y divide-border">
+              <div
+                v-for="l in lines"
+                :key="l.productId"
+                class="grid gap-3 p-3 sm:grid-cols-[minmax(0,1fr)_96px_128px_40px] sm:items-end"
+              >
+                <div class="min-w-0">
+                  <div class="truncate font-medium">{{ l.name }}</div>
+                  <div class="text-xs text-muted-foreground">{{ l.sku }}</div>
+                </div>
+                <label class="space-y-1 text-xs font-medium text-muted-foreground">
+                  <span>Množství</span>
+                  <Input
+                    v-model.number="l.quantity"
+                    type="number"
+                    min="0"
+                    class="h-9 text-center"
+                    aria-label="Množství"
+                  />
+                </label>
+                <label class="space-y-1 text-xs font-medium text-muted-foreground">
+                  <span>Nákup / ks</span>
+                  <Input
+                    v-model.number="l.unitCost"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    class="h-9 text-right"
+                    aria-label="Nákupní cena za kus"
+                  />
+                </label>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="self-end"
+                  title="Odebrat"
+                  @click="removeLine(l.productId)"
+                >
+                  <Trash2 class="h-4 w-4 text-destructive" />
                 </Button>
               </div>
-              <div
-                v-if="apiSuggestionsLoaded"
-                class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground"
-              >
-                <span>Denně {{ fmtQuantity(s.averageDailyUsage) }} ks</span>
-                <span v-if="s.daysOfStockRemaining != null">
-                  Zásoba {{ fmtQuantity(s.daysOfStockRemaining) }} dní
-                </span>
-                <span v-if="s.estimatedCost != null">Odhad {{ fmtMoney(s.estimatedCost) }}</span>
-              </div>
+            </div>
+
+            <div
+              class="flex flex-col gap-3 border-t border-border p-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <span class="text-sm text-muted-foreground">
+                {{ lines.length }} položek · {{ totalUnits }} ks
+                <template v-if="hasAnyCost"> · nákup {{ fmtMoney(totalCost) }}</template>
+              </span>
+              <Button variant="coral" :disabled="lines.length === 0 || submitting" @click="submit">
+                <Loader2 v-if="submitting" class="h-4 w-4 animate-spin" />
+                <PackagePlus v-else class="h-4 w-4" /> Uložit příjemku
+              </Button>
             </div>
           </div>
         </div>
 
-        <!-- Poslední příjemky -->
-        <div class="rounded-2xl border border-border bg-card p-4">
-          <h2 class="flex items-center gap-1.5 font-semibold">
-            <FileText class="h-4 w-4 text-primary" /> Poslední příjemky
-          </h2>
-          <div v-if="recentReceipts.length === 0" class="mt-4 text-sm text-muted-foreground">
-            Zatím tu není žádná příjemka.
-          </div>
-          <div v-else class="mt-3 space-y-2">
-            <div
-              v-for="receipt in recentReceipts.slice(0, 5)"
-              :key="receipt.id"
-              class="rounded-lg border border-border p-2.5"
-            >
-              <div class="flex items-center justify-between gap-2">
-                <div class="min-w-0">
-                  <div class="truncate text-sm font-medium">
-                    {{ receipt.documentNumber || receipt.supplierName || 'Příjemka' }}
-                  </div>
-                  <div class="text-xs text-muted-foreground">
-                    {{ fmtDate(receipt.receivedOn) }} · {{ receipt.items.length }} položek
-                  </div>
+        <div class="space-y-4">
+          <!-- Návrhy k doobjednání -->
+          <div class="rounded-2xl border border-border bg-card p-4">
+            <h2 class="flex items-center gap-1.5 font-semibold">
+              <AlertTriangle class="h-4 w-4 text-destructive" /> K doobjednání
+            </h2>
+            <p class="mt-0.5 text-xs text-muted-foreground">{{ suggestionsSubtitle }}</p>
+
+            <div v-if="suggestions.length === 0" class="mt-4 text-sm text-muted-foreground">
+              {{ emptySuggestionsText }}
+            </div>
+            <div v-else class="mt-3 space-y-2">
+              <div
+                v-for="s in suggestions"
+                :key="s.productId"
+                class="rounded-lg border border-border p-2.5"
+              >
+                <div class="truncate text-sm font-medium">{{ s.name }}</div>
+                <div
+                  class="mt-0.5 flex items-center justify-between gap-2 text-xs text-muted-foreground"
+                >
+                  <span>stav {{ fmtQuantity(s.current) }} / min {{ fmtQuantity(s.min) }}</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    class="h-7 shrink-0"
+                    @click="addSuggestion(s)"
+                  >
+                    + {{ fmtQuantity(s.suggested) }} ks
+                  </Button>
                 </div>
-                <div class="shrink-0 text-sm font-semibold">
-                  {{ receipt.totalCost == null ? 'Bez ceny' : fmtMoney(receipt.totalCost) }}
+                <div
+                  v-if="apiSuggestionsLoaded"
+                  class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground"
+                >
+                  <span>Denně {{ fmtQuantity(s.averageDailyUsage) }} ks</span>
+                  <span v-if="s.daysOfStockRemaining != null">
+                    Zásoba {{ fmtQuantity(s.daysOfStockRemaining) }} dní
+                  </span>
+                  <span v-if="s.estimatedCost != null">Odhad {{ fmtMoney(s.estimatedCost) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Poslední příjemky -->
+          <div class="rounded-2xl border border-border bg-card p-4">
+            <h2 class="flex items-center gap-1.5 font-semibold">
+              <FileText class="h-4 w-4 text-primary" /> Poslední příjemky
+            </h2>
+            <div v-if="recentReceipts.length === 0" class="mt-4 text-sm text-muted-foreground">
+              Zatím tu není žádná příjemka.
+            </div>
+            <div v-else class="mt-3 space-y-2">
+              <div
+                v-for="receipt in recentReceipts.slice(0, 5)"
+                :key="receipt.id"
+                class="rounded-lg border border-border p-2.5"
+              >
+                <div class="flex items-center justify-between gap-2">
+                  <div class="min-w-0">
+                    <div class="truncate text-sm font-medium">
+                      {{ receipt.documentNumber || receipt.supplierName || 'Příjemka' }}
+                    </div>
+                    <div class="text-xs text-muted-foreground">
+                      {{ fmtDate(receipt.receivedOn) }} ·
+                      {{ receipt.items.length }} položek<template
+                        v-if="locations.length > 1 && locationName(receipt.locationId)"
+                      >
+                        · {{ locationName(receipt.locationId) }}</template
+                      >
+                    </div>
+                  </div>
+                  <div class="shrink-0 text-sm font-semibold">
+                    {{ receipt.totalCost == null ? 'Bez ceny' : fmtMoney(receipt.totalCost) }}
+                  </div>
                 </div>
               </div>
             </div>
