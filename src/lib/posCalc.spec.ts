@@ -4,7 +4,7 @@ import {
   clampAmount,
   calcPosLine,
   calcPosTotals,
-  calcSplitGroupTotal,
+  calcSplitGroupPayment,
   totalAssignedFraction,
 } from '@/lib/posCalc'
 import { round2 } from '@/lib/invoice'
@@ -51,6 +51,16 @@ describe('calcPosLine', () => {
       lineTotal: 100,
       lineNet: 100,
       lineVat: 0,
+    })
+  })
+
+  it('na midpointu zaokrouhluje DPH první (parita s backend SaleCalculator)', () => {
+    // gross 0,14 @ 12 %: DPH 0,015 → 0,02 (zaokrouhluje se DPH, základ je dopočet).
+    // Zaokrouhlení základu první by dalo net 0,13 / vat 0,01 a FE total by se rozešel se serverem.
+    expect(calcPosLine({ quantity: 1, unitPrice: 0.14, vatRate: 12 })).toEqual({
+      lineTotal: 0.14,
+      lineNet: 0.12,
+      lineVat: 0.02,
     })
   })
 })
@@ -184,27 +194,31 @@ describe('calcPosTotals', () => {
   })
 })
 
-describe('calcSplitGroupTotal', () => {
+describe('calcSplitGroupPayment', () => {
   const orderItems = [
     { itemId: 'i1', quantity: 1, unitPrice: 121, vatRate: 21 }, // net 100, vat 21, gross 121
     { itemId: 'i2', quantity: 1, unitPrice: 121, vatRate: 21 }, // net 100, vat 21, gross 121
   ]
 
   it('celá položka jedné skupině, žádná sleva ani tip', () => {
-    const total = calcSplitGroupTotal(orderItems, { items: [{ itemId: 'i1', fraction: 1 }] })
-    expect(total).toBe(121)
+    const payment = calcSplitGroupPayment(orderItems, { items: [{ itemId: 'i1', fraction: 1 }] })
+    expect(payment.total).toBe(121)
+    expect(payment.items).toEqual([{ itemId: 'i1', quantity: 1, gross: 121 }])
+    expect(payment.discountAmount).toBe(0)
+    expect(payment.tipAmount).toBe(0)
   })
 
   it('sdílená položka napůl mezi dvě skupiny se sečte na 100 %', () => {
-    const a = calcSplitGroupTotal(orderItems, { items: [{ itemId: 'i1', fraction: 0.5 }] })
-    const b = calcSplitGroupTotal(orderItems, { items: [{ itemId: 'i1', fraction: 0.5 }] })
-    expect(a).toBe(60.5)
-    expect(a + b).toBe(121)
+    const a = calcSplitGroupPayment(orderItems, { items: [{ itemId: 'i1', fraction: 0.5 }] })
+    const b = calcSplitGroupPayment(orderItems, { items: [{ itemId: 'i1', fraction: 0.5 }] })
+    expect(a.total).toBe(60.5)
+    expect(a.total + b.total).toBe(121)
+    expect(a.items[0].quantity).toBe(0.5) // množství, které se reálně pošle do pay-items
   })
 
   it('sleva na účet se promítne poměrně i do skupiny', () => {
     // skupina má celý účet (obě položky) → sleva 10 % z celého groupShare
-    const total = calcSplitGroupTotal(
+    const payment = calcSplitGroupPayment(
       orderItems,
       {
         items: [
@@ -214,25 +228,66 @@ describe('calcSplitGroupTotal', () => {
       },
       10,
     )
-    expect(total).toBe(217.8) // 242 * 0.9
+    expect(payment.total).toBe(217.8) // 242 * 0.9
+    expect(payment.discountAmount).toBe(24.2)
   })
 
-  it('tip se rozpočítá dle podílu skupiny na mezisoučtu (groupRatio)', () => {
+  it('tip se rozpočítá dle podílu skupiny na hrubém mezisoučtu', () => {
     // skupina má polovinu účtu (jedna celá položka z 242 celkem) → poloviční podíl na tipu
-    const total = calcSplitGroupTotal(orderItems, { items: [{ itemId: 'i1', fraction: 1 }] }, 0, 40)
-    expect(total).toBe(141) // 121 + 40*(121/242) = 121 + 20
+    const payment = calcSplitGroupPayment(
+      orderItems,
+      { items: [{ itemId: 'i1', fraction: 1 }] },
+      0,
+      40,
+    )
+    expect(payment.total).toBe(141) // 121 + 40*(121/242) = 121 + 20
+    expect(payment.tipAmount).toBe(20)
+  })
+
+  it('skupina platící celý účet dostane celé spropitné (jako backend paysEverything)', () => {
+    const payment = calcSplitGroupPayment(
+      orderItems,
+      {
+        items: [
+          { itemId: 'i1', fraction: 1 },
+          { itemId: 'i2', fraction: 1 },
+        ],
+      },
+      0,
+      35,
+    )
+    expect(payment.tipAmount).toBe(35)
+    expect(payment.total).toBe(277) // 242 + 35
+  })
+
+  it('parita se serverem: frakce 2/3 zaokrouhlí množství a gross po řádku, ne agregát', () => {
+    // Backend počítá gross = round(unitPrice × round2(qty×fraction)) per řádek:
+    // qty 0.67 → 67 Kč × 2 položky = 134, NE round2(200×2/3) = 133.33.
+    const items = [
+      { itemId: 'a', quantity: 1, unitPrice: 100, vatRate: 21 },
+      { itemId: 'b', quantity: 1, unitPrice: 100, vatRate: 21 },
+    ]
+    const payment = calcSplitGroupPayment(items, {
+      items: [
+        { itemId: 'a', fraction: 2 / 3 },
+        { itemId: 'b', fraction: 2 / 3 },
+      ],
+    })
+    expect(payment.items.map((r) => r.quantity)).toEqual([0.67, 0.67])
+    expect(payment.total).toBe(134)
   })
 
   it('neexistující itemId ve skupině se ignoruje (0 příspěvek)', () => {
-    const total = calcSplitGroupTotal(orderItems, {
+    const payment = calcSplitGroupPayment(orderItems, {
       items: [{ itemId: 'neexistuje', fraction: 1 }],
     })
-    expect(total).toBe(0)
+    expect(payment.total).toBe(0)
+    expect(payment.items).toEqual([])
   })
 
   it('prázdné položky objednávky → 0 bez dělení nulou', () => {
-    const total = calcSplitGroupTotal([], { items: [{ itemId: 'i1', fraction: 1 }] }, 10, 50)
-    expect(total).toBe(0)
+    const payment = calcSplitGroupPayment([], { items: [{ itemId: 'i1', fraction: 1 }] }, 10, 50)
+    expect(payment.total).toBe(0)
   })
 })
 

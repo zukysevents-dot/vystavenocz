@@ -16,6 +16,9 @@ export interface ReceiptInfo {
   tipAmount?: number
   total: number
   paymentMethod: string
+  /** Přijatá hotovost a vrácení (jen platba hotově se zadanou částkou). */
+  cashReceived?: number
+  cashChange?: number
 }
 
 interface BuildReceiptArgs {
@@ -29,6 +32,8 @@ interface BuildReceiptArgs {
   /** Zdroj čísla účtenky (id prodeje/účtu) — zkrátí se na čitelný kód. */
   id: string
   table?: string
+  cashReceived?: number | null
+  cashChange?: number | null
 }
 
 export function buildReceipt({
@@ -41,6 +46,8 @@ export function buildReceipt({
   method,
   id,
   table,
+  cashReceived,
+  cashChange,
 }: BuildReceiptArgs): ReceiptInfo {
   const address = [company?.street, [company?.zip, company?.city].filter(Boolean).join(' ')]
     .filter(Boolean)
@@ -65,5 +72,8 @@ export function buildReceipt({
     tipAmount: tipAmount || undefined,
     total,
     paymentMethod: method === 'Cash' ? 'Hotově' : 'Kartou',
+    // „Přijato / Vráceno" jen u hotovosti se zadanou částkou; vrácení 0 (přesně) se tiskne taky.
+    cashReceived: cashReceived ?? undefined,
+    cashChange: cashChange ?? undefined,
   }
 }

@@ -90,7 +90,19 @@ describe('useOrders — payload položek (note/course)', () => {
   it('pay neposílá discountPercent/tipAmount — bere se z persistovaného stavu Order', async () => {
     vi.mocked(http.post).mockResolvedValue({} as never)
     await useOrders().pay('o1', 'Cash')
-    expect(http.post).toHaveBeenCalledWith('/orders/o1/pay', { paymentMethod: 'Cash' })
+    expect(http.post).toHaveBeenCalledWith('/orders/o1/pay', {
+      paymentMethod: 'Cash',
+      cashReceived: null,
+    })
+  })
+
+  it('pay pošle přijatou hotovost (cashReceived) při platbě hotově', async () => {
+    vi.mocked(http.post).mockResolvedValue({} as never)
+    await useOrders().pay('o1', 'Cash', 500)
+    expect(http.post).toHaveBeenCalledWith('/orders/o1/pay', {
+      paymentMethod: 'Cash',
+      cashReceived: 500,
+    })
   })
 
   it('payItems volá POST /orders/{id}/pay-items s vybraným množstvím položek', async () => {
@@ -105,6 +117,17 @@ describe('useOrders — payload položek (note/course)', () => {
         { itemId: 'i1', quantity: 1 },
         { itemId: 'i2', quantity: 0.5 },
       ],
+      cashReceived: null,
+    })
+  })
+
+  it('payItems pošle přijatou hotovost (cashReceived) při platbě hotově', async () => {
+    vi.mocked(http.post).mockResolvedValue({} as never)
+    await useOrders().payItems('o1', 'Cash', [{ itemId: 'i1', quantity: 1 }], 200)
+    expect(http.post).toHaveBeenCalledWith('/orders/o1/pay-items', {
+      paymentMethod: 'Cash',
+      items: [{ itemId: 'i1', quantity: 1 }],
+      cashReceived: 200,
     })
   })
 

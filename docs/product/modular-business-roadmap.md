@@ -143,7 +143,7 @@ These are non-negotiable before claiming serious gastro readiness:
 - shifts, cash movements, attendance, and user roles
 - day close, Z-report, VAT, payment summaries, sold products, and exports
 - multi-branch support
-- payment terminal integration
+- payment terminal integration (foundation: shared PaymentDialog gives one payment flow for POS/tables/split — cash with received amount + change via `cashReceived`/`cashChange`, card through a manual-confirmation terminal step that a real terminal integration will replace; no fake payments are stored before confirmation)
 - accounting exports to systems such as POHODA and Flexi
 - EET 2.0 readiness once the technical specification is final
 - import path from existing POS systems

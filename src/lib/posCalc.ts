@@ -36,8 +36,11 @@ export function calcPosLine(item: PosCalcLineInput): PosLineCalc {
   const gross = round2(
     item.quantity * item.unitPrice * (1 - clampPercent(item.discountPercent) / 100),
   )
-  const net = round2(gross / (1 + item.vatRate / 100))
-  return { lineTotal: gross, lineNet: net, lineVat: round2(gross - net) }
+  // DPH extrakce SHODNĚ s backend SaleCalculator: zaokrouhlí se DPH a základ je dopočet.
+  // Backend validuje cashReceived >= server Total — haléřový rozdíl náhledu na midpointu
+  // by jinak obsluze zablokoval platbu „přesnou částkou" (422).
+  const vat = round2((gross * item.vatRate) / (100 + item.vatRate))
+  return { lineTotal: gross, lineNet: round2(gross - vat), lineVat: vat }
 }
 
 export interface PosTotals {
@@ -96,34 +99,74 @@ export interface PosSplitGroupInput {
   items: { itemId: string; fraction: number }[]
 }
 
+export interface PosSplitPaymentRow {
+  itemId: string
+  quantity: number // zaokrouhlené množství — PŘESNĚ to, co se pošle do pay-items
+  gross: number // řádková cena vč. DPH před slevou na účet
+}
+
+export interface PosSplitPayment {
+  items: PosSplitPaymentRow[]
+  gross: number // placená část vč. DPH před slevou na účet
+  discountAmount: number // sleva na účet připadající na placenou část
+  tipAmount: number // poměrné spropitné placené části
+  total: number // budoucí Sale.Total — proti němu backend validuje cashReceived
+}
+
 /**
- * Kolik má skupina zaplatit: groupShare = Σ(lineNet+lineVat)*fraction přes přiřazené položky,
- * groupRatio = podíl skupiny na mezisoučtu celého účtu, sleva na účet i tip se promítají
- * poměrně dle tohoto podílu (stejná sleva-na-účet % pro celý účet, tip rozpočítaný podle podílu).
+ * Kolik má skupina zaplatit — MUSÍ dávat stejný výsledek jako backend pay-items +
+ * SaleCalculator: zaokrouhlené množství → řádkový gross → DPH extrakce po řádku →
+ * sleva na účet faktorem na net/vat → poměrné spropitné podle hrubých mezisoučtů
+ * (při zaplacení všeho celé spropitné). Backend validuje cashReceived >= Sale.Total,
+ * takže haléřový rozdíl náhledu by obsluze zablokoval platbu „přesnou částkou".
  */
-export function calcSplitGroupTotal(
+export function calcSplitGroupPayment(
   orderItems: PosSplitLineInput[],
   group: PosSplitGroupInput,
   discountPercent = 0,
   tipAmount = 0,
-): number {
-  const perItem = new Map(orderItems.map((it) => [it.itemId, calcPosLine(it)]))
-
-  let groupShare = 0
+): PosSplitPayment {
+  const byId = new Map(orderItems.map((it) => [it.itemId, it]))
+  const rows: (PosSplitPaymentRow & { net: number; vat: number })[] = []
   for (const { itemId, fraction } of group.items) {
-    const line = perItem.get(itemId)
-    if (!line) continue
-    groupShare += (line.lineNet + line.lineVat) * fraction
+    const item = byId.get(itemId)
+    if (!item) continue
+    const quantity = round2(item.quantity * fraction)
+    if (quantity <= 0) continue
+    const gross = round2(item.unitPrice * quantity)
+    const vat = round2((gross * item.vatRate) / (100 + item.vatRate))
+    rows.push({ itemId, quantity, gross, vat, net: round2(gross - vat) })
   }
-  groupShare = round2(groupShare)
 
-  const orderSubtotalGross = round2(
-    orderItems.reduce((sum, it) => sum + calcPosLine(it).lineTotal, 0),
+  const selectedGross = round2(rows.reduce((sum, r) => sum + r.gross, 0))
+  const orderGross = round2(
+    orderItems.reduce((sum, it) => sum + round2(it.unitPrice * it.quantity), 0),
   )
-  const groupRatio = orderSubtotalGross > 0 ? groupShare / orderSubtotalGross : 0
-  const factor = 1 - clampPercent(discountPercent) / 100
+  const paysEverything =
+    orderItems.length > 0 &&
+    orderItems.every((it) => {
+      const row = rows.find((r) => r.itemId === it.itemId)
+      return !!row && row.quantity === round2(it.quantity)
+    })
+  const tip = clampAmount(tipAmount)
+  const tipShare = paysEverything
+    ? tip
+    : orderGross === 0
+      ? 0
+      : round2((tip * selectedGross) / orderGross)
 
-  return round2(groupShare * factor + clampAmount(tipAmount) * groupRatio)
+  const factor = 1 - clampPercent(discountPercent) / 100
+  const totalNet = round2(rows.reduce((sum, r) => sum + r.net, 0) * factor)
+  const totalVat = round2(rows.reduce((sum, r) => sum + r.vat, 0) * factor)
+  const paidGrossAfterDiscount = round2(totalNet + totalVat)
+
+  return {
+    items: rows.map(({ itemId, quantity, gross }) => ({ itemId, quantity, gross })),
+    gross: selectedGross,
+    discountAmount: round2(selectedGross - paidGrossAfterDiscount),
+    tipAmount: tipShare,
+    total: round2(paidGrossAfterDiscount + tipShare),
+  }
 }
 
 /** Součet frakcí přes všechny skupiny pro danou položku — nesmí přesáhnout 1. */

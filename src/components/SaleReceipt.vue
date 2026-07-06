@@ -31,6 +31,8 @@ withDefaults(
     tipAmount?: number
     total: number
     paymentMethod: string
+    cashReceived?: number
+    cashChange?: number
     footer?: string
   }>(),
   { footer: 'Děkujeme za návštěvu' },
@@ -145,6 +147,12 @@ const money = (n: number) =>
 
     <div class="mt-2 flex justify-between text-[10px] text-zinc-700">
       <span>Platba</span><span>{{ paymentMethod }}</span>
+    </div>
+    <div v-if="cashReceived != null" class="flex justify-between text-[10px] text-zinc-700">
+      <span>Přijato</span><span class="tabular-nums">{{ money(cashReceived) }} Kč</span>
+    </div>
+    <div v-if="cashChange != null" class="flex justify-between text-[10px] text-zinc-700">
+      <span>Vráceno</span><span class="tabular-nums">{{ money(cashChange) }} Kč</span>
     </div>
 
     <div class="my-3 text-center text-[10px] tracking-[0.3em] text-zinc-400">✻ ✻ ✻ ✻ ✻ ✻ ✻ ✻ ✻</div>

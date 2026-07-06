@@ -5,7 +5,6 @@ import {
   Minus,
   Plus,
   Banknote,
-  CreditCard,
   ChefHat,
   ArrowLeft,
   ArrowLeftRight,
@@ -28,6 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import PaymentDialog from '@/components/PaymentDialog.vue'
 import ReceiptDialog from '@/components/ReceiptDialog.vue'
 import { buildReceipt, type ReceiptInfo } from '@/lib/receipt'
 import { useCompanyStore } from '@/stores/company'
@@ -38,7 +38,7 @@ import { useCategories } from '@/composables/useCategories'
 import { useOrders } from '@/composables/useOrders'
 import { ApiError, isApiMode } from '@/lib/http'
 import { formatCZK, round2 } from '@/lib/invoice'
-import { calcPosTotals, calcSplitGroupTotal, clampAmount, clampPercent } from '@/lib/posCalc'
+import { calcPosTotals, calcSplitGroupPayment, clampAmount, clampPercent } from '@/lib/posCalc'
 import { toast } from '@/components/ui/sonner'
 import type {
   Category,
@@ -359,12 +359,14 @@ const unassignedSplitTotal = computed(() => {
   return round2(totals.value.total - assigned)
 })
 
-function groupTotal(group: OrderSplitGroup): number {
-  if (!currentOrder.value) return 0
-  // Bere se z lokálních refs (accountDiscountPercent/tipAmount), NE z currentOrder.value —
-  // ty se ukládají na server debounced (viz scheduleDiscountUpdate), takže krátce po změně
-  // ještě neodpovídají persistovanému stavu. Stejný zdroj jako panel účtu (computed totals).
-  return calcSplitGroupTotal(
+// Rozpočet části za osobu MUSÍ sedět se server-computed Sale.Total (backend proti němu
+// validuje cashReceived) → sdílený calcSplitGroupPayment zrcadlí backendový výpočet.
+// Bere se z lokálních refs (accountDiscountPercent/tipAmount), NE z currentOrder.value —
+// ty se ukládají na server debounced (viz scheduleDiscountUpdate), takže krátce po změně
+// ještě neodpovídají persistovanému stavu. Stejný zdroj jako panel účtu (computed totals).
+function splitGroupPayment(group: OrderSplitGroup) {
+  if (!currentOrder.value) return null
+  return calcSplitGroupPayment(
     currentOrder.value.items.map((i) => ({
       itemId: i.id,
       quantity: i.quantity,
@@ -377,67 +379,56 @@ function groupTotal(group: OrderSplitGroup): number {
   )
 }
 
+function groupTotal(group: OrderSplitGroup): number {
+  return splitGroupPayment(group)?.total ?? 0
+}
+
 function splitPaymentItems(group: OrderSplitGroup) {
-  if (!currentOrder.value) return []
-  const byId = new Map(currentOrder.value.items.map((item) => [item.id, item]))
-  return group.items
-    .map((share) => {
-      const item = byId.get(share.itemId)
-      if (!item) return null
-      return {
-        itemId: item.id,
-        quantity: item.quantity * share.fraction,
-      }
-    })
-    .filter((item): item is { itemId: string; quantity: number } => !!item && item.quantity > 0)
+  return (splitGroupPayment(group)?.items ?? []).map(({ itemId, quantity }) => ({
+    itemId,
+    quantity,
+  }))
 }
 
 function splitPaymentReceipt(group: OrderSplitGroup) {
-  if (!currentOrder.value) return null
-  const subtotal = round2(currentOrder.value.items.reduce((sum, item) => sum + item.lineTotal, 0))
-  const rows = group.items
-    .map((share) => {
-      const item = currentOrder.value!.items.find((i) => i.id === share.itemId)
-      if (!item) return null
-      return {
-        item,
-        quantity: round2(item.quantity * share.fraction),
-        gross: round2(item.lineTotal * share.fraction),
-      }
-    })
-    .filter(
-      (row): row is { item: OrderItemLine; quantity: number; gross: number } =>
-        !!row && row.quantity > 0,
-    )
-  const gross = round2(rows.reduce((sum, row) => sum + row.gross, 0))
-  const ratio = subtotal > 0 ? gross / subtotal : 0
-  const discountAmount = round2(gross * (clampPercent(accountDiscountPercent.value) / 100))
-  const tipShare = round2(clampAmount(tipAmount.value) * ratio)
+  const payment = splitGroupPayment(group)
+  if (!payment || !currentOrder.value) return null
+  const nameById = new Map(currentOrder.value.items.map((item) => [item.id, item.name]))
   return {
-    items: rows.map((row) => ({ name: row.item.name, qty: row.quantity, total: row.gross })),
-    discountAmount,
-    tipAmount: tipShare,
-    total: round2(gross - discountAmount + tipShare),
+    items: payment.items.map((row) => ({
+      name: nameById.get(row.itemId) ?? '',
+      qty: row.quantity,
+      total: row.gross,
+    })),
+    discountAmount: payment.discountAmount,
+    tipAmount: payment.tipAmount,
+    total: payment.total,
   }
 }
 
-async function paySplitGroup(group: OrderSplitGroup, method: PaymentMethod) {
-  if (!currentOrder.value || busy.value) return
+async function paySplitGroup(
+  group: OrderSplitGroup,
+  method: PaymentMethod,
+  cashReceived: number | null = null,
+): Promise<boolean> {
+  if (!currentOrder.value || busy.value) return false
   const items = splitPaymentItems(group)
-  if (!items.length) return
+  if (!items.length) return false
   const tableName = selectedTable.value?.name
   busy.value = true
   try {
     await flushDiscountUpdate()
-    if (!currentOrder.value) return
+    if (!currentOrder.value) return false
     const orderId = currentOrder.value.id
     const receipt = splitPaymentReceipt(group)
-    const updated = await ordersApi.payItems(orderId, method, items)
+    const updated = await ordersApi.payItems(orderId, method, items, cashReceived)
     currentOrder.value = updated
     syncDiscountFromOrder(updated)
     splitGroups.value = []
     splitDialogOpen.value = false
     if (receipt) {
+      const change = cashReceived != null ? round2(cashReceived - receipt.total) : null
+      paymentOpen.value = false // zavřít PŘED otevřením účtenky — dva otevřené dialogy zamykaly stránku
       receiptData.value = buildReceipt({
         company: companyStore.company,
         items: receipt.items,
@@ -448,25 +439,57 @@ async function paySplitGroup(group: OrderSplitGroup, method: PaymentMethod) {
         method,
         id: orderId,
         table: tableName,
+        cashReceived,
+        cashChange: change,
       })
       receiptOpen.value = true
     }
     toast.success(`Zaplaceno ${formatCZK(receipt?.total ?? 0)} za ${group.label}.`)
     await refreshOpen()
     if (updated.status === 'Closed') backToMap()
+    return true
   } catch (e) {
     if (e instanceof ApiError && (e.status === 404 || e.status === 409)) {
       toast.error('Účet mezitím zaplatil nebo zrušil jiný terminál.')
       splitDialogOpen.value = false
       await refreshOpen()
       backToMap()
+    } else if (e instanceof ApiError && e.status === 422 && cashReceived != null) {
+      // Přijatá částka nepokryla server-spočítaný Total; dialog zůstává otevřený.
+      toast.error('Přijatá hotovost nepokrývá částku k úhradě. Zadejte vyšší částku.')
     } else {
       toast.error('Platba vybrané části selhala.')
     }
     console.error(e)
+    return false
   } finally {
     busy.value = false
   }
+}
+
+// --- Jednotný platební dialog (hotově s výpočtem vrácení / karta přes terminálový krok) ---
+const paymentOpen = ref(false)
+// null = platba celého účtu; jinak platba části za osobu z rozdělení účtu.
+const paymentSplitGroup = ref<OrderSplitGroup | null>(null)
+const paymentTotal = computed(() =>
+  paymentSplitGroup.value
+    ? groupTotal(paymentSplitGroup.value)
+    : (totals.value?.total ?? currentOrder.value?.total ?? 0),
+)
+const paymentLabel = computed(() =>
+  paymentSplitGroup.value ? paymentSplitGroup.value.label : selectedTable.value?.name,
+)
+
+function openPayment(group: OrderSplitGroup | null = null) {
+  paymentSplitGroup.value = group
+  paymentOpen.value = true
+}
+
+async function confirmPayment(payment: { method: PaymentMethod; cashReceived: number | null }) {
+  const ok = paymentSplitGroup.value
+    ? await paySplitGroup(paymentSplitGroup.value, payment.method, payment.cashReceived)
+    : await pay(payment.method, payment.cashReceived)
+  if (ok) paymentOpen.value = false // při chybě zůstává otevřený, obsluha může zkusit znovu
 }
 
 async function saveSplit() {
@@ -576,16 +599,17 @@ async function sendToKitchen() {
   }
 }
 
-async function pay(method: PaymentMethod) {
-  if (!currentOrder.value || busy.value) return
+async function pay(method: PaymentMethod, cashReceived: number | null = null): Promise<boolean> {
+  if (!currentOrder.value || busy.value) return false
   const tableName = selectedTable.value?.name
   busy.value = true
   try {
     await flushDiscountUpdate() // sleva/tip musí být uložené na Order, pay() je bere ze serveru
-    if (!currentOrder.value) return
+    if (!currentOrder.value) return false
     const order = currentOrder.value
     const discountAmountSnapshot = totals.value?.discountAmount
-    const paid = await ordersApi.pay(order.id, method)
+    const paid = await ordersApi.pay(order.id, method, cashReceived)
+    const change = cashReceived != null ? round2(cashReceived - paid.total) : null
     receiptData.value = buildReceipt({
       company: companyStore.company,
       items: order.items.map((i) => ({ name: i.name, qty: i.quantity, total: i.lineTotal })),
@@ -596,14 +620,28 @@ async function pay(method: PaymentMethod) {
       method,
       id: order.id,
       table: tableName,
+      cashReceived,
+      cashChange: change,
     })
+    paymentOpen.value = false // zavřít PŘED otevřením účtenky — dva otevřené dialogy zamykaly stránku
     receiptOpen.value = true // účtenka po zaplacení (náhled + tisk)
-    toast.success(`Zaplaceno ${formatCZK(paid.total)} ${method === 'Cash' ? 'hotově' : 'kartou'}.`)
+    toast.success(
+      change != null && change > 0
+        ? `Zaplaceno ${formatCZK(paid.total)} hotově, vrátit ${formatCZK(change)}.`
+        : `Zaplaceno ${formatCZK(paid.total)} ${method === 'Cash' ? 'hotově' : 'kartou'}.`,
+    )
     await refreshOpen()
     backToMap()
+    return true
   } catch (e) {
-    toast.error('Platba selhala.')
+    // 422 u hotovosti = přijatá částka nepokryla server-spočítaný Total; dialog zůstává otevřený.
+    if (e instanceof ApiError && e.status === 422 && cashReceived != null) {
+      toast.error('Přijatá hotovost nepokrývá částku k úhradě. Zadejte vyšší částku.')
+    } else {
+      toast.error('Platba selhala.')
+    }
     console.error(e)
+    return false
   } finally {
     busy.value = false
   }
@@ -937,22 +975,15 @@ const hasNewItems = computed(() =>
               <ChefHat class="h-4 w-4" /> Odeslat objednávku
             </Button>
 
-            <div class="grid grid-cols-2 gap-2">
-              <Button
-                variant="coral"
-                :disabled="busy || !currentOrder.items.length"
-                @click="pay('Cash')"
-              >
-                <Banknote class="h-4 w-4" /> Hotově
-              </Button>
-              <Button
-                variant="outline"
-                :disabled="busy || !currentOrder.items.length"
-                @click="pay('Card')"
-              >
-                <CreditCard class="h-4 w-4" /> Kartou
-              </Button>
-            </div>
+            <Button
+              variant="coral"
+              size="lg"
+              class="w-full"
+              :disabled="busy || !currentOrder.items.length"
+              @click="openPayment()"
+            >
+              <Banknote class="h-4 w-4" /> Zaplatit
+            </Button>
             <Button
               v-if="currentOrder.items.length"
               variant="ghost"
@@ -1123,22 +1154,11 @@ const hasNewItems = computed(() =>
               variant="ghost"
               size="icon"
               class="h-6 w-6"
-              title="Zaplatit hotově"
+              title="Zaplatit tuto část"
               :disabled="busy || splitPaymentItems(g).length === 0"
-              @click="paySplitGroup(g, 'Cash')"
+              @click="openPayment(g)"
             >
               <Banknote class="h-3 w-3" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              class="h-6 w-6"
-              title="Zaplatit kartou"
-              :disabled="busy || splitPaymentItems(g).length === 0"
-              @click="paySplitGroup(g, 'Card')"
-            >
-              <CreditCard class="h-3 w-3" />
             </Button>
             <Button
               type="button"
@@ -1229,6 +1249,14 @@ const hasNewItems = computed(() =>
     </Dialog>
 
     <!-- Účtenka po zaplacení (náhled + tisk/PDF) -->
+    <PaymentDialog
+      v-model:open="paymentOpen"
+      :total="paymentTotal"
+      :label="paymentLabel"
+      :busy="busy"
+      @confirm="confirmPayment"
+    />
+
     <ReceiptDialog v-model:open="receiptOpen" :receipt="receiptData" />
   </div>
 </template>
