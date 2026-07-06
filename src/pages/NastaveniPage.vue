@@ -94,6 +94,7 @@ const form = reactive({
   invoiceNumberFormat: '{prefix}-{year}-{seq}',
   nextInvoiceSeq: 1,
   defaultPaymentDays: 14,
+  publicSlug: '',
 })
 const enabledModules = ref<AppModuleId[]>([...auth.modules])
 
@@ -122,6 +123,7 @@ onMounted(async () => {
   form.invoiceNumberFormat = c.invoiceNumberFormat ?? '{prefix}-{year}-{seq}'
   form.nextInvoiceSeq = c.nextInvoiceSeq ?? 1
   form.defaultPaymentDays = c.defaultPaymentDays ?? 14
+  form.publicSlug = c.publicSlug ?? ''
 })
 
 function toggleModule(module: AppModuleId, enabled: boolean | 'indeterminate' | undefined): void {
@@ -142,6 +144,22 @@ const numberPreview = computed(() =>
     Number(form.nextInvoiceSeq) || 1,
   ),
 )
+const publicOrderPreview = computed(() => {
+  const slug = normalizePublicSlug(form.publicSlug)
+  return slug ? `${window.location.origin}/objednavka/${slug}` : ''
+})
+
+function normalizePublicSlug(value: string): string {
+  return value
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+}
 
 function onLogoChange(e: Event): void {
   const input = e.target as HTMLInputElement
@@ -191,6 +209,7 @@ async function onSubmit(): Promise<void> {
     invoiceNumberFormat: form.invoiceNumberFormat || null,
     nextInvoiceSeq: Number(form.nextInvoiceSeq) || 1,
     defaultPaymentDays: Number.isFinite(dueDays) && dueDays >= 0 ? Math.floor(dueDays) : 14,
+    publicSlug: normalizePublicSlug(form.publicSlug),
     email: auth.user?.email ?? companyStore.company?.email ?? '',
   }
   try {
@@ -258,6 +277,31 @@ async function onSubmit(): Promise<void> {
             <p class="text-xs text-muted-foreground">
               Neplátce a identifikovaná osoba fakturují bez DPH.
             </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Veřejné odkazy -->
+      <div class="rounded-xl border border-border bg-card p-6">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Veřejné odkazy
+        </h2>
+        <div class="mt-4 space-y-4">
+          <div class="space-y-2">
+            <Label for="public_slug">Veřejný slug</Label>
+            <Input
+              id="public_slug"
+              v-model="form.publicSlug"
+              placeholder="moje-bistro"
+              @blur="form.publicSlug = normalizePublicSlug(form.publicSlug)"
+            />
+            <p class="text-xs text-muted-foreground">
+              Používá se pro online objednávky, QR stoly a veřejné rezervace.
+            </p>
+          </div>
+          <div v-if="publicOrderPreview" class="rounded-lg bg-muted/40 px-3 py-2 text-sm">
+            Online objednávky:
+            <span class="break-all font-medium text-foreground">{{ publicOrderPreview }}</span>
           </div>
         </div>
       </div>
