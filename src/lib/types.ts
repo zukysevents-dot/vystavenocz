@@ -260,6 +260,10 @@ export interface Sale {
   status: SaleStatus
   discountPercent: number
   tipAmount: number
+  /** Přijatá hotovost (jen platba hotově se zadanou částkou), jinak null. */
+  cashReceived: number | null
+  /** Vráceno = cashReceived − total (počítá backend), jinak null. */
+  cashChange: number | null
   totalNet: number
   totalVat: number
   total: number

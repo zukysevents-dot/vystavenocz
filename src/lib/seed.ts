@@ -101,6 +101,8 @@ async function seedLocationsAndSales(): Promise<void> {
         status: 'Completed',
         discountPercent: 0,
         tipAmount: tip,
+        cashReceived: null,
+        cashChange: null,
         totalNet: net,
         totalVat: round2(revenue - net),
         total: round2(revenue + tip),

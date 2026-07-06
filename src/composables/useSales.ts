@@ -20,6 +20,8 @@ export interface SaleOptions {
   // Provozovna, na které prodej vznikl. Bez ní backend uloží prodej „bez pobočky" a per-pobočka
   // uzávěrka (Z-report) ho neuvidí. '' / null = neposílat (klient bez provozoven).
   locationId?: string | null
+  // Přijatá hotovost (jen platba Cash) — backend validuje, že pokryje Total, a vrátí cashChange.
+  cashReceived?: number | null
 }
 
 export function useSales() {
@@ -36,6 +38,7 @@ export function useSales() {
       items: items.map((i) => ({ ...i, discountPercent: i.discountPercent ?? 0 })),
       discountPercent: options?.discountPercent ?? 0,
       tipAmount: options?.tipAmount ?? 0,
+      cashReceived: options?.cashReceived ?? null,
     })
     lastSale.value = sale
     return sale

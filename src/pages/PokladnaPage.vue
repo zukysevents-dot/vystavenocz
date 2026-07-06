@@ -7,7 +7,6 @@ import {
   Plus,
   Trash2,
   Banknote,
-  CreditCard,
   ShoppingCart,
   Package,
   ReceiptText,
@@ -40,6 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import PaymentDialog from '@/components/PaymentDialog.vue'
 import ReceiptDialog from '@/components/ReceiptDialog.vue'
 import { useProducts } from '@/composables/useProducts'
 import { useCategories } from '@/composables/useCategories'
@@ -166,8 +166,16 @@ function clearCart() {
   tipAmount.value = 0
 }
 
-async function pay(method: PaymentMethod) {
-  if (!cart.value.length || paying.value) return
+// --- Jednotný platební dialog (hotově s výpočtem vrácení / karta přes terminálový krok) ---
+const paymentOpen = ref(false)
+
+async function confirmPayment(payment: { method: PaymentMethod; cashReceived: number | null }) {
+  const ok = await pay(payment.method, payment.cashReceived)
+  if (ok) paymentOpen.value = false // při chybě zůstává otevřený, obsluha může zkusit znovu
+}
+
+async function pay(method: PaymentMethod, cashReceived: number | null = null): Promise<boolean> {
+  if (!cart.value.length || paying.value) return false
   paying.value = true
   try {
     const receiptLines = cart.value.map((l) => ({
@@ -190,6 +198,7 @@ async function pay(method: PaymentMethod) {
       discountPercent: clampPercent(accountDiscountPercent.value),
       tipAmount: clampAmount(tipAmount.value),
       locationId: currentLocationId.value || null,
+      cashReceived,
     })
     receiptData.value = buildReceipt({
       company: companyStore.company,
@@ -200,13 +209,27 @@ async function pay(method: PaymentMethod) {
       total: sale.total,
       method,
       id: sale.id,
+      cashReceived: sale.cashReceived,
+      cashChange: sale.cashChange,
     })
+    paymentOpen.value = false // zavřít PŘED otevřením účtenky — dva otevřené dialogy zamykaly stránku
     receiptOpen.value = true // účtenka po zaplacení (náhled + tisk)
-    toast.success(`Zaplaceno ${formatCZK(sale.total)} ${method === 'Cash' ? 'hotově' : 'kartou'}.`)
+    toast.success(
+      sale.cashChange != null && sale.cashChange > 0
+        ? `Zaplaceno ${formatCZK(sale.total)} hotově, vrátit ${formatCZK(sale.cashChange)}.`
+        : `Zaplaceno ${formatCZK(sale.total)} ${method === 'Cash' ? 'hotově' : 'kartou'}.`,
+    )
     clearCart()
+    return true
   } catch (e) {
-    toast.error('Prodej se nepodařilo dokončit. Zkontrolujte připojení k serveru.')
+    // 422 u hotovosti = přijatá částka nepokryla server-spočítaný Total; dialog zůstává otevřený.
+    if (e instanceof ApiError && e.status === 422 && cashReceived != null) {
+      toast.error('Přijatá hotovost nepokrývá částku k úhradě. Zadejte vyšší částku.')
+    } else {
+      toast.error('Prodej se nepodařilo dokončit. Zkontrolujte připojení k serveru.')
+    }
     console.error(e)
+    return false
   } finally {
     paying.value = false
   }
@@ -527,25 +550,16 @@ function saleTime(iso: string): string {
             <span class="text-sm text-muted-foreground">Celkem</span>
             <span class="text-2xl font-bold tabular-nums">{{ formatCZK(totals.total) }}</span>
           </div>
-          <div class="grid grid-cols-2 gap-2">
-            <Button
-              variant="coral"
-              size="lg"
-              :disabled="!cart.length || paying"
-              @click="pay('Cash')"
-            >
-              <Loader2 v-if="paying" class="h-4 w-4 animate-spin" />
-              <Banknote v-else class="h-4 w-4" /> Hotově
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              :disabled="!cart.length || paying"
-              @click="pay('Card')"
-            >
-              <CreditCard class="h-4 w-4" /> Kartou
-            </Button>
-          </div>
+          <Button
+            variant="coral"
+            size="lg"
+            class="w-full"
+            :disabled="!cart.length || paying"
+            @click="paymentOpen = true"
+          >
+            <Loader2 v-if="paying" class="h-4 w-4 animate-spin" />
+            <Banknote v-else class="h-4 w-4" /> Zaplatit
+          </Button>
         </div>
       </div>
     </div>
@@ -640,6 +654,13 @@ function saleTime(iso: string): string {
     </AlertDialog>
 
     <!-- Účtenka po zaplacení (náhled + tisk/PDF) -->
+    <PaymentDialog
+      v-model:open="paymentOpen"
+      :total="totals.total"
+      :busy="paying"
+      @confirm="confirmPayment"
+    />
+
     <ReceiptDialog v-model:open="receiptOpen" :receipt="receiptData" />
   </div>
 </template>

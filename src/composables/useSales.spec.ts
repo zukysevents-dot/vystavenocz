@@ -31,7 +31,18 @@ describe('useSales — kontrakt volání', () => {
       ],
       discountPercent: 0,
       tipAmount: 0,
+      cashReceived: null,
     })
+  })
+
+  it('create pošle přijatou hotovost (cashReceived) při platbě hotově', async () => {
+    vi.mocked(http.post).mockResolvedValue({ id: 's1' } as never)
+    await useSales().create(
+      'Cash',
+      [{ productId: 'p1', description: 'Burger', quantity: 1, unitPrice: 199, vatRate: 12 }],
+      { cashReceived: 500 },
+    )
+    expect(http.post).toHaveBeenCalledWith('/sales', expect.objectContaining({ cashReceived: 500 }))
   })
 
   it('create pošle zvolenou provozovnu (locationId) do těla prodeje', async () => {

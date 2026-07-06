@@ -73,15 +73,29 @@ export function useOrders() {
   function updateSplit(orderId: string, splitGroups: OrderSplitGroup[]): Promise<Order> {
     return http.put<Order>(`/orders/${orderId}/split`, { splitGroups })
   }
-  function pay(orderId: string, method: PaymentMethod): Promise<Order> {
-    return http.post<Order>(`/orders/${orderId}/pay`, { paymentMethod: method })
+  // cashReceived = přijatá hotovost (jen platba Cash) — backend validuje, že pokryje placenou částku,
+  // a uloží ji na Sale (účtenka pak umí „Přijato / Vráceno").
+  function pay(
+    orderId: string,
+    method: PaymentMethod,
+    cashReceived?: number | null,
+  ): Promise<Order> {
+    return http.post<Order>(`/orders/${orderId}/pay`, {
+      paymentMethod: method,
+      cashReceived: cashReceived ?? null,
+    })
   }
   function payItems(
     orderId: string,
     method: PaymentMethod,
     items: OrderItemPaymentShare[],
+    cashReceived?: number | null,
   ): Promise<Order> {
-    return http.post<Order>(`/orders/${orderId}/pay-items`, { paymentMethod: method, items })
+    return http.post<Order>(`/orders/${orderId}/pay-items`, {
+      paymentMethod: method,
+      items,
+      cashReceived: cashReceived ?? null,
+    })
   }
   function cancel(orderId: string): Promise<Order> {
     return http.post<Order>(`/orders/${orderId}/cancel`)
