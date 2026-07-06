@@ -2,6 +2,7 @@ import { http } from '@/lib/http'
 import type {
   PosCostSummary,
   PosDateRange,
+  PosLossSummary,
   PosRevenue,
   PosSalesSummary,
   PosStaffPerformance,
@@ -34,5 +35,9 @@ export function usePosReports() {
       `/pos-reports/staff?from=${range.from}&to=${range.to}${loc}`,
     )
   }
-  return { summary, revenue, costs, staff }
+  function losses(range: PosDateRange, locationId?: string): Promise<PosLossSummary> {
+    const loc = locationId ? `&locationId=${locationId}` : ''
+    return http.get<PosLossSummary>(`/pos-reports/losses?from=${range.from}&to=${range.to}${loc}`)
+  }
+  return { summary, revenue, costs, staff, losses }
 }
