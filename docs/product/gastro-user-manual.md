@@ -19,11 +19,12 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 
 1. Otevřete `Pokladna`.
 2. Vyberte produkty nebo kategorii.
-3. Zkontrolujte účtenku vpravo.
-4. Klepněte na `Zaplatit` a vyberte `Hotově` nebo `Kartou`.
-5. U hotovosti zadejte, kolik host dal (nebo použijte rychlou volbu bankovky) — systém hned ukáže, kolik vrátit.
-6. U karty zadejte částku na platebním terminálu a po dokončení potvrďte `Platba prošla`. Terminál zatím není propojený, výsledek potvrzuje obsluha.
-7. Po zaplacení vznikne prodej, DPH rozpad a skladový pohyb. Produkt s recepturou odečítá suroviny, produkt bez receptury odečítá sám sebe. Účtenka u hotovosti ukazuje `Přijato` a `Vráceno`.
+3. Produkt můžete přidat i skenem: v poli `Sken / EAN` použijte běžnou čtečku čárových kódů, zadejte EAN ručně a potvrďte Enterem, nebo klikněte na `Kamera` a naskenujte kód mobilem/tabletem.
+4. Zkontrolujte účtenku vpravo.
+5. Klepněte na `Zaplatit` a vyberte `Hotově` nebo `Kartou`.
+6. U hotovosti zadejte, kolik host dal (nebo použijte rychlou volbu bankovky) — systém hned ukáže, kolik vrátit.
+7. U karty zadejte částku na platebním terminálu a po dokončení potvrďte `Platba prošla`. Terminál zatím není propojený, výsledek potvrzuje obsluha.
+8. Po zaplacení vznikne prodej, DPH rozpad a skladový pohyb. Produkt s recepturou odečítá suroviny, produkt bez receptury odečítá sám sebe. Účtenka u hotovosti ukazuje `Přijato` a `Vráceno`.
 
 ## Restaurace a stoly
 
