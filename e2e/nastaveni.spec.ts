@@ -42,3 +42,23 @@ test('nastavení ukáže pravdivý stav integrací a exportů', async ({ page })
   await expect(page.getByText('Exportní režim')).toBeVisible()
   await expect(page.getByText('přímá synchronizace zatím neběží')).toBeVisible()
 })
+
+test('veřejný slug se normalizuje pro online objednávky a QR stoly', async ({ page }) => {
+  await seedApp(page, { subscription: 'pro' })
+  await page.goto('/app/nastaveni')
+
+  await page.locator('#public_slug').fill('  Žluťoučký Bistro 2026!!  ')
+  await page.locator('#public_slug').blur()
+
+  await expect(page.locator('#public_slug')).toHaveValue('zlutoucky-bistro-2026')
+  await expect(page.getByText(/\/objednavka\/zlutoucky-bistro-2026/)).toBeVisible()
+
+  await page.getByRole('button', { name: 'Uložit nastavení' }).click()
+  await expect(page.getByText('Nastavení uloženo')).toBeVisible()
+
+  const storedSlug = await page.evaluate(() => {
+    const raw = localStorage.getItem('vystaveno.company.v1')
+    return raw ? JSON.parse(raw).publicSlug : null
+  })
+  expect(storedSlug).toBe('zlutoucky-bistro-2026')
+})
