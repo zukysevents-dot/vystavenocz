@@ -19,5 +19,6 @@ jakmile endpoint existuje, FE se přepne bez dalšího zásahu.
 | 5   | [`rezervace-pripominky.md`](./rezervace-pripominky.md)       | střední  | připomínky rezervací (scheduler + SMS/e-mail)                   |
 | 6   | [`online-platba-faktur.md`](./online-platba-faktur.md)       | větší    | platba faktur kartou v Klientské zóně (platební brána)          |
 | 7   | [`uzaverka.md`](./uzaverka.md)                               | větší    | „Zavřít den" (Z-report + zámek), historie, per-číšník, hotovost |
+| 8   | [`import-historie-prodeju.md`](./import-historie-prodeju.md) | větší    | historie prodejů z konkurenčního POS do analytiky (od dne 0)    |
 
 U každého jsou i **otázky/rozhodnutí**, na které potřebuju od tebe odpověď, ať doladím FE.
