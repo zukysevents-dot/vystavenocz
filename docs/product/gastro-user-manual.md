@@ -18,7 +18,7 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 ## Prodej na pokladně
 
 1. Otevřete `Pokladna`.
-2. Vyberte produkty nebo kategorii.
+2. Vyberte produkty, kategorii nebo použijte `Hledat produkt` podle názvu, SKU či EAN.
 3. Produkt můžete přidat i skenem: v poli `Sken / EAN` použijte běžnou čtečku čárových kódů, zadejte EAN ručně a potvrďte Enterem, nebo klikněte na `Kamera` a naskenujte kód mobilem/tabletem.
 4. Zkontrolujte účtenku vpravo.
 5. Klepněte na `Zaplatit` a vyberte `Hotově` nebo `Kartou`.

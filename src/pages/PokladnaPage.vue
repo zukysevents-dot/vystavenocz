@@ -7,6 +7,7 @@ import {
   Minus,
   Plus,
   ScanBarcode,
+  Search,
   Trash2,
   Banknote,
   ShoppingCart,
@@ -86,11 +87,17 @@ const selectedCat = ref('')
 const scanEan = ref('')
 const scanInput = ref<InstanceType<typeof Input> | null>(null)
 const scannerOpen = ref(false)
-const visibleProducts = computed(() =>
-  selectedCat.value
-    ? products.value.filter((p) => p.categoryId === selectedCat.value)
-    : products.value,
-)
+const productSearch = ref('')
+const visibleProducts = computed(() => {
+  const q = productSearch.value.trim().toLocaleLowerCase('cs-CZ')
+  return products.value.filter((p) => {
+    if (selectedCat.value && p.categoryId !== selectedCat.value) return false
+    if (!q) return true
+    return [p.name, p.sku, p.ean ?? ''].some((value) =>
+      value.toLocaleLowerCase('cs-CZ').includes(q),
+    )
+  })
+})
 
 interface CartLine {
   product: Product
@@ -434,6 +441,18 @@ function saleTime(iso: string): string {
             </div>
           </div>
 
+          <div class="mb-3">
+            <label class="mb-1.5 flex items-center gap-1.5 text-sm font-medium" for="pos-search">
+              <Search class="h-4 w-4 text-muted-foreground" /> Hledat produkt
+            </label>
+            <Input
+              id="pos-search"
+              v-model="productSearch"
+              autocomplete="off"
+              placeholder="Název, SKU nebo EAN"
+            />
+          </div>
+
           <div v-if="categories.length" class="mb-3 flex flex-wrap gap-2">
             <button
               type="button"
@@ -462,7 +481,13 @@ function saleTime(iso: string): string {
               {{ c.name }}
             </button>
           </div>
-          <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div
+            v-if="visibleProducts.length === 0"
+            class="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground"
+          >
+            Žádný produkt neodpovídá hledání.
+          </div>
+          <div v-else class="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <button
               v-for="p in visibleProducts"
               :key="p.id"

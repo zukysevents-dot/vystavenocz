@@ -127,3 +127,28 @@ test('obsluha přidá produkt do pokladny skenem EAN', async ({ page }) => {
 
   await expect(page.getByText('EAN „123456789“ nenalezen v katalogu.')).toBeVisible()
 })
+
+test('obsluha najde produkt na pokladně podle názvu, SKU nebo EAN', async ({ page }) => {
+  await seedApiMode(page)
+  await dismissCookies(page)
+  await routeApi(page)
+
+  await page.goto('/app/pokladna')
+
+  const search = page.getByLabel('Hledat produkt')
+  await expect(search).toBeVisible()
+
+  await search.fill('kof')
+  await expect(page.getByRole('button', { name: /Kofola 0,5l/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Voda neperlivá/ })).toHaveCount(0)
+
+  await search.fill('VODA')
+  await expect(page.getByRole('button', { name: /Voda neperlivá/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Kofola 0,5l/ })).toHaveCount(0)
+
+  await search.fill(voda.ean)
+  await expect(page.getByRole('button', { name: /Voda neperlivá/ })).toBeVisible()
+
+  await search.fill('xyz-neexistuje')
+  await expect(page.getByText('Žádný produkt neodpovídá hledání.')).toBeVisible()
+})

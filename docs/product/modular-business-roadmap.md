@@ -139,7 +139,7 @@ These are non-negotiable before claiming serious gastro readiness:
 - table map and open bills
 - mobile waiter/tablet flow (foundation: `Restaurace` keeps the visual table map on desktop and adds a compact mobile/tablet table list plus a sticky waiter action bar on open orders with table name, item count, total, send-to-kitchen, and pay actions; handheld e2e covers table selection, item add, sticky actions, and send-to-kitchen. Remaining work: optional native/mobile app shell.)
 - kitchen/bar ticketing
-- receipt, storno, discount, tip, split payment, and fast EAN checkout scan (foundation: `Pokladna` supports exact product EAN through HW/Bluetooth scanner input plus camera scan; unknown/duplicate codes are blocked with operator feedback)
+- receipt, storno, discount, tip, split payment, fast product search, and EAN checkout scan (foundation: `Pokladna` supports product tile filtering by name/SKU/EAN plus exact product EAN through HW/Bluetooth scanner input and camera scan; unknown/duplicate codes are blocked with operator feedback)
 - stock cards, suppliers, purchase receipts, inventory, recipes, and stock mirror
 - shifts, cash movements, attendance, and user roles
 - day close, Z-report, VAT, payment summaries, sold products, and exports
