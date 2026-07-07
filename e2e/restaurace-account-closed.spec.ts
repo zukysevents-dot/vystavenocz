@@ -133,6 +133,8 @@ test('přidání položky na účet zavřený jiným terminálem hlásí konflik
 
     if (method === 'GET' && path === '/company') return route.fulfill({ json: company })
     if (method === 'GET' && path === '/products') return route.fulfill({ json: paged([product]) })
+    if (method === 'GET' && path === `/products/${product.id}/modifier-groups`)
+      return route.fulfill({ json: [] })
     if (method === 'GET' && path === '/categories')
       return route.fulfill({ json: paged([category]) })
     if (method === 'GET' && path === '/floors') return route.fulfill({ json: paged([floor]) })

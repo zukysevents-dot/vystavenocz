@@ -30,6 +30,16 @@ describe('useOrders — payload položek (note/course)', () => {
     })
   })
 
+  it('addItem s modifikátory posílá modifierOptionIds pro backend snapshot', async () => {
+    vi.mocked(http.post).mockResolvedValue({} as never)
+    await useOrders().addItem('o1', 'p1', 1, { modifierOptionIds: ['opt-fries', 'opt-cheese'] })
+    expect(http.post).toHaveBeenCalledWith('/orders/o1/items', {
+      productId: 'p1',
+      quantity: 1,
+      modifierOptionIds: ['opt-fries', 'opt-cheese'],
+    })
+  })
+
   it('updateItem posílá quantity i meta — změna množství nesmaže poznámku/chod', async () => {
     vi.mocked(http.put).mockResolvedValue({} as never)
     await useOrders().updateItem('o1', 'i1', 3, { note: 'extra sýr', course: null })

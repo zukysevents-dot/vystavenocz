@@ -8,6 +8,10 @@ export interface OrderItemMeta {
   course?: string | null
 }
 
+export interface AddOrderItemInput extends OrderItemMeta {
+  modifierOptionIds?: string[]
+}
+
 // Sleva na účet + spropitné — ukládá se průběžně na otevřený účet (ne až v pay()).
 export interface OrderDiscountInput {
   discountPercent?: number
@@ -34,9 +38,9 @@ export function useOrders() {
     orderId: string,
     productId: string,
     quantity = 1,
-    meta?: OrderItemMeta,
+    input?: AddOrderItemInput,
   ): Promise<Order> {
-    return http.post<Order>(`/orders/${orderId}/items`, { productId, quantity, ...meta })
+    return http.post<Order>(`/orders/${orderId}/items`, { productId, quantity, ...input })
   }
   // POZOR: backend bere Note/Course jako součást celého updatu (default null) — kdo volá jen s quantity,
   // smaže stávající poznámku/chod. Volající proto musí předat aktuální meta, pokud je chce zachovat.
