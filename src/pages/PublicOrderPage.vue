@@ -13,12 +13,14 @@ import {
   Trash2,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import ModifierSelectDialog from '@/components/app/ModifierSelectDialog.vue'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { usePublicOrders } from '@/composables/usePublicOrders'
 import { formatCZK } from '@/lib/invoice'
 import type {
+  ModifierOption,
   OrderFulfillment,
   PublicMenuCategory,
   PublicMenuProduct,
@@ -46,7 +48,26 @@ const confirmation = ref<PublicOrderConfirmation | null>(null)
 const categories = ref<PublicMenuCategory[]>([])
 const products = ref<PublicMenuProduct[]>([])
 const checkoutPanel = ref<HTMLElement | null>(null)
-const cart = reactive<Record<string, number>>({})
+const cart = ref<PublicCartLine[]>([])
+const modifierDialogOpen = ref(false)
+const modifierProduct = ref<PublicMenuProduct | null>(null)
+
+interface PublicCartLine {
+  id: string
+  productId: string
+  quantity: number
+  modifierOptionIds: string[]
+}
+
+type PublicCartModifier = ModifierOption & { groupName: string }
+
+interface PublicCartItem {
+  line: PublicCartLine
+  product: PublicMenuProduct
+  modifiers: PublicCartModifier[]
+  unitPrice: number
+  lineTotal: number
+}
 
 const form = reactive<{
   customerName: string
@@ -86,16 +107,25 @@ const groupedMenu = computed(() => {
 })
 
 const cartItems = computed(() =>
-  Object.entries(cart)
-    .map(([productId, quantity]) => ({
-      product: products.value.find((p) => p.id === productId),
-      quantity,
-    }))
-    .filter((row): row is { product: PublicMenuProduct; quantity: number } => !!row.product),
+  cart.value
+    .map((line) => {
+      const product = products.value.find((p) => p.id === line.productId)
+      if (!product) return null
+      const modifiers = selectedModifierOptions(product, line.modifierOptionIds)
+      const unitPrice = productUnitPrice(product, line.modifierOptionIds)
+      return {
+        line,
+        product,
+        modifiers,
+        unitPrice,
+        lineTotal: unitPrice * line.quantity,
+      }
+    })
+    .filter((row): row is PublicCartItem => !!row),
 )
 
 const itemCount = computed(() =>
-  cartItems.value.reduce((sum, row) => sum + Number(row.quantity || 0), 0),
+  cartItems.value.reduce((sum, row) => sum + Number(row.line.quantity || 0), 0),
 )
 const itemCountWord = computed(() =>
   itemCount.value === 1
@@ -104,9 +134,7 @@ const itemCountWord = computed(() =>
       ? 'položky'
       : 'položek',
 )
-const total = computed(() =>
-  cartItems.value.reduce((sum, row) => sum + row.product.priceWithVat * row.quantity, 0),
-)
+const total = computed(() => cartItems.value.reduce((sum, row) => sum + row.lineTotal, 0))
 const canSubmit = computed(
   () =>
     itemCount.value > 0 &&
@@ -121,12 +149,25 @@ const showMobileCartBar = computed(
     products.value.length > 0 &&
     itemCount.value > 0,
 )
+const modifierDialogProduct = computed(() =>
+  modifierProduct.value
+    ? {
+        id: modifierProduct.value.id,
+        name: modifierProduct.value.name,
+        salePrice: modifierProduct.value.priceWithVat,
+      }
+    : null,
+)
+const modifierDialogGroups = computed(() => modifierProduct.value?.modifierGroups ?? [])
 
 onMounted(async () => {
   try {
     const response = await publicOrders.menu(slug.value)
     categories.value = response.categories
-    products.value = response.products
+    products.value = response.products.map((product) => ({
+      ...product,
+      modifierGroups: product.modifierGroups ?? [],
+    }))
   } catch {
     loadError.value = true
   } finally {
@@ -135,17 +176,70 @@ onMounted(async () => {
 })
 
 function add(product: PublicMenuProduct) {
-  cart[product.id] = (cart[product.id] ?? 0) + 1
+  if (product.modifierGroups.length > 0) {
+    modifierProduct.value = product
+    modifierDialogOpen.value = true
+    return
+  }
+  addCartLine(product, [])
 }
 
-function decrease(productId: string) {
-  const next = (cart[productId] ?? 0) - 1
-  if (next > 0) cart[productId] = next
-  else delete cart[productId]
+function addCartLine(product: PublicMenuProduct, modifierOptionIds: string[]) {
+  const normalizedModifierOptionIds = normalizeModifierOptionIds(modifierOptionIds)
+  const key = cartKey(product.id, normalizedModifierOptionIds)
+  const existing = cart.value.find(
+    (line) => cartKey(line.productId, line.modifierOptionIds) === key,
+  )
+  if (existing) existing.quantity += 1
+  else {
+    cart.value.push({
+      id: crypto.randomUUID(),
+      productId: product.id,
+      quantity: 1,
+      modifierOptionIds: normalizedModifierOptionIds,
+    })
+  }
 }
 
-function remove(productId: string) {
-  delete cart[productId]
+function confirmModifiers(modifierOptionIds: string[]) {
+  if (modifierProduct.value) addCartLine(modifierProduct.value, modifierOptionIds)
+  modifierDialogOpen.value = false
+}
+
+function decrease(lineId: string) {
+  const line = cart.value.find((row) => row.id === lineId)
+  if (!line) return
+  line.quantity -= 1
+  if (line.quantity <= 0) remove(lineId)
+}
+
+function remove(lineId: string) {
+  cart.value = cart.value.filter((line) => line.id !== lineId)
+}
+
+function cartKey(productId: string, modifierOptionIds: string[]) {
+  return `${productId}:${normalizeModifierOptionIds(modifierOptionIds).join('|')}`
+}
+
+function normalizeModifierOptionIds(modifierOptionIds: string[]) {
+  return [...modifierOptionIds].sort()
+}
+
+function selectedModifierOptions(product: PublicMenuProduct, modifierOptionIds: string[]) {
+  const selected = new Set(modifierOptionIds)
+  return product.modifierGroups
+    .flatMap((group) => group.options.map((option) => ({ ...option, groupName: group.name })))
+    .filter((option) => selected.has(option.id))
+}
+
+function productUnitPrice(product: PublicMenuProduct, modifierOptionIds: string[]) {
+  return (
+    product.priceWithVat +
+    selectedModifierOptions(product, modifierOptionIds).reduce(
+      (sum, option) => sum + option.priceDelta,
+      0,
+    )
+  )
 }
 
 function scrollToCheckout() {
@@ -160,7 +254,10 @@ async function submit() {
     confirmation.value = await publicOrders.order(slug.value, {
       items: cartItems.value.map((row) => ({
         productId: row.product.id,
-        quantity: row.quantity,
+        quantity: row.line.quantity,
+        ...(row.line.modifierOptionIds.length
+          ? { modifierOptionIds: row.line.modifierOptionIds }
+          : {}),
       })),
       customerName: form.customerName.trim(),
       customerPhone: form.customerPhone.trim() || null,
@@ -259,7 +356,7 @@ async function submit() {
               </div>
               <Button type="button" variant="outline" class="mt-3 w-full" @click="add(product)">
                 <Plus class="h-4 w-4" />
-                Přidat
+                {{ product.modifierGroups.length ? 'Vybrat' : 'Přidat' }}
               </Button>
             </article>
           </div>
@@ -280,16 +377,28 @@ async function submit() {
         </div>
 
         <div v-else class="mt-3 divide-y divide-border">
-          <div v-for="row in cartItems" :key="row.product.id" class="py-3">
+          <div v-for="row in cartItems" :key="row.line.id" class="py-3">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <div class="truncate text-sm font-medium">{{ row.product.name }}</div>
                 <div class="text-xs text-muted-foreground">
-                  {{ row.quantity }} × {{ formatCZK(row.product.priceWithVat) }}
+                  {{ row.line.quantity }} × {{ formatCZK(row.unitPrice) }}
+                </div>
+                <div v-if="row.modifiers.length" class="mt-1 space-y-0.5">
+                  <div
+                    v-for="modifier in row.modifiers"
+                    :key="modifier.id"
+                    class="text-xs text-muted-foreground"
+                  >
+                    {{ modifier.name }}
+                    <span v-if="modifier.priceDelta">
+                      ({{ modifier.priceDelta > 0 ? '+' : '' }}{{ formatCZK(modifier.priceDelta) }})
+                    </span>
+                  </div>
                 </div>
               </div>
               <div class="font-semibold tabular-nums">
-                {{ formatCZK(row.product.priceWithVat * row.quantity) }}
+                {{ formatCZK(row.lineTotal) }}
               </div>
             </div>
             <div class="mt-2 flex items-center gap-1">
@@ -298,17 +407,17 @@ async function submit() {
                 variant="outline"
                 size="icon"
                 class="h-8 w-8"
-                @click="decrease(row.product.id)"
+                @click="decrease(row.line.id)"
               >
                 <Minus class="h-3.5 w-3.5" />
               </Button>
-              <span class="w-10 text-center text-sm tabular-nums">{{ row.quantity }}</span>
+              <span class="w-10 text-center text-sm tabular-nums">{{ row.line.quantity }}</span>
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
                 class="h-8 w-8"
-                @click="add(row.product)"
+                @click="addCartLine(row.product, row.line.modifierOptionIds)"
               >
                 <Plus class="h-3.5 w-3.5" />
               </Button>
@@ -318,7 +427,7 @@ async function submit() {
                 size="icon"
                 class="ml-auto h-8 w-8"
                 title="Odebrat položku"
-                @click="remove(row.product.id)"
+                @click="remove(row.line.id)"
               >
                 <Trash2 class="h-3.5 w-3.5 text-destructive" />
               </Button>
@@ -382,6 +491,14 @@ async function submit() {
         </form>
       </aside>
     </div>
+
+    <ModifierSelectDialog
+      v-model:open="modifierDialogOpen"
+      :product="modifierDialogProduct"
+      :groups="modifierDialogGroups"
+      confirm-label="Přidat do košíku"
+      @confirm="confirmModifiers"
+    />
 
     <div
       v-if="showMobileCartBar"

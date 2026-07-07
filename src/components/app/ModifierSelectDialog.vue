@@ -12,13 +12,20 @@ import {
 } from '@/components/ui/dialog'
 import { formatCZK } from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
-import type { ModifierGroup, ModifierOption, Product } from '@/lib/types'
+import type { ModifierGroup, ModifierOption } from '@/lib/types'
+
+interface ModifierDialogProduct {
+  id: string
+  name: string
+  salePrice: number
+}
 
 const props = defineProps<{
   open: boolean
-  product: Product | null
+  product: ModifierDialogProduct | null
   groups: ModifierGroup[]
   busy?: boolean
+  confirmLabel?: string
 }>()
 
 const emit = defineEmits<{
@@ -189,7 +196,7 @@ function confirm() {
         <Button type="button" variant="ghost" @click="openModel = false">Zrušit</Button>
         <Button variant="coral" :disabled="busy || !!validationError" @click="confirm">
           <Loader2 v-if="busy" class="h-4 w-4 animate-spin" />
-          Přidat na účet
+          {{ confirmLabel ?? 'Přidat na účet' }}
         </Button>
       </DialogFooter>
     </DialogContent>
