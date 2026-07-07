@@ -1,0 +1,328 @@
+{
+  "mode": "design",
+  "status": "adjust_required",
+  "summary": "MVP gastro modifikátorů/variant (parita Dotykačka/Storyous) postavené PŘESNĚ na existujících vzorech: modifier groups/options jsou katalogová per-produkt entita editovaná stejně jako receptura (ProductRecipeService = delete-all-insert upsert). Vybrané modifikátory se SNAPSHOTUJÍ na OrderItem a SaleItem jako řádky (vzor NameSnapshot/UnitPrice u položek), cena modifikátoru je delta v Kč se stejnou DPH jako produkt. Klíčové zjednodušení: cenu modifikátoru vůbec neřešíme přes SaleCalculator novým kanálem — promítne se do efektivní UnitPrice položky (UnitPrice = productSalePrice + Σ modifierDelta), takže SaleCalculator, uzávěrka, Z-report, marže i účtenka fungují beze změny. MVP = jen cena + zobrazení na KDS/účtence, BEZ skladového dopadu za modifikátor (bezpečné: sklad dál řeší jen produkt/receptura). Rozděleno do 6 malých PR; první 4 jsou bezpečné autonomně, poslední 2 (výběr při přidání položky, zobrazení) potřebují jedno UX/produktové potvrzení.",
+  "assumptions": [
+    "Cílem MVP je parita se ZÁKLADNÍMI modifikátory (bez cibule, +sýr +15 Kč, velikost, propečení), ne pokročilé kombinatorické varianty s vlastními SKU/skladem.",
+    "Modifikátor NEMÁ v MVP vlastní produkt ani skladový odečet — je to čistě cenová delta + text na bon/účtenku. Skladový dopad se řeší až fází 2 (mimo tento návrh).",
+    "Cena modifikátoru má STEJNOU DPH sazbu jako produkt, ke kterému je připnutý. Modifikátor tedy nemá vlastní VatRate — přebírá VatRate produktu. (Pro MVP správné a jednoduché; smíšené DPH v rámci jedné položky by rozbilo model 'jedna položka = jedna sazba'.)",
+    "Delta smí být kladná (+sýr) i nulová (bez cibule = 0 Kč). Záporná delta (sleva za vynechání) je teoreticky možná, ale efektivní UnitPrice položky nesmí klesnout pod 0 — hlídá validace.",
+    "Editace modifikátorů = správcovská akce (Owner/Admin/Manager) přes Permissions.Inventory.Manage/Catalog.Manage, stejně jako receptura. Výběr modifikátoru při přidání položky = běžná obsluha (stejné oprávnění jako AddItem).",
+    "Modul: modifikátory jsou součást gastro/POS domény (stejný modul jako Orders/Products). Nevytvářím nový modul.",
+    "Backend používá EF Core global query filter na CompanyId — VŠECHNY nové entity implementují ITenantOwned a CompanyId se bere ze scope (JWT), nikdy z requestu."
+  ],
+  "open_questions": [
+    {
+      "id": "q1_selection_ux",
+      "question": "UX výběru modifikátorů při přidání položky na účet: má se po kliknutí na produkt s povinnou skupinou modifikátorů OTEVŘÍT dialog výběru (blokující, jako u Dotykačky), nebo se položka přidá s defaultem a modifikátory se doupraví? MVP návrh počítá s dialogem jen když má produkt aspoň jednu skupinu; produkty bez skupin fungují jako dnes (jeden klik = přidání). Potřebuje potvrdit chování povinné skupiny (nelze přidat bez výběru).",
+      "blocks": ["Fáze 5 (frontend výběr)"]
+    },
+    {
+      "id": "q2_merge_semantics",
+      "question": "Sloučení 'New' položek stejného produktu v AddItemAsync dnes porovnává ProductId+Note+Course. S modifikátory: dvě položky se stejným produktem a STEJNOU sadou modifikátorů se mají sloučit do '2×', ale s ODLIŠNOU sadou zůstat oddělené. Návrh přidává do slučovacího klíče normalizovaný fingerprint modifikátorů — potvrdit, že to je žádané chování (alternativa: modifikátory vždy tvoří samostatný řádek, nikdy neslučovat)."
+    },
+    {
+      "id": "q3_max_select_limits",
+      "question": "Skupina má min/max počet výběrů (např. 'vyber přesně 1 velikost', 'vyber 0–3 přílohy'). MVP navrhuje single/multi + required flag + volitelný maxSelect. Potřebuje potvrdit, zda pro první fázi stačí single(required?)/multi(maxSelect?), nebo je potřeba i minSelect > 1."
+    }
+  ],
+  "architecture": {
+    "data_model": [
+      {
+        "entity": "ModifierGroup",
+        "table": "modifier_groups",
+        "purpose": "Skupina modifikátorů (např. 'Velikost', 'Přílohy', 'Bez čeho'). Katalogová tenant entita se soft-delete (vzor Product/Category — po smazání lze název znovu použít a historické snapshoty na účtenkách zůstanou nedotčené).",
+        "implements": "BaseEntity, ITenantOwned, ISoftDelete",
+        "columns": [
+          "Id: guid (BaseEntity)",
+          "CompanyId: guid (ze scope, global query filter)",
+          "Name: string (max 100) — 'Velikost', 'Přílohy'",
+          "SelectionType: enum string ('Single' | 'Multi') HasConversion<string> HasMaxLength(16)",
+          "IsRequired: bool — povinná skupina (nelze přidat položku bez výběru)",
+          "MaxSelect: int? — u Multi horní limit počtu voleb (null = bez limitu); u Single ignorováno (vždy 1)",
+          "SortOrder: int — pořadí skupin v dialogu",
+          "DeletedAt: datetime? (ISoftDelete)"
+        ],
+        "indexes": ["HasIndex(CompanyId)"],
+        "notes": "Bez FK na Product — vazba je M:N přes ProductModifierGroup (jedna skupina 'Přílohy' použitelná u víc produktů, vzor Storyous sdílených modifier setů)."
+      },
+      {
+        "entity": "ModifierOption",
+        "table": "modifier_options",
+        "purpose": "Konkrétní volba ve skupině ('Malá' 0 Kč, 'Velká' +20 Kč, 'Sýr navíc' +15 Kč, 'Bez cibule' 0 Kč). Cenová delta v Kč (s DPH, stejná sazba jako produkt).",
+        "implements": "BaseEntity, ITenantOwned, ISoftDelete",
+        "columns": [
+          "Id: guid",
+          "CompanyId: guid (ze scope)",
+          "ModifierGroupId: guid — FK na ModifierGroup, cascade delete v rámci skupiny",
+          "Name: string (max 100)",
+          "PriceDelta: decimal(18,2) — delta k ceně produktu VČETNĚ DPH (může být 0 nebo záporná), default 0",
+          "SortOrder: int",
+          "DeletedAt: datetime?"
+        ],
+        "indexes": ["HasIndex(CompanyId)", "HasIndex(ModifierGroupId)"],
+        "relations": [
+          "HasOne<ModifierGroup>().WithMany().HasForeignKey(ModifierGroupId).OnDelete(Cascade) — smazání skupiny smaže volby"
+        ]
+      },
+      {
+        "entity": "ProductModifierGroup",
+        "table": "product_modifier_groups",
+        "purpose": "Přiřazení skupiny modifikátorů k produktu (M:N link + pořadí u konkrétního produktu). Vzor RecipeIngredient (per-produkt link entita, delete-all-insert upsert).",
+        "implements": "BaseEntity, ITenantOwned",
+        "columns": [
+          "Id: guid",
+          "CompanyId: guid (ze scope)",
+          "ProductId: guid — FK Product, cascade (smazání produktu uklidí linky)",
+          "ModifierGroupId: guid — FK ModifierGroup, Restrict (skupina se soft-deletuje)",
+          "SortOrder: int — pořadí skupin u tohoto produktu"
+        ],
+        "indexes": [
+          "HasIndex(CompanyId)",
+          "HasIndex(CompanyId, ProductId, ModifierGroupId).IsUnique() — vzor RecipeIngredient unique per produkt+skupina"
+        ],
+        "relations": [
+          "HasOne<Product>().WithMany().HasForeignKey(ProductId).OnDelete(Cascade)",
+          "HasOne<ModifierGroup>().WithMany().HasForeignKey(ModifierGroupId).OnDelete(Restrict)"
+        ]
+      },
+      {
+        "entity": "OrderItemModifier",
+        "table": "order_item_modifiers",
+        "purpose": "SNAPSHOT vybraného modifikátoru na položce účtu. Vzor OrderItem.NameSnapshot/UnitPrice — jméno i cena se zmrazí při výběru, pozdější změna ceníku modifikátoru neovlivní otevřený účet.",
+        "implements": "BaseEntity, ITenantOwned",
+        "columns": [
+          "Id: guid",
+          "CompanyId: guid (ze scope)",
+          "OrderItemId: guid — FK OrderItem, cascade (položka se smaže → modifikátory taky)",
+          "ModifierOptionId: guid? — reference na zdroj (nullable Restrict; audit/reporting), snapshot je ale zdroj pravdy",
+          "GroupNameSnapshot: string (max 100) — 'Přílohy'",
+          "NameSnapshot: string (max 100) — 'Sýr navíc'",
+          "PriceDelta: decimal(18,2) — zmrazená delta vč. DPH v okamžiku výběru"
+        ],
+        "indexes": ["HasIndex(CompanyId)", "HasIndex(OrderItemId)"],
+        "relations": [
+          "HasOne<OrderItem>().WithMany(Modifiers).HasForeignKey(OrderItemId).OnDelete(Cascade)",
+          "HasOne<ModifierOption>().WithMany().HasForeignKey(ModifierOptionId).OnDelete(Restrict) — nullable"
+        ],
+        "note": "OrderItem dostane novou navigaci: public List<OrderItemModifier> Modifiers { get; set; } = [];"
+      },
+      {
+        "entity": "SaleItemModifier",
+        "table": "sale_item_modifiers",
+        "purpose": "SNAPSHOT modifikátoru na neměnné položce prodeje (účtenka). Vzor SaleItem — jakmile vznikne Sale, je to neměnný účetní doklad; modifikátory se sem zkopírují z OrderItemModifier při platbě (u pokladny přímo z requestu).",
+        "implements": "BaseEntity, ITenantOwned",
+        "columns": [
+          "Id: guid",
+          "CompanyId: guid (ze scope)",
+          "SaleItemId: guid — FK SaleItem, cascade",
+          "GroupNameSnapshot: string (max 100)",
+          "NameSnapshot: string (max 100)",
+          "PriceDelta: decimal(18,2)"
+        ],
+        "indexes": ["HasIndex(CompanyId)", "HasIndex(SaleItemId)"],
+        "relations": [
+          "HasOne<SaleItem>().WithMany(Modifiers).HasForeignKey(SaleItemId).OnDelete(Cascade)"
+        ],
+        "note": "SaleItem dostane novou navigaci: public List<SaleItemModifier> Modifiers { get; set; } = []; SaleItem NEMÁ ProductId FK na modifier — je to čistý snapshot (žádná vazba na katalog, aby storno/účtenka nikdy nezávisely na aktuálním ceníku)."
+      },
+      {
+        "migration_needed": true,
+        "migration_note": "ANO — nutná EF migrace (5 nových tabulek + 2 navigace na OrderItem/SaleItem). Migrace = human review (dle AGENTS.md). Migrace je čistě ADITIVNÍ: žádná změna existujících sloupců, žádný backfill, žádná změna UnitPrice sémantiky na existujících řádcích. Existující účty/prodeje bez modifikátorů fungují beze změny (prázdné kolekce). Generovat jako root přes Docker SDK dle AGENTS.md, pak chown zpět."
+      }
+    ],
+    "api_endpoints": [
+      {
+        "group": "Katalog modifikátorů (CRUD skupin/voleb) — samostatný resource",
+        "endpoints": [
+          "GET  /api/v1/modifier-groups — seznam skupin firmy (s volbami), Permissions.Catalog.Read/Inventory.Read",
+          "POST /api/v1/modifier-groups — vytvoř skupinu + volby (nested), Permissions.Catalog.Manage/Inventory.Manage → 201",
+          "GET  /api/v1/modifier-groups/{id} — detail skupiny s volbami",
+          "PUT  /api/v1/modifier-groups/{id} — přepiš skupinu + volby (delete-all-insert voleb, vzor ProductRecipeService), 404/422",
+          "DELETE /api/v1/modifier-groups/{id} — soft-delete skupiny (volby cascade); 404. Odmítni/varuj pokud je přiřazená k produktům? MVP: povolit soft-delete, přiřazení (ProductModifierGroup) zůstane osiřelé a při čtení se přeskočí (skupina neviditelná přes soft-delete filter)."
+        ]
+      },
+      {
+        "group": "Přiřazení skupin k produktu — per-produkt, VZOR ProductRecipesController",
+        "endpoints": [
+          "GET  /api/v1/products/{productId}/modifier-groups — vrátí přiřazené skupiny (v pořadí SortOrder) i s volbami, Permissions.Inventory.Read; 404 když produkt neexistuje/cizí firma",
+          "PUT  /api/v1/products/{productId}/modifier-groups — přepíše přiřazení (delete-all-insert ProductModifierGroup, přesně jako ProductRecipeService.UpsertAsync). Body: { groups: [{ modifierGroupId, sortOrder }] }. Validace: skupina existuje ve firmě → jinak 422 'neexistující skupina'. Permissions.Inventory.Manage; 404/422",
+          "DELETE /api/v1/products/{productId}/modifier-groups — odebere všechna přiřazení; 204/404 (symetrie s recipe DELETE)"
+        ]
+      },
+      {
+        "group": "Výběr modifikátorů při přidání položky — ROZŠÍŘENÍ existujícího AddItemAsync",
+        "endpoints": [
+          "POST /api/v1/orders/{orderId}/items — AddOrderItemRequest ROZŠÍŘEN o volitelné ModifierOptionIds: IReadOnlyList<Guid>? (default null/[]). Backend: (1) ověří že každá volba patří k produktu (přes ProductModifierGroup → ModifierGroup → ModifierOption, tenant filter), jinak 422 'volba nepatří k produktu'; (2) ověří required skupiny mají výběr a Single/Multi/maxSelect limity → 422; (3) snapshotne GroupName/Name/PriceDelta do OrderItemModifier; (4) UnitPrice položky = product.SalePrice + Σ PriceDelta (efektivní jednotková cena vč. DPH). VatRate zůstává z produktu.",
+          "PUT  /api/v1/orders/{orderId}/items/{itemId} — MVP: modifikátory NEeditovatelné po přidání (jen quantity/note/course jako dnes). Změna modifikátorů = smazat řádek a přidat znovu. Zjednodušení pro první fázi; jednořádkový výběr se stejně dělá při přidání. (Fáze 2+ může přidat re-výběr.)",
+          "POST /api/v1/sales — pokladna (POS): CreateSaleItemRequest ROZŠÍŘEN o volitelné Modifiers: [{ name, groupName, priceDelta }]? — POS klient posílá už rozpočítanou efektivní UnitPrice (jako dnes u ceny). Backend snapshotne modifikátory do SaleItemModifier. MVP MŮŽE tuto pokladní cestu ODLOŽIT (viz fázování — pokladna nemá dialog modifikátorů v prvním kole); primární tok je gastro Order → pay."
+        ]
+      }
+    ],
+    "pricing_logic": {
+      "principle": "Cena modifikátoru se NEPROMÍTÁ novým kanálem do SaleCalculator. Místo toho se konsoliduje do efektivní UnitPrice položky. Tím zůstává celý peněžní tok (SaleCalculator, sleva na účet, spropitné, DPH extrakce, uzávěrka, Z-report, marže reporty, účtenka) BEZE ZMĚNY.",
+      "formula": "OrderItem.UnitPrice = product.SalePrice + Σ(modifier.PriceDelta)   [vše vč. DPH, stejná VatRate]",
+      "line_total": "LineTotal = UnitPrice * Quantity — beze změny (výpočet v OrderService.Map a SaleCalculator je stejný).",
+      "snapshot": "Rozpad na modifikátory (Group/Name/PriceDelta) se ukládá ODDĚLENĚ v OrderItemModifier/SaleItemModifier čistě pro ZOBRAZENÍ (KDS bon, účtenka, případně detail položky). Peněžní zdroj pravdy zůstává UnitPrice — modifikátorové snapshoty se do součtů NEPŘIČÍTAJÍ podruhé (jsou už v UnitPrice).",
+      "vat": "Modifikátor dědí VatRate produktu → jedna položka = jedna DPH sazba. SaleCalculator extrahuje DPH z gross UnitPrice beze změny. (Smíšené DPH v jedné položce záměrně mimo MVP — rozbilo by model.)",
+      "guard": "Validace: efektivní UnitPrice (SalePrice + ΣDelta) musí být >= 0 → jinak 422. Chrání před tím, aby záporné delty stlačily cenu pod nulu.",
+      "history_safety": "PriceDelta se snapshotuje (vzor NameSnapshot/UnitPrice). Pozdější změna ModifierOption.PriceDelta v ceníku NEZMĚNÍ otevřené účty ani historické účtenky. Storno prodeje funguje beze změny — vrací se skladové pohyby produktu (modifikátor sklad neřeší), UnitPrice v Sale je neměnná."
+    },
+    "stock_scope_mvp": {
+      "decision": "MVP = modifikátory jsou POUZE cena + zobrazení, BEZ skladového dopadu.",
+      "why_safe": "SaleService.BuildStockIssuesAsync odečítá sklad podle produktu/receptury z OrderItem.ProductId. Modifikátory NEMAJÍ ProductId ani IngredientProductId → do BuildStockIssuesAsync nevstupují → žádný odečet, žádná změna existující skladové logiky. '+sýr' v MVP neodečte sýr ze skladu — je to VĚDOMÉ zjednodušení a je bezpečné: nezavádí nekonzistenci (nic se neodečítá dvakrát ani chybně), jen je odečet neúplný. Sklad zůstává konzistentní s dnešní recepturou produktu.",
+      "future_extension": "Fáze 2 (mimo tento návrh, chce produktové rozhodnutí): ModifierOption dostane volitelnou vazbu na IngredientProductId + Quantity (mini-receptura modifikátoru). BuildStockIssuesAsync se rozšíří o iteraci přes vybrané modifikátory položky. Návrh dat je na to připravený (OrderItemModifier zná ModifierOptionId → lze dohledat surovinu). Storno se rozšíří symetricky. Toto NEDĚLAT v MVP."
+    },
+    "flow": {
+      "1_add_item": "Obsluha v RestauracePage klikne na produkt. Má-li produkt aspoň jednu skupinu (GET /products/{id}/modifier-groups vrátí neprázdné), otevře se dialog výběru; jinak jeden klik = přidání jako dnes. AddItem posílá productId, quantity, modifierOptionIds[].",
+      "2_persist_orderitem": "AddItemAsync ověří volby vůči produktu + required/limity, snapshotne modifikátory do OrderItemModifier, spočte UnitPrice = SalePrice + ΣDelta. Slučování 'New' položek do klíče přidá fingerprint modifikátorů (viz open_question q2).",
+      "3_kds_bon": "SendToKitchen → KitchenService.GetQueueAsync. KitchenQueueItem se rozšíří o Modifiers: [{ groupName, name }] (bez ceny — kuchyň cenu nepotřebuje). KDS bon zobrazí modifikátory pod názvem položky (pod/vedle Note), např. 'Burger — bez cibule, +sýr'.",
+      "4_pay": "PayAsync/PayItemsAsync mapuje OrderItem → CreateSaleItemRequest. UnitPrice už obsahuje delty → SaleCalculator/Total beze změny. NAVÍC se OrderItemModifier zkopírují do SaleItemModifier (snapshot na neměnný doklad). Klíčová změna v PersistSaleAsync: musí přijmout a uložit modifikátorové snapshoty per položka.",
+      "5_receipt": "ReceiptPdfGenerator zobrazí pod řádkem položky odsazené modifikátory (name + volitelně delta), stejný vzor jako dnes řádky. Účtenkový Total sedí (delta je v UnitPrice)."
+    },
+    "folder_structure": [
+      "backend: src/Vystaveno.Infrastructure/Persistence/Entities/{ModifierGroup,ModifierOption,ProductModifierGroup,OrderItemModifier,SaleItemModifier}.cs",
+      "backend: src/Vystaveno.Application/Catalog/ModifierDtos.cs, ModifierValidators.cs, IModifierService.cs, IProductModifierService.cs",
+      "backend: src/Vystaveno.Infrastructure/Catalog/ModifierService.cs (CRUD skupin), ProductModifierService.cs (přiřazení per produkt — vzor ProductRecipeService)",
+      "backend: src/Vystaveno.Api/Controllers/ModifierGroupsController.cs, ProductModifierGroupsController.cs (vzor ProductRecipesController)",
+      "backend: rozšíření OrderService.AddItemAsync, SaleService.PersistSaleAsync, KitchenService.GetQueueAsync, ReceiptPdfGenerator; DTO OrderDtos/SaleDtos; AppDbContext entity config",
+      "frontend: src/composables/useModifiers.ts (CRUD skupin), rozšíření useOrders.addItem o modifierOptionIds",
+      "frontend: src/components/app/ModifierGroupDialog.vue (editor skupin, vzor ProductRecipeDialog.vue) + ProductModifierDialog.vue (přiřazení k produktu, akce u produktu v SkladPage jako receptura)",
+      "frontend: src/components/app/ModifierSelectDialog.vue (výběr při přidání položky v RestauracePage)",
+      "frontend: rozšíření RestauracePage.vue (dialog výběru), KuchynePage.vue (modifikátory na bonu), lib/types.ts (OrderItemLine.modifiers, KitchenQueueItem.modifiers)"
+    ],
+    "tech_choices": [
+      {
+        "choice": "5 relačních tabulek (ne JSON blob na OrderItem)",
+        "reason": "Katalogové entity (ModifierGroup/Option/link) MUSÍ být relační kvůli CRUD, validaci vazby k produktu a budoucímu skladovému rozšíření. Snapshot na OrderItem/SaleItem dělám také jako child tabulku (ne jsonb), abych sledoval existující vzor OrderItem/SaleItem (relační child s cascade) a měl indexovatelnou vazbu pro reporting. Alternativa jsonb (jako Order.SplitGroups) je možná pro snapshot, ale child tabulka je konzistentnější s tím, jak jsou dnes položky prodeje modelované, a lépe se rozšíří na sklad.",
+        "alternative": "Snapshot jako jsonb (OwnsMany().ToJson(), vzor SplitGroups/VatBreakdown) — jednodušší migrace, mére tabulek. Přijatelné, pokud se reporting nad modifikátory nikdy nebude dělat relačně. Doporučuji child tabulku kvůli symetrii s SaleItem a fázi 2 (sklad)."
+      },
+      {
+        "choice": "Delta v UnitPrice (ne samostatný cenový kanál v SaleCalculator)",
+        "reason": "Nulový zásah do peněžní logiky = nulové riziko rozbití uzávěrky/DPH/marže. SaleCalculator, Z-report, pos-reports, účtenka se nemění. Toto je nejbezpečnější možná integrace.",
+        "alternative": "Modelovat modifikátor jako samostatný SaleLineInput s vlastní cenou. Zamítnuto: rozbíjí model 'položka = řádek', komplikuje slevu na účet a slučování, a hlavně mění SaleCalculator (finanční kód = kritická zóna)."
+      },
+      {
+        "choice": "Per-produkt přiřazení přes PUT delete-all-insert (vzor ProductRecipeService)",
+        "reason": "Přesně existující, otestovaný vzor pro per-produkt kolekci. Idempotentní, jednoduchý, konzistentní s recepturou.",
+        "alternative": "Inkrementální PATCH linků — víc endpointů, víc stavů, žádný přínos pro MVP."
+      }
+    ]
+  },
+  "conflicts": [
+    {
+      "severity": "warning",
+      "where": "OrderService.AddItemAsync — slučování 'New' položek (řádek 128–133)",
+      "why": "Dnešní kód sloučí položku stejného ProductId+Note+Course do existující 'New' položky (existing.Quantity += ...). Bez úpravy by se položka 'Burger +sýr' sloučila s 'Burger bez sýra' → ztráta/přepis modifikátorů a špatná cena. NUTNÉ přidat do slučovacího klíče fingerprint modifikátorů (nebo modifikátorové položky neslučovat vůbec). Viz open_question q2."
+    },
+    {
+      "severity": "warning",
+      "where": "SaleService.PersistSaleAsync + OrderService.PayAsync/PayItemsAsync",
+      "why": "PersistSaleAsync dnes staví SaleItem z CreateSaleItemRequest bez child kolekcí. Aby se modifikátory dostaly na neměnnou účtenku, musí PersistSaleAsync přijmout a uložit modifikátorové snapshoty (rozšířit CreateSaleItemRequest o Modifiers a mapper). PayAsync/PayItemsAsync musí OrderItemModifier zkopírovat do requestu. Změna je aditivní (default prázdná kolekce = starý klient beze změny), ale dotýká se sdíleného finančního jádra → pokrýt integračním testem, že Total/DPH se NEMĚNÍ (delta je jen v UnitPrice, ne dvakrát)."
+    },
+    {
+      "severity": "info",
+      "where": "KitchenService.GetQueueAsync / KitchenQueueItem DTO",
+      "why": "Bon dnes nemá modifikátory. Rozšíření KitchenQueueItem o modifiers[] je aditivní; GetQueueAsync musí Include(Modifiers) na OrderItem. Bez ceny (kuchyň ji nepotřebuje)."
+    },
+    {
+      "severity": "info",
+      "where": "Skladový odečet (BuildStockIssuesAsync)",
+      "why": "V MVP ZÁMĚRNĚ žádný dopad — '+sýr' se neodečte ze skladu. Není to konflikt datové konzistence (nic se neodečítá špatně), ale je to funkční omezení, které musí být v dokumentaci/manuálu jasně uvedené, aby provozovatel nečekal přesný sklad za modifikátory."
+    }
+  ],
+  "security": [
+    "Všech 5 nových entit je ITenantOwned → EF global query filter na CompanyId je aplikuje automaticky (viz smyčka v AppDbContext.OnModelCreating ř. 630). CompanyId se VŽDY bere ze scope (tenant.CompanyIdOrNull), NIKDY z requestu — vzor ProductRecipeService.",
+    "Validace vazby modifikátoru k produktu: při AddItem MUSÍ backend ověřit, že každý ModifierOptionId patří k některé skupině přiřazené danému produktu ve stejné firmě (přes ProductModifierGroup → ModifierGroup → ModifierOption, vše pod tenant filtrem). Jinak by šlo podstrčit cizí/nesouvisející volbu → 422. (Analogie k SaleService kontrole, že ProductId existuje ve firmě.)",
+    "Required/Single/Multi/maxSelect limity se validují na backendu (FluentValidation + doménová kontrola ve service), ne jen na FE — obcházení přes přímé API nesmí založit položku porušující pravidla skupiny.",
+    "Efektivní UnitPrice >= 0 guard (záporné delty) — brání manipulaci ceny pod nulu.",
+    "Editace modifikátorů (ModifierGroups CRUD, přiřazení) = manažerské oprávnění (Catalog.Manage/Inventory.Manage), výběr při prodeji = běžná obsluha. Permission authorization dál vyžaduje roli i zapnutý modul (ProductModules.ForPermission).",
+    "Snapshot pattern (GroupNameSnapshot/NameSnapshot/PriceDelta na OrderItemModifier/SaleItemModifier) chrání integritu historie: účtenka a uzavřený prodej nikdy nezávisí na aktuálním ceníku modifikátorů → soft-delete/změna skupiny nerozbije staré doklady (stejná záruka jako u OrderItem.NameSnapshot)."
+  ],
+  "scalability": [
+    "Single-tenant per firma (samostatná DB) → objem modifikátorů je malý (desítky skupin, stovky voleb na firmu). Žádný škálovací problém.",
+    "KDS GetQueueAsync přidá Include(Modifiers) → 1 extra JOIN na frontu; fronta je malá (jen Sent/Preparing/Ready). Zanedbatelné.",
+    "GET /products/{id}/modifier-groups se volá při každém přidání položky s modifikátory — cachovatelné na FE per session (skupiny se mění zřídka). Není potřeba řešit v MVP.",
+    "Žádný nový cross-branch/agregační dotaz → uzávěrka a pos-reports se nemění (delta je v UnitPrice, agregace beží nad Sale.Total beze změny)."
+  ],
+  "phasing": [
+    {
+      "phase": "PR 1 — Backend: schema + katalog CRUD (ModifierGroups)",
+      "autonomy": "BEZPEČNÉ AUTONOMNĚ",
+      "scope": "Nové entity ModifierGroup + ModifierOption + EF config + migrace. IModifierService/ModifierService (delete-all-insert voleb, vzor ProductRecipeService). ModifierGroupsController (GET/POST/GET{id}/PUT/DELETE). DTO + FluentValidation. Registrace v DI. ŽÁDNÝ dotyk Order/Sale/Kitchen.",
+      "risks": "Nová migrace = human review. Aditivní, žádný backfill, žádná změna existujících tabulek.",
+      "test": "Integrační testy (Testcontainers): CRUD skupin, tenant izolace (cizí firma nevidí), soft-delete, validace (prázdný název, Multi bez maxSelect ok). Build -warnaserror, dotnet format."
+    },
+    {
+      "phase": "PR 2 — Backend: přiřazení skupin k produktu (ProductModifierGroup)",
+      "autonomy": "BEZPEČNÉ AUTONOMNĚ",
+      "scope": "Entity ProductModifierGroup + config + migrace. ProductModifierService (PUT delete-all-insert, vzor ProductRecipeService.UpsertAsync). ProductModifierGroupsController (GET/PUT/DELETE na /products/{productId}/modifier-groups). Validace: skupina existuje ve firmě. ŽÁDNÝ dotyk Order/Sale.",
+      "risks": "Migrace = human review. Osiřelé linky po soft-delete skupiny — čtení přeskočí neviditelné skupiny.",
+      "test": "Integrační: přiřazení/odebrání, produkt cizí firmy → 404, neexistující skupina → 422, tenant izolace, idempotence PUT."
+    },
+    {
+      "phase": "PR 3 — Backend: OrderItemModifier snapshot + rozšíření AddItemAsync + cena",
+      "autonomy": "BEZPEČNÉ AUTONOMNĚ (implementace) — ale slučovací sémantika čeká na q2",
+      "scope": "Entity OrderItemModifier + OrderItem.Modifiers navigace + config + migrace. AddOrderItemRequest o ModifierOptionIds. AddItemAsync: validace vazby k produktu + required/limity, snapshot do OrderItemModifier, UnitPrice = SalePrice + ΣDelta, úprava slučovacího klíče o fingerprint modifikátorů (q2). OrderItemResponse o Modifiers. Map() vrací modifikátory.",
+      "risks": "Dotýká se AddItemAsync (row-lock/transakce zůstávají). Slučování položek (conflict warning #1) — pokrýt testem, že různé modifikátory = různé řádky, stejné = sloučení. UnitPrice >= 0 guard.",
+      "test": "Integrační: přidání s modifikátory nastaví správnou UnitPrice a snapshoty; cizí volba → 422; required skupina bez výběru → 422; Multi nad maxSelect → 422; slučování; tenant izolace. Ověřit, že Order.Total odpovídá UnitPrice se zahrnutou deltou."
+    },
+    {
+      "phase": "PR 4 — Backend: KDS bon + SaleItemModifier + účtenka",
+      "autonomy": "BEZPEČNÉ AUTONOMNĚ",
+      "scope": "Entity SaleItemModifier + SaleItem.Modifiers + config + migrace. PersistSaleAsync přijme a uloží modifikátorové snapshoty (CreateSaleItemRequest o Modifiers). PayAsync/PayItemsAsync kopírují OrderItemModifier → request. KitchenQueueItem o modifiers[], GetQueueAsync Include(Modifiers). ReceiptPdfGenerator zobrazí modifikátory pod položkou.",
+      "risks": "Dotyk sdíleného finančního jádra PersistSaleAsync (conflict warning #2). KRITICKÝ TEST: Sale.Total a DPH se NEZMĚNÍ oproti stavu bez child snapshotů (delta je v UnitPrice, ne dvakrát). Storno beze změny.",
+      "test": "Integrační: pay účtu s modifikátory → SaleItemModifier snapshoty sedí, Total = Σ UnitPrice*Qty (delta jednou); pay-items částečná platba; storno funguje; KDS fronta vrací modifikátory; účtenka PDF se vyrenderuje. Regrese: prodej BEZ modifikátorů beze změny."
+    },
+    {
+      "phase": "PR 5 — Frontend: editor modifikátorů + přiřazení k produktu",
+      "autonomy": "BEZPEČNÉ AUTONOMNĚ (backend hotový)",
+      "scope": "useModifiers.ts (CRUD skupin). ModifierGroupDialog.vue (editor skupin/voleb, vzor ProductRecipeDialog). ProductModifierDialog.vue (přiřazení k produktu — nová akce u produktu v SkladPage, vedle 'Receptura'). types.ts. Aktualizace docs/product/gastro-user-manual.md (uživatelsky viditelná změna).",
+      "risks": "Nízké — čistě UI nad hotovým API. npm run build (typecheck), lint, e2e smoke.",
+      "test": "Vytvoř skupinu, přiřaď k produktu, ověř GET. Build/lint/vitest zelené."
+    },
+    {
+      "phase": "PR 6 — Frontend: výběr modifikátorů při přidání položky + zobrazení na bonu",
+      "autonomy": "POTŘEBUJE PRODUKTOVÉ ROZHODNUTÍ (q1 UX) PŘED STARTEM",
+      "scope": "ModifierSelectDialog.vue (výběr při přidání položky v RestauracePage — otevře se jen když produkt má skupiny; required/single/multi/maxSelect UX). useOrders.addItem o modifierOptionIds. RestauracePage integrace. KuchynePage.vue: modifikátory pod položkou bonu. types.ts (OrderItemLine.modifiers, KitchenQueueItem.modifiers). ReceiptDialog zobrazení. Aktualizace gastro-user-manual.md.",
+      "risks": "UX povinné skupiny / blokující dialog (q1). Slučování (q2) se projeví ve zobrazení. Bez potvrzení q1/q2 hrozí předělání.",
+      "test": "e2e: přidání položky s modifikátory na účet, bon ukáže modifikátory, zaplacení → účtenka. Build/lint zelené, konzole čistá."
+    }
+  ],
+  "first_concrete_pr": {
+    "title": "PR 1 — Modifier catalog schema + CRUD (backend, izolovaný, žádný dotyk Order/Sale)",
+    "branch": "feat/gastro-modifiers-catalog",
+    "deliverables": [
+      "Entity: src/Vystaveno.Infrastructure/Persistence/Entities/ModifierGroup.cs (ITenantOwned, ISoftDelete; Name, SelectionType enum, IsRequired, MaxSelect?, SortOrder), ModifierOption.cs (ModifierGroupId FK, Name, PriceDelta decimal(18,2), SortOrder)",
+      "Enum: ModifierSelectionType { Single, Multi } (Application vrstva, HasConversion<string> v configu — vzor KitchenSection/OrderStatus)",
+      "AppDbContext: DbSet<ModifierGroup>/<ModifierOption>, entity config (precision, MaxLength, indexy, cascade Option→Group), spadne automaticky do global tenant/soft-delete filtru",
+      "EF migrace AddModifierCatalog (jen 2 nové tabulky; generovat jako root přes Docker SDK, chown zpět; human review)",
+      "DTO: ModifierDtos.cs (ModifierGroupResponse s nested options, Create/UpdateModifierGroupRequest s nested options), ModifierValidators.cs (Name required max 100, Multi: MaxSelect >= 1 nebo null, aspoň... — jen základní)",
+      "Service: IModifierService + ModifierService (List/Get/Create/Update(delete-all-insert options)/SoftDelete — vzor ProductRecipeService)",
+      "Controller: ModifierGroupsController (GET/POST/GET{id}/PUT/DELETE, Authorize policy Catalog.Manage/Inventory.Manage pro zápis, Read pro čtení, vzor ProductRecipesController)",
+      "DI registrace (Application/Infrastructure DependencyInjection)",
+      "Integrační testy (Testcontainers): CRUD, tenant izolace (cross-tenant leak test dle backend-standards), soft-delete, validace"
+    ],
+    "definition_of_done": [
+      "dotnet build --no-restore -warnaserror čistý",
+      "dotnet test (integrační) zelené, včetně cross-tenant leak testu",
+      "dotnet format --verify-no-changes",
+      "Migrace obsahuje POUZE 2 nové tabulky (kontrola diffu snapshotu)",
+      "Žádný dotyk OrderService/SaleService/KitchenService/existujících tabulek",
+      "AGENTS.md + CLAUDE.md (backend) aktualizované o modifier catalog kontrakt"
+    ]
+  },
+  "handoff": {
+    "next_agent": "human",
+    "context_for_review": "Návrh MVP gastro modifikátorů. Architektura je hotová a napasovaná na existující vzory (ProductRecipeService pro CRUD, NameSnapshot/UnitPrice pro snapshot, delta v UnitPrice pro nulový zásah do SaleCalculatoru). Před spuštěním implementace potřebuji od člověka/produktu potvrdit 3 open_questions (q1 UX výběru, q2 slučování položek, q3 min/max limity skupin) — blokují hlavně FRONTEND fázi 6, NE backend fáze 1–4. Backend PR 1–4 jsou bezpečné a lze je stavět autonomně přes noc po malých PR hned; FE PR 5 také (nad hotovým API); FE PR 6 čeká na q1/q2. Migrace ve všech backend PR = human review dle AGENTS.md. Doporučené pořadí spuštění: potvrdit q1–q3 → spustit PR1 (invoice-code-reviewer/qa po implementaci).",
+    "required_checks": [
+      "Ověřit v review PR každého kroku: CompanyId ze scope, nikdy z requestu; global query filter aktivní na všech 5 nových entitách (cross-tenant leak integrační test).",
+      "PR3/PR4: integrační test, že Order.Total a Sale.Total/DPH se NEROZBIJÍ — delta modifikátoru je započtena PRÁVĚ JEDNOU (v UnitPrice), snapshoty jsou jen zobrazovací.",
+      "PR3: test, že AddItem odmítne (422) volbu, která nepatří k produktu, a required skupinu bez výběru; UnitPrice >= 0 guard.",
+      "PR3: slučování 'New' položek — různé modifikátory = různé řádky, stejné = '2×' (dle rozhodnutí q2).",
+      "PR4: storno prodeje s modifikátory funguje beze změny (sklad se řeší jen produktem; modifikátorové snapshoty se stornem nemění).",
+      "Každá migrace: jen zamýšlené aditivní tabulky, žádná změna existujících sloupců, žádný destruktivní krok.",
+      "MVP omezení (modifikátor bez skladového dopadu) zdokumentováno v gastro-user-manual.md, aby provozovatel nečekal přesný sklad za '+sýr'."
+    ]
+  }
+}
