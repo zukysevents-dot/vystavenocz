@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   buildDayCloseAccountingRows,
   buildDayCloseAccountingRowsForReports,
+  buildShiftHandoverRowsFromDayClose,
+  buildShiftHandoverRowsFromSummary,
   DAY_CLOSE_ACCOUNTING_COLUMNS,
+  SHIFT_HANDOVER_COLUMNS,
 } from '@/lib/day-close-export'
 import type { DayCloseResponse } from '@/lib/types'
 
@@ -165,5 +168,62 @@ describe('day-close accounting export', () => {
 
     expect(rows.some((r) => r[0] === '2026-07-05' && r[1] === 'Bistro Praha')).toBe(true)
     expect(rows.some((r) => r[0] === '2026-07-06' && r[1] === 'Bar zahrada')).toBe(true)
+  })
+})
+
+describe('shift handover export', () => {
+  it('má stabilní hlavičky pro předávku směny', () => {
+    expect(SHIFT_HANDOVER_COLUMNS).toEqual([
+      'Datum',
+      'Pobočka',
+      'Z-report',
+      'Sekce',
+      'Položka',
+      'Hodnota',
+      'Poznámka',
+    ])
+  })
+
+  it('sestaví předávku z živého souhrnu otevřeného dne', () => {
+    const rows = buildShiftHandoverRowsFromSummary('2026-07-05', 'Bistro Praha', {
+      count: 2,
+      avgSale: 605,
+      totalNet: 1000,
+      totalVat: 210,
+      total: 1210,
+      cashTotal: 500,
+      cardTotal: 710,
+      tipTotal: 40,
+      discountTotal: 25,
+      cancelledCount: 1,
+      cancelledTotal: 99,
+    })
+
+    expect(rows).toContainEqual(['2026-07-05', 'Bistro Praha', '', 'Tržby', 'Účtenek', 2, ''])
+    expect(rows).toContainEqual(['2026-07-05', 'Bistro Praha', '', 'Platby', 'Hotovost', 500, ''])
+    expect(rows).toContainEqual([
+      '2026-07-05',
+      'Bistro Praha',
+      '',
+      'Checklist',
+      'Otevřené účty doplaceny nebo zrušeny',
+      '',
+      'OK / ne',
+    ])
+  })
+
+  it('sestaví předávku ze zavřeného Z-reportu včetně hotovosti', () => {
+    const rows = buildShiftHandoverRowsFromDayClose(CLOSED_REPORT, 'Bistro Praha')
+
+    expect(rows).toContainEqual([
+      '2026-07-05',
+      'Bistro Praha',
+      12,
+      'Hotovost',
+      'Rozdíl hotovosti',
+      -10,
+      '',
+    ])
+    expect(rows).toContainEqual(['2026-07-05', 'Bistro Praha', 12, 'Předání', 'Převzal', '', ''])
   })
 })

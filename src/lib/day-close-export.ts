@@ -1,6 +1,7 @@
 import type { CsvValue } from '@/lib/csv-export'
 import { downloadCsv } from '@/lib/csv-export'
 import type { DayCloseResponse } from '@/lib/types'
+import type { SalesSummary } from '@/lib/salesReport'
 
 export const DAY_CLOSE_ACCOUNTING_COLUMNS = [
   'Datum',
@@ -17,8 +18,22 @@ export const DAY_CLOSE_ACCOUNTING_COLUMNS = [
   'Poznámka',
 ]
 
+export const SHIFT_HANDOVER_COLUMNS = [
+  'Datum',
+  'Pobočka',
+  'Z-report',
+  'Sekce',
+  'Položka',
+  'Hodnota',
+  'Poznámka',
+]
+
 function amount(value: number | null | undefined): number {
   return value ?? 0
+}
+
+function avgSale(total: number, count: number): number {
+  return count > 0 ? Math.round((total / count) * 100) / 100 : 0
 }
 
 function row(
@@ -257,4 +272,139 @@ export function downloadDayCloseAccountingCsvForReports(
     DAY_CLOSE_ACCOUNTING_COLUMNS,
     buildDayCloseAccountingRowsForReports(reports, locationNameById),
   )
+}
+
+export function buildShiftHandoverRowsFromSummary(
+  date: string,
+  locationName: string,
+  summary: SalesSummary,
+): CsvValue[][] {
+  return buildShiftHandoverRows({
+    date,
+    locationName,
+    zReportNumber: '',
+    saleCount: summary.count,
+    avgSale: summary.avgSale,
+    total: summary.total,
+    cashTotal: summary.cashTotal,
+    cardTotal: summary.cardTotal,
+    tipTotal: summary.tipTotal,
+    discountTotal: summary.discountTotal,
+    cancelledCount: summary.cancelledCount,
+    cancelledTotal: summary.cancelledTotal,
+  })
+}
+
+export function buildShiftHandoverRowsFromDayClose(
+  z: DayCloseResponse,
+  locationName: string,
+): CsvValue[][] {
+  return buildShiftHandoverRows({
+    date: z.date,
+    locationName,
+    zReportNumber: z.zReportNumber ?? '',
+    saleCount: amount(z.saleCount),
+    avgSale: avgSale(amount(z.total), amount(z.saleCount)),
+    total: amount(z.total),
+    cashTotal: amount(z.cashTotal),
+    cardTotal: amount(z.cardTotal),
+    tipTotal: amount(z.tipTotal),
+    discountTotal: amount(z.discountTotal),
+    cancelledCount: amount(z.cancelledCount),
+    cancelledTotal: amount(z.cancelledTotal),
+    cashOpening: z.cashOpening,
+    cashPayIns: z.cashPayIns,
+    cashPayOuts: z.cashPayOuts,
+    cashExpectedClosing: z.cashExpectedClosing,
+    cashCountedClosing: z.cashCountedClosing,
+    cashDrop: z.cashDrop,
+    cashDifference: z.cashDifference,
+  })
+}
+
+export function downloadShiftHandoverCsv(
+  date: string,
+  locationName: string,
+  rows: CsvValue[][],
+): void {
+  downloadCsv(`predavka-smeny-${date}-${locationName}`, SHIFT_HANDOVER_COLUMNS, rows)
+}
+
+interface ShiftHandoverInput {
+  date: string
+  locationName: string
+  zReportNumber: CsvValue
+  saleCount: number
+  avgSale: number
+  total: number
+  cashTotal: number
+  cardTotal: number
+  tipTotal: number
+  discountTotal: number
+  cancelledCount: number
+  cancelledTotal: number
+  cashOpening?: number | null
+  cashPayIns?: number | null
+  cashPayOuts?: number | null
+  cashExpectedClosing?: number | null
+  cashCountedClosing?: number | null
+  cashDrop?: number | null
+  cashDifference?: number | null
+}
+
+function handoverRow(
+  data: ShiftHandoverInput,
+  section: string,
+  item: string,
+  value: CsvValue,
+  note = '',
+): CsvValue[] {
+  return [data.date, data.locationName, data.zReportNumber, section, item, value, note]
+}
+
+function buildShiftHandoverRows(data: ShiftHandoverInput): CsvValue[][] {
+  const rows: CsvValue[][] = [
+    handoverRow(data, 'Tržby', 'Účtenek', data.saleCount),
+    handoverRow(data, 'Tržby', 'Průměrný účet', data.avgSale),
+    handoverRow(data, 'Tržby', 'Tržba celkem', data.total),
+    handoverRow(data, 'Platby', 'Hotovost', data.cashTotal),
+    handoverRow(data, 'Platby', 'Karta', data.cardTotal),
+    handoverRow(data, 'Kontrola', 'Spropitné', data.tipTotal),
+    handoverRow(data, 'Kontrola', 'Slevy', data.discountTotal),
+    handoverRow(data, 'Kontrola', 'Stornovaných účtenek', data.cancelledCount),
+    handoverRow(data, 'Kontrola', 'Hodnota storn', data.cancelledTotal),
+  ]
+
+  if (
+    data.cashOpening != null ||
+    data.cashPayIns != null ||
+    data.cashPayOuts != null ||
+    data.cashExpectedClosing != null ||
+    data.cashCountedClosing != null ||
+    data.cashDrop != null ||
+    data.cashDifference != null
+  ) {
+    rows.push(
+      handoverRow(data, 'Hotovost', 'Počáteční hotovost', amount(data.cashOpening)),
+      handoverRow(data, 'Hotovost', 'Vklady do pokladny', amount(data.cashPayIns)),
+      handoverRow(data, 'Hotovost', 'Výběry z pokladny', amount(data.cashPayOuts)),
+      handoverRow(data, 'Hotovost', 'Očekávaná hotovost', amount(data.cashExpectedClosing)),
+      handoverRow(data, 'Hotovost', 'Spočítaná hotovost', amount(data.cashCountedClosing)),
+      handoverRow(data, 'Hotovost', 'Odvod hotovosti', amount(data.cashDrop)),
+      handoverRow(data, 'Hotovost', 'Rozdíl hotovosti', amount(data.cashDifference)),
+    )
+  }
+
+  rows.push(
+    handoverRow(data, 'Checklist', 'Otevřené účty doplaceny nebo zrušeny', '', 'OK / ne'),
+    handoverRow(data, 'Checklist', 'Hotovost přepočítána', '', 'OK / ne'),
+    handoverRow(data, 'Checklist', 'Platební terminál zkontrolován', '', 'OK / ne'),
+    handoverRow(data, 'Checklist', 'Storna a slevy zkontrolovány', '', 'OK / ne'),
+    handoverRow(data, 'Checklist', 'Skladové výdeje a inventury zapsány', '', 'OK / ne'),
+    handoverRow(data, 'Předání', 'Předal', '', ''),
+    handoverRow(data, 'Předání', 'Převzal', '', ''),
+    handoverRow(data, 'Předání', 'Poznámka', '', ''),
+  )
+
+  return rows
 }

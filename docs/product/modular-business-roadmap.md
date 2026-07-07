@@ -86,7 +86,7 @@ Must support a real service day:
 - restaurant table map with open bills, moving items, merging bills, splitting bills, and partial group payments (foundation: `Restaurace` map opens/moves accounts, merges bills through backend PR #165, splits items among guests, and pays a selected split group through backend PR #168 `POST /orders/{id}/pay-items`; paid quantities become normal Sales, the unpaid remainder stays open, and split is reset for the remaining bill)
 - kitchen/bar tickets by category or station (foundation: `Kuchyně` KDS groups sent order items into station tickets, filters Kitchen/Bar, supports print, preparation timer/SLA colors, public pickup/delivery labels, QR table order table names, the Sent → Preparing → Ready → Served workflow, and a read-only Served history from backend PR #172)
 - receipt creation with VAT breakdown and payment history
-- shift opening and closing with cash balance, card summary, storno summary, and user ownership
+- shift handover with cash/card/storno summary and user handoff fields (foundation: `Uzávěrka` has a `Provozní předávka` block for open and closed days plus `Export předávky CSV`; persisted shift ownership can build on this later)
 - day close with Z-report, receipts, sales, payment methods, VAT, storno, discounts, sold products, and a guard that blocks closing while gastro accounts are still open
 - basic stock item linking so selected sales create stock movements
 - role restrictions for dangerous actions
