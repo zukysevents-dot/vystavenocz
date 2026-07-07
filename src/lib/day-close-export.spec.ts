@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   buildDayCloseAccountingRows,
   buildDayCloseAccountingRowsForReports,
+  buildDayCloseMonthlySummaryRows,
   buildShiftHandoverRowsFromDayClose,
   buildShiftHandoverRowsFromSummary,
   DAY_CLOSE_ACCOUNTING_COLUMNS,
+  DAY_CLOSE_MONTHLY_SUMMARY_COLUMNS,
   SHIFT_HANDOVER_COLUMNS,
 } from '@/lib/day-close-export'
 import type { DayCloseResponse } from '@/lib/types'
@@ -168,6 +170,90 @@ describe('day-close accounting export', () => {
 
     expect(rows.some((r) => r[0] === '2026-07-05' && r[1] === 'Bistro Praha')).toBe(true)
     expect(rows.some((r) => r[0] === '2026-07-06' && r[1] === 'Bar zahrada')).toBe(true)
+  })
+
+  it('má stabilní hlavičky pro měsíční souhrn uzávěrek', () => {
+    expect(DAY_CLOSE_MONTHLY_SUMMARY_COLUMNS).toEqual([
+      'Datum',
+      'Pobočka',
+      'Z-report',
+      'Účtenek',
+      'Základ',
+      'DPH',
+      'Celkem',
+      'Hotovost',
+      'Karta',
+      'Spropitné',
+      'Slevy',
+      'Storna počet',
+      'Storna celkem',
+      'Rozdíl hotovosti',
+      'Měna',
+      'Poznámka',
+    ])
+  })
+
+  it('sestaví měsíční souhrn uzávěrek včetně součtového řádku', () => {
+    const rows = buildDayCloseMonthlySummaryRows(
+      [
+        CLOSED_REPORT,
+        {
+          ...CLOSED_REPORT,
+          date: '2026-07-06',
+          locationId: 'loc-2',
+          zReportNumber: 13,
+          saleCount: 2,
+          totalNet: 500,
+          totalVat: 105,
+          total: 605,
+          cashTotal: 100,
+          cardTotal: 505,
+          tipTotal: 0,
+          discountTotal: 10,
+          cancelledCount: 0,
+          cancelledTotal: 0,
+          cashDifference: 5,
+        },
+      ],
+      (locationId) => (locationId === 'loc-1' ? 'Bistro Praha' : 'Bar zahrada'),
+    )
+
+    expect(rows[0]).toEqual([
+      '2026-07-05',
+      'Bistro Praha',
+      12,
+      3,
+      1000,
+      210,
+      1210,
+      500,
+      710,
+      40,
+      25,
+      1,
+      99,
+      -10,
+      'CZK',
+      'Uzavřeno 2026-07-05T21:00:00Z',
+    ])
+    expect(rows.at(-1)).toEqual([
+      'CELKEM',
+      '',
+      '',
+      5,
+      1500,
+      315,
+      1815,
+      600,
+      1215,
+      40,
+      35,
+      1,
+      99,
+      -5,
+      'CZK',
+      'Součet vybraných Z-reportů',
+    ])
   })
 })
 
