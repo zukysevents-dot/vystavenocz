@@ -121,6 +121,13 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 8. `Export měsíc účetní CSV` stáhne detailní účetní řádky za všechny uzavřené Z-reporty ve vybraném měsíci a pobočce.
 9. `Export měsíc souhrn CSV` stáhne přehled jeden řádek na Z-report plus řádek `CELKEM`, aby účetní rychle zkontrolovala tržby, DPH, hotovost, karty, storna a rozdíl hotovosti za měsíc.
 
+## Integrace a exporty
+
+1. V `Nastavení firmy` otevřete část `Integrace a exporty`.
+2. `Připraveno` znamená, že export už můžete používat ručně, například ISDOC/CSV faktury nebo Z-reporty.
+3. `Manuální krok` u platebního terminálu znamená, že obsluha zatím potvrdí platbu po dokončení na fyzickém terminálu.
+4. `Exportní režim` u POHODA/Flexi znamená předání přes ISDOC/CSV. Přímá synchronizace se doplní jako samostatný konektor.
+
 ## Provozní přehled
 
 1. `Provozní přehled` používá majitel, manažer nebo admin.
