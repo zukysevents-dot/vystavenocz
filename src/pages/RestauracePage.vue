@@ -94,6 +94,8 @@ onMounted(async () => {
     loading.value = false
     return
   }
+  // Průběžně obnovuj otevřený účet (QR doobjednávky). refreshCurrentOrder si sám ohlídá, kdy je bezpečné načíst.
+  accountRefreshTimer = setInterval(() => void refreshCurrentOrder(), 5000)
   try {
     await Promise.all([loadProducts(), refreshOpen()])
     categories.value = await categoriesApi.list()
@@ -112,6 +114,30 @@ async function loadTables() {
 }
 async function refreshOpen() {
   openOrders.value = await ordersApi.listOpen()
+}
+// Host může přes QR doobjednat do otevřeného účtu (backend připíše položky ke stejnému účtu stolu). Aby obsluha
+// platila podle skutečného stavu, průběžně (interval) i před platbou znovu načteme aktuální účet ze serveru.
+async function refreshCurrentOrder() {
+  const order = currentOrder.value
+  if (!order || busy.value) return
+  // Neruš aktivní dialog (částka k platbě / rozdělení účtu) — změna položek pod rukama by mátla.
+  if (paymentOpen.value || splitDialogOpen.value) return
+  try {
+    const fresh = await ordersApi.get(order.id)
+    // Obsluha mohla mezitím přepnout stůl nebo spustit akci — aplikuj jen na stále tentýž, needitovaný účet.
+    if (currentOrder.value?.id !== order.id || busy.value) return
+    if (fresh.status !== 'Open') {
+      // Účet mezitím uzavřel/zrušil jiný terminál nebo host doplatil přes QR — zpět na mapu.
+      toast.info('Účet byl mezitím uzavřen.')
+      await refreshOpen()
+      backToMap()
+      return
+    }
+    // Jen položky/total; lokální slevu/tip (accountDiscountPercent/tipAmount) nepřepisujeme, ať nezrušíme editaci.
+    currentOrder.value = fresh
+  } catch (e) {
+    console.error(e) // tiché selhání — další kolo intervalu to zkusí znovu
+  }
 }
 watch(currentFloorId, () => {
   if (apiMode) loadTables()
@@ -155,6 +181,8 @@ const accountDiscountPercent = ref(0)
 const tipAmount = ref(0)
 const TIP_PRESETS = [10, 15, 20, 25] as const
 let discountTimer: ReturnType<typeof setTimeout> | null = null
+// Poll otevřeného účtu (QR doobjednávky hosta) — běží jen v API módu, spouští se v onMounted.
+let accountRefreshTimer: ReturnType<typeof setInterval> | null = null
 
 // Zruší naplánovaný (ještě neodeslaný) update — volat před opuštěním/zrušením/přesunem účtu,
 // ať po 500 ms nevystřelí PATCH na už neaktuální/zavřený Order.
@@ -164,8 +192,11 @@ function cancelPendingDiscountUpdate() {
     discountTimer = null
   }
 }
-// Odchod z routy (jiná stránka) uprostřed rozpracované změny — timer by běžel dál na pozadí.
-onBeforeUnmount(cancelPendingDiscountUpdate)
+// Odchod z routy (jiná stránka) uprostřed rozpracované změny — timery by běžely dál na pozadí.
+onBeforeUnmount(() => {
+  cancelPendingDiscountUpdate()
+  if (accountRefreshTimer) clearInterval(accountRefreshTimer)
+})
 
 function syncDiscountFromOrder(order: Order) {
   accountDiscountPercent.value = order.discountPercent
@@ -480,7 +511,11 @@ const paymentLabel = computed(() =>
   paymentSplitGroup.value ? paymentSplitGroup.value.label : selectedTable.value?.name,
 )
 
-function openPayment(group: OrderSplitGroup | null = null) {
+async function openPayment(group: OrderSplitGroup | null = null) {
+  // Platba celého účtu: napřed natáhni aktuální stav — host mohl QR doobjednat, obsluha musí platit podle reality.
+  // (Split platba se neobnovuje: rozdělení účtu vychází ze známých položek a refresh by ho rozhodil.)
+  if (group === null) await refreshCurrentOrder()
+  if (!currentOrder.value) return // účet se mezitím zavřel a refresh nás vrátil na mapu
   paymentSplitGroup.value = group
   paymentOpen.value = true
 }
