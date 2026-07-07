@@ -37,10 +37,14 @@ test('nastavení ukáže pravdivý stav integrací a exportů', async ({ page })
   await expect(page.getByText('denní i měsíční účetní CSV')).toBeVisible()
 
   await expect(page.getByText('Platební terminál')).toBeVisible()
-  await expect(page.getByText('Manuální krok')).toBeVisible()
+  await expect(page.getByText('Účtenky a kuchyňské bony')).toBeVisible()
+  await expect(page.getByText('Manuální krok')).toHaveCount(2)
+  await expect(page.getByText('Čeká na konektor')).toBeVisible()
   await expect(page.getByText('POHODA / Flexi')).toBeVisible()
   await expect(page.getByText('Exportní režim')).toBeVisible()
   await expect(page.getByText('přímá synchronizace zatím neběží')).toBeVisible()
+  await expect(page.getByText('Partnerské API')).toBeVisible()
+  await expect(page.getByText('Plánováno')).toBeVisible()
 })
 
 test('veřejný slug se normalizuje pro online objednávky a QR stoly', async ({ page }) => {
