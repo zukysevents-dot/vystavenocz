@@ -8,7 +8,8 @@ import type { PagedResult } from '@/composables/useApi'
  *
  * `getDayClose` vrátí stav dne (Open/Closed), `closeDay` den uzavře a vrátí Z-report.
  * Chyby z API (ApiError) jsou přebaleny na `DayCloseError` se srozumitelnou hláškou dle
- * statusu (409 už zavřený, 422 neplatný den/pobočka, 403 cizí pobočka), ať je UI umí ukázat.
+ * statusu (409 už zavřený / otevřené účty, 422 neplatný den/pobočka, 403 cizí pobočka),
+ * ať je UI umí ukázat.
  */
 
 /** Tělo POST /day-close. Hotovostní pole jsou volitelná (uzávěrka hotovosti nemusí proběhnout). */
@@ -44,7 +45,7 @@ function toDayCloseError(e: unknown): DayCloseError {
   if (e instanceof ApiError) {
     switch (e.status) {
       case 409:
-        return new DayCloseError(409, 'Den je už uzavřený.')
+        return new DayCloseError(409, e.message || 'Den je už uzavřený nebo má otevřené účty.')
       case 422:
         return new DayCloseError(422, 'Den nelze uzavřít — zkontrolujte datum a pobočku.')
       case 403:

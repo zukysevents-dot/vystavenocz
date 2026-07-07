@@ -87,7 +87,7 @@ Must support a real service day:
 - kitchen/bar tickets by category or station (foundation: `Kuchyně` KDS groups sent order items into station tickets, filters Kitchen/Bar, supports print, preparation timer/SLA colors, public pickup/delivery labels, QR table order table names, the Sent → Preparing → Ready → Served workflow, and a read-only Served history from backend PR #172)
 - receipt creation with VAT breakdown and payment history
 - shift opening and closing with cash balance, card summary, storno summary, and user ownership
-- day close with Z-report, receipts, sales, payment methods, VAT, storno, discounts, and sold products
+- day close with Z-report, receipts, sales, payment methods, VAT, storno, discounts, sold products, and a guard that blocks closing while gastro accounts are still open
 - basic stock item linking so selected sales create stock movements
 - role restrictions for dangerous actions
 - audit log for storno, discounts, price changes, day close, and cash corrections (foundation: backend PR #169 writes append-only audit rows for sale storno, open gastro order discount/tip changes, and day close/Z-report; backend PR #170 adds product sale/purchase price and VAT changes; backend PR #173 adds action filtering; `/app/audit` shows the paged, filterable audit log to Owner/Admin; cash pay-ins/pay-outs/drop/difference are covered through the audited day-close cash fields)

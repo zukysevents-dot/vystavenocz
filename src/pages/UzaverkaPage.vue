@@ -154,7 +154,7 @@ async function confirmClose(): Promise<void> {
   } catch (e) {
     if (e instanceof DayCloseError) {
       toast.error(e.message)
-      // 409 = mezitím zavřel někdo jiný → přenačti stav, ať se ukáže Z-report.
+      // 409 = den mezitím zavřený nebo ho blokují otevřené účty → přenačti stav.
       if (e.status === 409) await loadDay()
     } else {
       toast.error('Zavření dne se nezdařilo.')

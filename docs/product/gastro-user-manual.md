@@ -107,8 +107,9 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 1. Na konci dne otevřete `Uzávěrka`.
 2. Zkontrolujte tržby, hotovost, karty, spropitné, storna, slevy, DPH a prodané položky.
 3. Zadejte hotovostní počátek, vklady, výběry, napočítanou hotovost a odvod.
-4. Zavřete den. Z-report se tím uzamkne a čísla se dál nemění.
-5. Exporty slouží pro účetní a kontrolu.
+4. Před zavřením dne doplaťte nebo zrušte všechny otevřené účty na provozovně. Pokud nějaký účet zůstává otevřený, systém zavření dne zablokuje.
+5. Zavřete den. Z-report se tím uzamkne a čísla se dál nemění.
+6. Exporty slouží pro účetní a kontrolu.
 
 ## Provozní přehled
 
