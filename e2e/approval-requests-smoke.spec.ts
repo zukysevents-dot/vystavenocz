@@ -204,6 +204,11 @@ test('pokladní storno nad limitem ukáže čekání na schválení managerem', 
 
   await expect(page.getByText('Storno čeká na schválení managerem.')).toBeVisible()
   expect(stornoRequested).toBe(true)
+
+  // 202 = akce se NEprovedla hned: prodej zůstává aktivní (dál má tlačítko Storno,
+  // není označen štítkem „Stornováno") — čeká na schválení managerem.
+  await expect(page.getByRole('button', { name: 'Storno', exact: true })).toBeVisible()
+  await expect(page.getByText('Stornováno')).toHaveCount(0)
 })
 
 test('skladový výdej nad limitem ukáže čekání na schválení managerem', async ({ page }) => {
