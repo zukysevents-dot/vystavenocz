@@ -14,6 +14,7 @@ const menu = {
       priceWithVat: 59,
       vatRate: 21,
       available: true,
+      allergens: [1, 7],
       modifierGroups: [],
     },
   ],
@@ -54,6 +55,7 @@ test('QR objednávka ke stolu odešle tableId a nepoužije rozvozový tok', asyn
 
   await expect(page.getByRole('heading', { name: 'Objednávka ke stolu' })).toBeVisible()
   await expect(page.getByText('Stůl 1')).toBeVisible()
+  await expect(page.getByText('Alergeny: 1 Lepek, 7 Mléko')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Výdej' })).toBeHidden()
   await expect(page.getByRole('button', { name: 'Rozvoz' })).toBeHidden()
   await expect(page.getByLabel('Adresa rozvozu')).toBeHidden()

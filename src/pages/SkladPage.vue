@@ -14,6 +14,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import ProductRecipeDialog from '@/components/app/ProductRecipeDialog.vue'
@@ -40,6 +41,7 @@ import { useProducts, type ProductInput } from '@/composables/useProducts'
 import { useCategories } from '@/composables/useCategories'
 import { isApiMode } from '@/lib/http'
 import { formatCZK } from '@/lib/invoice'
+import { ALLERGENS, formatAllergenCodes, normalizeAllergens } from '@/lib/allergens'
 import { toast } from '@/components/ui/sonner'
 import type { Category, Product } from '@/lib/types'
 
@@ -76,6 +78,7 @@ type ProductForm = {
   sku: string
   ean: string
   categoryId: string
+  allergens: number[]
 }
 
 const emptyForm: ProductForm = {
@@ -87,6 +90,7 @@ const emptyForm: ProductForm = {
   sku: '',
   ean: '',
   categoryId: '',
+  allergens: [],
 }
 const form = reactive<ProductForm>({ ...emptyForm })
 
@@ -131,6 +135,13 @@ function openModifiers(p: Product) {
   modifiersDialogOpen.value = true
 }
 
+function toggleAllergen(code: number, checked: boolean | 'indeterminate' | undefined): void {
+  const selected = new Set(form.allergens)
+  if (checked === true) selected.add(code)
+  else selected.delete(code)
+  form.allergens = normalizeAllergens([...selected])
+}
+
 function optionalNumber(value: number | ''): number | null {
   if (value === '') return null
   return Number(value) || 0
@@ -149,6 +160,7 @@ watch(dialogOpen, (open) => {
         sku: p.sku,
         ean: p.ean ?? '',
         categoryId: p.categoryId ?? '',
+        allergens: normalizeAllergens(p.allergens),
       })
     } else {
       Object.assign(form, { ...emptyForm })
@@ -175,6 +187,7 @@ async function onSubmit() {
     purchasePrice: optionalNumber(form.purchasePrice),
     minQuantity: Number(form.minQuantity) || 0,
     categoryId: form.categoryId || null,
+    allergens: normalizeAllergens(form.allergens),
   }
   try {
     if (editing.value) {
@@ -269,7 +282,12 @@ async function onDelete() {
             </div>
             <div>
               <div class="font-semibold">{{ p.name }}</div>
-              <div class="text-sm text-muted-foreground">{{ p.sku }} • DPH {{ p.vatRate }} %</div>
+              <div class="text-sm text-muted-foreground">
+                {{ p.sku }} • DPH {{ p.vatRate }} %
+                <span v-if="p.allergens?.length">
+                  • Alergeny {{ formatAllergenCodes(p.allergens) }}
+                </span>
+              </div>
             </div>
           </div>
           <div class="flex items-center gap-3">
@@ -381,6 +399,29 @@ async function onDelete() {
               <option value="">— bez kategorie —</option>
               <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
             </select>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <Label>Alergeny</Label>
+              <p class="mt-1 text-xs text-muted-foreground">
+                Číselník 1–14 podle běžného značení v restauracích. Zobrazí se i v QR menu.
+              </p>
+            </div>
+            <div class="grid gap-2 sm:grid-cols-2">
+              <label
+                v-for="allergen in ALLERGENS"
+                :key="allergen.code"
+                class="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm"
+              >
+                <Checkbox
+                  :model-value="form.allergens.includes(allergen.code)"
+                  @update:model-value="(checked) => toggleAllergen(allergen.code, checked)"
+                />
+                <span class="tabular-nums">{{ allergen.code }}</span>
+                <span class="min-w-0 truncate">{{ allergen.label }}</span>
+              </label>
+            </div>
           </div>
 
           <DialogFooter>

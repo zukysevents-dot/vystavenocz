@@ -54,8 +54,9 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 5. Objednávka bez stolu se po odeslání objeví rovnou v `Kuchyně` jako veřejný bon se jménem zákazníka.
 6. QR objednávku ke stolu vytvoříte v `Mapa stolů`: vyberte stůl, otevřete `QR objednávka` a použijte QR kód nebo odkaz.
 7. Host po načtení QR kódu objednává ke konkrétnímu stolu; nevybírá výdej ani rozvoz. Na mobilu má po přidání položek dole rychlý přístup ke košíku a celkové částce.
-8. Položky se připíšou do otevřeného účtu stolu; pokud účet ještě neexistuje, systém ho založí.
-9. Obsluha QR objednávku zaplatí běžným způsobem v `Restaurace`, stejně jako ostatní položky na stole.
+8. U položek host vidí nastavené alergeny podle číselníku 1–14.
+9. Položky se připíšou do otevřeného účtu stolu; pokud účet ještě neexistuje, systém ho založí.
+10. Obsluha QR objednávku zaplatí běžným způsobem v `Restaurace`, stejně jako ostatní položky na stole.
 
 ## Naskladnění
 
@@ -66,6 +67,13 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 5. Zadejte množství a volitelně nákupní cenu.
 6. Uložte příjemku. Sklad se mění přes příjemku, ne přes anonymní ruční příjem.
 7. Blok `K doobjednání` doporučuje množství podle minim, skutečné spotřeby a receptur (pro vybranou pobočku).
+
+## Alergeny v menu
+
+1. Otevřete `Sklad` a upravte produkt.
+2. V části `Alergeny` zaškrtněte číselné alergeny 1–14, které se produktu týkají.
+3. Uložte produkt. Alergeny jsou informační údaj pro hosta; nemění cenu, sklad ani recepturu.
+4. Host je uvidí ve veřejném/QR menu u položky. Pokud se receptura změní, zkontrolujte i alergeny produktu.
 
 ## Skupiny modifikátorů
 
