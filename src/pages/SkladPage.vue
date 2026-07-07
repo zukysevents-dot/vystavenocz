@@ -11,11 +11,13 @@ import {
   Tags,
   Upload,
   ClipboardList,
+  SlidersHorizontal,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import ProductRecipeDialog from '@/components/app/ProductRecipeDialog.vue'
+import ProductModifiersDialog from '@/components/app/ProductModifiersDialog.vue'
 import {
   Dialog,
   DialogContent,
@@ -55,6 +57,8 @@ const deleteOpen = ref(false)
 const submitting = ref(false)
 const recipeProduct = ref<Product | null>(null)
 const recipeDialogOpen = ref(false)
+const modifiersProduct = ref<Product | null>(null)
+const modifiersDialogOpen = ref(false)
 
 function askDelete(id: string) {
   deleteId.value = id
@@ -120,6 +124,11 @@ function openEdit(p: Product) {
 function openRecipe(p: Product) {
   recipeProduct.value = p
   recipeDialogOpen.value = true
+}
+
+function openModifiers(p: Product) {
+  modifiersProduct.value = p
+  modifiersDialogOpen.value = true
 }
 
 function optionalNumber(value: number | ''): number | null {
@@ -269,6 +278,9 @@ async function onDelete() {
               <Button variant="ghost" size="icon" title="Receptura" @click="openRecipe(p)">
                 <ClipboardList class="h-4 w-4" />
               </Button>
+              <Button variant="ghost" size="icon" title="Modifikátory" @click="openModifiers(p)">
+                <SlidersHorizontal class="h-4 w-4" />
+              </Button>
               <Button variant="ghost" size="icon" title="Upravit" @click="openEdit(p)">
                 <Pencil class="h-4 w-4" />
               </Button>
@@ -408,5 +420,6 @@ async function onDelete() {
       :product="recipeProduct"
       :products="products"
     />
+    <ProductModifiersDialog v-model:open="modifiersDialogOpen" :product="modifiersProduct" />
   </div>
 </template>

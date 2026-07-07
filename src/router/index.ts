@@ -282,6 +282,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Kategorie', layout: 'app', requiresAuth: true, requiresModule: 'core' },
   },
   {
+    path: '/app/modifikatory',
+    name: 'app-modifikatory',
+    component: () => import('@/pages/ModifikatoryPage.vue'),
+    meta: { title: 'Modifikátory', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
+  },
+  {
     path: '/app/zasoby',
     name: 'app-zasoby',
     component: () => import('@/pages/ZasobyPage.vue'),
