@@ -13,6 +13,7 @@ import {
   Lock,
   Download,
   CalendarDays,
+  ClipboardCheck,
 } from 'lucide-vue-next'
 import { formatCZK } from '@/lib/invoice'
 import { isApiMode } from '@/lib/http'
@@ -21,8 +22,11 @@ import { useDayClose, DayCloseError } from '@/composables/useDayClose'
 import { useLocations } from '@/composables/useLocations'
 import { downloadCsv } from '@/lib/csv-export'
 import {
+  buildShiftHandoverRowsFromDayClose,
+  buildShiftHandoverRowsFromSummary,
   downloadDayCloseAccountingCsv,
   downloadDayCloseAccountingCsvForReports,
+  downloadShiftHandoverCsv,
 } from '@/lib/day-close-export'
 import { toast } from '@/components/ui/sonner'
 import LoadError from '@/components/app/LoadError.vue'
@@ -72,6 +76,13 @@ const dayState = ref<DayCloseResponse | null>(null)
 const dayLoading = ref(false)
 const dayError = ref(false)
 const monthExporting = ref(false)
+const handoverChecklist = [
+  'Otevřené účty doplaceny nebo zrušeny',
+  'Hotovost přepočítána',
+  'Platební terminál zkontrolován',
+  'Storna a slevy zkontrolovány',
+  'Skladové výdeje a inventury zapsány',
+]
 
 const isClosed = computed(() => dayState.value?.status === 'Closed')
 const zReport = computed(() => (isClosed.value ? dayState.value : null))
@@ -214,6 +225,23 @@ function exportAccountingCsv(): void {
   const z = zReport.value
   if (!z) return
   downloadDayCloseAccountingCsv(z, locationName(z.locationId))
+}
+
+function exportOpenShiftHandover(): void {
+  if (!selectedLocationId.value) return
+  const loc = locationName(selectedLocationId.value)
+  downloadShiftHandoverCsv(
+    selectedDate.value,
+    loc,
+    buildShiftHandoverRowsFromSummary(selectedDate.value, loc, summary.value),
+  )
+}
+
+function exportClosedShiftHandover(): void {
+  const z = zReport.value
+  if (!z) return
+  const loc = locationName(z.locationId)
+  downloadShiftHandoverCsv(z.date, loc, buildShiftHandoverRowsFromDayClose(z, loc))
 }
 
 function locationName(locationId: string): string {
@@ -365,6 +393,49 @@ watch([selectedDate, selectedLocationId], () => {
           <Button variant="outline" @click="exportAccountingCsv">
             <Download class="h-4 w-4" /> Export účetní CSV
           </Button>
+        </div>
+      </div>
+
+      <div class="mt-6 rounded-xl border border-border bg-card p-4">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div class="flex items-start gap-2">
+            <ClipboardCheck class="mt-0.5 h-5 w-5 text-primary" />
+            <div>
+              <h2 class="text-lg font-semibold">Provozní předávka</h2>
+              <p class="text-sm text-muted-foreground">
+                Podklad pro předání směny k uzavřenému Z-reportu.
+              </p>
+            </div>
+          </div>
+          <Button variant="outline" @click="exportClosedShiftHandover">
+            <Download class="h-4 w-4" /> Export předávky CSV
+          </Button>
+        </div>
+        <div class="mt-4 grid gap-3 sm:grid-cols-3">
+          <div class="rounded-lg border border-border bg-muted/20 p-3">
+            <div class="text-xs text-muted-foreground">Hotovost</div>
+            <div class="mt-1 text-lg font-semibold">{{ formatCZK(zReport.cashTotal ?? 0) }}</div>
+          </div>
+          <div class="rounded-lg border border-border bg-muted/20 p-3">
+            <div class="text-xs text-muted-foreground">Karta</div>
+            <div class="mt-1 text-lg font-semibold">{{ formatCZK(zReport.cardTotal ?? 0) }}</div>
+          </div>
+          <div class="rounded-lg border border-border bg-muted/20 p-3">
+            <div class="text-xs text-muted-foreground">Storna</div>
+            <div class="mt-1 text-lg font-semibold">
+              {{ zReport.cancelledCount ?? 0 }} / {{ formatCZK(zReport.cancelledTotal ?? 0) }}
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 grid gap-2 sm:grid-cols-2">
+          <div
+            v-for="item in handoverChecklist"
+            :key="item"
+            class="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          >
+            <span class="h-3 w-3 rounded-sm border border-muted-foreground/50" />
+            <span>{{ item }}</span>
+          </div>
         </div>
       </div>
 
@@ -609,6 +680,52 @@ watch([selectedDate, selectedLocationId], () => {
             <Lock v-else class="h-4 w-4" />
             Zavřít den
           </Button>
+        </div>
+
+        <div
+          v-if="apiMode && selectedLocationId"
+          class="mt-6 rounded-xl border border-border bg-card p-4"
+        >
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="flex items-start gap-2">
+              <ClipboardCheck class="mt-0.5 h-5 w-5 text-primary" />
+              <div>
+                <h2 class="text-lg font-semibold">Provozní předávka</h2>
+                <p class="text-sm text-muted-foreground">
+                  Průběžný podklad pro předání směny před zavřením dne.
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" @click="exportOpenShiftHandover">
+              <Download class="h-4 w-4" /> Export předávky CSV
+            </Button>
+          </div>
+          <div class="mt-4 grid gap-3 sm:grid-cols-3">
+            <div class="rounded-lg border border-border bg-muted/20 p-3">
+              <div class="text-xs text-muted-foreground">Hotovost</div>
+              <div class="mt-1 text-lg font-semibold">{{ formatCZK(summary.cashTotal) }}</div>
+            </div>
+            <div class="rounded-lg border border-border bg-muted/20 p-3">
+              <div class="text-xs text-muted-foreground">Karta</div>
+              <div class="mt-1 text-lg font-semibold">{{ formatCZK(summary.cardTotal) }}</div>
+            </div>
+            <div class="rounded-lg border border-border bg-muted/20 p-3">
+              <div class="text-xs text-muted-foreground">Storna</div>
+              <div class="mt-1 text-lg font-semibold">
+                {{ summary.cancelledCount }} / {{ formatCZK(summary.cancelledTotal) }}
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 grid gap-2 sm:grid-cols-2">
+            <div
+              v-for="item in handoverChecklist"
+              :key="item"
+              class="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            >
+              <span class="h-3 w-3 rounded-sm border border-muted-foreground/50" />
+              <span>{{ item }}</span>
+            </div>
+          </div>
         </div>
 
         <!-- KPI dlaždice (živě) -->
