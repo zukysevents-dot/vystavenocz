@@ -173,6 +173,29 @@ export interface ProductRecipeInput {
   wastePercent?: number
 }
 
+export type ModifierSelectionType = 'Single' | 'Multi'
+
+export interface ModifierOption {
+  id: string
+  name: string
+  priceDelta: number
+  sortOrder: number
+}
+
+export interface ModifierGroup {
+  id: string
+  name: string
+  selectionType: ModifierSelectionType
+  isRequired: boolean
+  maxSelect: number | null
+  sortOrder: number
+  options: ModifierOption[]
+}
+
+export interface ProductModifierGroup extends ModifierGroup {
+  productId?: string
+}
+
 export type JobStatus = 'quote' | 'in_progress' | 'done' | 'invoiced'
 
 // Zakázka / výjezd (modul Zakázky) — materiál + hodiny → ziskovost.

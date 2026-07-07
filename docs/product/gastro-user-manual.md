@@ -60,6 +60,12 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 6. Uložte příjemku. Sklad se mění přes příjemku, ne přes anonymní ruční příjem.
 7. Blok `K doobjednání` doporučuje množství podle minim, skutečné spotřeby a receptur (pro vybranou pobočku).
 
+## Skupiny modifikátorů
+
+1. V menu otevřete `Modifikátory` a vytvořte `Nová skupina`: zadejte název, typ `Jedna volba` nebo `Více voleb`, jestli je volba povinná, a jednotlivé volby s případnými příplatky.
+2. Otevřete `Sklad`, u produktu klikněte na ikonu `Modifikátory`, zaškrtněte skupiny, které se mají u produktu nabízet, a uložte.
+3. Tyto volby se pak nabídnou obsluze při účtování ve fázi 6. Povinnou volbu nepůjde přeskočit.
+
 ## Import katalogu z jiné pokladny
 
 1. Otevřete `Import dat` a zvolte `Produkty`, pokud systém typ souboru nerozpozná sám.
