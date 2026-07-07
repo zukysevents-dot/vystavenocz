@@ -92,6 +92,14 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 4. V náhledu vyřešte duplicity. Produkt se stejným SKU, EAN nebo názvem můžete přeskočit nebo přepsat.
 5. Import katalogu nepřenáší historické účtenky ani mapu stolů. Slouží k rychlému založení sortimentu bez ručního přepisování.
 
+## Import historických tržeb
+
+1. Otevřete `Import dat`, zvolte `Tržby` a vyberte zdroj exportu.
+2. Nahrajte CSV nebo XLSX se starými účtenkami. Jeden doklad může být ve více řádcích podle položek; systém je seskupí podle čísla účtenky.
+3. Zkontrolujte náhled účtenek, počet položek, datum a celkovou částku.
+4. Nejprve použijte `Zkontrolovat bez uložení`. Ostrý import spusťte až po kontrole chyb.
+5. Historické tržby slouží pro analytiku po přechodu z jiné pokladny. Neodečítají sklad a zpětně nemění uzavřené Z-reporty.
+
 ## Zásoby, výdeje a přesuny
 
 1. `Zásoby` ukazují aktuální stav produktů.
