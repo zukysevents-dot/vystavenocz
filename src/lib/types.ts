@@ -519,6 +519,7 @@ export interface PublicMenuProduct {
   priceWithVat: number
   vatRate: number
   available: boolean
+  modifierGroups: ModifierGroup[]
 }
 
 export interface PublicMenuResponse {
@@ -529,6 +530,7 @@ export interface PublicMenuResponse {
 export interface PublicOrderItemInput {
   productId: string
   quantity: number
+  modifierOptionIds?: string[]
 }
 
 export interface PublicOrderRequest {

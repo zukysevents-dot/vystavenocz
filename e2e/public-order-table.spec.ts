@@ -14,6 +14,7 @@ const menu = {
       priceWithVat: 59,
       vatRate: 21,
       available: true,
+      modifierGroups: [],
     },
   ],
 }
@@ -75,6 +76,85 @@ test('QR objednávka ke stolu odešle tableId a nepoužije rozvozový tok', asyn
     customerName: 'Host u stolu',
     customerPhone: '777123456',
     note: 'bez cukru',
+    fulfillment: 'pickup',
+    address: null,
+    tableId: 'table-1',
+  })
+})
+
+test('QR objednávka ke stolu vyžádá povinné modifikátory a odešle volby', async ({ page }) => {
+  let postedOrder: unknown = null
+  const menuWithModifiers = {
+    categories: [{ id: 'cat-burger', name: 'Burgery', sortOrder: 0 }],
+    products: [
+      {
+        id: 'prod-burger',
+        name: 'Burger',
+        categoryId: 'cat-burger',
+        priceWithVat: 189,
+        vatRate: 21,
+        available: true,
+        modifierGroups: [
+          {
+            id: 'group-size',
+            name: 'Velikost',
+            selectionType: 'Single',
+            isRequired: true,
+            maxSelect: null,
+            sortOrder: 0,
+            options: [
+              { id: 'opt-small', name: 'Malý', priceDelta: 0, sortOrder: 0 },
+              { id: 'opt-large', name: 'Velký', priceDelta: 30, sortOrder: 1 },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await seedApiMode(page)
+  await page.route(API, async (route: Route) => {
+    const request = route.request()
+    const url = new URL(request.url())
+    const path = url.pathname.replace('/api/v1', '')
+
+    if (request.method() === 'GET' && path === '/public/bistro/menu') {
+      return route.fulfill({ json: menuWithModifiers })
+    }
+    if (request.method() === 'POST' && path === '/public/bistro/orders') {
+      postedOrder = request.postDataJSON()
+      return route.fulfill({
+        status: 201,
+        json: { orderId: 'order-qr-2', total: 219, currency: 'CZK' },
+      })
+    }
+
+    return route.fulfill({ status: 404, json: { title: `Unhandled ${request.method()} ${path}` } })
+  })
+  await dismissCookies(page)
+
+  await page.goto('/objednavka/bistro?table=table-1&name=St%C5%AFl%201')
+  await page.getByRole('button', { name: 'Vybrat' }).click()
+  await expect(page.getByRole('dialog', { name: 'Vybrat modifikátory' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Přidat do košíku' })).toBeDisabled()
+
+  await page.getByRole('button', { name: /Velký/ }).click()
+  await page.getByRole('button', { name: 'Přidat do košíku' }).click()
+  await expect(page.getByText('1 položka v košíku')).toBeVisible()
+  await page.getByRole('button', { name: /^Košík$/ }).click()
+  await expect(page.getByText('Velký')).toBeVisible()
+  await expect(page.getByText('1 × 219,00 Kč')).toBeVisible()
+
+  await page.getByLabel('Jméno').fill('Host u stolu')
+  await page.getByRole('button', { name: 'Odeslat objednávku' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Objednávka přijata' })).toBeVisible()
+  expect(postedOrder).toEqual({
+    items: [{ productId: 'prod-burger', quantity: 1, modifierOptionIds: ['opt-large'] }],
+    customerName: 'Host u stolu',
+    customerPhone: null,
+    note: null,
     fulfillment: 'pickup',
     address: null,
     tableId: 'table-1',

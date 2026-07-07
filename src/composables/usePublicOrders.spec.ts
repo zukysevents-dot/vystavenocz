@@ -27,7 +27,7 @@ describe('usePublicOrders', () => {
     } as never)
 
     await usePublicOrders().order('bistro', {
-      items: [{ productId: 'prod-1', quantity: 2 }],
+      items: [{ productId: 'prod-1', quantity: 2, modifierOptionIds: ['opt-large'] }],
       customerName: 'Jana',
       customerPhone: null,
       note: null,
@@ -36,7 +36,7 @@ describe('usePublicOrders', () => {
     })
 
     expect(http.postPublic).toHaveBeenCalledWith('/public/bistro/orders', {
-      items: [{ productId: 'prod-1', quantity: 2 }],
+      items: [{ productId: 'prod-1', quantity: 2, modifierOptionIds: ['opt-large'] }],
       customerName: 'Jana',
       customerPhone: null,
       note: null,
