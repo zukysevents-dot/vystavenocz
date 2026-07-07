@@ -27,7 +27,8 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 5. Na mobilu zůstává dole rychlá lišta s aktuálním stolem, počtem položek, celkem a hlavními akcemi.
 6. Placení spustíte tlačítkem `Zaplatit` (celý účet) nebo ikonou bankovky u osoby v rozdělení účtu. Hotovost počítá vrácení, karta jde přes terminálový krok.
 7. Když host mezitím doobjedná přes QR kód ke stolu, otevřený účet se sám průběžně obnovuje a před stiskem `Zaplatit` se ještě jednou načte aktuální stav — vidíte tedy správný počet položek i částku, ne zastaralou.
-8. Po zaplacení zůstane otevřený jen nezaplacený zbytek účtu.
+8. Pokud účet mezitím uzavřel nebo zrušil jiný terminál (nebo ho host doplatil přes QR) a vy zrovna přidáváte položku nebo posíláte do kuchyně, systém vás na to upozorní hláškou a vrátí vás na mapu stolů — nepracujete tak omylem se zavřeným účtem.
+9. Po zaplacení zůstane otevřený jen nezaplacený zbytek účtu.
 
 ## Kuchyně a bar
 

@@ -262,12 +262,24 @@ function setTipPercent(pct: number) {
   tipAmount.value = round2((totals.value.subtotalGross - totals.value.discountAmount) * (pct / 100))
 }
 
+// Účet mezitím uzavřel/zrušil jiný terminál nebo host doplatil přes QR (404/409). Sjednocené zpracování:
+// hláška, obnova obsazenosti a návrat na mapu. Vrací true, když šlo o tenhle případ (volající pak přeskočí
+// generickou chybu). Používá se u akcí, kde 409 znamená JEN „účet už není otevřený" (add položky, odeslání do kuchyně).
+async function handleAccountClosedElsewhere(e: unknown): Promise<boolean> {
+  if (!(e instanceof ApiError) || (e.status !== 404 && e.status !== 409)) return false
+  toast.error('Účet mezitím zaplatil nebo zrušil jiný terminál.')
+  await refreshOpen()
+  backToMap()
+  return true
+}
+
 async function addProduct(productId: string) {
   if (!currentOrder.value || busy.value) return
   busy.value = true
   try {
     currentOrder.value = await ordersApi.addItem(currentOrder.value.id, productId, 1)
   } catch (e) {
+    if (await handleAccountClosedElsewhere(e)) return
     toast.error('Položku se nepodařilo přidat.')
     console.error(e)
   } finally {
@@ -627,6 +639,7 @@ async function sendToKitchen() {
       parts.length ? `Objednávka odeslána (${parts.join(', ')}).` : 'Objednávka odeslána.',
     )
   } catch (e) {
+    if (await handleAccountClosedElsewhere(e)) return
     toast.error('Odeslání objednávky selhalo.')
     console.error(e)
   } finally {
