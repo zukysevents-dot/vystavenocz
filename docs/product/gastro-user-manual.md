@@ -64,7 +64,9 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 
 1. V menu otevřete `Modifikátory` a vytvořte `Nová skupina`: zadejte název, typ `Jedna volba` nebo `Více voleb`, jestli je volba povinná, a jednotlivé volby s případnými příplatky.
 2. Otevřete `Sklad`, u produktu klikněte na ikonu `Modifikátory`, zaškrtněte skupiny, které se mají u produktu nabízet, a uložte.
-3. Tyto volby se pak nabídnou obsluze při účtování ve fázi 6. Povinnou volbu nepůjde přeskočit.
+3. V `Restaurace` se při klepnutí na produkt s modifikátory otevře výběr voleb. Povinnou skupinu nejde přeskočit; u `Jedna volba` vyberte jednu možnost, u `Více voleb` lze vybrat víc položek podle nastaveného maxima.
+4. Vybrané modifikátory se ukážou pod položkou na účtu, na kuchyňském/baru bonu a na účtence. Příplatek je už započtený v ceně položky, nepřičítá se ručně podruhé.
+5. QR objednávky od hostů zatím používají základní položky bez výběru modifikátorů; modifikátory vybírá obsluha v `Restaurace`.
 
 ## Import katalogu z jiné pokladny
 

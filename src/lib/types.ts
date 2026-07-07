@@ -261,6 +261,12 @@ export interface Location {
 export type PaymentMethod = 'Cash' | 'Card'
 export type SaleStatus = 'Completed' | 'Cancelled'
 
+export interface ItemModifierLine {
+  groupName: string
+  name: string
+  priceDelta: number
+}
+
 export interface SaleItemLine {
   id: string
   description: string | null
@@ -272,6 +278,7 @@ export interface SaleItemLine {
   lineNet: number
   lineVat: number
   lineTotal: number
+  modifiers?: ItemModifierLine[]
 }
 
 export interface Sale {
@@ -450,6 +457,7 @@ export interface OrderItemLine {
   kitchenSection: CategoryKitchenSection
   kitchenStatus: KitchenStatus
   lineTotal: number
+  modifiers?: ItemModifierLine[]
 }
 
 // Split účtu — čistě zobrazovací/organizační rozpočet nad Order, NENÍ platební transakce.
@@ -491,6 +499,7 @@ export interface KitchenQueueItem {
   quantity: number
   course: string | null
   note: string | null
+  modifiers?: Pick<ItemModifierLine, 'groupName' | 'name'>[]
   kitchenSection: CategoryKitchenSection
   kitchenStatus: KitchenStatus
   sentToKitchenAt: string | null

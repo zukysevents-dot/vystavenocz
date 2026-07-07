@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/dialog'
 import PaymentDialog from '@/components/PaymentDialog.vue'
 import ReceiptDialog from '@/components/ReceiptDialog.vue'
+import ModifierSelectDialog from '@/components/app/ModifierSelectDialog.vue'
 import { buildReceipt, type ReceiptInfo } from '@/lib/receipt'
 import { useCompanyStore } from '@/stores/company'
 import { useFloors } from '@/composables/useFloors'
@@ -36,6 +37,7 @@ import { useTables } from '@/composables/useTables'
 import { useProducts } from '@/composables/useProducts'
 import { useCategories } from '@/composables/useCategories'
 import { useOrders } from '@/composables/useOrders'
+import { useModifierGroups } from '@/composables/useModifierGroups'
 import { ApiError, isApiMode } from '@/lib/http'
 import { formatCZK, round2 } from '@/lib/invoice'
 import { calcPosTotals, calcSplitGroupPayment, clampAmount, clampPercent } from '@/lib/posCalc'
@@ -48,12 +50,15 @@ import type {
   OrderItemLine,
   OrderSplitGroup,
   PaymentMethod,
+  Product,
+  ProductModifierGroup,
 } from '@/lib/types'
 
 const floorsApi = useFloors()
 const tablesApi = useTables()
 const ordersApi = useOrders()
 const categoriesApi = useCategories()
+const modifiersApi = useModifierGroups()
 const { products, load: loadProducts } = useProducts()
 const companyStore = useCompanyStore()
 const apiMode = isApiMode()
@@ -61,6 +66,11 @@ const apiMode = isApiMode()
 // Účtenka po zaplacení (náhled + tisk/PDF).
 const receiptOpen = ref(false)
 const receiptData = ref<ReceiptInfo | null>(null)
+
+const modifierDialogOpen = ref(false)
+const modifierProduct = ref<Product | null>(null)
+const modifierGroups = ref<ProductModifierGroup[]>([])
+const productModifierCache = new Map<string, ProductModifierGroup[]>()
 
 const categories = ref<Category[]>([])
 const selectedCat = ref('')
@@ -121,7 +131,7 @@ async function refreshCurrentOrder() {
   const order = currentOrder.value
   if (!order || busy.value) return
   // Neruš aktivní dialog (částka k platbě / rozdělení účtu) — změna položek pod rukama by mátla.
-  if (paymentOpen.value || splitDialogOpen.value) return
+  if (paymentOpen.value || splitDialogOpen.value || modifierDialogOpen.value) return
   try {
     const fresh = await ordersApi.get(order.id)
     // Obsluha mohla mezitím přepnout stůl nebo spustit akci — aplikuj jen na stále tentýž, needitovaný účet.
@@ -273,11 +283,48 @@ async function handleAccountClosedElsewhere(e: unknown): Promise<boolean> {
   return true
 }
 
-async function addProduct(productId: string) {
+async function productModifiers(productId: string): Promise<ProductModifierGroup[]> {
+  const cached = productModifierCache.get(productId)
+  if (cached) return cached
+  const groups = await modifiersApi.listForProduct(productId)
+  productModifierCache.set(productId, groups)
+  return groups
+}
+
+async function addProduct(product: Product) {
   if (!currentOrder.value || busy.value) return
   busy.value = true
   try {
-    currentOrder.value = await ordersApi.addItem(currentOrder.value.id, productId, 1)
+    const groups = await productModifiers(product.id)
+    if (groups.length) {
+      modifierProduct.value = product
+      modifierGroups.value = groups
+      modifierDialogOpen.value = true
+      return
+    }
+    currentOrder.value = await ordersApi.addItem(currentOrder.value.id, product.id, 1)
+  } catch (e) {
+    if (await handleAccountClosedElsewhere(e)) return
+    toast.error('Položku se nepodařilo přidat.')
+    console.error(e)
+  } finally {
+    busy.value = false
+  }
+}
+
+async function addProductWithModifiers(modifierOptionIds: string[]) {
+  if (!currentOrder.value || !modifierProduct.value || busy.value) return
+  busy.value = true
+  try {
+    currentOrder.value = await ordersApi.addItem(
+      currentOrder.value.id,
+      modifierProduct.value.id,
+      1,
+      {
+        modifierOptionIds,
+      },
+    )
+    modifierDialogOpen.value = false
   } catch (e) {
     if (await handleAccountClosedElsewhere(e)) return
     toast.error('Položku se nepodařilo přidat.')
@@ -436,12 +483,13 @@ function splitPaymentItems(group: OrderSplitGroup) {
 function splitPaymentReceipt(group: OrderSplitGroup) {
   const payment = splitGroupPayment(group)
   if (!payment || !currentOrder.value) return null
-  const nameById = new Map(currentOrder.value.items.map((item) => [item.id, item.name]))
+  const itemById = new Map(currentOrder.value.items.map((item) => [item.id, item]))
   return {
     items: payment.items.map((row) => ({
-      name: nameById.get(row.itemId) ?? '',
+      name: itemById.get(row.itemId)?.name ?? '',
       qty: row.quantity,
       total: row.gross,
+      modifiers: itemById.get(row.itemId)?.modifiers ?? [],
     })),
     discountAmount: payment.discountAmount,
     tipAmount: payment.tipAmount,
@@ -660,7 +708,12 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
     const change = cashReceived != null ? round2(cashReceived - paid.total) : null
     receiptData.value = buildReceipt({
       company: companyStore.company,
-      items: order.items.map((i) => ({ name: i.name, qty: i.quantity, total: i.lineTotal })),
+      items: order.items.map((i) => ({
+        name: i.name,
+        qty: i.quantity,
+        total: i.lineTotal,
+        modifiers: i.modifiers ?? [],
+      })),
       discountPercent: paid.discountPercent,
       discountAmount: discountAmountSnapshot,
       tipAmount: paid.tipAmount,
@@ -893,7 +946,7 @@ const currentItemCount = computed(() =>
                 type="button"
                 :disabled="busy"
                 class="flex min-h-20 flex-col justify-between rounded-xl border border-border bg-background p-3 text-left transition-colors hover:border-primary hover:bg-primary-soft active:scale-[0.98] disabled:opacity-50"
-                @click="addProduct(p.id)"
+                @click="addProduct(p)"
               >
                 <span class="text-sm font-semibold leading-tight">{{ p.name }}</span>
                 <span class="mt-1 text-sm font-bold text-primary tabular-nums">{{
@@ -928,7 +981,20 @@ const currentItemCount = computed(() =>
                     >v kuchyni</span
                   >
                 </div>
-                <div v-if="it.course || it.note" class="mt-1 space-y-0.5">
+                <div v-if="it.modifiers?.length || it.course || it.note" class="mt-1 space-y-0.5">
+                  <div v-if="it.modifiers?.length" class="space-y-0.5">
+                    <div
+                      v-for="(modifier, index) in it.modifiers"
+                      :key="`${it.id}-${modifier.groupName}-${modifier.name}-${index}`"
+                      class="text-xs text-muted-foreground"
+                    >
+                      ↳ {{ modifier.groupName }}: {{ modifier.name }}
+                      <span v-if="modifier.priceDelta" class="tabular-nums">
+                        ({{ modifier.priceDelta > 0 ? '+' : ''
+                        }}{{ formatCZK(modifier.priceDelta) }})
+                      </span>
+                    </div>
+                  </div>
                   <span
                     v-if="it.course"
                     class="inline-block rounded bg-primary-soft px-1.5 py-0.5 text-[10px] font-medium text-primary"
@@ -1370,6 +1436,14 @@ const currentItemCount = computed(() =>
       :label="paymentLabel"
       :busy="busy"
       @confirm="confirmPayment"
+    />
+
+    <ModifierSelectDialog
+      v-model:open="modifierDialogOpen"
+      :product="modifierProduct"
+      :groups="modifierGroups"
+      :busy="busy"
+      @confirm="addProductWithModifiers"
     />
 
     <ReceiptDialog v-model:open="receiptOpen" :receipt="receiptData" />

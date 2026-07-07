@@ -188,7 +188,7 @@ function printTicket(t: Ticket) {
       (i) =>
         `<div class="row"><b>${i.quantity}×</b> ${escapeHtml(i.productName)}${
           i.course ? ` <span class="course">[${escapeHtml(i.course)}]</span>` : ''
-        }${i.note ? `<div class="note">↳ ${escapeHtml(i.note)}</div>` : ''}</div>`,
+        }${modifierRows(i)}${i.note ? `<div class="note">↳ ${escapeHtml(i.note)}</div>` : ''}</div>`,
     )
     .join('')
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Bon</title>
@@ -210,6 +210,15 @@ function printTicket(t: Ticket) {
   w.focus()
   w.print()
   w.close()
+}
+
+function modifierRows(item: KitchenQueueItem): string {
+  return (item.modifiers ?? [])
+    .map(
+      (modifier) =>
+        `<div class="note">↳ ${escapeHtml(modifier.groupName)}: ${escapeHtml(modifier.name)}</div>`,
+    )
+    .join('')
 }
 
 function escapeHtml(s: string): string {
@@ -371,6 +380,14 @@ onUnmounted(() => {
                 >{{ i.course }}</span
               >
               <div v-if="i.note" class="pl-4 text-xs text-muted-foreground">↳ {{ i.note }}</div>
+              <div v-if="i.modifiers?.length" class="pl-4 text-xs text-muted-foreground">
+                <div
+                  v-for="(modifier, index) in i.modifiers"
+                  :key="`${i.itemId}-${modifier.groupName}-${modifier.name}-${index}`"
+                >
+                  ↳ {{ modifier.groupName }}: {{ modifier.name }}
+                </div>
+              </div>
             </li>
           </ul>
 

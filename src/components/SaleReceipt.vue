@@ -5,6 +5,11 @@ export interface ReceiptLine {
   name: string
   qty: number
   total: number
+  modifiers?: {
+    groupName: string
+    name: string
+    priceDelta?: number
+  }[]
 }
 export interface ReceiptVatLine {
   rate: number
@@ -111,10 +116,20 @@ const money = (n: number) =>
 
     <!-- Položky s tečkovanými vodicími linkami -->
     <ul class="mt-1.5 space-y-1.5">
-      <li v-for="(it, i) in items" :key="i" class="flex items-baseline gap-1">
-        <span class="shrink-0">{{ it.qty }}× {{ it.name }}</span>
-        <span class="mb-[3px] flex-1 border-b border-dotted border-zinc-300" aria-hidden="true" />
-        <span class="shrink-0 tabular-nums">{{ money(it.total) }}</span>
+      <li v-for="(it, i) in items" :key="i">
+        <div class="flex items-baseline gap-1">
+          <span class="shrink-0">{{ it.qty }}× {{ it.name }}</span>
+          <span class="mb-[3px] flex-1 border-b border-dotted border-zinc-300" aria-hidden="true" />
+          <span class="shrink-0 tabular-nums">{{ money(it.total) }}</span>
+        </div>
+        <div v-if="it.modifiers?.length" class="mt-0.5 space-y-0.5 pl-4 text-[9px] text-zinc-600">
+          <div v-for="(modifier, mi) in it.modifiers" :key="mi">
+            {{ modifier.groupName }}: {{ modifier.name }}
+            <span v-if="modifier.priceDelta">
+              ({{ modifier.priceDelta > 0 ? '+' : '' }}{{ money(modifier.priceDelta) }} Kč)
+            </span>
+          </div>
+        </div>
       </li>
     </ul>
 
