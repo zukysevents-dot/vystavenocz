@@ -24,6 +24,13 @@ export interface BusinessProfile {
   label: string
   description: string
   modules: AppModuleId[]
+  setupSteps: BusinessProfileSetupStep[]
+}
+
+export interface BusinessProfileSetupStep {
+  label: string
+  description: string
+  to: string
 }
 
 export const BUSINESS_PROFILES: BusinessProfile[] = [
@@ -44,24 +51,102 @@ export const BUSINESS_PROFILES: BusinessProfile[] = [
       'ai',
       'integrations',
     ],
+    setupSteps: [
+      {
+        label: 'Založit provozovny',
+        description: 'Pobočky určují sklad, uzávěrku, reporting a oprávnění obsluhy.',
+        to: '/app/pobocky',
+      },
+      {
+        label: 'Připravit stoly a QR',
+        description: 'Mapa stolů vytvoří rozložení sálu a odkazy pro objednání ke stolu.',
+        to: '/app/mapa-stolu',
+      },
+      {
+        label: 'Nahrát menu a sklad',
+        description: 'Produkty, kategorie, receptury a příjemky jsou základ paperless provozu.',
+        to: '/app/sklad',
+      },
+      {
+        label: 'Nastavit modifikátory',
+        description: 'Volby jako přílohy, propečení nebo mléko se pak nabídnou obsluze i hostům.',
+        to: '/app/modifikatory',
+      },
+      {
+        label: 'Ověřit denní provoz',
+        description: 'Pokladna, restaurace, kuchyně, zásoby a uzávěrka drží jeden zdroj pravdy.',
+        to: '/app/uzaverka',
+      },
+    ],
   },
   {
     id: 'services',
     label: 'Služby',
     description: 'Rezervace, klienti, služby, fakturace, docházka a reporty.',
     modules: ['core', 'invoicing', 'booking', 'attendance', 'reporting', 'ai', 'integrations'],
+    setupSteps: [
+      {
+        label: 'Nastavit služby',
+        description: 'Služby a rezervace určují, co si zákazník může objednat.',
+        to: '/app/nastaveni',
+      },
+      {
+        label: 'Založit klienty',
+        description: 'Klientská historie pomůže s fakturací i opakovanými návštěvami.',
+        to: '/app/klienti',
+      },
+      {
+        label: 'Připravit rezervace',
+        description: 'Kalendář, zdroje a veřejné rezervace udrží provoz bez ruční tabulky.',
+        to: '/app/rezervace',
+      },
+    ],
   },
   {
     id: 'crafts',
     label: 'Řemesla a zakázky',
     description: 'Zakázky, materiál, výjezdy, sklad, předání práce a fakturace.',
     modules: ['core', 'invoicing', 'jobs', 'stock', 'reporting', 'ai', 'integrations'],
+    setupSteps: [
+      {
+        label: 'Založit zakázky',
+        description: 'Zakázka drží práci, materiál, poznámky a návaznou fakturaci pohromadě.',
+        to: '/app/zakazky',
+      },
+      {
+        label: 'Připravit materiál',
+        description: 'Skladové položky pomohou sledovat spotřebu a náklady.',
+        to: '/app/sklad',
+      },
+      {
+        label: 'Nastavit fakturaci',
+        description: 'Číslování, údaje firmy a účtárna uzavírají práci do dokladů.',
+        to: '/app/nastaveni',
+      },
+    ],
   },
   {
     id: 'shop',
     label: 'Obchod',
     description: 'Produkty, pokladna, EAN, sklad, vratky, věrnost a reporty.',
     modules: ['core', 'invoicing', 'pos', 'stock', 'reporting', 'loyalty', 'ai', 'integrations'],
+    setupSteps: [
+      {
+        label: 'Nahrát produkty',
+        description: 'Katalog, EAN a ceny připraví prodej na pokladně i sklad.',
+        to: '/app/sklad',
+      },
+      {
+        label: 'Naskladnit zboží',
+        description: 'Příjemky vytvoří auditní stopu a skutečný stav skladu.',
+        to: '/app/naskladneni',
+      },
+      {
+        label: 'Ověřit prodej',
+        description: 'Pokladna, zásoby, reporty a věrnost pak běží nad stejnými daty.',
+        to: '/app/pokladna',
+      },
+    ],
   },
 ]
 
