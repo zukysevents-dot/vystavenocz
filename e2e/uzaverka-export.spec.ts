@@ -144,3 +144,76 @@ test('uzávěrka stáhne měsíční souhrn Z-reportů s celkovým řádkem', as
   expect(csv).toContain('2026-07-06;Bistro Praha;13;2;500;105;605')
   expect(csv).toContain('CELKEM;;;5;1500;315;1815')
 })
+
+test('uzávěrka stáhne měsíční účetní CSV pro uzavřené Z-reporty', async ({ page }) => {
+  await seedApiMode(page)
+  await dismissCookies(page)
+
+  await page.route(API, async (route: Route) => {
+    const request = route.request()
+    const url = new URL(request.url())
+    const path = url.pathname.replace('/api/v1', '')
+    const method = request.method()
+
+    if (method === 'GET' && path === '/company') return route.fulfill({ json: company })
+    if (method === 'GET' && path === '/locations') {
+      return route.fulfill({ json: { items: [location], total: 1, page: 1, pageSize: 100 } })
+    }
+    if (method === 'GET' && path.startsWith('/day-close/')) {
+      return route.fulfill({ json: closedDay })
+    }
+    if (method === 'GET' && path === '/day-close') {
+      expect(url.searchParams.get('from')).toBe('2026-07-01')
+      expect(url.searchParams.get('to')).toBe('2026-07-31')
+      expect(url.searchParams.get('locationId')).toBe('loc-1')
+      return route.fulfill({
+        json: {
+          items: [
+            closedDay,
+            {
+              ...closedDay,
+              date: '2026-07-06',
+              zReportNumber: 13,
+              saleCount: 2,
+              totalNet: 500,
+              totalVat: 105,
+              total: 605,
+              cashTotal: 100,
+              cardTotal: 505,
+              tipTotal: 0,
+              discountTotal: 10,
+              cancelledCount: 0,
+              cancelledTotal: 0,
+              cashDifference: 5,
+              vatBreakdown: [{ vatRate: 21, net: 500, vat: 105, gross: 605 }],
+            },
+          ],
+          total: 2,
+          page: 1,
+          pageSize: 100,
+        },
+      })
+    }
+
+    return route.fulfill({ status: 404, json: { title: `Unhandled ${method} ${path}` } })
+  })
+
+  await page.goto('/app/uzaverka')
+  await page.locator('#uzaverka-date').fill('2026-07-05')
+  await expect(page.getByText('Z-report č. 12')).toBeVisible()
+
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Export měsíc účetní CSV' }).click()
+  const download = await downloadPromise
+
+  expect(download.suggestedFilename()).toBe('z-reporty-ucetni-2026-07.csv')
+  const path = await download.path()
+  expect(path).toBeTruthy()
+  const csv = await readFile(path!, 'utf8')
+
+  expect(csv).toContain('Datum;Pobočka;Z-report;Sekce;Položka;Sazba DPH')
+  expect(csv).toContain('2026-07-05;Bistro Praha;12;Tržba;DPH 21 %;21;;1000;210;1210')
+  expect(csv).toContain('2026-07-05;Bistro Praha;12;Platby;Hotovost;;;;;500;CZK')
+  expect(csv).toContain('2026-07-05;Bistro Praha;12;Korekce tržeb;Storna;;1;;;-99')
+  expect(csv).toContain('2026-07-06;Bistro Praha;13;Tržba;DPH 21 %;21;;500;105;605')
+})
