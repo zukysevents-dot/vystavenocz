@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Loader2 } from 'lucide-vue-next'
+import { CheckCircle2, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -29,6 +29,10 @@ const form = reactive({
   iban: '',
   invoice_number_prefix: 'FA',
 })
+
+const selectedProfile = computed(() =>
+  BUSINESS_PROFILES.find((profile) => profile.id === form.business_profile),
+)
 
 onMounted(async () => {
   await companyStore.load()
@@ -64,7 +68,7 @@ async function onSubmit() {
   }
   try {
     await companyStore.save(payload) // API režim: založí firmu (POST /companies) + uloží nastavení
-    const profile = BUSINESS_PROFILES.find((p) => p.id === form.business_profile)
+    const profile = selectedProfile.value
     if (profile) await companyStore.saveModules(profile.modules)
   } catch {
     submitting.value = false
@@ -73,7 +77,7 @@ async function onSubmit() {
   }
   submitting.value = false
   toast.success('Profil firmy uložen.')
-  router.push('/app')
+  router.push(selectedProfile.value?.setupSteps[0]?.to ?? '/app')
 }
 </script>
 
@@ -109,6 +113,36 @@ async function onSubmit() {
             <span class="mt-1 block text-xs text-muted-foreground">{{ profile.description }}</span>
           </label>
         </div>
+      </div>
+
+      <div v-if="selectedProfile" class="rounded-xl border border-border bg-card p-6">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Doporučený start
+        </h2>
+        <div class="mt-4 space-y-3">
+          <div
+            v-for="(step, index) in selectedProfile.setupSteps"
+            :key="step.to"
+            class="flex gap-3 border-b border-border pb-3 last:border-0 last:pb-0"
+          >
+            <div
+              class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary"
+            >
+              {{ index + 1 }}
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5 font-medium">
+                <CheckCircle2 class="h-4 w-4 text-primary" />
+                {{ step.label }}
+              </div>
+              <p class="mt-1 text-sm text-muted-foreground">{{ step.description }}</p>
+            </div>
+          </div>
+        </div>
+        <p class="mt-4 text-xs text-muted-foreground">
+          Po uložení profilu otevřeme první krok. Další části zůstanou v levém menu podle zapnutých
+          modulů.
+        </p>
       </div>
 
       <div class="rounded-xl border border-border bg-card p-6">

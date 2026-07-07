@@ -8,6 +8,13 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 2. Otevřete pokladnu nebo mapu stolů podle toho, jestli prodáváte na pultu nebo u stolu.
 3. Všechny prodeje, storna, slevy, spropitné, skladové pohyby a uzávěrky zapisujte do systému. Papír může být jen výtisk nebo pomocná poznámka, ne zdroj pravdy.
 
+## První nastavení gastro provozu
+
+1. V onboardingu vyberte typ podnikání `Gastro`.
+2. Systém ukáže doporučený start: `Pobočky`, `Mapa stolů`, `Sklad`, `Modifikátory` a `Uzávěrka`.
+3. Po uložení profilu se otevřou `Pobočky`, protože provozovna určuje sklad, uzávěrku, reporting a oprávnění obsluhy.
+4. Další kroky dokončete z levého menu. Cílem je mít stoly, QR odkazy, menu, sklad a denní uzávěrku připravené dřív, než začne ostrý provoz.
+
 ## Prodej na pokladně
 
 1. Otevřete `Pokladna`.

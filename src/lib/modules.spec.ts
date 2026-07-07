@@ -40,4 +40,16 @@ describe('module capabilities', () => {
     expect(crafts.modules).toContain('jobs')
     expect(crafts.modules).not.toContain('gastro')
   })
+
+  it('business profiles define actionable onboarding setup steps', () => {
+    const gastro = BUSINESS_PROFILES.find((profile) => profile.id === 'gastro')!
+
+    expect(BUSINESS_PROFILES.every((profile) => profile.setupSteps.length > 0)).toBe(true)
+    expect(gastro.setupSteps[0]).toMatchObject({
+      label: 'Založit provozovny',
+      to: '/app/pobocky',
+    })
+    expect(gastro.setupSteps.map((step) => step.to)).toContain('/app/mapa-stolu')
+    expect(gastro.setupSteps.map((step) => step.to)).toContain('/app/uzaverka')
+  })
 })

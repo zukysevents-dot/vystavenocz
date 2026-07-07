@@ -8,7 +8,7 @@ Last updated: 2026-07-05
 - Backend `/me` exposes `modules` and `features`.
 - Backend persists tenant-selected modules in `company_modules`; tenants without rows still fall back to all default modules.
 - Frontend auth store persists capabilities and the app shell filters navigation/routes through a typed module manifest.
-- Onboarding lets the company choose a business profile: Gastro, Services, Crafts/Jobs, or Shop. The selected profile saves the first enabled module bundle.
+- Onboarding lets the company choose a business profile: Gastro, Services, Crafts/Jobs, or Shop. The selected profile saves the first enabled module bundle, shows a profile-specific setup checklist, and routes the company to the first recommended setup step after save.
 - Company settings lets owners adjust enabled modules after onboarding through `/company/modules`; the mandatory `core` module is always kept enabled by normalization.
 
 ## Product goal
@@ -157,7 +157,7 @@ Vystaveno should win through:
 - live profitability: recipe cost, purchase price, waste, margin, recommended sale price
 - smarter stock mirror with variance explanations (foundation: `Zásoby > Zrcadlo` row detail explains opening + receipt + storno - sale - issue = expected state, and correction + stocktake = variance)
 - AI assistant that explains losses, anomalies, and next actions
-- modern onboarding templates for cafe, bistro, restaurant, bar, food truck, salon, plumber, shop
+- modern onboarding templates for cafe, bistro, restaurant, bar, food truck, salon, plumber, shop (foundation: business profiles define `setupSteps`; onboarding shows the recommended start and sends Gastro users first to `Pobočky`, then guides them through tables/QR, stock/menu, modifiers, and day close)
 - readable integration status for accounting and payment systems
 - no paper as source of truth; paper is only an export or printout
 - simple Czech user guidance inside `docs/product/gastro-user-manual.md`, kept in sync as features land
@@ -208,7 +208,7 @@ Vystaveno should win through:
 4. Extend recipes with portions, variants, and semi-products on top of the existing ingredient stock deduction and waste/yield foundation.
 5. Build purchase receipts, enrich inventory counts, and extend stock mirror with warehouses/CZK variance.
 6. Add food cost, margin, variance, and manager reports.
-7. Add modular onboarding and templates per business type.
+7. Add modular onboarding and templates per business type (foundation: profile-specific onboarding checklist and first-step routing).
 8. Add services and jobs as the next non-gastro verticals.
 9. Add accounting and payment integrations.
 10. Add AI insights after the underlying data is reliable.
