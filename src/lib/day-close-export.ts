@@ -28,6 +28,25 @@ export const SHIFT_HANDOVER_COLUMNS = [
   'Poznámka',
 ]
 
+export const DAY_CLOSE_MONTHLY_SUMMARY_COLUMNS = [
+  'Datum',
+  'Pobočka',
+  'Z-report',
+  'Účtenek',
+  'Základ',
+  'DPH',
+  'Celkem',
+  'Hotovost',
+  'Karta',
+  'Spropitné',
+  'Slevy',
+  'Storna počet',
+  'Storna celkem',
+  'Rozdíl hotovosti',
+  'Měna',
+  'Poznámka',
+]
+
 function amount(value: number | null | undefined): number {
   return value ?? 0
 }
@@ -271,6 +290,65 @@ export function downloadDayCloseAccountingCsvForReports(
     filename,
     DAY_CLOSE_ACCOUNTING_COLUMNS,
     buildDayCloseAccountingRowsForReports(reports, locationNameById),
+  )
+}
+
+export function buildDayCloseMonthlySummaryRows(
+  reports: DayCloseResponse[],
+  locationNameById: (locationId: string) => string,
+): CsvValue[][] {
+  const rows = reports.map((z) => [
+    z.date,
+    locationNameById(z.locationId),
+    z.zReportNumber ?? '',
+    amount(z.saleCount),
+    amount(z.totalNet),
+    amount(z.totalVat),
+    amount(z.total),
+    amount(z.cashTotal),
+    amount(z.cardTotal),
+    amount(z.tipTotal),
+    amount(z.discountTotal),
+    amount(z.cancelledCount),
+    amount(z.cancelledTotal),
+    amount(z.cashDifference),
+    'CZK',
+    z.closedAt ? `Uzavřeno ${z.closedAt}` : '',
+  ])
+
+  if (reports.length === 0) return rows
+
+  rows.push([
+    'CELKEM',
+    '',
+    '',
+    reports.reduce((sum, z) => sum + amount(z.saleCount), 0),
+    reports.reduce((sum, z) => sum + amount(z.totalNet), 0),
+    reports.reduce((sum, z) => sum + amount(z.totalVat), 0),
+    reports.reduce((sum, z) => sum + amount(z.total), 0),
+    reports.reduce((sum, z) => sum + amount(z.cashTotal), 0),
+    reports.reduce((sum, z) => sum + amount(z.cardTotal), 0),
+    reports.reduce((sum, z) => sum + amount(z.tipTotal), 0),
+    reports.reduce((sum, z) => sum + amount(z.discountTotal), 0),
+    reports.reduce((sum, z) => sum + amount(z.cancelledCount), 0),
+    reports.reduce((sum, z) => sum + amount(z.cancelledTotal), 0),
+    reports.reduce((sum, z) => sum + amount(z.cashDifference), 0),
+    'CZK',
+    'Součet vybraných Z-reportů',
+  ])
+
+  return rows
+}
+
+export function downloadDayCloseMonthlySummaryCsv(
+  reports: DayCloseResponse[],
+  locationNameById: (locationId: string) => string,
+  filename: string,
+): void {
+  downloadCsv(
+    filename,
+    DAY_CLOSE_MONTHLY_SUMMARY_COLUMNS,
+    buildDayCloseMonthlySummaryRows(reports, locationNameById),
   )
 }
 

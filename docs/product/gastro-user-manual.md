@@ -118,6 +118,8 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 5. Před zavřením dne doplaťte nebo zrušte všechny otevřené účty na provozovně. Pokud nějaký účet zůstává otevřený, systém zavření dne zablokuje.
 6. Zavřete den. Z-report se tím uzamkne a čísla se dál nemění.
 7. Exporty slouží pro účetní, kontrolu a předání směny (`Export předávky CSV`).
+8. `Export měsíc účetní CSV` stáhne detailní účetní řádky za všechny uzavřené Z-reporty ve vybraném měsíci a pobočce.
+9. `Export měsíc souhrn CSV` stáhne přehled jeden řádek na Z-report plus řádek `CELKEM`, aby účetní rychle zkontrolovala tržby, DPH, hotovost, karty, storna a rozdíl hotovosti za měsíc.
 
 ## Provozní přehled
 

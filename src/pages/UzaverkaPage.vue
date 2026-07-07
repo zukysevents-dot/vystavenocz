@@ -26,6 +26,7 @@ import {
   buildShiftHandoverRowsFromSummary,
   downloadDayCloseAccountingCsv,
   downloadDayCloseAccountingCsvForReports,
+  downloadDayCloseMonthlySummaryCsv,
   downloadShiftHandoverCsv,
 } from '@/lib/day-close-export'
 import { toast } from '@/components/ui/sonner'
@@ -76,6 +77,7 @@ const dayState = ref<DayCloseResponse | null>(null)
 const dayLoading = ref(false)
 const dayError = ref(false)
 const monthExporting = ref(false)
+const monthSummaryExporting = ref(false)
 const handoverChecklist = [
   'Otevřené účty doplaceny nebo zrušeny',
   'Hotovost přepočítána',
@@ -281,6 +283,26 @@ async function exportMonthlyAccountingCsv(): Promise<void> {
   }
 }
 
+async function exportMonthlySummaryCsv(): Promise<void> {
+  if (!selectedLocationId.value) return
+  const { month, from, to } = monthBounds(selectedDate.value)
+  monthSummaryExporting.value = true
+  try {
+    const reports = await listDayCloses({ from, to, locationId: selectedLocationId.value })
+    if (reports.length === 0) {
+      toast.error('V tomto měsíci nejsou žádné uzavřené Z-reporty.')
+      return
+    }
+    downloadDayCloseMonthlySummaryCsv(reports, locationName, `z-reporty-souhrn-${month}`)
+    toast.success(`Exportován souhrn ${reports.length} uzávěrek za ${month}.`)
+  } catch (e) {
+    if (e instanceof DayCloseError) toast.error(e.message)
+    else toast.error('Měsíční souhrn uzávěrek se nezdařil.')
+  } finally {
+    monthSummaryExporting.value = false
+  }
+}
+
 onMounted(async () => {
   if (apiMode) {
     await loadLocations()
@@ -359,6 +381,15 @@ watch([selectedDate, selectedLocationId], () => {
         <Loader2 v-if="monthExporting" class="h-4 w-4 animate-spin" />
         <CalendarDays v-else class="h-4 w-4" />
         Export měsíc účetní CSV
+      </Button>
+      <Button
+        variant="outline"
+        :disabled="monthSummaryExporting || !selectedLocationId"
+        @click="exportMonthlySummaryCsv"
+      >
+        <Loader2 v-if="monthSummaryExporting" class="h-4 w-4 animate-spin" />
+        <Download v-else class="h-4 w-4" />
+        Export měsíc souhrn CSV
       </Button>
     </div>
 
