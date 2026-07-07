@@ -12,7 +12,9 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 
-const props = defineProps<{ open: boolean }>()
+const props = withDefaults(defineProps<{ open: boolean; description?: string }>(), {
+  description: 'Namiř čárový kód na kameru — položka se přidá na příjemku automaticky.',
+})
 const emit = defineEmits<{ 'update:open': [boolean]; detected: [string] }>()
 
 const video = ref<HTMLVideoElement | null>(null)
@@ -109,7 +111,7 @@ onBeforeUnmount(stop)
       <DialogHeader>
         <DialogTitle>Skenovat kamerou</DialogTitle>
         <DialogDescription>
-          Namiř čárový kód na kameru — položka se přidá na příjemku automaticky.
+          {{ props.description }}
         </DialogDescription>
       </DialogHeader>
 

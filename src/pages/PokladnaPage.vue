@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import {
+  Camera,
   Loader2,
   Minus,
   Plus,
+  ScanBarcode,
   Trash2,
   Banknote,
   ShoppingCart,
@@ -41,11 +43,13 @@ import {
 } from '@/components/ui/select'
 import PaymentDialog from '@/components/PaymentDialog.vue'
 import ReceiptDialog from '@/components/ReceiptDialog.vue'
+import CameraScanner from '@/components/app/CameraScanner.vue'
 import { useProducts } from '@/composables/useProducts'
 import { useCategories } from '@/composables/useCategories'
 import { useLocations } from '@/composables/useLocations'
 import { useSales } from '@/composables/useSales'
 import { formatCZK, round2 } from '@/lib/invoice'
+import { findByEan } from '@/lib/reorder'
 import { buildReceipt, type ReceiptInfo } from '@/lib/receipt'
 import { calcPosTotals, clampAmount, clampPercent } from '@/lib/posCalc'
 import { ApiError, isApiMode } from '@/lib/http'
@@ -79,6 +83,9 @@ const receiptData = ref<ReceiptInfo | null>(null)
 
 const categories = ref<Category[]>([])
 const selectedCat = ref('')
+const scanEan = ref('')
+const scanInput = ref<InstanceType<typeof Input> | null>(null)
+const scannerOpen = ref(false)
 const visibleProducts = computed(() =>
   selectedCat.value
     ? products.value.filter((p) => p.categoryId === selectedCat.value)
@@ -143,12 +150,40 @@ onMounted(async () => {
   if (stored && locations.value.some((l) => l.id === stored)) currentLocationId.value = stored
   else if (locations.value.length) currentLocationId.value = locations.value[0].id
   loading.value = false
+  focusScan()
 })
 
 function addToCart(p: Product) {
   const line = cart.value.find((l) => l.product.id === p.id)
   if (line) line.quantity++
   else cart.value.push({ product: p, quantity: 1, discountPercent: 0 })
+}
+
+function focusScan() {
+  nextTick(() => {
+    const el = scanInput.value?.$el as HTMLInputElement | undefined
+    el?.focus()
+  })
+}
+
+function handleCode(raw: string) {
+  const code = raw.trim()
+  if (!code) return
+  const product = findByEan(products.value, code)
+  if (!product) {
+    toast.error(`EAN „${code}“ nenalezen v katalogu.`)
+  } else if (products.value.filter((p) => p.ean === code).length > 1) {
+    toast.error(`Víc produktů se stejným EAN „${code}“ — vyberte položku ručně.`)
+  } else {
+    addToCart(product)
+    toast.success(`${product.name} přidáno na účtenku.`)
+  }
+  scanEan.value = ''
+  focusScan()
+}
+
+function onScan() {
+  handleCode(scanEan.value)
 }
 
 function inc(line: CartLine) {
@@ -372,6 +407,33 @@ function saleTime(iso: string): string {
           </Button>
         </div>
         <template v-else>
+          <div class="mb-3 rounded-xl border border-border bg-muted/30 p-3">
+            <label class="mb-1.5 flex items-center gap-1.5 text-sm font-medium" for="pos-scan">
+              <ScanBarcode class="h-4 w-4 text-primary" /> Sken / EAN
+            </label>
+            <div class="flex gap-2">
+              <Input
+                id="pos-scan"
+                ref="scanInput"
+                v-model="scanEan"
+                inputmode="numeric"
+                autocomplete="off"
+                placeholder="Naskenujte kód nebo zadejte EAN a Enter"
+                class="flex-1"
+                @keyup.enter="onScan"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                class="shrink-0"
+                title="Skenovat kamerou"
+                @click="scannerOpen = true"
+              >
+                <Camera class="h-4 w-4" /> Kamera
+              </Button>
+            </div>
+          </div>
+
           <div v-if="categories.length" class="mb-3 flex flex-wrap gap-2">
             <button
               type="button"
@@ -667,5 +729,10 @@ function saleTime(iso: string): string {
     />
 
     <ReceiptDialog v-model:open="receiptOpen" :receipt="receiptData" />
+    <CameraScanner
+      v-model:open="scannerOpen"
+      description="Namiř čárový kód na kameru — položka se přidá na účtenku automaticky."
+      @detected="handleCode"
+    />
   </div>
 </template>
