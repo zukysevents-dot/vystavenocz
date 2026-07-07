@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ImageUp, Save, Trash2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -74,6 +75,43 @@ const moduleOptions: { id: AppModuleId; label: string; description: string; lock
     id: 'integrations',
     label: 'Integrace',
     description: 'Importy, exporty, účetnictví, API a napojení služeb.',
+  },
+]
+
+const integrationStatuses: {
+  name: string
+  state: string
+  variant: 'default' | 'secondary' | 'outline'
+  description: string
+  nextStep: string
+}[] = [
+  {
+    name: 'Faktury do účetnictví',
+    state: 'Připraveno',
+    variant: 'default',
+    description: 'Účtárna umí exportovat faktury jako ISDOC XML a přehledové CSV.',
+    nextStep: 'Automatické odesílání do účetního systému.',
+  },
+  {
+    name: 'Gastro Z-reporty',
+    state: 'Připraveno',
+    variant: 'default',
+    description: 'Uzávěrka nabízí denní i měsíční účetní CSV a měsíční souhrn Z-reportů.',
+    nextStep: 'Mapování na konkrétní importní šablony účetních programů.',
+  },
+  {
+    name: 'Platební terminál',
+    state: 'Manuální krok',
+    variant: 'secondary',
+    description: 'Karta se potvrzuje po dokončení platby na fyzickém terminálu.',
+    nextStep: 'Napojení terminálu nahradí ruční potvrzení bez změny platebního toku.',
+  },
+  {
+    name: 'POHODA / Flexi',
+    state: 'Exportní režim',
+    variant: 'outline',
+    description: 'Podklady se předávají přes ISDOC/CSV; přímá synchronizace zatím neběží.',
+    nextStep: 'Doplnit konektory po potvrzení konkrétního importního kontraktu.',
   },
 ]
 
@@ -348,6 +386,29 @@ async function onSubmit(): Promise<void> {
               <span class="mt-1 block text-xs text-muted-foreground">{{ module.description }}</span>
             </span>
           </label>
+        </div>
+      </div>
+
+      <!-- Integrace -->
+      <div class="rounded-xl border border-border bg-card p-6">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Integrace a exporty
+        </h2>
+        <div class="mt-4 divide-y divide-border">
+          <div
+            v-for="item in integrationStatuses"
+            :key="item.name"
+            class="grid gap-2 py-3 first:pt-0 last:pb-0 sm:grid-cols-[170px_1fr]"
+          >
+            <div>
+              <div class="font-medium">{{ item.name }}</div>
+              <Badge :variant="item.variant" class="mt-1">{{ item.state }}</Badge>
+            </div>
+            <div class="text-sm text-muted-foreground">
+              <p>{{ item.description }}</p>
+              <p class="mt-1 text-xs">Další krok: {{ item.nextStep }}</p>
+            </div>
+          </div>
         </div>
       </div>
 

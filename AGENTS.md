@@ -22,6 +22,8 @@ Claude Code continuation prompt pro samostatnou pipeline práci nad gastro roadm
 
 Modulární runtime základ: backend `/me` vrací `modules` + `features`; frontend je drží v `src/stores/auth.ts` a app shell filtruje navigaci/routy přes `src/lib/modules.ts`. Backend ukládá tenant-selected moduly v `company_modules`; staré firmy bez řádků mají fallback na všechny default moduly. Onboarding vybírá první modulový balíček podle typu podnikání a ukazuje profilový checklist `setupSteps`; po uložení pošle firmu na první doporučený krok (Gastro začíná v `Pobočky`). `Nastavení firmy` umožňuje pozdější změnu modulů přes `/company/modules`. Modul `core` je povinný a normalizace ho vždy doplní.
 
+Stav integrací: `Nastavení firmy` má sekci `Integrace a exporty`, která pravdivě rozlišuje připravené exporty (ISDOC/CSV faktury, Z-reporty), manuální terminálový krok a exportní režim POHODA/Flexi. Nepiš do UI ani dokumentace, že terminál, POHODA nebo Flexi běží přímou synchronizací, dokud nevznikne skutečný konektor.
+
 Veřejný slug firmy: `Nastavení firmy` ukládá `Company.publicSlug` přes `/company`; frontend ho normalizuje na malá ASCII písmena, čísla a pomlčky. Slug je sdílený základ pro `/objednavka/:slug`, veřejné rezervace a QR odkazy ke stolům.
 
 QR objednávka ke stolu: veřejná route `/objednavka/:slug?table=<tableId>&name=<tableName>` schová výdej/rozvoz, odešle `tableId` přes `usePublicOrders` a backend objednávku připíše do dine-in účtu stolu. Na mobilu `PublicOrderPage` po přidání položek ukazuje sticky spodní košík s počtem položek, totalem a skokem na checkout. E2E `e2e/public-order-table.spec.ts` ověřuje hostovský table-link flow bez JWT.
