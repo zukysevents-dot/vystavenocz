@@ -144,6 +144,7 @@ export interface Product {
   purchasePrice: number | null
   minQuantity: number
   categoryId: string | null
+  allergens?: number[]
 }
 
 export interface ProductRecipeIngredient {
@@ -519,6 +520,7 @@ export interface PublicMenuProduct {
   priceWithVat: number
   vatRate: number
   available: boolean
+  allergens?: number[]
   modifierGroups: ModifierGroup[]
 }
 

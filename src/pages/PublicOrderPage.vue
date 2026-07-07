@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { usePublicOrders } from '@/composables/usePublicOrders'
+import { formatAllergens } from '@/lib/allergens'
 import { formatCZK } from '@/lib/invoice'
 import type {
   ModifierOption,
@@ -352,6 +353,9 @@ async function submit() {
                 <h3 class="font-semibold leading-tight">{{ product.name }}</h3>
                 <p class="mt-1 text-sm text-muted-foreground">
                   {{ formatCZK(product.priceWithVat) }}
+                </p>
+                <p v-if="product.allergens?.length" class="mt-1 text-xs text-muted-foreground">
+                  Alergeny: {{ formatAllergens(product.allergens) }}
                 </p>
               </div>
               <Button type="button" variant="outline" class="mt-3 w-full" @click="add(product)">

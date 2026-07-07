@@ -104,6 +104,7 @@ Must make the restaurant paperless:
 - stock mirror for bars and kitchens (V1: ledger-based expected vs variance report via backend PR #154 and `Zásoby` tab; frontend filters by date, branch/location, and product search; row detail explains the expected-state formula and why the variance comes from corrections/inventory counts)
 - variance report in units and CZK (foundation: backend PR #157 returns varianceValue, backend PR #158 uses weighted receipt cost with product-price fallback, and `Zásoby` shows it)
 - food cost and margin per item (foundation: backend PR #159 adds recipe margin metrics and the recipe dialog shows live cost, sale price, margin, and food cost)
+- product allergens for Czech/EU gastro menus (foundation: backend PR #208 stores normalized allergen codes 1–14 on products and public menus return them; `Sklad / katalog` lets staff maintain them and `/objednavka/:slug` shows them to guests in online/QR ordering)
 - monthly close and accounting export (foundation: closed-day `Uzávěrka` exports readable Z-report CSV and accounting CSV rows; `Export měsíc účetní CSV` uses closed Z-reports from `GET /api/v1/day-close?from=&to=&locationId=`, and `Export měsíc souhrn CSV` gives accountants a one-row-per-Z-report monthly control sheet with totals)
 
 ### Gastro V2
