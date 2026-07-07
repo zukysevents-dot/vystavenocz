@@ -224,6 +224,17 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/app/akce-ceny',
+    name: 'app-akce-ceny',
+    component: () => import('@/pages/AkceProvozuPage.vue'),
+    meta: {
+      title: 'Akce a ceny',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'loyalty',
+    },
+  },
+  {
     path: '/app/zakazky',
     name: 'app-zakazky',
     component: () => import('@/pages/ZakazkyPage.vue'),

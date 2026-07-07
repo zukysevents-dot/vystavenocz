@@ -108,6 +108,13 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 3. Majitel, admin nebo manager otevře `Schvalování`, zkontroluje částku a žádost schválí nebo zamítne.
 4. Po schválení systém provede původní akci; po zamítnutí se nic nezmění.
 
+## Akce a ceny
+
+1. Otevřete `Akce a ceny`.
+2. Stránka teď ukazuje model cenových hladin, časových akcí, produktových/kategoriových slev a věrnostních bodů.
+3. Cenová hladina upraví cenu před akcemi. Akční pravidla se potom aplikují podle produktu, kategorie, času nebo minimální útraty.
+4. Trvalé ukládání pravidel a napojení do ostré pokladny, restaurace a QR objednávek bude další krok. Finální cenu má vždy potvrdit server.
+
 ## Inventura a zrcadlo
 
 1. Inventura porovnává `Stav má být` se skutečně napočítanou `Realitou`.

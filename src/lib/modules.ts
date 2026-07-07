@@ -206,6 +206,7 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
   { to: '/app/klienti', label: 'Klienti', module: 'core', hiddenForRoles: ['Employee'] },
   { to: '/app/import', label: 'Import dat', module: 'integrations', hiddenForRoles: ['Employee'] },
   { to: '/app/vernost', label: 'Věrnost', module: 'loyalty' },
+  { to: '/app/akce-ceny', label: 'Akce a ceny', module: 'loyalty', hiddenForRoles: ['Employee'] },
   { to: '/app/zakazky', label: 'Zakázky', module: 'jobs' },
   { to: '/app/predplatne', label: 'Předplatné', module: 'core' },
   { to: '/app/nastaveni', label: 'Nastavení', module: 'core' },
