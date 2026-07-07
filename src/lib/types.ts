@@ -173,6 +173,42 @@ export interface ProductRecipeInput {
   wastePercent?: number
 }
 
+// Gastro modifikátory (volby/příplatky k produktu). SelectionType Single = právě jedna volba, Multi = víc voleb
+// (limit MaxSelect). PriceDelta = příplatek/sleva k ceně produktu vč. DPH (může být 0 i záporná).
+export type ModifierSelectionType = 'Single' | 'Multi'
+
+export interface ModifierOption {
+  id: string
+  name: string
+  priceDelta: number
+  sortOrder: number
+}
+
+export interface ModifierGroup {
+  id: string
+  name: string
+  selectionType: ModifierSelectionType
+  isRequired: boolean
+  maxSelect: number | null
+  sortOrder: number
+  options: ModifierOption[]
+}
+
+export interface ModifierOptionInput {
+  name: string
+  priceDelta: number
+  sortOrder: number
+}
+
+export interface ModifierGroupInput {
+  name: string
+  selectionType: ModifierSelectionType
+  isRequired: boolean
+  maxSelect: number | null
+  sortOrder: number
+  options: ModifierOptionInput[]
+}
+
 export type JobStatus = 'quote' | 'in_progress' | 'done' | 'invoiced'
 
 // Zakázka / výjezd (modul Zakázky) — materiál + hodiny → ziskovost.

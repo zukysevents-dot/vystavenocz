@@ -82,6 +82,7 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
   { to: '/app/sklad', label: 'Sklad', module: 'stock' },
   { to: '/app/zasoby', label: 'Zásoby', module: 'stock' },
   { to: '/app/naskladneni', label: 'Naskladnění', module: 'stock' },
+  { to: '/app/modifikatory', label: 'Modifikátory', module: 'stock' },
   { to: '/app/dochazka', label: 'Docházka', module: 'attendance' },
   { to: '/app/smeny', label: 'Směny', module: 'attendance' },
   { to: '/app/pobocky', label: 'Pobočky', module: 'core', hiddenForRoles: ['Employee'] },

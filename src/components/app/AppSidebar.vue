@@ -34,6 +34,7 @@ import {
   X,
   History,
   ShieldCheck,
+  ListChecks,
 } from 'lucide-vue-next'
 import SiteLogo from '@/components/SiteLogo.vue'
 import { Button } from '@/components/ui/button'
@@ -50,6 +51,7 @@ const navIcons = {
   '/app/sklad': Package,
   '/app/zasoby': Boxes,
   '/app/naskladneni': ScanBarcode,
+  '/app/modifikatory': ListChecks,
   '/app/dochazka': Clock,
   '/app/smeny': CalendarClock,
   '/app/pobocky': Building2,
