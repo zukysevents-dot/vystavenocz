@@ -35,7 +35,8 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 1. Položky s kuchyňskou nebo barovou sekcí posílejte do výroby.
 2. `Kuchyně` ukazuje bony podle stanice, stolu a času přípravy.
 3. Stav bonu postupuje `Odesláno` → `Připravuje se` → `Hotovo` → `Vydáno`.
-4. Historie vydaných bonů je jen pro kontrolu, nemění stav objednávky.
+4. Když stejný bon mezitím posunul jiný terminál (druhá obrazovka v kuchyni), systém vás upozorní hláškou „Bon už mezitím posunul jiný terminál." a hned frontu obnoví — nepřepíšete tak omylem novější stav zpět.
+5. Historie vydaných bonů je jen pro kontrolu, nemění stav objednávky.
 
 ## Online objednávky
 

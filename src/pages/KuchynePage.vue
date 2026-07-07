@@ -13,7 +13,7 @@ import {
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { useKitchen } from '@/composables/useKitchen'
-import { isApiMode } from '@/lib/http'
+import { ApiError, isApiMode } from '@/lib/http'
 import { toast } from '@/components/ui/sonner'
 import LoadError from '@/components/app/LoadError.vue'
 import type { CategoryKitchenSection, KitchenQueueItem } from '@/lib/types'
@@ -124,8 +124,15 @@ async function setAll(t: Ticket, status: 'Preparing' | 'Ready' | 'Served') {
     if (status === 'Served') toast.success(`Vydáno: ${ticketTitle(t)}`)
     await refresh()
   } catch (e) {
-    toast.error('Změna stavu selhala.')
-    console.error(e)
+    // Bon mezitím posunul/vydal jiný terminál — backend odmítne neplatný přechod (409). Ukaž jasnou hlášku
+    // a hned synchronizuj frontu, ať kuchyň nevidí zastaralý stav.
+    if (e instanceof ApiError && e.status === 409) {
+      toast.error('Bon už mezitím posunul jiný terminál.')
+      await refresh()
+    } else {
+      toast.error('Změna stavu selhala.')
+      console.error(e)
+    }
   } finally {
     busy.value = false
   }
