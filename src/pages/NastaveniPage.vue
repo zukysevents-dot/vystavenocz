@@ -27,7 +27,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useLocations } from '@/composables/useLocations'
 import {
   useIntegrations,
-  type AccountingExportResult,
+  type AccountingExportTarget,
   type AccountingExportType,
   type PrintJob,
   type TerminalPayment,
@@ -115,9 +115,10 @@ const queuedPrintJobs = ref(0)
 const integrationsLoading = ref(false)
 const integrationsError = ref<string | null>(null)
 const accountingExportLoading = ref(false)
-const lastAccountingExport = ref<AccountingExportResult | null>(null)
+const lastAccountingExportFile = ref<string | null>(null)
 const accountingExportForm = reactive({
   type: 'ZReports' as AccountingExportType,
+  target: 'Generic' as AccountingExportTarget,
   from: monthStartIso(),
   to: todayIso(),
   locationId: 'all',
@@ -275,33 +276,56 @@ async function downloadAccountingExport(): Promise<void> {
   if (!integrationRuntimeAvailable.value) return
   accountingExportLoading.value = true
   try {
-    const exportResult = await integrationsApi.buildAccountingExport({
+    const exportResult = await integrationsApi.downloadAccountingExport({
       type: accountingExportForm.type,
       from: accountingExportForm.from,
       to: accountingExportForm.to,
       locationId:
         accountingExportForm.locationId === 'all' ? null : accountingExportForm.locationId,
-      target: 'Generic',
-      format: 'Csv',
+      target: accountingExportForm.target,
+      format: accountingExportFormat(),
     })
-    lastAccountingExport.value = exportResult
-    downloadTextFile(exportResult.fileName, exportResult.content, exportResult.contentType)
+    const fileName = exportResult.fileName ?? accountingExportFallbackFileName()
+    lastAccountingExportFile.value = fileName
+    downloadBlobFile(fileName, exportResult.blob)
     toast.success('Export připraven ke stažení.')
   } catch (e) {
-    toast.error(integrationErrorMessage(e))
+    toast.error(accountingExportErrorMessage(e))
   } finally {
     accountingExportLoading.value = false
   }
 }
 
-function downloadTextFile(fileName: string, content: string, contentType: string): void {
-  const blob = new Blob([content], { type: contentType || 'text/csv;charset=utf-8' })
+function accountingExportFormat(): 'Csv' | 'Xml' {
+  return accountingExportForm.target === 'Pohoda' ? 'Xml' : 'Csv'
+}
+
+function accountingExportTargetLabel(): string {
+  return accountingExportForm.target === 'Pohoda' ? 'Pohoda XML' : 'Generic CSV'
+}
+
+function accountingExportFormatLabel(): string {
+  return accountingExportFormat() === 'Xml' ? 'XML' : 'CSV'
+}
+
+function accountingExportFallbackFileName(): string {
+  const extension = accountingExportFormat() === 'Xml' ? 'xml' : 'csv'
+  return `vystaveno-${accountingExportForm.type.toLowerCase()}-${accountingExportForm.from}-${accountingExportForm.to}.${extension}`
+}
+
+function downloadBlobFile(fileName: string, blob: Blob): void {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = fileName || 'vystaveno-export.csv'
+  link.download = fileName || accountingExportFallbackFileName()
   link.click()
   URL.revokeObjectURL(url)
+}
+
+function accountingExportErrorMessage(e: unknown): string {
+  if (e instanceof ApiError && e.status === 422 && accountingExportForm.target === 'Pohoda')
+    return 'Pohoda XML export potřebuje vyplněné IČO firmy. Doplňte ho nahoře v Nastavení firmy.'
+  return integrationErrorMessage(e)
 }
 
 function integrationErrorMessage(e: unknown): string {
@@ -562,9 +586,26 @@ async function onSubmit(): Promise<void> {
                 <FileSpreadsheet class="h-4 w-4 text-primary" />
                 Účetní export
               </div>
-              <Badge variant="secondary">Generic CSV</Badge>
+              <Badge variant="secondary">{{ accountingExportTargetLabel() }}</Badge>
             </div>
             <div class="mt-3 grid gap-3 sm:grid-cols-2">
+              <div class="space-y-1.5">
+                <Label for="integration-export-target">Cíl</Label>
+                <Select
+                  :model-value="accountingExportForm.target"
+                  @update:model-value="
+                    (value) => (accountingExportForm.target = value as AccountingExportTarget)
+                  "
+                >
+                  <SelectTrigger id="integration-export-target">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Generic">Generic CSV</SelectItem>
+                    <SelectItem value="Pohoda">Pohoda XML</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div class="space-y-1.5">
                 <Label for="integration-export-type">Typ</Label>
                 <Select
@@ -615,10 +656,7 @@ async function onSubmit(): Promise<void> {
             </div>
             <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
               <div class="text-xs text-muted-foreground">
-                <template v-if="lastAccountingExport">
-                  {{ lastAccountingExport.rowCount }} řádků ·
-                  {{ formatCZK(lastAccountingExport.total) }}
-                </template>
+                <template v-if="lastAccountingExportFile">{{ lastAccountingExportFile }}</template>
                 <template v-else>Bez posledního exportu</template>
               </div>
               <Button
@@ -628,9 +666,12 @@ async function onSubmit(): Promise<void> {
                 @click="downloadAccountingExport"
               >
                 <Download class="h-4 w-4" />
-                Stáhnout CSV
+                Stáhnout {{ accountingExportFormatLabel() }}
               </Button>
             </div>
+            <p class="mt-2 text-xs text-muted-foreground">
+              Pohoda XML je soubor pro ruční import v Pohodě, ne živá synchronizace.
+            </p>
           </div>
 
           <div class="rounded-lg border border-border p-4">

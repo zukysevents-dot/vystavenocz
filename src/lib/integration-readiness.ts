@@ -65,12 +65,12 @@ export const INTEGRATION_READINESS_ITEMS: IntegrationReadinessItem[] = [
   },
   {
     id: 'pohoda-flexi-export',
-    name: 'POHODA / Flexi',
+    name: 'POHODA / Money',
     capability: 'accounting',
     state: 'export',
-    description: 'Generic CSV export běží; cíle POHODA/Money/SuperFaktura čekají na renderer.',
-    operatorAction: 'Stáhnout Generic CSV z integrací nebo uzávěrky a předat účetní.',
-    nextStep: 'Doplnit první cílový adaptér nad stejnými kanonickými řádky.',
+    description: 'Generic CSV a POHODA XML export běží; Money/SuperFaktura čekají na renderer.',
+    operatorAction: 'Stáhnout Generic CSV nebo POHODA XML a importovat soubor v účetnictví.',
+    nextStep: 'Doplnit další cílové adaptéry nebo přímý účetní konektor.',
     requiresConnector: true,
   },
   {

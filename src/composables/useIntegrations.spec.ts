@@ -3,7 +3,7 @@ import { useIntegrations } from '@/composables/useIntegrations'
 import { http } from '@/lib/http'
 
 vi.mock('@/lib/http', () => ({
-  http: { get: vi.fn() },
+  http: { get: vi.fn(), download: vi.fn() },
 }))
 
 beforeEach(() => {
@@ -37,6 +37,24 @@ describe('useIntegrations - backend foundation contract', () => {
     })
     expect(http.get).toHaveBeenCalledWith(
       '/integrations/exports?type=ZReports&from=2026-07-01&to=2026-07-31&target=Generic&format=Csv&locationId=loc-1',
+    )
+  })
+
+  it('downloadAccountingExport skládá query pro Pohoda XML export', async () => {
+    vi.mocked(http.download).mockResolvedValue({
+      blob: new Blob(['<dataPack />']),
+      fileName: 'pohoda.xml',
+      contentType: 'application/xml',
+    } as never)
+    await useIntegrations().downloadAccountingExport({
+      type: 'Sales',
+      from: '2026-07-01',
+      to: '2026-07-31',
+      target: 'Pohoda',
+      format: 'Xml',
+    })
+    expect(http.download).toHaveBeenCalledWith(
+      '/integrations/exports/download?type=Sales&from=2026-07-01&to=2026-07-31&target=Pohoda&format=Xml',
     )
   })
 })

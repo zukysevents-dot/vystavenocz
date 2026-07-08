@@ -1,4 +1,4 @@
-import { http } from '@/lib/http'
+import { http, type DownloadResponse } from '@/lib/http'
 import type { PagedResult } from '@/composables/useApi'
 
 export type TerminalPaymentStatus = 'Pending' | 'Succeeded' | 'Failed' | 'Cancelled'
@@ -6,7 +6,7 @@ export type PrintJobStatus = 'Queued' | 'Printed' | 'Failed'
 export type PrintJobType = 'Receipt' | 'KitchenTicket' | 'ZReport'
 export type AccountingExportType = 'Sales' | 'ZReports'
 export type AccountingExportTarget = 'Generic' | 'Pohoda' | 'MoneyS3' | 'SuperFaktura'
-export type AccountingExportFormat = 'Csv'
+export type AccountingExportFormat = 'Csv' | 'Xml'
 
 export interface TerminalPayment {
   id: string
@@ -128,5 +128,17 @@ export function useIntegrations() {
     return http.get<AccountingExportResult>(`/integrations/exports?${params.toString()}`)
   }
 
-  return { listTerminalPayments, listPrintJobs, buildAccountingExport }
+  function downloadAccountingExport(query: AccountingExportQuery): Promise<DownloadResponse> {
+    const params = new URLSearchParams({
+      type: query.type,
+      from: query.from,
+      to: query.to,
+      target: query.target ?? 'Generic',
+      format: query.format ?? 'Csv',
+    })
+    if (query.locationId) params.set('locationId', query.locationId)
+    return http.download(`/integrations/exports/download?${params.toString()}`)
+  }
+
+  return { listTerminalPayments, listPrintJobs, buildAccountingExport, downloadAccountingExport }
 }

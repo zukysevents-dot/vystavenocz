@@ -43,9 +43,9 @@ test('nastavení ukáže pravdivý stav integrací a exportů', async ({ page })
   await expect(page.getByText('Účtenky a kuchyňské bony')).toBeVisible()
   await expect(page.getByText('Manuální krok')).toHaveCount(2)
   await expect(page.getByText('Čeká na konektor')).toBeVisible()
-  await expect(page.getByText('POHODA / Flexi')).toBeVisible()
+  await expect(page.getByText('POHODA / Money')).toBeVisible()
   await expect(page.getByText('Exportní režim')).toBeVisible()
-  await expect(page.getByText('Generic CSV export běží')).toBeVisible()
+  await expect(page.getByText('Generic CSV a POHODA XML export běží')).toBeVisible()
   await expect(page.getByText('Partnerské API')).toBeVisible()
   await expect(page.getByText('Plánováno')).toBeVisible()
 })
@@ -55,7 +55,7 @@ test('nastavení v API režimu ukáže živý stav integrací a stáhne účetn�
 }) => {
   await seedApiMode(page)
 
-  let exportQuery = ''
+  let exportDownloadQuery = ''
   await page.route(API, async (route: Route) => {
     const request = route.request()
     const url = new URL(request.url())
@@ -151,25 +151,14 @@ test('nastavení v API režimu ukáže živý stav integrací a stáhne účetn�
         },
       })
     }
-    if (method === 'GET' && path === '/integrations/exports') {
-      exportQuery = url.search
+    if (method === 'GET' && path === '/integrations/exports/download') {
+      exportDownloadQuery = url.search
       return route.fulfill({
-        json: {
-          type: 'ZReports',
-          target: 'Generic',
-          format: 'Csv',
-          from: url.searchParams.get('from'),
-          to: url.searchParams.get('to'),
-          locationId: url.searchParams.get('locationId'),
-          rowCount: 1,
-          totalNet: 100,
-          totalVat: 21,
-          total: 121,
-          rows: [],
-          contentType: 'text/csv',
-          fileName: 'zreports.csv',
-          content: 'DocumentType;DocumentNumber;Total\nz-report;Z1;121\n',
+        headers: {
+          'content-type': 'application/xml',
+          'content-disposition': 'attachment; filename="pohoda-zreports.xml"',
         },
+        body: '<dataPack id="E2E" />',
       })
     }
 
@@ -184,13 +173,16 @@ test('nastavení v API režimu ukáže živý stav integrací a stáhne účetn�
   await expect(page.getByText('209,00 Kč')).toBeVisible()
   await expect(page.getByText('Bon', { exact: true })).toBeVisible()
 
+  await page.locator('#integration-export-target').click()
+  await page.getByRole('option', { name: 'Pohoda XML' }).click()
+
   const download = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Stáhnout CSV' }).click()
+  await page.getByRole('button', { name: 'Stáhnout XML' }).click()
   const file = await download
-  expect(file.suggestedFilename()).toBe('zreports.csv')
-  expect(exportQuery).toContain('type=ZReports')
-  expect(exportQuery).toContain('target=Generic')
-  expect(exportQuery).toContain('format=Csv')
+  expect(file.suggestedFilename()).toBe('pohoda-zreports.xml')
+  expect(exportDownloadQuery).toContain('type=ZReports')
+  expect(exportDownloadQuery).toContain('target=Pohoda')
+  expect(exportDownloadQuery).toContain('format=Xml')
 })
 
 test('veřejný slug se normalizuje pro online objednávky a QR stoly', async ({ page }) => {

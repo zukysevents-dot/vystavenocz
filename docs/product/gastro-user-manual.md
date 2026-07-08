@@ -153,12 +153,13 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 
 1. V `Nastavení firmy` otevřete část `Integrace a exporty`.
 2. Souhrn nahoře ukazuje, kolik napojení je použitelné v provozu, kolik exportů je připravených a kolik věcí čeká na skutečný konektor.
-3. V API režimu panel ukazuje účetní export `Generic CSV`, poslední terminálové platby a tiskovou frontu.
-4. U účetního exportu vyberte typ `Z-reporty` nebo `Prodeje`, datum od/do a případně provozovnu, potom stáhněte CSV.
+3. V API režimu panel ukazuje účetní export `Generic CSV` nebo `Pohoda XML`, poslední terminálové platby a tiskovou frontu.
+4. U účetního exportu vyberte cíl (`Generic CSV` nebo `Pohoda XML`), typ `Z-reporty` nebo `Prodeje`, datum od/do a případně provozovnu, potom stáhněte soubor.
 5. Platební terminál má zatím backendový životní cyklus, ale bez reálné brány. Obsluha dál potvrzuje výsledek karty ručně.
 6. Tisková fronta je připravená pro lokálního tiskového agenta. Dokud agent není nainstalovaný, tisk probíhá stávající cestou.
-7. POHODA/Money/SuperFaktura zatím nejsou přímé adaptéry. Používejte Generic CSV, dokud nevznikne konkrétní renderer.
-8. `Plánováno` znamená, že funkce je v roadmapě, ale nemá se tvářit jako hotová integrace.
+7. `Pohoda XML` je soubor pro ruční import v Pohodě (`Soubor -> Datová komunikace -> XML import`), ne živá synchronizace. Pokud export hlásí chybějící IČO, doplňte IČO firmy v horní části nastavení.
+8. Money/SuperFaktura zatím nejsou přímé adaptéry. Používejte Generic CSV nebo Pohoda XML podle účetního systému.
+9. `Plánováno` znamená, že funkce je v roadmapě, ale nemá se tvářit jako hotová integrace.
 
 ## Provozní přehled
 
