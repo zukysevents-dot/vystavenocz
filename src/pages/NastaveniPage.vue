@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import {
   Copy,
+  CreditCard,
   Download,
   FileSpreadsheet,
   ImageUp,
@@ -32,6 +33,7 @@ import {
   useIntegrations,
   type AccountingExportTarget,
   type AccountingExportType,
+  type PaymentProviderCatalogItem,
   type PrintAgent,
   type PrintAgentRegistered,
   type PrintJob,
@@ -125,6 +127,12 @@ const accountingExportLoading = ref(false)
 const lastAccountingExportFile = ref<string | null>(null)
 const printAgentLoading = ref(false)
 const registeredPrintAgent = ref<PrintAgentRegistered | null>(null)
+const paymentProviders = ref<PaymentProviderCatalogItem[]>([])
+const paymentProvidersLoading = ref(false)
+const paymentProvidersError = ref<string | null>(null)
+const operationalProviderCount = computed(
+  () => paymentProviders.value.filter((p) => p.isOperational).length,
+)
 const accountingExportForm = reactive({
   type: 'ZReports' as AccountingExportType,
   target: 'Generic' as AccountingExportTarget,
@@ -185,7 +193,7 @@ onMounted(async () => {
   form.defaultPaymentDays = c.defaultPaymentDays ?? 14
   form.publicSlug = c.publicSlug ?? ''
   if (apiMode) {
-    await Promise.all([loadLocations(), refreshIntegrationsRuntime()])
+    await Promise.all([loadLocations(), refreshIntegrationsRuntime(), loadPaymentProviderCatalog()])
   }
 })
 
@@ -287,6 +295,42 @@ async function refreshIntegrationsRuntime(): Promise<void> {
   } finally {
     integrationsLoading.value = false
   }
+}
+
+// Provider-neutral katalog platebních providerů (ČSOB, NFCTRON, Comgate, SumUp, GP webpay, …). Read-only marketplace;
+// backend říká, co je reálně napojené vs zatím jen připravený cíl. Vlastní loading/error stav (403 = modul/práva).
+async function loadPaymentProviderCatalog(): Promise<void> {
+  if (!integrationRuntimeAvailable.value) {
+    paymentProviders.value = []
+    paymentProvidersError.value = null
+    return
+  }
+  paymentProvidersLoading.value = true
+  paymentProvidersError.value = null
+  try {
+    paymentProviders.value = await integrationsApi.listPaymentProviderCatalog()
+  } catch (e) {
+    paymentProvidersError.value = integrationErrorMessage(e)
+    paymentProviders.value = []
+  } finally {
+    paymentProvidersLoading.value = false
+  }
+}
+
+// Tlačítko Obnovit načte živé fronty i katalog providerů zároveň.
+async function refreshIntegrations(): Promise<void> {
+  await Promise.all([refreshIntegrationsRuntime(), loadPaymentProviderCatalog()])
+}
+
+// Kategorie z katalogu je provider-neutral řetězec; známé přeložíme, jinak zobrazíme, co pošle backend.
+function paymentProviderCategoryLabel(category: string): string {
+  const labels: Record<string, string> = {
+    terminal: 'Platební terminál',
+    online: 'Online platební brána',
+    hybrid: 'Terminál + online',
+    wallet: 'Peněženka / QR platby',
+  }
+  return labels[category.toLowerCase()] ?? category
 }
 
 async function downloadAccountingExport(): Promise<void> {
@@ -639,10 +683,13 @@ async function onSubmit(): Promise<void> {
             type="button"
             variant="outline"
             size="sm"
-            :disabled="integrationsLoading"
-            @click="refreshIntegrationsRuntime"
+            :disabled="integrationsLoading || paymentProvidersLoading"
+            @click="refreshIntegrations"
           >
-            <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': integrationsLoading }" />
+            <RefreshCw
+              class="h-4 w-4"
+              :class="{ 'animate-spin': integrationsLoading || paymentProvidersLoading }"
+            />
             Obnovit
           </Button>
         </div>
@@ -964,6 +1011,85 @@ async function onSubmit(): Promise<void> {
           class="mt-4 rounded-lg border border-dashed border-border bg-muted/20 p-3 text-sm text-muted-foreground"
         >
           Live stav integrací se zobrazí v API režimu se zapnutým modulem Integrace.
+        </div>
+
+        <!-- Platební provideri (provider-neutral katalog / marketplace) -->
+        <div class="mt-4 rounded-lg border border-border p-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2 font-medium">
+              <CreditCard class="h-4 w-4 text-primary" />
+              Platební provideri
+            </div>
+            <Badge v-if="integrationRuntimeAvailable" variant="secondary">
+              {{ operationalProviderCount }} aktivních
+            </Badge>
+          </div>
+          <p class="mt-1 text-xs text-muted-foreground">
+            Otevřený katalog platebních bran a terminálů. ČSOB, NFCTRON, Comgate, SumUp i GP webpay
+            jsou podporované integrační cíle — ostré platby ale běží jen přes implementovaný adapter
+            a vyžadují smlouvu a přístupové údaje poskytovatele.
+          </p>
+
+          <div
+            v-if="!integrationRuntimeAvailable"
+            class="mt-3 rounded-lg border border-dashed border-border bg-muted/20 p-3 text-sm text-muted-foreground"
+          >
+            Katalog platebních providerů se zobrazí v API režimu se zapnutým modulem Integrace.
+          </div>
+          <div
+            v-else-if="paymentProvidersLoading"
+            class="mt-3 rounded-md border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground"
+          >
+            Načítání katalogu…
+          </div>
+          <div
+            v-else-if="paymentProvidersError"
+            class="mt-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive"
+          >
+            {{ paymentProvidersError }}
+          </div>
+          <div v-else-if="paymentProviders.length" class="mt-3 grid gap-3 sm:grid-cols-2">
+            <div
+              v-for="provider in paymentProviders"
+              :key="provider.key"
+              class="rounded-md border border-border p-3"
+            >
+              <div class="flex items-start justify-between gap-2">
+                <div class="font-medium">{{ provider.name }}</div>
+                <Badge :variant="provider.isOperational ? 'default' : 'outline'">
+                  {{ provider.isOperational ? 'Aktivní' : 'Připraveno k napojení' }}
+                </Badge>
+              </div>
+              <div class="mt-1 text-xs text-muted-foreground">
+                {{ paymentProviderCategoryLabel(provider.category) }}
+              </div>
+              <div class="mt-2 flex flex-wrap gap-1.5">
+                <Badge v-if="provider.supportsInPerson" variant="secondary">Terminál</Badge>
+                <Badge v-if="provider.supportsOnline" variant="secondary">Online platby</Badge>
+                <Badge v-if="provider.supportsWebhooks" variant="secondary">Webhooky</Badge>
+              </div>
+              <p v-if="provider.notes" class="mt-2 text-xs text-muted-foreground">
+                {{ provider.notes }}
+              </p>
+              <ul class="mt-2 space-y-0.5 text-xs text-muted-foreground">
+                <li v-if="provider.requiresPartnerContract">
+                  • Vyžaduje smlouvu s poskytovatelem.
+                </li>
+                <li v-if="provider.requiresCredentials">
+                  • Vyžaduje přístupové údaje (credentials).
+                </li>
+                <li v-if="provider.setupFields.length">
+                  • Nastavení: {{ provider.setupFields.join(', ') }}
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div
+            v-else
+            class="mt-3 rounded-md border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground"
+          >
+            Katalog platebních providerů je zatím prázdný.
+          </div>
         </div>
 
         <div class="mt-4 divide-y divide-border">
