@@ -3,7 +3,7 @@ import { useIntegrations } from '@/composables/useIntegrations'
 import { http } from '@/lib/http'
 
 vi.mock('@/lib/http', () => ({
-  http: { get: vi.fn(), download: vi.fn() },
+  http: { get: vi.fn(), post: vi.fn(), del: vi.fn(), download: vi.fn() },
 }))
 
 beforeEach(() => {
@@ -56,5 +56,26 @@ describe('useIntegrations - backend foundation contract', () => {
     expect(http.download).toHaveBeenCalledWith(
       '/integrations/exports/download?type=Sales&from=2026-07-01&to=2026-07-31&target=Pohoda&format=Xml',
     )
+  })
+
+  it('listPrintAgents volá správu tiskových agentů', async () => {
+    vi.mocked(http.get).mockResolvedValue([] as never)
+    await useIntegrations().listPrintAgents()
+    expect(http.get).toHaveBeenCalledWith('/integrations/print-agents')
+  })
+
+  it('registerPrintAgent posílá název a provozovnu', async () => {
+    vi.mocked(http.post).mockResolvedValue({ token: 'secret' } as never)
+    await useIntegrations().registerPrintAgent({ name: 'Kuchyně', locationId: 'loc-1' })
+    expect(http.post).toHaveBeenCalledWith('/integrations/print-agents', {
+      name: 'Kuchyně',
+      locationId: 'loc-1',
+    })
+  })
+
+  it('revokePrintAgent ruší agenta podle id', async () => {
+    vi.mocked(http.del).mockResolvedValue(undefined as never)
+    await useIntegrations().revokePrintAgent('agent-1')
+    expect(http.del).toHaveBeenCalledWith('/integrations/print-agents/agent-1')
   })
 })

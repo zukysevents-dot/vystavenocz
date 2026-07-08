@@ -56,6 +56,23 @@ test('nastavení v API režimu ukáže živý stav integrací a stáhne účetn�
   await seedApiMode(page)
 
   let exportDownloadQuery = ''
+  let registeredPrintAgentBody: unknown = null
+  let revokedPrintAgentId = ''
+  const printAgents: Array<{
+    id: string
+    name: string
+    locationId: string | null
+    lastSeenAt: string | null
+    createdAt: string
+  }> = [
+    {
+      id: 'agent-1',
+      name: 'Kuchyně tiskárna',
+      locationId: 'loc-1',
+      lastSeenAt: new Date().toISOString(),
+      createdAt: '2026-07-08T11:00:00Z',
+    },
+  ]
   await page.route(API, async (route: Route) => {
     const request = route.request()
     const url = new URL(request.url())
@@ -151,6 +168,32 @@ test('nastavení v API režimu ukáže živý stav integrací a stáhne účetn�
         },
       })
     }
+    if (method === 'GET' && path === '/integrations/print-agents') {
+      return route.fulfill({ json: printAgents })
+    }
+    if (method === 'POST' && path === '/integrations/print-agents') {
+      registeredPrintAgentBody = request.postDataJSON()
+      const created = {
+        id: 'agent-2',
+        name: 'Bar tiskárna',
+        locationId: null,
+        token: 'pat_test_print_agent_token',
+        lastSeenAt: null,
+        createdAt: '2026-07-08T12:10:00Z',
+      }
+      printAgents.push({
+        id: created.id,
+        name: created.name,
+        locationId: created.locationId,
+        lastSeenAt: created.lastSeenAt,
+        createdAt: created.createdAt,
+      })
+      return route.fulfill({ status: 201, json: created })
+    }
+    if (method === 'DELETE' && path.startsWith('/integrations/print-agents/')) {
+      revokedPrintAgentId = path.split('/').at(-1) ?? ''
+      return route.fulfill({ status: 204 })
+    }
     if (method === 'GET' && path === '/integrations/exports/download') {
       exportDownloadQuery = url.search
       return route.fulfill({
@@ -172,6 +215,18 @@ test('nastavení v API režimu ukáže živý stav integrací a stáhne účetn�
   await expect(page.getByText('1 tisků čeká')).toBeVisible()
   await expect(page.getByText('209,00 Kč')).toBeVisible()
   await expect(page.getByText('Bon', { exact: true })).toBeVisible()
+  await expect(page.getByText('Tiskoví agenti')).toBeVisible()
+  await expect(page.getByText('Kuchyně tiskárna')).toBeVisible()
+  await expect(page.getByText('Online', { exact: true })).toBeVisible()
+
+  await page.locator('#print-agent-name').fill('Bar tiskárna')
+  await page.getByRole('button', { name: 'Přidat' }).click()
+  await expect(page.getByText('Token pro Bar tiskárna')).toBeVisible()
+  await expect(page.locator('#print-agent-token')).toHaveValue('pat_test_print_agent_token')
+  expect(registeredPrintAgentBody).toEqual({ name: 'Bar tiskárna', locationId: null })
+
+  await page.getByRole('button', { name: 'Zrušit agenta' }).first().click()
+  expect(revokedPrintAgentId).toBe('agent-1')
 
   await page.locator('#integration-export-target').click()
   await page.getByRole('option', { name: 'Pohoda XML' }).click()

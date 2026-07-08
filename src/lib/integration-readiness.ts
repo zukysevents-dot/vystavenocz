@@ -58,9 +58,10 @@ export const INTEGRATION_READINESS_ITEMS: IntegrationReadinessItem[] = [
     name: 'Účtenky a kuchyňské bony',
     capability: 'printing',
     state: 'manual',
-    description: 'Backend má frontu tiskových jobů pro účtenky, bony a Z-reporty.',
-    operatorAction: 'Sledovat frontu jobů; bez lokálního agenta tisknout zatím stávající cestou.',
-    nextStep: 'Doplnit lokální tiskový agent pro ESC/POS nebo síťové tiskárny.',
+    description: 'Backend má frontu tiskových jobů a tokenový kontrakt pro lokálního agenta.',
+    operatorAction:
+      'Zaregistrovat tiskového agenta v nastavení a token vložit do lokálního programu.',
+    nextStep: 'Dodat desktopového agenta pro ESC/POS nebo síťové tiskárny.',
     requiresConnector: true,
   },
   {
