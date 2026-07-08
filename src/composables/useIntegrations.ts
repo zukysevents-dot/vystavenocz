@@ -69,6 +69,9 @@ export interface PaymentProviderCatalogItem {
   requiresPartnerContract: boolean
   requiresCredentials: boolean
   setupFields: string[]
+  // Podmnožina setupFields, která jsou skutečná tajemství (credential ref) a patří do zabezpečeného trezoru
+  // (ne do checklistu `configuredFields`). Backend #225+ ho posílá; starší/mock odpovědi ho nemají → volitelné.
+  credentialFields?: string[]
   notes: string
 }
 
@@ -76,7 +79,8 @@ export type PaymentConnectionMode = 'sandbox' | 'production'
 export type PaymentConnectionStatus = 'draft' | 'awaiting_credentials' | 'ready' | 'disabled'
 
 // Konfigurace napojení konkrétního platebního providera. NIKDY nenese tajné hodnoty — jen metadata a checklist
-// (`configuredFields` = které setup pole má obsluha bezpečně připravené). Tajné klíče se napojují mimo aplikaci.
+// (`configuredFields` = které setup pole má obsluha bezpečně připravené). Tajné klíče (credentialy) žijí v
+// zabezpečeném trezoru na backendu (viz IntegrationSecretsStatus); tady je jen souhrn required/stored polí.
 export interface PaymentProviderConnection {
   id: string
   providerKey: string
@@ -85,8 +89,27 @@ export interface PaymentProviderConnection {
   status: PaymentConnectionStatus
   locationId: string | null
   configuredFields: string[]
+  // Souhrn credential trezoru (backend #225+): která credential pole provider vyžaduje a která už mají uložený klíč.
+  requiredCredentialFields?: string[]
+  storedCredentialFields?: string[]
   createdAt: string
   updatedAt: string
+}
+
+// Stav jednoho credential pole v zabezpečeném trezoru. NIKDY nenese hodnotu — jen jestli je klíč uložený a odkdy.
+export interface IntegrationSecretFieldStatus {
+  fieldName: string
+  required: boolean
+  hasSecret: boolean
+  updatedAt: string | null
+}
+
+// Přehled trezoru credentialů konfigurace. `allRequiredPresent` = má všechny povinné klíče (podmínka pro stav Ready).
+export interface IntegrationSecretsStatus {
+  connectionId: string
+  providerKey: string
+  fields: IntegrationSecretFieldStatus[]
+  allRequiredPresent: boolean
 }
 
 // Zápisový payload — vědomě BEZ tajných hodnot (jen names v `configuredFields`). Backend endpoint zatím neexistuje;
@@ -236,6 +259,36 @@ export function useIntegrations() {
     return http.del(`/integrations/payment-provider-connections/${id}`)
   }
 
+  // --- Zabezpečený trezor credentialů (backend #225) ---
+  // Čtení vrací JEN stav polí (hasSecret/updatedAt), nikdy hodnoty. Zápis/rotace posílá raw hodnotu jednorázově;
+  // backend ji zašifruje a už nikdy nevrací. Mazání/revoke degraduje konfiguraci (Ready → čeká na údaje řeší UI/backend).
+  function listPaymentProviderSecrets(connectionId: string): Promise<IntegrationSecretsStatus> {
+    return http.get<IntegrationSecretsStatus>(
+      `/integrations/payment-provider-connections/${connectionId}/secrets`,
+    )
+  }
+
+  function storePaymentProviderSecret(
+    connectionId: string,
+    field: string,
+    value: string,
+  ): Promise<IntegrationSecretsStatus> {
+    return http.put<IntegrationSecretsStatus>(
+      `/integrations/payment-provider-connections/${connectionId}/secrets/${encodeURIComponent(field)}`,
+      { value },
+    )
+  }
+
+  function deletePaymentProviderSecret(connectionId: string, field: string): Promise<void> {
+    return http.del(
+      `/integrations/payment-provider-connections/${connectionId}/secrets/${encodeURIComponent(field)}`,
+    )
+  }
+
+  function revokePaymentProviderSecrets(connectionId: string): Promise<void> {
+    return http.del(`/integrations/payment-provider-connections/${connectionId}/secrets`)
+  }
+
   function downloadAccountingExport(query: AccountingExportQuery): Promise<DownloadResponse> {
     const params = new URLSearchParams({
       type: query.type,
@@ -259,6 +312,10 @@ export function useIntegrations() {
     createPaymentProviderConnection,
     updatePaymentProviderConnection,
     deletePaymentProviderConnection,
+    listPaymentProviderSecrets,
+    storePaymentProviderSecret,
+    deletePaymentProviderSecret,
+    revokePaymentProviderSecrets,
     buildAccountingExport,
     downloadAccountingExport,
   }

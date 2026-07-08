@@ -62,7 +62,8 @@ Proveď na testovací firmě / testovacím účtu:
    - ověř moduly,
    - ověř `Integrace a exporty`,
    - u účetních exportů stáhni Generic CSV nebo Pohoda XML,
-   - u `Platební provideri` otevři katalog a konfiguraci providera.
+   - u `Platební provideri` otevři katalog a konfiguraci providera,
+   - u uložené konfigurace otevři `Nastavit` → uprav → v `Zabezpečeném trezoru credentialů` vlož testovací klíč a ulož: input se musí vyčistit, pole přejde na `Uloženo`. Pokud přijde hláška o chybějícím šifrovacím klíči (503), doplň `INTEGRATIONS_SECRET_ENCRYPTION_KEY` na VPS.
 3. `Pokladna`:
    - prodej 1 položku kartou,
    - ověř, že se prodej objeví v tržbách.
@@ -89,7 +90,7 @@ Proveď na testovací firmě / testovacím účtu:
 
 - Platební provider katalog a konfigurace jsou hotové.
 - Skutečné ostré stržení přes ČSOB/NFCTRON/Comgate/SumUp/GP webpay vyžaduje další runtime adaptér a vendor sandbox/credentials.
-- Secret/credential store je hotový backend milestone; raw klíče se píšou jen do vault endpointů a nikdy do běžných UI polí ani poznámek.
+- Secret/credential vault je hotový backend milestone (#225) a frontend ho plně obsluhuje (uložit/rotovat/smazat/revokovat klíče v `Nastavit`); raw klíče se píšou jen do vault endpointů a nikdy do běžných UI polí ani poznámek. Uložení klíče ostrou platbu NESPOUŠTÍ — ta čeká na runtime adaptér.
 - BankID podpis je samostatný plánovaný modul, ne blokace gastro/VPS deploye.
 
 ## 6. Když deploy selže
