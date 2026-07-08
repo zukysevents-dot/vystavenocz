@@ -64,6 +64,8 @@ curl https://$DOMAIN/health/ready    # 200 = DB připojena (503 = DB problém)
 Smoke přes prohlížeč: otevři `https://$DOMAIN`, zaregistruj se, založ/uprav firmu (onboarding), vytvoř klienta.
 HTTP automaticky přesměruje na HTTPS (Caddy, 308).
 
+Podrobný smoke checklist pro aktuální modulovou aplikaci je v [`docs/deploy-smoke-checklist.md`](deploy-smoke-checklist.md).
+
 ## 6. Aktualizace (nový deploy)
 
 ```bash
