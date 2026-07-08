@@ -22,6 +22,8 @@ export interface SaleOptions {
   locationId?: string | null
   // Přijatá hotovost (jen platba Cash) — backend validuje, že pokryje Total, a vrátí cashChange.
   cashReceived?: number | null
+  // Volitelná cenová hladina/VIP cena. Backend počítá finální cenu, frontend ji jen vybírá.
+  priceLevelId?: string | null
 }
 
 export function useSales() {
@@ -39,6 +41,7 @@ export function useSales() {
       discountPercent: options?.discountPercent ?? 0,
       tipAmount: options?.tipAmount ?? 0,
       cashReceived: options?.cashReceived ?? null,
+      priceLevelId: options?.priceLevelId ?? null,
     })
     lastSale.value = sale
     return sale
