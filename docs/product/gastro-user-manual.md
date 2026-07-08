@@ -119,9 +119,10 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 ## Akce a ceny
 
 1. Otevřete `Akce a ceny`.
-2. Stránka teď ukazuje model cenových hladin, časových akcí, produktových/kategoriových slev a věrnostních bodů.
-3. Cenová hladina upraví cenu před akcemi. Akční pravidla se potom aplikují podle produktu, kategorie, času nebo minimální útraty.
-4. Trvalé ukládání pravidel a napojení do ostré pokladny, restaurace a QR objednávek bude další krok. Finální cenu má vždy potvrdit server.
+2. Vytvořte cenovou hladinu, například `VIP host` nebo `Personál`, a nastavte procentní úpravu ceny.
+3. Vytvořte akční pravidlo: procentní nebo pevná sleva, celý účet / kategorie / produkt, časové okno, minimální útrata a priorita.
+4. Náhled účtu počítá server, takže vidíte stejnou logiku, která se později napojí do ostré pokladny.
+5. Napojení do běžného placení v `Pokladna`, `Restaurace` a QR objednávkách je další krok; do té doby stránka slouží pro správu pravidel a kontrolu výpočtu.
 
 ## Inventura a zrcadlo
 
