@@ -24,6 +24,9 @@ export interface SaleOptions {
   cashReceived?: number | null
   // Volitelná cenová hladina/VIP cena. Backend počítá finální cenu, frontend ji jen vybírá.
   priceLevelId?: string | null
+  // Věrnostní zákazník + počet uplatněných bodů. Backend počítá slevu i earn ledger.
+  customerId?: string | null
+  redeemPoints?: number
 }
 
 export function useSales() {
@@ -42,6 +45,8 @@ export function useSales() {
       tipAmount: options?.tipAmount ?? 0,
       cashReceived: options?.cashReceived ?? null,
       priceLevelId: options?.priceLevelId ?? null,
+      customerId: options?.customerId ?? null,
+      redeemPoints: options?.redeemPoints ?? 0,
     })
     lastSale.value = sale
     return sale
@@ -56,10 +61,14 @@ export function useSales() {
     return http.get<PagedResult<Sale>>('/sales?pageSize=50').then((r) => r.items)
   }
 
+  function get(id: string): Promise<Sale> {
+    return http.get<Sale>(`/sales/${id}`)
+  }
+
   // Storno prodeje — vrátí zboží na sklad, prodej dostane stav Cancelled.
   function storno(id: string): Promise<Sale | ApprovalRequest> {
     return http.post<Sale | ApprovalRequest>(`/sales/${id}/storno`)
   }
 
-  return { lastSale, create, summaryToday, list, storno }
+  return { lastSale, create, summaryToday, list, get, storno }
 }

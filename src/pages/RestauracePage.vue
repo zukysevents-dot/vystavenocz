@@ -15,6 +15,8 @@ import {
   Users,
   Trash2,
   Check,
+  Gift,
+  UserRound,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -46,6 +48,9 @@ import { useCategories } from '@/composables/useCategories'
 import { useOrders } from '@/composables/useOrders'
 import { useModifierGroups } from '@/composables/useModifierGroups'
 import { usePromotions } from '@/composables/usePromotions'
+import { useSales } from '@/composables/useSales'
+import { useCustomers, type LoyaltyCustomer } from '@/composables/useCustomers'
+import { useLoyalty, type LoyaltySettings } from '@/composables/useLoyalty'
 import { ApiError, isApiMode } from '@/lib/http'
 import { formatCZK, round2 } from '@/lib/invoice'
 import { calcPosTotals, calcSplitGroupPayment, clampAmount, clampPercent } from '@/lib/posCalc'
@@ -70,6 +75,9 @@ const ordersApi = useOrders()
 const categoriesApi = useCategories()
 const modifiersApi = useModifierGroups()
 const promotions = usePromotions()
+const salesApi = useSales()
+const customersApi = useCustomers()
+const loyaltyApi = useLoyalty()
 const { products, load: loadProducts } = useProducts()
 const companyStore = useCompanyStore()
 const auth = useAuthStore()
@@ -120,7 +128,7 @@ onMounted(async () => {
   // Průběžně obnovuj otevřený účet (QR doobjednávky). refreshCurrentOrder si sám ohlídá, kdy je bezpečné načíst.
   accountRefreshTimer = setInterval(() => void refreshCurrentOrder(), 5000)
   try {
-    await Promise.all([loadProducts(), refreshOpen(), loadPriceLevels()])
+    await Promise.all([loadProducts(), refreshOpen(), loadPriceLevels(), loadLoyaltyCheckoutData()])
     categories.value = await categoriesApi.list()
     floors.value = await floorsApi.list()
     if (floors.value.length) currentFloorId.value = floors.value[0].id
@@ -198,6 +206,8 @@ function backToMap() {
   accountDiscountPercent.value = 0
   tipAmount.value = 0
   selectedPriceLevelId.value = STANDARD_PRICE_LEVEL
+  selectedCustomerId.value = NO_CUSTOMER
+  redeemPoints.value = 0
   pricePreviewSeq++
   pricePreview.value = null
   splitPricePreviewSeq++
@@ -210,8 +220,13 @@ const accountDiscountPercent = ref(0)
 const tipAmount = ref(0)
 const TIP_PRESETS = [10, 15, 20, 25] as const
 const STANDARD_PRICE_LEVEL = 'standard'
+const NO_CUSTOMER = 'none'
 const priceLevels = ref<PriceLevel[]>([])
 const selectedPriceLevelId = ref(STANDARD_PRICE_LEVEL)
+const loyaltyCustomers = ref<LoyaltyCustomer[]>([])
+const selectedCustomerId = ref(NO_CUSTOMER)
+const loyaltySettings = ref<LoyaltySettings | null>(null)
+const redeemPoints = ref(0)
 const pricePreview = ref<PromotionCalculation | null>(null)
 const pricePreviewLoading = ref(false)
 const pricePreviewError = ref(false)
@@ -224,6 +239,10 @@ const selectedPriceLevel = computed(
 )
 const loyaltyEnabled = computed(() => auth.hasModule('loyalty'))
 const activePriceLevelId = computed(() => selectedPriceLevel.value?.id ?? null)
+const selectedCustomer = computed(
+  () => loyaltyCustomers.value.find((customer) => customer.id === selectedCustomerId.value) ?? null,
+)
+const activeCustomerId = computed(() => selectedCustomer.value?.id ?? null)
 const priceLevelAdjustment = computed(() =>
   pricePreview.value
     ? round2(pricePreview.value.subtotalOriginal - pricePreview.value.subtotalAfterPriceLevel)
@@ -263,6 +282,28 @@ async function loadPriceLevels() {
     priceLevels.value = await promotions.listPriceLevels()
   } catch (e) {
     priceLevels.value = []
+    console.error(e)
+  }
+}
+
+async function loadLoyaltyCheckoutData() {
+  if (!loyaltyEnabled.value) {
+    loyaltyCustomers.value = []
+    loyaltySettings.value = null
+    selectedCustomerId.value = NO_CUSTOMER
+    redeemPoints.value = 0
+    return
+  }
+  try {
+    const [customers, settings] = await Promise.all([
+      customersApi.list('', 100),
+      loyaltyApi.getSettings(),
+    ])
+    loyaltyCustomers.value = customers.items
+    loyaltySettings.value = settings
+  } catch (e) {
+    loyaltyCustomers.value = []
+    loyaltySettings.value = null
     console.error(e)
   }
 }
@@ -314,10 +355,6 @@ async function refreshPricePreview() {
   } finally {
     if (seq === pricePreviewSeq) pricePreviewLoading.value = false
   }
-}
-
-function applyAccountAdjustments(baseGross: number): number {
-  return round2(accountAdjustedBase(baseGross) + clampAmount(tipAmount.value))
 }
 
 function accountAdjustedBase(baseGross: number): number {
@@ -399,18 +436,45 @@ const totals = computed(() =>
     : null,
 )
 const checkoutTotal = computed(() =>
-  pricePreview.value
-    ? applyAccountAdjustments(pricePreview.value.total)
-    : (totals.value?.total ?? currentOrder.value?.total ?? 0),
+  round2(checkoutBaseBeforeTip.value - redeemDiscount.value + clampAmount(tipAmount.value)),
 )
+const checkoutBaseBeforeTip = computed(() =>
+  pricePreview.value
+    ? accountAdjustedBase(pricePreview.value.total)
+    : totals.value
+      ? round2(totals.value.subtotalGross - totals.value.discountAmount)
+      : round2((currentOrder.value?.total ?? 0) - clampAmount(tipAmount.value)),
+)
+const maxRedeemPoints = computed(() => {
+  const customer = selectedCustomer.value
+  const settings = loyaltySettings.value
+  if (!customer || !settings || settings.pointValueCzk <= 0) return 0
+  const byTotal = Math.floor(checkoutBaseBeforeTip.value / settings.pointValueCzk)
+  const byLimit =
+    settings.maxRedeemPointsPerSale > 0 ? settings.maxRedeemPointsPerSale : Number.MAX_SAFE_INTEGER
+  return Math.max(0, Math.min(customer.loyaltyPoints, byLimit, byTotal))
+})
+const appliedRedeemPoints = computed(() =>
+  Math.min(Math.max(0, Number(redeemPoints.value) || 0), maxRedeemPoints.value),
+)
+const redeemDiscount = computed(() =>
+  round2(appliedRedeemPoints.value * (loyaltySettings.value?.pointValueCzk ?? 0)),
+)
+const earnedPointsPreview = computed(() => {
+  const rate = loyaltySettings.value?.earnRateCzkPerPoint ?? 0
+  if (!selectedCustomer.value || rate <= 0) return 0
+  return Math.max(0, Math.floor((checkoutTotal.value - clampAmount(tipAmount.value)) / rate))
+})
 const pricingReady = computed(
   () =>
     !apiMode || !loyaltyEnabled.value || (!pricePreviewLoading.value && !pricePreviewError.value),
 )
 
 watch(
-  [currentOrder, activePriceLevelId],
+  [currentOrder, activePriceLevelId, selectedCustomer, loyaltySettings],
   () => {
+    if (!selectedCustomer.value) redeemPoints.value = 0
+    if (redeemPoints.value > maxRedeemPoints.value) redeemPoints.value = maxRedeemPoints.value
     void refreshPricePreview()
     if (paymentSplitGroup.value) void refreshSplitPricePreview(paymentSplitGroup.value)
   },
@@ -982,27 +1046,46 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
           pricePreview.value.total,
         )
       : totals.value?.discountAmount
-    const paid = await ordersApi.pay(order.id, method, cashReceived, activePriceLevelId.value)
-    const change = cashReceived != null ? round2(cashReceived - paid.total) : null
+    const paid = await ordersApi.pay(
+      order.id,
+      method,
+      cashReceived,
+      activePriceLevelId.value,
+      activeCustomerId.value,
+      appliedRedeemPoints.value,
+    )
+    const sale = paid.saleId ? await salesApi.get(paid.saleId) : null
+    const paidTotal = sale?.total ?? paid.total
+    const change = cashReceived != null ? round2(cashReceived - paidTotal) : null
     receiptData.value = buildReceipt({
       company: companyStore.company,
-      items: orderReceiptItems(order),
-      discountPercent: paid.discountPercent,
-      discountAmount: discountAmountSnapshot,
-      tipAmount: paid.tipAmount,
-      total: paid.total,
+      items: sale
+        ? sale.items.map((item) => ({
+            name: item.description ?? 'Položka',
+            qty: item.quantity,
+            total: item.lineTotal,
+            modifiers: item.modifiers ?? [],
+          }))
+        : orderReceiptItems(order),
+      discountPercent: sale?.discountPercent ?? paid.discountPercent,
+      discountAmount: round2((discountAmountSnapshot ?? 0) + (sale?.redeemDiscount ?? 0)),
+      tipAmount: sale?.tipAmount ?? paid.tipAmount,
+      total: paidTotal,
       method,
-      id: order.id,
+      id: sale?.id ?? order.id,
       table: tableName,
-      cashReceived,
+      customerName: selectedCustomer.value?.name,
+      cashReceived: sale?.cashReceived ?? cashReceived,
       cashChange: change,
+      loyaltyEarnedPoints: sale?.earnedPoints ?? earnedPointsPreview.value,
+      loyaltyRedeemedPoints: sale?.redeemPoints ?? appliedRedeemPoints.value,
     })
     paymentOpen.value = false // zavřít PŘED otevřením účtenky — dva otevřené dialogy zamykaly stránku
     receiptOpen.value = true // účtenka po zaplacení (náhled + tisk)
     toast.success(
       change != null && change > 0
-        ? `Zaplaceno ${formatCZK(paid.total)} hotově, vrátit ${formatCZK(change)}.`
-        : `Zaplaceno ${formatCZK(paid.total)} ${method === 'Cash' ? 'hotově' : 'kartou'}.`,
+        ? `Zaplaceno ${formatCZK(paidTotal)} hotově, vrátit ${formatCZK(change)}.`
+        : `Zaplaceno ${formatCZK(paidTotal)} ${method === 'Cash' ? 'hotově' : 'kartou'}.`,
     )
     await refreshOpen()
     backToMap()
@@ -1330,6 +1413,60 @@ const currentItemCount = computed(() =>
                 </SelectContent>
               </Select>
             </div>
+            <div v-if="loyaltyEnabled && loyaltyCustomers.length" class="space-y-2">
+              <div class="flex items-center justify-between gap-2">
+                <span class="inline-flex items-center gap-1 text-sm text-muted-foreground">
+                  <UserRound class="h-3.5 w-3.5" /> Zákazník
+                </span>
+                <Select v-model="selectedCustomerId" :disabled="busy">
+                  <SelectTrigger class="h-8 w-44">
+                    <SelectValue placeholder="Bez zákazníka" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem :value="NO_CUSTOMER">Bez zákazníka</SelectItem>
+                    <SelectItem
+                      v-for="customer in loyaltyCustomers"
+                      :key="customer.id"
+                      :value="customer.id"
+                    >
+                      {{ customer.name }} · {{ customer.loyaltyPoints }} b
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div
+                v-if="selectedCustomer"
+                class="rounded-lg border border-border bg-muted/30 p-2 text-xs"
+              >
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-muted-foreground">Body</span>
+                  <span class="font-medium tabular-nums">{{ selectedCustomer.loyaltyPoints }}</span>
+                </div>
+                <div class="mt-2 flex items-center justify-between gap-2">
+                  <span class="inline-flex items-center gap-1 text-muted-foreground">
+                    <Gift class="h-3.5 w-3.5" /> Uplatnit
+                  </span>
+                  <div class="flex items-center gap-1">
+                    <Input
+                      v-model.number="redeemPoints"
+                      type="number"
+                      min="0"
+                      :max="maxRedeemPoints"
+                      class="h-7 w-20 px-1 text-right text-xs"
+                      :disabled="busy || maxRedeemPoints === 0"
+                      aria-label="Uplatnit věrnostní body"
+                    />
+                    <span class="text-muted-foreground">b</span>
+                  </div>
+                </div>
+                <div class="mt-1 flex items-center justify-between gap-2 text-muted-foreground">
+                  <span>Max {{ maxRedeemPoints }} b</span>
+                  <span v-if="redeemDiscount" class="text-primary tabular-nums"
+                    >−{{ formatCZK(redeemDiscount) }}</span
+                  >
+                </div>
+              </div>
+            </div>
             <div class="flex items-center justify-between gap-2">
               <span class="text-sm text-muted-foreground">Sleva na účet</span>
               <div class="flex items-center">
@@ -1411,6 +1548,14 @@ const currentItemCount = computed(() =>
               <div v-if="promoDiscount" class="flex items-center justify-between gap-2">
                 <span class="text-muted-foreground">Akce</span>
                 <span class="tabular-nums text-primary">−{{ formatCZK(promoDiscount) }}</span>
+              </div>
+              <div v-if="redeemDiscount" class="flex items-center justify-between gap-2">
+                <span class="text-muted-foreground">Body</span>
+                <span class="tabular-nums text-primary">−{{ formatCZK(redeemDiscount) }}</span>
+              </div>
+              <div v-if="earnedPointsPreview" class="flex items-center justify-between gap-2">
+                <span class="text-muted-foreground">Získá bodů</span>
+                <span class="tabular-nums">+{{ earnedPointsPreview }}</span>
               </div>
               <div v-if="pricePreviewError" class="text-muted-foreground">
                 Náhled ceny není dostupný, finální cenu dopočítá server při platbě.

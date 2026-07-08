@@ -27,6 +27,7 @@ withDefaults(
     receiptNumber: string
     dateTime: string
     table?: string
+    customerName?: string
     cashier?: string
     items: ReceiptLine[]
     subtotal?: number
@@ -38,6 +39,8 @@ withDefaults(
     paymentMethod: string
     cashReceived?: number
     cashChange?: number
+    loyaltyEarnedPoints?: number
+    loyaltyRedeemedPoints?: number
     footer?: string
   }>(),
   { footer: 'Děkujeme za návštěvu' },
@@ -103,6 +106,9 @@ const money = (n: number) =>
       <div v-if="table" class="flex justify-between">
         <span>Stůl</span><span>{{ table }}</span>
       </div>
+      <div v-if="customerName" class="flex justify-between">
+        <span>Zákazník</span><span>{{ customerName }}</span>
+      </div>
       <div v-if="cashier" class="flex justify-between">
         <span>Obsluha</span><span>{{ cashier }}</span>
       </div>
@@ -152,6 +158,12 @@ const money = (n: number) =>
       </div>
       <div v-if="tipAmount" class="flex justify-between">
         <span>Spropitné</span><span class="tabular-nums">{{ money(tipAmount) }} Kč</span>
+      </div>
+      <div v-if="loyaltyRedeemedPoints" class="flex justify-between">
+        <span>Uplatněné body</span><span class="tabular-nums">{{ loyaltyRedeemedPoints }}</span>
+      </div>
+      <div v-if="loyaltyEarnedPoints" class="flex justify-between">
+        <span>Získané body</span><span class="tabular-nums">{{ loyaltyEarnedPoints }}</span>
       </div>
     </div>
 

@@ -104,6 +104,8 @@ describe('useOrders — payload položek (note/course)', () => {
       paymentMethod: 'Cash',
       cashReceived: null,
       priceLevelId: null,
+      customerId: null,
+      redeemPoints: 0,
     })
   })
 
@@ -114,6 +116,8 @@ describe('useOrders — payload položek (note/course)', () => {
       paymentMethod: 'Cash',
       cashReceived: 500,
       priceLevelId: null,
+      customerId: null,
+      redeemPoints: 0,
     })
   })
 
@@ -124,6 +128,20 @@ describe('useOrders — payload položek (note/course)', () => {
       paymentMethod: 'Card',
       cashReceived: null,
       priceLevelId: 'vip-1',
+      customerId: null,
+      redeemPoints: 0,
+    })
+  })
+
+  it('pay pošle zákazníka a uplatněné body', async () => {
+    vi.mocked(http.post).mockResolvedValue({} as never)
+    await useOrders().pay('o1', 'Card', null, null, 'cust-1', 30)
+    expect(http.post).toHaveBeenCalledWith('/orders/o1/pay', {
+      paymentMethod: 'Card',
+      cashReceived: null,
+      priceLevelId: null,
+      customerId: 'cust-1',
+      redeemPoints: 30,
     })
   })
 
