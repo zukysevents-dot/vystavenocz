@@ -121,8 +121,11 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 1. Otevřete `Akce a ceny`.
 2. Vytvořte cenovou hladinu, například `VIP host` nebo `Personál`, a nastavte procentní úpravu ceny.
 3. Vytvořte akční pravidlo: procentní nebo pevná sleva, celý účet / kategorie / produkt, časové okno, minimální útrata a priorita.
-4. Náhled účtu počítá server, takže vidíte stejnou logiku, která se později napojí do ostré pokladny.
-5. Napojení do běžného placení v `Pokladna`, `Restaurace` a QR objednávkách je další krok; do té doby stránka slouží pro správu pravidel a kontrolu výpočtu.
+4. Náhled účtu počítá server, takže vidíte stejnou logiku, která se používá při ostrém prodeji.
+5. Akční pravidla se v běžném prodeji uplatní automaticky podle nastavení. Obsluha je nemusí zapínat ručně.
+6. Pokud má zákazník VIP/personální cenu, vyberte před platbou v `Pokladna` nebo `Restaurace` pole `Cenová hladina`. Systém hned ukáže dopad cenové hladiny, případnou akci a finální částku.
+7. Cenová hladina se posílá na server až při zaplacení. Když náhled ceny není dostupný, finální cenu pořád dopočítá server při platbě.
+8. QR objednávky zatím používají běžné automatické akce; výběr VIP hladiny u hosta bez obsluhy je samostatný další krok.
 
 ## Inventura a zrcadlo
 

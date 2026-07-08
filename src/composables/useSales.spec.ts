@@ -32,6 +32,7 @@ describe('useSales — kontrakt volání', () => {
       discountPercent: 0,
       tipAmount: 0,
       cashReceived: null,
+      priceLevelId: null,
     })
   })
 
@@ -78,6 +79,19 @@ describe('useSales — kontrakt volání', () => {
     expect(http.post).toHaveBeenCalledWith(
       '/sales',
       expect.objectContaining({ discountPercent: 10, tipAmount: 50 }),
+    )
+  })
+
+  it('create pošle zvolenou cenovou hladinu (priceLevelId)', async () => {
+    vi.mocked(http.post).mockResolvedValue({ id: 's1' } as never)
+    await useSales().create(
+      'Card',
+      [{ productId: 'p1', description: 'Burger', quantity: 1, unitPrice: 199, vatRate: 12 }],
+      { priceLevelId: 'vip-1' },
+    )
+    expect(http.post).toHaveBeenCalledWith(
+      '/sales',
+      expect.objectContaining({ priceLevelId: 'vip-1' }),
     )
   })
 

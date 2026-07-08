@@ -103,6 +103,7 @@ describe('useOrders — payload položek (note/course)', () => {
     expect(http.post).toHaveBeenCalledWith('/orders/o1/pay', {
       paymentMethod: 'Cash',
       cashReceived: null,
+      priceLevelId: null,
     })
   })
 
@@ -112,6 +113,17 @@ describe('useOrders — payload položek (note/course)', () => {
     expect(http.post).toHaveBeenCalledWith('/orders/o1/pay', {
       paymentMethod: 'Cash',
       cashReceived: 500,
+      priceLevelId: null,
+    })
+  })
+
+  it('pay pošle zvolenou cenovou hladinu (priceLevelId)', async () => {
+    vi.mocked(http.post).mockResolvedValue({} as never)
+    await useOrders().pay('o1', 'Card', null, 'vip-1')
+    expect(http.post).toHaveBeenCalledWith('/orders/o1/pay', {
+      paymentMethod: 'Card',
+      cashReceived: null,
+      priceLevelId: 'vip-1',
     })
   })
 
@@ -128,6 +140,7 @@ describe('useOrders — payload položek (note/course)', () => {
         { itemId: 'i2', quantity: 0.5 },
       ],
       cashReceived: null,
+      priceLevelId: null,
     })
   })
 
@@ -138,6 +151,18 @@ describe('useOrders — payload položek (note/course)', () => {
       paymentMethod: 'Cash',
       items: [{ itemId: 'i1', quantity: 1 }],
       cashReceived: 200,
+      priceLevelId: null,
+    })
+  })
+
+  it('payItems pošle zvolenou cenovou hladinu (priceLevelId)', async () => {
+    vi.mocked(http.post).mockResolvedValue({} as never)
+    await useOrders().payItems('o1', 'Card', [{ itemId: 'i1', quantity: 1 }], null, 'vip-1')
+    expect(http.post).toHaveBeenCalledWith('/orders/o1/pay-items', {
+      paymentMethod: 'Card',
+      items: [{ itemId: 'i1', quantity: 1 }],
+      cashReceived: null,
+      priceLevelId: 'vip-1',
     })
   })
 

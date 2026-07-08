@@ -49,13 +49,16 @@ import { useProducts } from '@/composables/useProducts'
 import { useCategories } from '@/composables/useCategories'
 import { useLocations } from '@/composables/useLocations'
 import { useSales } from '@/composables/useSales'
+import { usePromotions } from '@/composables/usePromotions'
 import { formatCZK, round2 } from '@/lib/invoice'
 import { findByEan } from '@/lib/reorder'
 import { buildReceipt, type ReceiptInfo } from '@/lib/receipt'
 import { calcPosTotals, clampAmount, clampPercent } from '@/lib/posCalc'
 import { ApiError, isApiMode } from '@/lib/http'
 import { isApprovalRequest } from '@/lib/types'
+import type { PriceLevel, PromotionCalculation, PromotionLineInput } from '@/lib/promotions'
 import { useCompanyStore } from '@/stores/company'
+import { useAuthStore } from '@/stores/auth'
 import { toast } from '@/components/ui/sonner'
 import type { Category, DailySalesSummary, PaymentMethod, Product, Sale } from '@/lib/types'
 
@@ -63,7 +66,9 @@ const { products, load } = useProducts()
 const categoriesApi = useCategories()
 const { locations, load: loadLocations } = useLocations()
 const sales = useSales()
+const promotions = usePromotions()
 const companyStore = useCompanyStore()
+const auth = useAuthStore()
 
 // Provozovna, na které pokladna prodává (kvůli uzávěrce per pobočku). Jedna pobočka → automaticky,
 // víc → pokladní vybere, žádná → prodává se „bez pobočky" (uzávěrka po provozovnách pak nic neukáže).
@@ -121,6 +126,113 @@ const itemCount = computed(() => cart.value.reduce((sum, l) => sum + l.quantity,
 const accountDiscountPercent = ref(0)
 const tipAmount = ref(0)
 const TIP_PRESETS = [10, 15, 20, 25] as const
+const STANDARD_PRICE_LEVEL = 'standard'
+const priceLevels = ref<PriceLevel[]>([])
+const selectedPriceLevelId = ref(STANDARD_PRICE_LEVEL)
+const pricePreview = ref<PromotionCalculation | null>(null)
+const pricePreviewLoading = ref(false)
+const pricePreviewError = ref(false)
+let pricePreviewSeq = 0
+
+const selectedPriceLevel = computed(
+  () => priceLevels.value.find((level) => level.id === selectedPriceLevelId.value) ?? null,
+)
+const loyaltyEnabled = computed(() => auth.hasModule('loyalty'))
+const activePriceLevelId = computed(() => selectedPriceLevel.value?.id ?? null)
+const checkoutTotal = computed(() =>
+  pricePreview.value ? applyAccountAdjustments(pricePreview.value.total) : totals.value.total,
+)
+const pricingReady = computed(
+  () =>
+    !apiMode || !loyaltyEnabled.value || (!pricePreviewLoading.value && !pricePreviewError.value),
+)
+const priceLevelAdjustment = computed(() =>
+  pricePreview.value
+    ? round2(pricePreview.value.subtotalOriginal - pricePreview.value.subtotalAfterPriceLevel)
+    : 0,
+)
+const promoDiscount = computed(() => pricePreview.value?.discountTotal ?? 0)
+
+function applyAccountAdjustments(baseGross: number): number {
+  return round2(accountAdjustedBase(baseGross) + clampAmount(tipAmount.value))
+}
+
+function accountAdjustedBase(baseGross: number): number {
+  return round2(baseGross * (1 - clampPercent(accountDiscountPercent.value) / 100))
+}
+
+function accountDiscountAmount(baseGross: number): number {
+  return round2(baseGross * (clampPercent(accountDiscountPercent.value) / 100))
+}
+
+function receiptDiscountAmount(): number {
+  if (!pricePreview.value) return totals.value.discountAmount
+  return round2(
+    Math.max(0, pricePreview.value.subtotalOriginal - pricePreview.value.total) +
+      accountDiscountAmount(pricePreview.value.total),
+  )
+}
+
+function previewLines(): PromotionLineInput[] {
+  return cart.value.map((l) => ({
+    productId: l.product.id,
+    categoryId: l.product.categoryId,
+    name: l.product.name,
+    quantity: l.quantity,
+    unitPrice: round2(l.product.salePrice * (1 - clampPct(l.discountPercent) / 100)),
+  }))
+}
+
+async function loadPriceLevels() {
+  if (!loyaltyEnabled.value) {
+    priceLevels.value = []
+    selectedPriceLevelId.value = STANDARD_PRICE_LEVEL
+    return
+  }
+  try {
+    priceLevels.value = await promotions.listPriceLevels()
+  } catch (e) {
+    priceLevels.value = []
+    console.error(e)
+  }
+}
+
+async function refreshPricePreview() {
+  if (!apiMode || !loyaltyEnabled.value || !cart.value.length) {
+    pricePreviewSeq++
+    pricePreview.value = null
+    pricePreviewLoading.value = false
+    pricePreviewError.value = false
+    return
+  }
+  const seq = ++pricePreviewSeq
+  pricePreview.value = null
+  pricePreviewLoading.value = true
+  pricePreviewError.value = false
+  try {
+    const result = await promotions.calculate(
+      previewLines(),
+      activePriceLevelId.value,
+      [],
+      selectedPriceLevel.value,
+    )
+    if (seq === pricePreviewSeq) pricePreview.value = result
+  } catch (e) {
+    if (seq === pricePreviewSeq) {
+      pricePreview.value = null
+      pricePreviewError.value = true
+    }
+    console.error(e)
+  } finally {
+    if (seq === pricePreviewSeq) pricePreviewLoading.value = false
+  }
+}
+
+function formatPriceLevelImpact(value: number): string {
+  if (value > 0) return `−${formatCZK(value)}`
+  if (value < 0) return `+${formatCZK(Math.abs(value))}`
+  return formatCZK(0)
+}
 
 const totals = computed(() =>
   calcPosTotals(
@@ -136,17 +248,21 @@ const totals = computed(() =>
 )
 
 function setTipPercent(pct: number) {
-  tipAmount.value = round2((totals.value.subtotalGross - totals.value.discountAmount) * (pct / 100))
+  const base = pricePreview.value
+    ? accountAdjustedBase(pricePreview.value.total)
+    : totals.value.subtotalGross - totals.value.discountAmount
+  tipAmount.value = round2(base * (pct / 100))
 }
 
 onMounted(async () => {
+  auth.init()
   companyStore.init() // profil firmy (název/adresa) pro hlavičku účtenky
   if (!apiMode) {
     loading.value = false
     return
   }
   loading.value = true
-  await Promise.all([load(), loadLocations()])
+  await Promise.all([load(), loadLocations(), loadPriceLevels()])
   try {
     categories.value = await categoriesApi.list()
   } catch (e) {
@@ -207,12 +323,38 @@ function clearCart() {
   cart.value = []
   accountDiscountPercent.value = 0
   tipAmount.value = 0
+  selectedPriceLevelId.value = STANDARD_PRICE_LEVEL
+  pricePreviewSeq++
+  pricePreview.value = null
 }
+
+watch(
+  [cart, activePriceLevelId],
+  () => {
+    void refreshPricePreview()
+  },
+  { deep: true },
+)
 
 // --- Jednotný platební dialog (hotově s výpočtem vrácení / karta přes terminálový krok) ---
 const paymentOpen = ref(false)
 
+async function openPaymentDialog() {
+  if (!cart.value.length || paying.value) return
+  await refreshPricePreview()
+  if (!pricingReady.value) {
+    toast.error('Cenu se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+    return
+  }
+  paymentOpen.value = true
+}
+
 async function confirmPayment(payment: { method: PaymentMethod; cashReceived: number | null }) {
+  await refreshPricePreview()
+  if (!pricingReady.value) {
+    toast.error('Cenu se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+    return
+  }
   const ok = await pay(payment.method, payment.cashReceived)
   if (ok) paymentOpen.value = false // při chybě zůstává otevřený, obsluha může zkusit znovu
 }
@@ -221,11 +363,6 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
   if (!cart.value.length || paying.value) return false
   paying.value = true
   try {
-    const receiptLines = cart.value.map((l) => ({
-      name: l.product.name,
-      qty: l.quantity,
-      total: lineTotal(l),
-    }))
     const items = cart.value.map((l) => ({
       productId: l.product.id,
       description: l.product.name,
@@ -236,13 +373,26 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
     }))
     // Kč hodnota slevy na účet nejde odvodit ze Sale response (ta nese jen totaly PO slevě),
     // proto se bere z FE snapshotu před odesláním — jen pro zobrazení na účtence.
-    const discountAmountSnapshot = totals.value.discountAmount
+    const discountAmountSnapshot = receiptDiscountAmount()
     const sale = await sales.create(method, items, {
       discountPercent: clampPercent(accountDiscountPercent.value),
       tipAmount: clampAmount(tipAmount.value),
       locationId: currentLocationId.value || null,
       cashReceived,
+      priceLevelId: activePriceLevelId.value,
     })
+    const receiptLines = sale.items?.length
+      ? sale.items.map((item) => ({
+          name: item.description ?? 'Položka',
+          qty: item.quantity,
+          total: item.lineTotal,
+          modifiers: item.modifiers ?? [],
+        }))
+      : cart.value.map((l) => ({
+          name: l.product.name,
+          qty: l.quantity,
+          total: lineTotal(l),
+        }))
     receiptData.value = buildReceipt({
       company: companyStore.company,
       items: receiptLines,
@@ -582,6 +732,20 @@ function saleTime(iso: string): string {
         </div>
 
         <div v-if="cart.length" class="space-y-2 border-t border-border p-4">
+          <div v-if="priceLevels.length" class="flex items-center justify-between gap-2">
+            <span class="text-sm text-muted-foreground">Cenová hladina</span>
+            <Select v-model="selectedPriceLevelId" :disabled="paying">
+              <SelectTrigger class="h-8 w-44">
+                <SelectValue placeholder="Běžná cena" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem :value="STANDARD_PRICE_LEVEL">Běžná cena</SelectItem>
+                <SelectItem v-for="level in priceLevels" :key="level.id" :value="level.id">
+                  {{ level.name }} ({{ level.adjustmentPercent }} %)
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div class="flex items-center justify-between gap-2">
             <span class="text-sm text-muted-foreground">Sleva na účet</span>
             <div class="flex items-center">
@@ -634,20 +798,50 @@ function saleTime(iso: string): string {
         </div>
 
         <div class="border-t border-border p-4">
+          <div
+            v-if="
+              pricePreviewLoading ||
+              pricePreviewError ||
+              selectedPriceLevel ||
+              priceLevelAdjustment ||
+              promoDiscount
+            "
+            class="mb-3 space-y-1 rounded-lg border border-border bg-muted/30 p-2 text-xs"
+          >
+            <div v-if="pricePreviewLoading" class="text-muted-foreground">
+              Počítám cenu na serveru…
+            </div>
+            <div v-if="selectedPriceLevel" class="flex items-center justify-between gap-2">
+              <span class="text-muted-foreground">{{ selectedPriceLevel.name }}</span>
+              <span
+                class="tabular-nums"
+                :class="priceLevelAdjustment >= 0 ? 'text-primary' : 'text-destructive'"
+              >
+                {{ formatPriceLevelImpact(priceLevelAdjustment) }}
+              </span>
+            </div>
+            <div v-if="promoDiscount" class="flex items-center justify-between gap-2">
+              <span class="text-muted-foreground">Akce</span>
+              <span class="tabular-nums text-primary">−{{ formatCZK(promoDiscount) }}</span>
+            </div>
+            <div v-if="pricePreviewError" class="text-muted-foreground">
+              Náhled ceny není dostupný, finální cenu dopočítá server při platbě.
+            </div>
+          </div>
           <div v-if="totals.discountAmount" class="mb-1 flex items-center justify-between text-sm">
             <span class="text-muted-foreground">Sleva</span>
             <span class="tabular-nums text-primary">−{{ formatCZK(totals.discountAmount) }}</span>
           </div>
           <div class="mb-3 flex items-center justify-between">
             <span class="text-sm text-muted-foreground">Celkem</span>
-            <span class="text-2xl font-bold tabular-nums">{{ formatCZK(totals.total) }}</span>
+            <span class="text-2xl font-bold tabular-nums">{{ formatCZK(checkoutTotal) }}</span>
           </div>
           <Button
             variant="coral"
             size="lg"
             class="w-full"
-            :disabled="!cart.length || paying"
-            @click="paymentOpen = true"
+            :disabled="!cart.length || paying || pricePreviewLoading"
+            @click="openPaymentDialog"
           >
             <Loader2 v-if="paying" class="h-4 w-4 animate-spin" />
             <Banknote v-else class="h-4 w-4" /> Zaplatit
@@ -748,8 +942,8 @@ function saleTime(iso: string): string {
     <!-- Účtenka po zaplacení (náhled + tisk/PDF) -->
     <PaymentDialog
       v-model:open="paymentOpen"
-      :total="totals.total"
-      :busy="paying"
+      :total="checkoutTotal"
+      :busy="paying || pricePreviewLoading"
       @confirm="confirmPayment"
     />
 

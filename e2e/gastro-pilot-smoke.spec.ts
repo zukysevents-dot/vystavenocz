@@ -271,16 +271,16 @@ test('pilotní gastro průchod: účet u stolu, kuchyň, platba a nenulová uzá
       return route.fulfill({ json: paged(paid ? [sale()] : [], 100) })
     }
     if (method === 'GET' && path === '/sales/summary') {
-      expect(url.searchParams.get('date')).toBe(businessDate)
       expect(url.searchParams.get('locationId')).toBe(location.id)
+      const forBusinessDate = url.searchParams.get('date') === businessDate
       return route.fulfill({
         json: {
-          count: paid ? 1 : 0,
-          totalNet: paid ? 186.61 : 0,
-          totalVat: paid ? 22.39 : 0,
-          total: paid ? 209 : 0,
+          count: paid && forBusinessDate ? 1 : 0,
+          totalNet: paid && forBusinessDate ? 186.61 : 0,
+          totalVat: paid && forBusinessDate ? 22.39 : 0,
+          total: paid && forBusinessDate ? 209 : 0,
           cashTotal: 0,
-          cardTotal: paid ? 209 : 0,
+          cardTotal: paid && forBusinessDate ? 209 : 0,
         },
       })
     }
@@ -310,7 +310,7 @@ test('pilotní gastro průchod: účet u stolu, kuchyň, platba a nenulová uzá
   await page.getByRole('button', { name: 'Kartou' }).click()
   await page.getByRole('button', { name: 'Platba prošla' }).click()
   await expect(page.getByText('Zaplaceno 209,00 Kč kartou.')).toBeVisible()
-  expect(paymentPayload).toEqual({ paymentMethod: 'Card', cashReceived: null })
+  expect(paymentPayload).toEqual({ paymentMethod: 'Card', cashReceived: null, priceLevelId: null })
 
   await page.goto('/app/uzaverka')
   await page.locator('#uzaverka-date').fill(businessDate)

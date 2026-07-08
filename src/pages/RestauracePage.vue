@@ -27,6 +27,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import PaymentDialog from '@/components/PaymentDialog.vue'
 import ReceiptDialog from '@/components/ReceiptDialog.vue'
 import ModifierSelectDialog from '@/components/app/ModifierSelectDialog.vue'
@@ -38,10 +45,13 @@ import { useProducts } from '@/composables/useProducts'
 import { useCategories } from '@/composables/useCategories'
 import { useOrders } from '@/composables/useOrders'
 import { useModifierGroups } from '@/composables/useModifierGroups'
+import { usePromotions } from '@/composables/usePromotions'
 import { ApiError, isApiMode } from '@/lib/http'
 import { formatCZK, round2 } from '@/lib/invoice'
 import { calcPosTotals, calcSplitGroupPayment, clampAmount, clampPercent } from '@/lib/posCalc'
 import { toast } from '@/components/ui/sonner'
+import { useAuthStore } from '@/stores/auth'
+import type { PriceLevel, PromotionCalculation, PromotionLineInput } from '@/lib/promotions'
 import type {
   Category,
   DiningTable,
@@ -59,8 +69,10 @@ const tablesApi = useTables()
 const ordersApi = useOrders()
 const categoriesApi = useCategories()
 const modifiersApi = useModifierGroups()
+const promotions = usePromotions()
 const { products, load: loadProducts } = useProducts()
 const companyStore = useCompanyStore()
+const auth = useAuthStore()
 const apiMode = isApiMode()
 
 // Účtenka po zaplacení (náhled + tisk/PDF).
@@ -99,6 +111,7 @@ const occupancy = computed(() => {
 })
 
 onMounted(async () => {
+  auth.init()
   companyStore.init() // profil firmy (název/adresa) pro hlavičku účtenky
   if (!apiMode) {
     loading.value = false
@@ -107,7 +120,7 @@ onMounted(async () => {
   // Průběžně obnovuj otevřený účet (QR doobjednávky). refreshCurrentOrder si sám ohlídá, kdy je bezpečné načíst.
   accountRefreshTimer = setInterval(() => void refreshCurrentOrder(), 5000)
   try {
-    await Promise.all([loadProducts(), refreshOpen()])
+    await Promise.all([loadProducts(), refreshOpen(), loadPriceLevels()])
     categories.value = await categoriesApi.list()
     floors.value = await floorsApi.list()
     if (floors.value.length) currentFloorId.value = floors.value[0].id
@@ -184,12 +197,39 @@ function backToMap() {
   currentOrder.value = null
   accountDiscountPercent.value = 0
   tipAmount.value = 0
+  selectedPriceLevelId.value = STANDARD_PRICE_LEVEL
+  pricePreviewSeq++
+  pricePreview.value = null
+  splitPricePreviewSeq++
+  splitPricePreview.value = null
+  splitPricePreviewGroupId.value = null
 }
 
 // --- Sleva na účet + spropitné (ukládá se průběžně, ne až při platbě) ---
 const accountDiscountPercent = ref(0)
 const tipAmount = ref(0)
 const TIP_PRESETS = [10, 15, 20, 25] as const
+const STANDARD_PRICE_LEVEL = 'standard'
+const priceLevels = ref<PriceLevel[]>([])
+const selectedPriceLevelId = ref(STANDARD_PRICE_LEVEL)
+const pricePreview = ref<PromotionCalculation | null>(null)
+const pricePreviewLoading = ref(false)
+const pricePreviewError = ref(false)
+let pricePreviewSeq = 0
+const splitPricePreview = ref<PromotionCalculation | null>(null)
+const splitPricePreviewGroupId = ref<string | null>(null)
+let splitPricePreviewSeq = 0
+const selectedPriceLevel = computed(
+  () => priceLevels.value.find((level) => level.id === selectedPriceLevelId.value) ?? null,
+)
+const loyaltyEnabled = computed(() => auth.hasModule('loyalty'))
+const activePriceLevelId = computed(() => selectedPriceLevel.value?.id ?? null)
+const priceLevelAdjustment = computed(() =>
+  pricePreview.value
+    ? round2(pricePreview.value.subtotalOriginal - pricePreview.value.subtotalAfterPriceLevel)
+    : 0,
+)
+const promoDiscount = computed(() => pricePreview.value?.discountTotal ?? 0)
 let discountTimer: ReturnType<typeof setTimeout> | null = null
 // Poll otevřeného účtu (QR doobjednávky hosta) — běží jen v API módu, spouští se v onMounted.
 let accountRefreshTimer: ReturnType<typeof setInterval> | null = null
@@ -211,6 +251,98 @@ onBeforeUnmount(() => {
 function syncDiscountFromOrder(order: Order) {
   accountDiscountPercent.value = order.discountPercent
   tipAmount.value = order.tipAmount
+}
+
+async function loadPriceLevels() {
+  if (!loyaltyEnabled.value) {
+    priceLevels.value = []
+    selectedPriceLevelId.value = STANDARD_PRICE_LEVEL
+    return
+  }
+  try {
+    priceLevels.value = await promotions.listPriceLevels()
+  } catch (e) {
+    priceLevels.value = []
+    console.error(e)
+  }
+}
+
+function previewLines(): PromotionLineInput[] {
+  return promotionLinesForItems(currentOrder.value?.items ?? [])
+}
+
+function promotionLinesForItems(items: OrderItemLine[]): PromotionLineInput[] {
+  const productById = new Map(products.value.map((product) => [product.id, product]))
+  return items.map((item) => {
+    const product = item.productId ? productById.get(item.productId) : null
+    return {
+      productId: item.productId,
+      categoryId: product?.categoryId ?? null,
+      name: item.name,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+    }
+  })
+}
+
+async function refreshPricePreview() {
+  if (!apiMode || !loyaltyEnabled.value || !currentOrder.value?.items.length) {
+    pricePreviewSeq++
+    pricePreview.value = null
+    pricePreviewLoading.value = false
+    pricePreviewError.value = false
+    return
+  }
+  const seq = ++pricePreviewSeq
+  pricePreview.value = null
+  pricePreviewLoading.value = true
+  pricePreviewError.value = false
+  try {
+    const result = await promotions.calculate(
+      previewLines(),
+      activePriceLevelId.value,
+      [],
+      selectedPriceLevel.value,
+    )
+    if (seq === pricePreviewSeq) pricePreview.value = result
+  } catch (e) {
+    if (seq === pricePreviewSeq) {
+      pricePreview.value = null
+      pricePreviewError.value = true
+    }
+    console.error(e)
+  } finally {
+    if (seq === pricePreviewSeq) pricePreviewLoading.value = false
+  }
+}
+
+function applyAccountAdjustments(baseGross: number): number {
+  return round2(accountAdjustedBase(baseGross) + clampAmount(tipAmount.value))
+}
+
+function accountAdjustedBase(baseGross: number): number {
+  return round2(baseGross * (1 - clampPercent(accountDiscountPercent.value) / 100))
+}
+
+function accountDiscountAmount(baseGross: number): number {
+  return round2(baseGross * (clampPercent(accountDiscountPercent.value) / 100))
+}
+
+function receiptDiscountAmount(
+  originalGross: number,
+  afterPriceLevelAndPromo: number,
+  accountDiscountBase: number,
+): number {
+  return round2(
+    Math.max(0, originalGross - afterPriceLevelAndPromo) +
+      accountDiscountAmount(accountDiscountBase),
+  )
+}
+
+function formatPriceLevelImpact(value: number): string {
+  if (value > 0) return `−${formatCZK(value)}`
+  if (value < 0) return `+${formatCZK(Math.abs(value))}`
+  return formatCZK(0)
 }
 
 // Volá se po každé změně vstupu; no-op pokud hodnoty už odpovídají persistovanému stavu
@@ -266,10 +398,31 @@ const totals = computed(() =>
       )
     : null,
 )
+const checkoutTotal = computed(() =>
+  pricePreview.value
+    ? applyAccountAdjustments(pricePreview.value.total)
+    : (totals.value?.total ?? currentOrder.value?.total ?? 0),
+)
+const pricingReady = computed(
+  () =>
+    !apiMode || !loyaltyEnabled.value || (!pricePreviewLoading.value && !pricePreviewError.value),
+)
+
+watch(
+  [currentOrder, activePriceLevelId],
+  () => {
+    void refreshPricePreview()
+    if (paymentSplitGroup.value) void refreshSplitPricePreview(paymentSplitGroup.value)
+  },
+  { deep: true },
+)
 
 function setTipPercent(pct: number) {
   if (!totals.value) return
-  tipAmount.value = round2((totals.value.subtotalGross - totals.value.discountAmount) * (pct / 100))
+  const base = pricePreview.value
+    ? accountAdjustedBase(pricePreview.value.total)
+    : totals.value.subtotalGross - totals.value.discountAmount
+  tipAmount.value = round2(base * (pct / 100))
 }
 
 // Účet mezitím uzavřel/zrušil jiný terminál nebo host doplatil přes QR (404/409). Sjednocené zpracování:
@@ -480,6 +633,76 @@ function splitPaymentItems(group: OrderSplitGroup) {
   }))
 }
 
+function splitPreviewLines(group: OrderSplitGroup): PromotionLineInput[] {
+  if (!currentOrder.value) return []
+  const itemById = new Map(currentOrder.value.items.map((item) => [item.id, item]))
+  const splitItems = splitGroupPayment(group)?.items ?? []
+  return promotionLinesForItems(
+    splitItems
+      .map((row) => {
+        const item = itemById.get(row.itemId)
+        return item ? { ...item, quantity: row.quantity } : null
+      })
+      .filter((item): item is OrderItemLine => item !== null),
+  )
+}
+
+async function refreshSplitPricePreview(group: OrderSplitGroup | null) {
+  if (!group || !apiMode || !loyaltyEnabled.value) {
+    splitPricePreviewSeq++
+    splitPricePreview.value = null
+    splitPricePreviewGroupId.value = null
+    return
+  }
+  const lines = splitPreviewLines(group)
+  if (!lines.length) {
+    splitPricePreviewSeq++
+    splitPricePreview.value = null
+    splitPricePreviewGroupId.value = group.id
+    return
+  }
+  const seq = ++splitPricePreviewSeq
+  splitPricePreviewGroupId.value = group.id
+  try {
+    const result = await promotions.calculate(
+      lines,
+      activePriceLevelId.value,
+      [],
+      selectedPriceLevel.value,
+    )
+    if (seq === splitPricePreviewSeq) splitPricePreview.value = result
+  } catch (e) {
+    if (seq === splitPricePreviewSeq) {
+      splitPricePreview.value = null
+    }
+    console.error(e)
+  }
+}
+
+function splitCheckoutTotal(group: OrderSplitGroup): number {
+  const payment = splitGroupPayment(group)
+  if (!payment) return 0
+  if (splitPricePreviewGroupId.value === group.id && splitPricePreview.value) {
+    const afterAccountDiscount =
+      splitPricePreview.value.total * (1 - clampPercent(accountDiscountPercent.value) / 100)
+    return round2(afterAccountDiscount + payment.tipAmount)
+  }
+  return payment.total
+}
+
+function splitDiscountAmount(group: OrderSplitGroup): number {
+  const payment = splitGroupPayment(group)
+  if (!payment) return 0
+  if (splitPricePreviewGroupId.value === group.id && splitPricePreview.value) {
+    return receiptDiscountAmount(
+      splitPricePreview.value.subtotalOriginal,
+      splitPricePreview.value.total,
+      splitPricePreview.value.total,
+    )
+  }
+  return payment.discountAmount
+}
+
 function splitPaymentReceipt(group: OrderSplitGroup) {
   const payment = splitGroupPayment(group)
   if (!payment || !currentOrder.value) return null
@@ -491,10 +714,21 @@ function splitPaymentReceipt(group: OrderSplitGroup) {
       total: row.gross,
       modifiers: itemById.get(row.itemId)?.modifiers ?? [],
     })),
-    discountAmount: payment.discountAmount,
+    discountAmount: splitDiscountAmount(group),
     tipAmount: payment.tipAmount,
-    total: payment.total,
+    total: splitCheckoutTotal(group),
   }
+}
+
+function orderReceiptItems(order: Order) {
+  const preview = pricePreview.value
+  const hasPreviewLines = preview?.lines.length === order.items.length
+  return order.items.map((item, index) => ({
+    name: item.name,
+    qty: item.quantity,
+    total: hasPreviewLines ? preview.lines[index].finalTotal : item.lineTotal,
+    modifiers: item.modifiers ?? [],
+  }))
 }
 
 async function paySplitGroup(
@@ -512,7 +746,13 @@ async function paySplitGroup(
     if (!currentOrder.value) return false
     const orderId = currentOrder.value.id
     const receipt = splitPaymentReceipt(group)
-    const updated = await ordersApi.payItems(orderId, method, items, cashReceived)
+    const updated = await ordersApi.payItems(
+      orderId,
+      method,
+      items,
+      cashReceived,
+      activePriceLevelId.value,
+    )
     currentOrder.value = updated
     syncDiscountFromOrder(updated)
     splitGroups.value = []
@@ -563,9 +803,7 @@ const paymentOpen = ref(false)
 // null = platba celého účtu; jinak platba části za osobu z rozdělení účtu.
 const paymentSplitGroup = ref<OrderSplitGroup | null>(null)
 const paymentTotal = computed(() =>
-  paymentSplitGroup.value
-    ? groupTotal(paymentSplitGroup.value)
-    : (totals.value?.total ?? currentOrder.value?.total ?? 0),
+  paymentSplitGroup.value ? splitCheckoutTotal(paymentSplitGroup.value) : checkoutTotal.value,
 )
 const paymentLabel = computed(() =>
   paymentSplitGroup.value ? paymentSplitGroup.value.label : selectedTable.value?.name,
@@ -574,13 +812,47 @@ const paymentLabel = computed(() =>
 async function openPayment(group: OrderSplitGroup | null = null) {
   // Platba celého účtu: napřed natáhni aktuální stav — host mohl QR doobjednat, obsluha musí platit podle reality.
   // (Split platba se neobnovuje: rozdělení účtu vychází ze známých položek a refresh by ho rozhodil.)
-  if (group === null) await refreshCurrentOrder()
+  if (group === null) {
+    await refreshCurrentOrder()
+    await refreshPricePreview()
+    if (!pricingReady.value) {
+      toast.error('Cenu se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+      return
+    }
+  }
   if (!currentOrder.value) return // účet se mezitím zavřel a refresh nás vrátil na mapu
   paymentSplitGroup.value = group
+  await refreshSplitPricePreview(group)
+  if (
+    group &&
+    apiMode &&
+    loyaltyEnabled.value &&
+    (splitPricePreviewGroupId.value !== group.id || !splitPricePreview.value)
+  ) {
+    toast.error('Cenu vybrané části se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+    return
+  }
   paymentOpen.value = true
 }
 
 async function confirmPayment(payment: { method: PaymentMethod; cashReceived: number | null }) {
+  if (paymentSplitGroup.value) {
+    await refreshSplitPricePreview(paymentSplitGroup.value)
+    if (
+      apiMode &&
+      loyaltyEnabled.value &&
+      (splitPricePreviewGroupId.value !== paymentSplitGroup.value.id || !splitPricePreview.value)
+    ) {
+      toast.error('Cenu vybrané části se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+      return
+    }
+  } else {
+    await refreshPricePreview()
+    if (!pricingReady.value) {
+      toast.error('Cenu se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+      return
+    }
+  }
   const ok = paymentSplitGroup.value
     ? await paySplitGroup(paymentSplitGroup.value, payment.method, payment.cashReceived)
     : await pay(payment.method, payment.cashReceived)
@@ -703,17 +975,18 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
     await flushDiscountUpdate() // sleva/tip musí být uložené na Order, pay() je bere ze serveru
     if (!currentOrder.value) return false
     const order = currentOrder.value
-    const discountAmountSnapshot = totals.value?.discountAmount
-    const paid = await ordersApi.pay(order.id, method, cashReceived)
+    const discountAmountSnapshot = pricePreview.value
+      ? receiptDiscountAmount(
+          pricePreview.value.subtotalOriginal,
+          pricePreview.value.total,
+          pricePreview.value.total,
+        )
+      : totals.value?.discountAmount
+    const paid = await ordersApi.pay(order.id, method, cashReceived, activePriceLevelId.value)
     const change = cashReceived != null ? round2(cashReceived - paid.total) : null
     receiptData.value = buildReceipt({
       company: companyStore.company,
-      items: order.items.map((i) => ({
-        name: i.name,
-        qty: i.quantity,
-        total: i.lineTotal,
-        modifiers: i.modifiers ?? [],
-      })),
+      items: orderReceiptItems(order),
       discountPercent: paid.discountPercent,
       discountAmount: discountAmountSnapshot,
       tipAmount: paid.tipAmount,
@@ -1043,6 +1316,20 @@ const currentItemCount = computed(() =>
           </div>
 
           <div class="space-y-2 border-t border-border p-4">
+            <div v-if="priceLevels.length" class="flex items-center justify-between gap-2">
+              <span class="text-sm text-muted-foreground">Cenová hladina</span>
+              <Select v-model="selectedPriceLevelId" :disabled="busy">
+                <SelectTrigger class="h-8 w-44">
+                  <SelectValue placeholder="Běžná cena" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem :value="STANDARD_PRICE_LEVEL">Běžná cena</SelectItem>
+                  <SelectItem v-for="level in priceLevels" :key="level.id" :value="level.id">
+                    {{ level.name }} ({{ level.adjustmentPercent }} %)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div class="flex items-center justify-between gap-2">
               <span class="text-sm text-muted-foreground">Sleva na účet</span>
               <div class="flex items-center">
@@ -1100,6 +1387,36 @@ const currentItemCount = computed(() =>
 
           <div class="border-t border-border p-4">
             <div
+              v-if="
+                pricePreviewLoading ||
+                pricePreviewError ||
+                selectedPriceLevel ||
+                priceLevelAdjustment ||
+                promoDiscount
+              "
+              class="mb-3 space-y-1 rounded-lg border border-border bg-muted/30 p-2 text-xs"
+            >
+              <div v-if="pricePreviewLoading" class="text-muted-foreground">
+                Počítám cenu na serveru…
+              </div>
+              <div v-if="selectedPriceLevel" class="flex items-center justify-between gap-2">
+                <span class="text-muted-foreground">{{ selectedPriceLevel.name }}</span>
+                <span
+                  class="tabular-nums"
+                  :class="priceLevelAdjustment >= 0 ? 'text-primary' : 'text-destructive'"
+                >
+                  {{ formatPriceLevelImpact(priceLevelAdjustment) }}
+                </span>
+              </div>
+              <div v-if="promoDiscount" class="flex items-center justify-between gap-2">
+                <span class="text-muted-foreground">Akce</span>
+                <span class="tabular-nums text-primary">−{{ formatCZK(promoDiscount) }}</span>
+              </div>
+              <div v-if="pricePreviewError" class="text-muted-foreground">
+                Náhled ceny není dostupný, finální cenu dopočítá server při platbě.
+              </div>
+            </div>
+            <div
               v-if="totals?.discountAmount"
               class="mb-1 flex items-center justify-between text-sm"
             >
@@ -1108,9 +1425,7 @@ const currentItemCount = computed(() =>
             </div>
             <div class="mb-3 flex items-center justify-between">
               <span class="text-sm text-muted-foreground">Celkem</span>
-              <span class="text-2xl font-bold tabular-nums">{{
-                formatCZK(totals?.total ?? currentOrder.total)
-              }}</span>
+              <span class="text-2xl font-bold tabular-nums">{{ formatCZK(checkoutTotal) }}</span>
             </div>
 
             <Button
@@ -1127,7 +1442,7 @@ const currentItemCount = computed(() =>
               variant="coral"
               size="lg"
               class="w-full"
-              :disabled="busy || !currentOrder.items.length"
+              :disabled="busy || pricePreviewLoading || !currentOrder.items.length"
               @click="openPayment()"
             >
               <Banknote class="h-4 w-4" /> Zaplatit
@@ -1434,7 +1749,7 @@ const currentItemCount = computed(() =>
       v-model:open="paymentOpen"
       :total="paymentTotal"
       :label="paymentLabel"
-      :busy="busy"
+      :busy="busy || pricePreviewLoading"
       @confirm="confirmPayment"
     />
 

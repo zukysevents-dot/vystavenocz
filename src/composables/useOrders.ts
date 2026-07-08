@@ -83,10 +83,12 @@ export function useOrders() {
     orderId: string,
     method: PaymentMethod,
     cashReceived?: number | null,
+    priceLevelId?: string | null,
   ): Promise<Order> {
     return http.post<Order>(`/orders/${orderId}/pay`, {
       paymentMethod: method,
       cashReceived: cashReceived ?? null,
+      priceLevelId: priceLevelId ?? null,
     })
   }
   function payItems(
@@ -94,11 +96,13 @@ export function useOrders() {
     method: PaymentMethod,
     items: OrderItemPaymentShare[],
     cashReceived?: number | null,
+    priceLevelId?: string | null,
   ): Promise<Order> {
     return http.post<Order>(`/orders/${orderId}/pay-items`, {
       paymentMethod: method,
       items,
       cashReceived: cashReceived ?? null,
+      priceLevelId: priceLevelId ?? null,
     })
   }
   function cancel(orderId: string): Promise<Order> {
