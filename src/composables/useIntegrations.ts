@@ -72,6 +72,34 @@ export interface PaymentProviderCatalogItem {
   notes: string
 }
 
+export type PaymentConnectionMode = 'sandbox' | 'production'
+export type PaymentConnectionStatus = 'draft' | 'awaiting_credentials' | 'ready' | 'disabled'
+
+// Konfigurace napojení konkrétního platebního providera. NIKDY nenese tajné hodnoty — jen metadata a checklist
+// (`configuredFields` = které setup pole má obsluha bezpečně připravené). Tajné klíče se napojují mimo aplikaci.
+export interface PaymentProviderConnection {
+  id: string
+  providerKey: string
+  name: string
+  mode: PaymentConnectionMode
+  status: PaymentConnectionStatus
+  locationId: string | null
+  configuredFields: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+// Zápisový payload — vědomě BEZ tajných hodnot (jen names v `configuredFields`). Backend endpoint zatím neexistuje;
+// UI je připravené a v testech se mockuje (GET/POST/PUT/DELETE /integrations/payment-provider-connections).
+export interface UpsertPaymentProviderConnectionRequest {
+  providerKey: string
+  name: string
+  mode: PaymentConnectionMode
+  status: PaymentConnectionStatus
+  locationId?: string | null
+  configuredFields?: string[]
+}
+
 export interface AccountingVatLine {
   vatRate: number
   net: number
@@ -179,6 +207,35 @@ export function useIntegrations() {
     return http.get<PaymentProviderCatalogItem[]>('/integrations/payment-providers/catalog')
   }
 
+  // Konfigurace napojení platebních providerů. Payload NIKDY neobsahuje tajné hodnoty (jen checklist `configuredFields`).
+  // Backend endpoint je zatím budoucí — UI je připravené, testy ho mockují.
+  function listPaymentProviderConnections(): Promise<PaymentProviderConnection[]> {
+    return http.get<PaymentProviderConnection[]>('/integrations/payment-provider-connections')
+  }
+
+  function createPaymentProviderConnection(
+    request: UpsertPaymentProviderConnectionRequest,
+  ): Promise<PaymentProviderConnection> {
+    return http.post<PaymentProviderConnection>(
+      '/integrations/payment-provider-connections',
+      request,
+    )
+  }
+
+  function updatePaymentProviderConnection(
+    id: string,
+    request: UpsertPaymentProviderConnectionRequest,
+  ): Promise<PaymentProviderConnection> {
+    return http.put<PaymentProviderConnection>(
+      `/integrations/payment-provider-connections/${id}`,
+      request,
+    )
+  }
+
+  function deletePaymentProviderConnection(id: string): Promise<void> {
+    return http.del(`/integrations/payment-provider-connections/${id}`)
+  }
+
   function downloadAccountingExport(query: AccountingExportQuery): Promise<DownloadResponse> {
     const params = new URLSearchParams({
       type: query.type,
@@ -198,6 +255,10 @@ export function useIntegrations() {
     registerPrintAgent,
     revokePrintAgent,
     listPaymentProviderCatalog,
+    listPaymentProviderConnections,
+    createPaymentProviderConnection,
+    updatePaymentProviderConnection,
+    deletePaymentProviderConnection,
     buildAccountingExport,
     downloadAccountingExport,
   }
