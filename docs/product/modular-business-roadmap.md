@@ -1,6 +1,6 @@
 # Vystaveno modular business roadmap
 
-Last updated: 2026-07-05
+Last updated: 2026-07-08
 
 ## Implementation status
 
@@ -37,6 +37,7 @@ The shared core is mandatory for all verticals:
 - customers, suppliers, contacts, notes, tasks, documents, and attachments
 - products, services, tax profiles, numbering series, and payment methods
 - invoices, receipts, credit notes, exports, and accounting-ready document history
+- verified document signing and identity-backed signature audit trails
 - audit log for critical business actions
 - notifications and reminders
 - subscription, enabled modules, feature flags, limits, and runtime capabilities
@@ -160,6 +161,7 @@ Vystaveno should win through:
 - AI assistant that explains losses, anomalies, and next actions
 - modern onboarding templates for cafe, bistro, restaurant, bar, food truck, salon, plumber, shop (foundation: business profiles define `setupSteps`; onboarding shows the recommended start and sends Gastro users first to `Pobočky`, then guides them through tables/QR, stock/menu, modifiers, and day close)
 - readable integration status for accounting, payments, printing, and API systems (foundation: `src/lib/integration-readiness.ts` drives `Nastavení firmy > Integrace a exporty`, showing operationally usable items, ready exports, connector backlog, manual terminal/printing steps, POHODA/Flexi export mode, and planned partner API without claiming direct sync before connectors exist)
+- verified signatures as a paid add-on: Bank iD first where it fits Czech verified identity, but provider-based so Signi/DocuSign/DigiSign or an internal signature provider can be added later
 - no paper as source of truth; paper is only an export or printout
 - simple Czech user guidance inside `docs/product/gastro-user-manual.md`, kept in sync as features land
 
@@ -183,6 +185,14 @@ Vystaveno should win through:
 
 - invoices, proformas, credit notes, recurring invoices, payment tracking, VAT, numbering, exports
 
+### Verified signatures
+
+- standalone paid add-on for verified signing of invoices, contracts, handover protocols, job protocols, reservations, service documents, and uploaded PDFs
+- Bank iD should be the first Czech identity-backed provider to evaluate, but the module must use a provider abstraction instead of hard-coding one vendor
+- document workflow: draft, sent, viewed, identity verified, signed, rejected, expired, cancelled, archived
+- signature evidence: document hash, provider transaction id, allowed identity payload, timestamps, actor, source channel, signed PDF, and immutable audit trail
+- reusable across gastro, services, crafts/jobs, invoicing, and future custom document flows
+
 ### Stock
 
 - reusable module used by gastro, shop, and jobs
@@ -199,7 +209,7 @@ Vystaveno should win through:
 
 ### Integrations
 
-- accounting, payments, terminals, bank imports, e-shops, calendars, food delivery, public API, webhooks
+- accounting, payments, terminals, verified signing providers, bank imports, e-shops, calendars, food delivery, public API, webhooks
 
 ## Implementation order
 
@@ -211,9 +221,10 @@ Vystaveno should win through:
 6. Add food cost, margin, variance, and manager reports.
 7. Add modular onboarding and templates per business type (foundation: profile-specific onboarding checklist and first-step routing).
 8. Add services and jobs as the next non-gastro verticals.
-9. Add accounting and payment integrations.
-10. Add AI insights after the underlying data is reliable.
-11. Add EET 2.0 when final technical requirements are published.
+9. Add verified document signing as a standalone paid module, starting with provider-based Bank iD signing feasibility.
+10. Add accounting and payment integrations.
+11. Add AI insights after the underlying data is reliable.
+12. Add EET 2.0 when final technical requirements are published.
 
 ## Acceptance criteria
 
@@ -224,5 +235,6 @@ Vystaveno is ready to compete in gastro when:
 - stock state changes automatically from real sales and manual stock operations
 - inventory and stock mirror show quantity and money differences
 - every critical action has user, time, reason, and audit trail
+- selected documents can be signed digitally with verifiable evidence instead of paper signatures
 - a non-gastro customer can disable gastro and see only their relevant modules
 - API rejects disabled modules and missing permissions even if the UI is bypassed
