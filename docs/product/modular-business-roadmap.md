@@ -159,7 +159,7 @@ Vystaveno should win through:
 - smarter stock mirror with variance explanations (foundation: `Zásoby > Zrcadlo` row detail explains opening + receipt + storno - sale - issue = expected state, and correction + stocktake = variance)
 - AI assistant that explains losses, anomalies, and next actions
 - modern onboarding templates for cafe, bistro, restaurant, bar, food truck, salon, plumber, shop (foundation: business profiles define `setupSteps`; onboarding shows the recommended start and sends Gastro users first to `Pobočky`, then guides them through tables/QR, stock/menu, modifiers, and day close)
-- readable integration status for accounting, payments, printing, and API systems (foundation: `src/lib/integration-readiness.ts` drives `Nastavení firmy > Integrace a exporty`, showing operationally usable items, ready exports, connector backlog, manual terminal/printing steps, POHODA/Flexi export mode, and planned partner API without claiming direct sync before connectors exist)
+- readable integration status for accounting, payments, printing, and API systems (foundation: `src/lib/integration-readiness.ts` drives `Nastavení firmy > Integrace a exporty`, showing operationally usable items, ready exports, connector backlog, manual terminal/printing steps, Generic CSV/Pohoda XML export mode, and planned partner API without claiming direct sync before connectors exist)
 - no paper as source of truth; paper is only an export or printout
 - simple Czech user guidance inside `docs/product/gastro-user-manual.md`, kept in sync as features land
 

@@ -58,6 +58,12 @@ export class ApiError extends Error {
   }
 }
 
+export interface DownloadResponse {
+  blob: Blob
+  fileName: string | null
+  contentType: string | null
+}
+
 // Souběžné requesty po expiraci tokenu sdílí jeden refresh — backend rotuje refresh token,
 // dva paralelní refreshe by se navzájem zneplatnily.
 let refreshing: Promise<Tokens | null> | null = null
@@ -137,12 +143,66 @@ async function request<T>(
   return (await res.json()) as T
 }
 
+async function download(path: string, retry = true): Promise<DownloadResponse> {
+  const baseUrl = apiUrl()
+  if (!baseUrl) throw new ApiError(0, 'API URL není nastavené.')
+  const tokens = getTokens()
+  const headers: Record<string, string> = { Accept: '*/*' }
+  if (tokens?.accessToken) headers.Authorization = `Bearer ${tokens.accessToken}`
+
+  const res = await fetch(`${baseUrl}${path}`, { method: 'GET', headers })
+
+  if (res.status === 401 && retry && getTokens()?.refreshToken) {
+    const refreshed = await refreshTokens()
+    if (refreshed) return download(path, false)
+  }
+
+  if (!res.ok) {
+    let detail: unknown
+    try {
+      detail = await res.json()
+    } catch {
+      try {
+        detail = await res.text()
+      } catch {
+        /* prázdné / nečitelné tělo */
+      }
+    }
+    const problem = detail as { detail?: string; title?: string } | undefined
+    throw new ApiError(
+      res.status,
+      problem?.detail ?? problem?.title ?? `HTTP ${res.status}`,
+      detail,
+    )
+  }
+
+  return {
+    blob: await res.blob(),
+    fileName: parseContentDispositionFileName(res.headers.get('content-disposition')),
+    contentType: res.headers.get('content-type'),
+  }
+}
+
+function parseContentDispositionFileName(value: string | null): string | null {
+  if (!value) return null
+  const encoded = value.match(/filename\*=UTF-8''([^;]+)/i)?.[1]
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded)
+    } catch {
+      return encoded
+    }
+  }
+  return value.match(/filename="?([^";]+)"?/i)?.[1] ?? null
+}
+
 export const http = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
   put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
   del: <T = void>(path: string) => request<T>('DELETE', path),
+  download,
   // Neautorizované volání (bez Authorization a bez refresh/retry) — veřejné endpointy.
   getPublic: <T>(path: string) => request<T>('GET', path, undefined, false, true),
   postPublic: <T>(path: string, body?: unknown) => request<T>('POST', path, body, false, true),

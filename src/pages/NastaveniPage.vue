@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ImageUp, Save, Trash2 } from 'lucide-vue-next'
+import {
+  Download,
+  FileSpreadsheet,
+  ImageUp,
+  Printer,
+  RefreshCw,
+  Save,
+  Trash2,
+} from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -16,7 +24,16 @@ import {
 import { toast } from '@/components/ui/sonner'
 import { useCompanyStore } from '@/stores/company'
 import { useAuthStore } from '@/stores/auth'
-import { buildInvoiceNumber } from '@/lib/invoice'
+import { useLocations } from '@/composables/useLocations'
+import {
+  useIntegrations,
+  type AccountingExportTarget,
+  type AccountingExportType,
+  type PrintJob,
+  type TerminalPayment,
+} from '@/composables/useIntegrations'
+import { ApiError, isApiMode } from '@/lib/http'
+import { buildInvoiceNumber, formatCZK } from '@/lib/invoice'
 import {
   INTEGRATION_READINESS_ITEMS,
   integrationBadgeVariant,
@@ -28,6 +45,9 @@ import type { Company, VatMode } from '@/lib/types'
 
 const companyStore = useCompanyStore()
 const auth = useAuthStore()
+const integrationsApi = useIntegrations()
+const { locations, load: loadLocations } = useLocations()
+const apiMode = isApiMode()
 
 // Max velikost loga (data URL žije v localStorage, držíme ho malé).
 const LOGO_MAX_BYTES = 512 * 1024
@@ -86,6 +106,23 @@ const moduleOptions: { id: AppModuleId; label: string; description: string; lock
 
 const integrationReadiness = INTEGRATION_READINESS_ITEMS
 const integrationSummary = computed(() => summarizeIntegrationReadiness(integrationReadiness))
+const integrationsModuleEnabled = computed(() => enabledModules.value.includes('integrations'))
+const integrationRuntimeAvailable = computed(() => apiMode && integrationsModuleEnabled.value)
+const terminalPayments = ref<TerminalPayment[]>([])
+const printJobs = ref<PrintJob[]>([])
+const pendingTerminalPayments = ref(0)
+const queuedPrintJobs = ref(0)
+const integrationsLoading = ref(false)
+const integrationsError = ref<string | null>(null)
+const accountingExportLoading = ref(false)
+const lastAccountingExportFile = ref<string | null>(null)
+const accountingExportForm = reactive({
+  type: 'ZReports' as AccountingExportType,
+  target: 'Generic' as AccountingExportTarget,
+  from: monthStartIso(),
+  to: todayIso(),
+  locationId: 'all',
+})
 
 const form = reactive({
   companyName: '',
@@ -134,6 +171,9 @@ onMounted(async () => {
   form.nextInvoiceSeq = c.nextInvoiceSeq ?? 1
   form.defaultPaymentDays = c.defaultPaymentDays ?? 14
   form.publicSlug = c.publicSlug ?? ''
+  if (apiMode) {
+    await Promise.all([loadLocations(), refreshIntegrationsRuntime()])
+  }
 })
 
 function toggleModule(module: AppModuleId, enabled: boolean | 'indeterminate' | undefined): void {
@@ -197,6 +237,149 @@ function onLogoChange(e: Event): void {
 
 function removeLogo(): void {
   form.logoUrl = ''
+}
+
+async function refreshIntegrationsRuntime(): Promise<void> {
+  if (!integrationRuntimeAvailable.value) {
+    terminalPayments.value = []
+    printJobs.value = []
+    pendingTerminalPayments.value = 0
+    queuedPrintJobs.value = 0
+    integrationsError.value = null
+    return
+  }
+  integrationsLoading.value = true
+  integrationsError.value = null
+  try {
+    const [terminals, pendingTerminals, jobs, queuedJobs] = await Promise.all([
+      integrationsApi.listTerminalPayments({ pageSize: 5 }),
+      integrationsApi.listTerminalPayments({ pageSize: 1, status: 'Pending' }),
+      integrationsApi.listPrintJobs({ pageSize: 5 }),
+      integrationsApi.listPrintJobs({ pageSize: 1, status: 'Queued' }),
+    ])
+    terminalPayments.value = terminals.items
+    pendingTerminalPayments.value = pendingTerminals.total
+    printJobs.value = jobs.items
+    queuedPrintJobs.value = queuedJobs.total
+  } catch (e) {
+    integrationsError.value = integrationErrorMessage(e)
+    terminalPayments.value = []
+    printJobs.value = []
+    pendingTerminalPayments.value = 0
+    queuedPrintJobs.value = 0
+  } finally {
+    integrationsLoading.value = false
+  }
+}
+
+async function downloadAccountingExport(): Promise<void> {
+  if (!integrationRuntimeAvailable.value) return
+  accountingExportLoading.value = true
+  try {
+    const exportResult = await integrationsApi.downloadAccountingExport({
+      type: accountingExportForm.type,
+      from: accountingExportForm.from,
+      to: accountingExportForm.to,
+      locationId:
+        accountingExportForm.locationId === 'all' ? null : accountingExportForm.locationId,
+      target: accountingExportForm.target,
+      format: accountingExportFormat(),
+    })
+    const fileName = exportResult.fileName ?? accountingExportFallbackFileName()
+    lastAccountingExportFile.value = fileName
+    downloadBlobFile(fileName, exportResult.blob)
+    toast.success('Export připraven ke stažení.')
+  } catch (e) {
+    toast.error(accountingExportErrorMessage(e))
+  } finally {
+    accountingExportLoading.value = false
+  }
+}
+
+function accountingExportFormat(): 'Csv' | 'Xml' {
+  return accountingExportForm.target === 'Pohoda' ? 'Xml' : 'Csv'
+}
+
+function accountingExportTargetLabel(): string {
+  return accountingExportForm.target === 'Pohoda' ? 'Pohoda XML' : 'Generic CSV'
+}
+
+function accountingExportFormatLabel(): string {
+  return accountingExportFormat() === 'Xml' ? 'XML' : 'CSV'
+}
+
+function accountingExportFallbackFileName(): string {
+  const extension = accountingExportFormat() === 'Xml' ? 'xml' : 'csv'
+  return `vystaveno-${accountingExportForm.type.toLowerCase()}-${accountingExportForm.from}-${accountingExportForm.to}.${extension}`
+}
+
+function downloadBlobFile(fileName: string, blob: Blob): void {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName || accountingExportFallbackFileName()
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+function accountingExportErrorMessage(e: unknown): string {
+  if (e instanceof ApiError && e.status === 422 && accountingExportForm.target === 'Pohoda')
+    return 'Pohoda XML export potřebuje vyplněné IČO firmy. Doplňte ho nahoře v Nastavení firmy.'
+  return integrationErrorMessage(e)
+}
+
+function integrationErrorMessage(e: unknown): string {
+  if (e instanceof ApiError && e.status === 403)
+    return 'Modul Integrace není povolený nebo nemáte oprávnění.'
+  if (e instanceof ApiError && e.status === 422) return e.message
+  if (e instanceof ApiError && e.status === 0) return 'API není dostupné.'
+  return 'Integrace se nepodařilo načíst.'
+}
+
+function terminalStatusLabel(status: TerminalPayment['status']): string {
+  const labels: Record<TerminalPayment['status'], string> = {
+    Pending: 'Čeká',
+    Succeeded: 'Úspěšná',
+    Failed: 'Selhala',
+    Cancelled: 'Zrušená',
+  }
+  return labels[status]
+}
+
+function printJobStatusLabel(status: PrintJob['status']): string {
+  const labels: Record<PrintJob['status'], string> = {
+    Queued: 'Ve frontě',
+    Printed: 'Vytištěno',
+    Failed: 'Selhalo',
+  }
+  return labels[status]
+}
+
+function printJobTypeLabel(type: PrintJob['type']): string {
+  const labels: Record<PrintJob['type'], string> = {
+    Receipt: 'Účtenka',
+    KitchenTicket: 'Bon',
+    ZReport: 'Z-report',
+  }
+  return labels[type]
+}
+
+function shortDateTime(value: string): string {
+  return new Date(value).toLocaleString('cs-CZ', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function monthStartIso(): string {
+  const now = new Date()
+  return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
 }
 
 async function onSubmit(): Promise<void> {
@@ -363,9 +546,22 @@ async function onSubmit(): Promise<void> {
 
       <!-- Integrace -->
       <div class="rounded-xl border border-border bg-card p-6">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Integrace a exporty
-        </h2>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Integrace a exporty
+          </h2>
+          <Button
+            v-if="integrationRuntimeAvailable"
+            type="button"
+            variant="outline"
+            size="sm"
+            :disabled="integrationsLoading"
+            @click="refreshIntegrationsRuntime"
+          >
+            <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': integrationsLoading }" />
+            Obnovit
+          </Button>
+        </div>
         <div class="mt-4 grid gap-3 sm:grid-cols-3">
           <div class="rounded-lg border border-border bg-muted/30 p-3">
             <div class="text-xs text-muted-foreground">Použitelné v provozu</div>
@@ -382,6 +578,188 @@ async function onSubmit(): Promise<void> {
             <div class="mt-1 text-2xl font-semibold">{{ integrationSummary.connectorBacklog }}</div>
           </div>
         </div>
+
+        <div v-if="integrationRuntimeAvailable" class="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr]">
+          <div class="rounded-lg border border-border p-4">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2 font-medium">
+                <FileSpreadsheet class="h-4 w-4 text-primary" />
+                Účetní export
+              </div>
+              <Badge variant="secondary">{{ accountingExportTargetLabel() }}</Badge>
+            </div>
+            <div class="mt-3 grid gap-3 sm:grid-cols-2">
+              <div class="space-y-1.5">
+                <Label for="integration-export-target">Cíl</Label>
+                <Select
+                  :model-value="accountingExportForm.target"
+                  @update:model-value="
+                    (value) => (accountingExportForm.target = value as AccountingExportTarget)
+                  "
+                >
+                  <SelectTrigger id="integration-export-target">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Generic">Generic CSV</SelectItem>
+                    <SelectItem value="Pohoda">Pohoda XML</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div class="space-y-1.5">
+                <Label for="integration-export-type">Typ</Label>
+                <Select
+                  :model-value="accountingExportForm.type"
+                  @update:model-value="
+                    (value) => (accountingExportForm.type = value as AccountingExportType)
+                  "
+                >
+                  <SelectTrigger id="integration-export-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ZReports">Z-reporty</SelectItem>
+                    <SelectItem value="Sales">Prodeje</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div class="space-y-1.5">
+                <Label for="integration-export-location">Provozovna</Label>
+                <Select v-model="accountingExportForm.locationId">
+                  <SelectTrigger id="integration-export-location">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Všechny</SelectItem>
+                    <SelectItem
+                      v-for="location in locations"
+                      :key="location.id"
+                      :value="location.id"
+                    >
+                      {{ location.name }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div class="space-y-1.5">
+                <Label for="integration-export-from">Od</Label>
+                <Input
+                  id="integration-export-from"
+                  v-model="accountingExportForm.from"
+                  type="date"
+                />
+              </div>
+              <div class="space-y-1.5">
+                <Label for="integration-export-to">Do</Label>
+                <Input id="integration-export-to" v-model="accountingExportForm.to" type="date" />
+              </div>
+            </div>
+            <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <div class="text-xs text-muted-foreground">
+                <template v-if="lastAccountingExportFile">{{ lastAccountingExportFile }}</template>
+                <template v-else>Bez posledního exportu</template>
+              </div>
+              <Button
+                type="button"
+                variant="coral"
+                :disabled="accountingExportLoading"
+                @click="downloadAccountingExport"
+              >
+                <Download class="h-4 w-4" />
+                Stáhnout {{ accountingExportFormatLabel() }}
+              </Button>
+            </div>
+            <p class="mt-2 text-xs text-muted-foreground">
+              Pohoda XML je soubor pro ruční import v Pohodě, ne živá synchronizace.
+            </p>
+          </div>
+
+          <div class="rounded-lg border border-border p-4">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2 font-medium">
+                <Printer class="h-4 w-4 text-primary" />
+                Provozní fronty
+              </div>
+              <div class="flex gap-2">
+                <Badge variant="secondary">{{ pendingTerminalPayments }} plateb čeká</Badge>
+                <Badge variant="secondary">{{ queuedPrintJobs }} tisků čeká</Badge>
+              </div>
+            </div>
+            <div
+              v-if="integrationsError"
+              class="mt-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive"
+            >
+              {{ integrationsError }}
+            </div>
+            <div v-else class="mt-3 grid gap-3 sm:grid-cols-2">
+              <div>
+                <div class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Terminál
+                </div>
+                <div class="space-y-2">
+                  <div
+                    v-for="payment in terminalPayments"
+                    :key="payment.id"
+                    class="rounded-md border border-border px-3 py-2 text-sm"
+                  >
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="font-medium">{{ formatCZK(payment.amount) }}</span>
+                      <Badge :variant="payment.status === 'Failed' ? 'destructive' : 'outline'">
+                        {{ terminalStatusLabel(payment.status) }}
+                      </Badge>
+                    </div>
+                    <div class="mt-1 text-xs text-muted-foreground">
+                      {{ payment.provider }} · {{ shortDateTime(payment.createdAt) }}
+                    </div>
+                  </div>
+                  <div
+                    v-if="!terminalPayments.length && !integrationsLoading"
+                    class="rounded-md border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground"
+                  >
+                    Bez platebních transakcí.
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Tisk
+                </div>
+                <div class="space-y-2">
+                  <div
+                    v-for="job in printJobs"
+                    :key="job.id"
+                    class="rounded-md border border-border px-3 py-2 text-sm"
+                  >
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="font-medium">{{ printJobTypeLabel(job.type) }}</span>
+                      <Badge :variant="job.status === 'Failed' ? 'destructive' : 'outline'">
+                        {{ printJobStatusLabel(job.status) }}
+                      </Badge>
+                    </div>
+                    <div class="mt-1 text-xs text-muted-foreground">
+                      {{ job.printer }} · {{ shortDateTime(job.createdAt) }}
+                    </div>
+                  </div>
+                  <div
+                    v-if="!printJobs.length && !integrationsLoading"
+                    class="rounded-md border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground"
+                  >
+                    Bez tiskových jobů.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          v-else
+          class="mt-4 rounded-lg border border-dashed border-border bg-muted/20 p-3 text-sm text-muted-foreground"
+        >
+          Live stav integrací se zobrazí v API režimu se zapnutým modulem Integrace.
+        </div>
+
         <div class="mt-4 divide-y divide-border">
           <div
             v-for="item in integrationReadiness"

@@ -1,5 +1,8 @@
 import { test, expect } from './fixtures/test'
 import { seedApp } from './helpers/seed'
+import type { Route } from '@playwright/test'
+
+const API = '**/api/v1/**'
 
 test('nastavení firmy se promítne do nové faktury (číslo + splatnost)', async ({ page }) => {
   await seedApp(page, {
@@ -40,11 +43,146 @@ test('nastavení ukáže pravdivý stav integrací a exportů', async ({ page })
   await expect(page.getByText('Účtenky a kuchyňské bony')).toBeVisible()
   await expect(page.getByText('Manuální krok')).toHaveCount(2)
   await expect(page.getByText('Čeká na konektor')).toBeVisible()
-  await expect(page.getByText('POHODA / Flexi')).toBeVisible()
+  await expect(page.getByText('POHODA / Money')).toBeVisible()
   await expect(page.getByText('Exportní režim')).toBeVisible()
-  await expect(page.getByText('přímá synchronizace zatím neběží')).toBeVisible()
+  await expect(page.getByText('Generic CSV a POHODA XML export běží')).toBeVisible()
   await expect(page.getByText('Partnerské API')).toBeVisible()
   await expect(page.getByText('Plánováno')).toBeVisible()
+})
+
+test('nastavení v API režimu ukáže živý stav integrací a stáhne účetní export', async ({
+  page,
+}) => {
+  await seedApiMode(page)
+
+  let exportDownloadQuery = ''
+  await page.route(API, async (route: Route) => {
+    const request = route.request()
+    const url = new URL(request.url())
+    const path = url.pathname.replace('/api/v1', '')
+    const method = request.method()
+
+    if (method === 'GET' && path === '/company') {
+      return route.fulfill({
+        json: {
+          id: 'c_e2e',
+          name: 'E2E Bistro',
+          ico: '12345678',
+          dic: null,
+          email: 'e2e@vystaveno.cz',
+          phone: null,
+          logoUrl: null,
+          defaultDueDays: 14,
+          currency: 'CZK',
+          address: { street: 'Testovací 1', city: 'Praha', postalCode: '11000', country: 'CZ' },
+          bankAccount: { accountNumber: '123456789/0100', iban: null, bic: null },
+          publicSlug: 'e2e-bistro',
+        },
+      })
+    }
+    if (method === 'GET' && path === '/company/modules') {
+      return route.fulfill({
+        json: { modules: ['core', 'invoicing', 'pos', 'gastro', 'reporting', 'integrations'] },
+      })
+    }
+    if (method === 'GET' && path === '/locations') {
+      return route.fulfill({
+        json: {
+          items: [{ id: 'loc-1', name: 'Bistro Praha', address: null, isActive: true }],
+          total: 1,
+          page: 1,
+          pageSize: 100,
+        },
+      })
+    }
+    if (method === 'GET' && path === '/integrations/terminal-payments') {
+      const pendingOnly = url.searchParams.get('status') === 'Pending'
+      return route.fulfill({
+        json: {
+          items: pendingOnly
+            ? []
+            : [
+                {
+                  id: 'pay-1',
+                  provider: 'manual',
+                  status: 'Succeeded',
+                  amount: 209,
+                  currency: 'CZK',
+                  orderId: null,
+                  locationId: 'loc-1',
+                  reference: 'order-1-card',
+                  providerReference: null,
+                  failureReason: null,
+                  createdAt: '2026-07-08T12:00:00Z',
+                  updatedAt: '2026-07-08T12:01:00Z',
+                },
+              ],
+          total: pendingOnly ? 2 : 1,
+          page: 1,
+          pageSize: Number(url.searchParams.get('pageSize') ?? 20),
+        },
+      })
+    }
+    if (method === 'GET' && path === '/integrations/print-jobs') {
+      const queuedOnly = url.searchParams.get('status') === 'Queued'
+      return route.fulfill({
+        json: {
+          items: queuedOnly
+            ? []
+            : [
+                {
+                  id: 'print-1',
+                  type: 'KitchenTicket',
+                  status: 'Queued',
+                  printer: 'kitchen',
+                  payload: 'Burger',
+                  relatedOrderId: 'order-1',
+                  relatedSaleId: null,
+                  relatedDayCloseId: null,
+                  locationId: 'loc-1',
+                  failureReason: null,
+                  createdAt: '2026-07-08T12:02:00Z',
+                  updatedAt: '2026-07-08T12:02:00Z',
+                },
+              ],
+          total: queuedOnly ? 1 : 1,
+          page: 1,
+          pageSize: Number(url.searchParams.get('pageSize') ?? 20),
+        },
+      })
+    }
+    if (method === 'GET' && path === '/integrations/exports/download') {
+      exportDownloadQuery = url.search
+      return route.fulfill({
+        headers: {
+          'content-type': 'application/xml',
+          'content-disposition': 'attachment; filename="pohoda-zreports.xml"',
+        },
+        body: '<dataPack id="E2E" />',
+      })
+    }
+
+    return route.fulfill({ status: 404, json: { title: `Unhandled ${method} ${path}` } })
+  })
+
+  await page.goto('/app/nastaveni')
+
+  await expect(page.getByText('Účetní export')).toBeVisible()
+  await expect(page.getByText('2 plateb čeká')).toBeVisible()
+  await expect(page.getByText('1 tisků čeká')).toBeVisible()
+  await expect(page.getByText('209,00 Kč')).toBeVisible()
+  await expect(page.getByText('Bon', { exact: true })).toBeVisible()
+
+  await page.locator('#integration-export-target').click()
+  await page.getByRole('option', { name: 'Pohoda XML' }).click()
+
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Stáhnout XML' }).click()
+  const file = await download
+  expect(file.suggestedFilename()).toBe('pohoda-zreports.xml')
+  expect(exportDownloadQuery).toContain('type=ZReports')
+  expect(exportDownloadQuery).toContain('target=Pohoda')
+  expect(exportDownloadQuery).toContain('format=Xml')
 })
 
 test('veřejný slug se normalizuje pro online objednávky a QR stoly', async ({ page }) => {
@@ -66,3 +204,27 @@ test('veřejný slug se normalizuje pro online objednávky a QR stoly', async ({
   })
   expect(storedSlug).toBe('zlutoucky-bistro-2026')
 })
+
+async function seedApiMode(page: Parameters<typeof seedApp>[0]): Promise<void> {
+  await page.addInitScript(() => {
+    window.__VYSTAVENO_API_URL__ = '/api/v1'
+    localStorage.setItem(
+      'vystaveno.auth.tokens.v1',
+      JSON.stringify({ accessToken: 'e2e-access', refreshToken: 'e2e-refresh' }),
+    )
+    localStorage.setItem(
+      'vystaveno.auth.session.v1',
+      JSON.stringify({
+        user: { id: 'u_e2e', email: 'e2e@vystaveno.cz', fullName: 'E2E Test' },
+        companyId: 'c_e2e',
+        role: 'Owner',
+        modules: ['core', 'invoicing', 'pos', 'gastro', 'reporting', 'integrations'],
+        features: [],
+      }),
+    )
+    localStorage.setItem(
+      'vystaveno.subscription.v1',
+      JSON.stringify({ active: true, plan: 'pro', trialEndsAt: null, subscriptionUntil: null }),
+    )
+  })
+}
