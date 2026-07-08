@@ -153,10 +153,12 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 
 1. V `Nastavení firmy` otevřete část `Integrace a exporty`.
 2. Souhrn nahoře ukazuje, kolik napojení je použitelné v provozu, kolik exportů je připravených a kolik věcí čeká na skutečný konektor.
-3. `Připraveno` znamená, že export už můžete používat ručně, například ISDOC/CSV faktury nebo Z-reporty.
-4. `Manuální krok` u platebního terminálu nebo tisku znamená, že obsluha zatím provede krok ve fyzickém zařízení nebo v tiskovém dialogu.
-5. `Exportní režim` u POHODA/Flexi znamená předání přes ISDOC/CSV. Přímá synchronizace se doplní jako samostatný konektor.
-6. `Plánováno` znamená, že funkce je v roadmapě, ale nemá se tvářit jako hotová integrace.
+3. V API režimu panel ukazuje účetní export `Generic CSV`, poslední terminálové platby a tiskovou frontu.
+4. U účetního exportu vyberte typ `Z-reporty` nebo `Prodeje`, datum od/do a případně provozovnu, potom stáhněte CSV.
+5. Platební terminál má zatím backendový životní cyklus, ale bez reálné brány. Obsluha dál potvrzuje výsledek karty ručně.
+6. Tisková fronta je připravená pro lokálního tiskového agenta. Dokud agent není nainstalovaný, tisk probíhá stávající cestou.
+7. POHODA/Money/SuperFaktura zatím nejsou přímé adaptéry. Používejte Generic CSV, dokud nevznikne konkrétní renderer.
+8. `Plánováno` znamená, že funkce je v roadmapě, ale nemá se tvářit jako hotová integrace.
 
 ## Provozní přehled
 
