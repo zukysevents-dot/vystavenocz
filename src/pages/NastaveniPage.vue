@@ -17,6 +17,12 @@ import { toast } from '@/components/ui/sonner'
 import { useCompanyStore } from '@/stores/company'
 import { useAuthStore } from '@/stores/auth'
 import { buildInvoiceNumber } from '@/lib/invoice'
+import {
+  INTEGRATION_READINESS_ITEMS,
+  integrationBadgeVariant,
+  integrationStateLabel,
+  summarizeIntegrationReadiness,
+} from '@/lib/integration-readiness'
 import type { AppModuleId } from '@/lib/modules'
 import type { Company, VatMode } from '@/lib/types'
 
@@ -78,42 +84,8 @@ const moduleOptions: { id: AppModuleId; label: string; description: string; lock
   },
 ]
 
-const integrationStatuses: {
-  name: string
-  state: string
-  variant: 'default' | 'secondary' | 'outline'
-  description: string
-  nextStep: string
-}[] = [
-  {
-    name: 'Faktury do účetnictví',
-    state: 'Připraveno',
-    variant: 'default',
-    description: 'Účtárna umí exportovat faktury jako ISDOC XML a přehledové CSV.',
-    nextStep: 'Automatické odesílání do účetního systému.',
-  },
-  {
-    name: 'Gastro Z-reporty',
-    state: 'Připraveno',
-    variant: 'default',
-    description: 'Uzávěrka nabízí denní i měsíční účetní CSV a měsíční souhrn Z-reportů.',
-    nextStep: 'Mapování na konkrétní importní šablony účetních programů.',
-  },
-  {
-    name: 'Platební terminál',
-    state: 'Manuální krok',
-    variant: 'secondary',
-    description: 'Karta se potvrzuje po dokončení platby na fyzickém terminálu.',
-    nextStep: 'Napojení terminálu nahradí ruční potvrzení bez změny platebního toku.',
-  },
-  {
-    name: 'POHODA / Flexi',
-    state: 'Exportní režim',
-    variant: 'outline',
-    description: 'Podklady se předávají přes ISDOC/CSV; přímá synchronizace zatím neběží.',
-    nextStep: 'Doplnit konektory po potvrzení konkrétního importního kontraktu.',
-  },
-]
+const integrationReadiness = INTEGRATION_READINESS_ITEMS
+const integrationSummary = computed(() => summarizeIntegrationReadiness(integrationReadiness))
 
 const form = reactive({
   companyName: '',
@@ -394,18 +366,37 @@ async function onSubmit(): Promise<void> {
         <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Integrace a exporty
         </h2>
+        <div class="mt-4 grid gap-3 sm:grid-cols-3">
+          <div class="rounded-lg border border-border bg-muted/30 p-3">
+            <div class="text-xs text-muted-foreground">Použitelné v provozu</div>
+            <div class="mt-1 text-2xl font-semibold">
+              {{ integrationSummary.operationallyUsable }}
+            </div>
+          </div>
+          <div class="rounded-lg border border-border bg-muted/30 p-3">
+            <div class="text-xs text-muted-foreground">Připravené exporty</div>
+            <div class="mt-1 text-2xl font-semibold">{{ integrationSummary.ready }}</div>
+          </div>
+          <div class="rounded-lg border border-border bg-muted/30 p-3">
+            <div class="text-xs text-muted-foreground">Čeká na konektor</div>
+            <div class="mt-1 text-2xl font-semibold">{{ integrationSummary.connectorBacklog }}</div>
+          </div>
+        </div>
         <div class="mt-4 divide-y divide-border">
           <div
-            v-for="item in integrationStatuses"
+            v-for="item in integrationReadiness"
             :key="item.name"
             class="grid gap-2 py-3 first:pt-0 last:pb-0 sm:grid-cols-[170px_1fr]"
           >
             <div>
               <div class="font-medium">{{ item.name }}</div>
-              <Badge :variant="item.variant" class="mt-1">{{ item.state }}</Badge>
+              <Badge :variant="integrationBadgeVariant(item.state)" class="mt-1">
+                {{ integrationStateLabel(item.state) }}
+              </Badge>
             </div>
             <div class="text-sm text-muted-foreground">
               <p>{{ item.description }}</p>
+              <p class="mt-1 text-xs">Provoz teď: {{ item.operatorAction }}</p>
               <p class="mt-1 text-xs">Další krok: {{ item.nextStep }}</p>
             </div>
           </div>

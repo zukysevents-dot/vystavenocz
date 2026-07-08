@@ -148,9 +148,11 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 ## Integrace a exporty
 
 1. V `Nastavení firmy` otevřete část `Integrace a exporty`.
-2. `Připraveno` znamená, že export už můžete používat ručně, například ISDOC/CSV faktury nebo Z-reporty.
-3. `Manuální krok` u platebního terminálu znamená, že obsluha zatím potvrdí platbu po dokončení na fyzickém terminálu.
-4. `Exportní režim` u POHODA/Flexi znamená předání přes ISDOC/CSV. Přímá synchronizace se doplní jako samostatný konektor.
+2. Souhrn nahoře ukazuje, kolik napojení je použitelné v provozu, kolik exportů je připravených a kolik věcí čeká na skutečný konektor.
+3. `Připraveno` znamená, že export už můžete používat ručně, například ISDOC/CSV faktury nebo Z-reporty.
+4. `Manuální krok` u platebního terminálu nebo tisku znamená, že obsluha zatím provede krok ve fyzickém zařízení nebo v tiskovém dialogu.
+5. `Exportní režim` u POHODA/Flexi znamená předání přes ISDOC/CSV. Přímá synchronizace se doplní jako samostatný konektor.
+6. `Plánováno` znamená, že funkce je v roadmapě, ale nemá se tvářit jako hotová integrace.
 
 ## Provozní přehled
 
