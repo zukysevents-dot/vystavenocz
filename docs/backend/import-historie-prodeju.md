@@ -1,7 +1,9 @@
 # Backend + FE návrh: Import historie prodejů z POS (F9)
 
-**Stav: NÁVRH.** FE ani BE zatím neexistuje. Tento dokument je kontrakt — až podle
-něj vznikne backend endpoint + FE flow. Navazuje na hotový **katalog import**
+**Stav: ROZPRACOVÁNO.** Frontend základ existuje v `/app/import?entity=sales`:
+`src/lib/sales-import.ts` připraví dávku z CSV/XLSX a `src/composables/useSalesImport.ts`
+volá `POST /sales/import`. Backend endpoint/migrace jsou navazující práce. Tento dokument
+je kontrakt pro backend i finální FE flow. Navazuje na hotový **katalog import**
 (`src/import/adapters/pos-products.ts` — Dotykačka / Storyous / iKelp) a na
 roadmapu `docs/product/modular-business-roadmap.md` (řádek 150: _„Remaining work:
 sales history…"_).
