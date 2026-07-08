@@ -156,12 +156,13 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 3. V API režimu panel ukazuje účetní export `Generic CSV` nebo `Pohoda XML`, poslední terminálové platby a tiskovou frontu.
 4. U účetního exportu vyberte cíl (`Generic CSV` nebo `Pohoda XML`), typ `Z-reporty` nebo `Prodeje`, datum od/do a případně provozovnu, potom stáhněte soubor.
 5. Platební terminál má zatím backendový životní cyklus, ale bez reálné brány. Obsluha dál potvrzuje výsledek karty ručně.
-6. `Tiskoví agenti` slouží pro lokální program u fyzické tiskárny. Manažer klikne `Přidat`, pojmenuje agenta, případně vybere provozovnu a uloží si token. Token se zobrazí jen jednou.
-7. Lokální agent používá token k načtení tiskové fronty a k potvrzení výsledku tisku. Pokud agenta zrušíte, token okamžitě přestane platit.
-8. Tisková fronta ukazuje poslední účtenky, kuchyňské bony a Z-reporty; bez nainstalovaného lokálního agenta tisk probíhá stávající cestou.
-9. `Pohoda XML` je soubor pro ruční import v Pohodě (`Soubor -> Datová komunikace -> XML import`), ne živá synchronizace. Pokud export hlásí chybějící IČO, doplňte IČO firmy v horní části nastavení.
-10. Money/SuperFaktura zatím nejsou přímé adaptéry. Používejte Generic CSV nebo Pohoda XML podle účetního systému.
-11. `Plánováno` znamená, že funkce je v roadmapě, ale nemá se tvářit jako hotová integrace.
+6. `Platební provideri` je otevřený katalog platebních bran a terminálů (ČSOB, NFCTRON, Comgate, SumUp, GP webpay a další). U každého vidíte, jestli je `Aktivní`, nebo `Připraveno k napojení`, jaké umí schopnosti (terminál, online platby, webhooky) a co napojení vyžaduje (smlouvu s poskytovatelem, přístupové údaje). Je to přehled podporovaných cílů — ostré platby poběží až přes skutečně napojený adaptér, katalog sám žádnou platbu nespouští a žádného providera neoznačuje za hotový, dokud reálně nefunguje.
+7. `Tiskoví agenti` slouží pro lokální program u fyzické tiskárny. Manažer klikne `Přidat`, pojmenuje agenta, případně vybere provozovnu a uloží si token. Token se zobrazí jen jednou.
+8. Lokální agent používá token k načtení tiskové fronty a k potvrzení výsledku tisku. Pokud agenta zrušíte, token okamžitě přestane platit.
+9. Tisková fronta ukazuje poslední účtenky, kuchyňské bony a Z-reporty; bez nainstalovaného lokálního agenta tisk probíhá stávající cestou.
+10. `Pohoda XML` je soubor pro ruční import v Pohodě (`Soubor -> Datová komunikace -> XML import`), ne živá synchronizace. Pokud export hlásí chybějící IČO, doplňte IČO firmy v horní části nastavení.
+11. Money/SuperFaktura zatím nejsou přímé adaptéry. Používejte Generic CSV nebo Pohoda XML podle účetního systému.
+12. `Plánováno` znamená, že funkce je v roadmapě, ale nemá se tvářit jako hotová integrace.
 
 ## Provozní přehled
 

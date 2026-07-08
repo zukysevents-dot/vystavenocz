@@ -55,6 +55,23 @@ export interface RegisterPrintAgentRequest {
   locationId?: string | null
 }
 
+// Provider-neutral katalog platebních bran/terminálů (ČSOB, NFCTRON, Comgate, SumUp, GP webpay, …). Backend je
+// jediný zdroj pravdy o tom, co je reálně napojené (`isOperational`) vs zatím jen připravený cíl. NENÍ Stripe-first.
+export interface PaymentProviderCatalogItem {
+  key: string
+  name: string
+  category: string
+  status: string
+  isOperational: boolean
+  supportsInPerson: boolean
+  supportsOnline: boolean
+  supportsWebhooks: boolean
+  requiresPartnerContract: boolean
+  requiresCredentials: boolean
+  setupFields: string[]
+  notes: string
+}
+
 export interface AccountingVatLine {
   vatRate: number
   net: number
@@ -157,6 +174,11 @@ export function useIntegrations() {
     return http.del(`/integrations/print-agents/${id}`)
   }
 
+  // Provider-neutral katalog platebních providerů (marketplace). Read-only; backend říká, co je reálně napojené.
+  function listPaymentProviderCatalog(): Promise<PaymentProviderCatalogItem[]> {
+    return http.get<PaymentProviderCatalogItem[]>('/integrations/payment-providers/catalog')
+  }
+
   function downloadAccountingExport(query: AccountingExportQuery): Promise<DownloadResponse> {
     const params = new URLSearchParams({
       type: query.type,
@@ -175,6 +197,7 @@ export function useIntegrations() {
     listPrintAgents,
     registerPrintAgent,
     revokePrintAgent,
+    listPaymentProviderCatalog,
     buildAccountingExport,
     downloadAccountingExport,
   }

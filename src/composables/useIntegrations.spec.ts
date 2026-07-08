@@ -78,4 +78,10 @@ describe('useIntegrations - backend foundation contract', () => {
     await useIntegrations().revokePrintAgent('agent-1')
     expect(http.del).toHaveBeenCalledWith('/integrations/print-agents/agent-1')
   })
+
+  it('listPaymentProviderCatalog volá provider-neutral katalog platebních providerů', async () => {
+    vi.mocked(http.get).mockResolvedValue([] as never)
+    await useIntegrations().listPaymentProviderCatalog()
+    expect(http.get).toHaveBeenCalledWith('/integrations/payment-providers/catalog')
+  })
 })
