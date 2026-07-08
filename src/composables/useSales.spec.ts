@@ -33,6 +33,8 @@ describe('useSales — kontrakt volání', () => {
       tipAmount: 0,
       cashReceived: null,
       priceLevelId: null,
+      customerId: null,
+      redeemPoints: 0,
     })
   })
 
@@ -93,6 +95,25 @@ describe('useSales — kontrakt volání', () => {
       '/sales',
       expect.objectContaining({ priceLevelId: 'vip-1' }),
     )
+  })
+
+  it('create pošle zákazníka a uplatněné body', async () => {
+    vi.mocked(http.post).mockResolvedValue({ id: 's1' } as never)
+    await useSales().create(
+      'Card',
+      [{ productId: 'p1', description: 'Burger', quantity: 1, unitPrice: 199, vatRate: 12 }],
+      { customerId: 'cust-1', redeemPoints: 25 },
+    )
+    expect(http.post).toHaveBeenCalledWith(
+      '/sales',
+      expect.objectContaining({ customerId: 'cust-1', redeemPoints: 25 }),
+    )
+  })
+
+  it('get volá GET /sales/{id}', async () => {
+    vi.mocked(http.get).mockResolvedValue({ id: 's1' } as never)
+    await useSales().get('s1')
+    expect(http.get).toHaveBeenCalledWith('/sales/s1')
   })
 
   it('create s options obsahujícím jen discountPercent doplní tipAmount na 0', async () => {

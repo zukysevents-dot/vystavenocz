@@ -279,6 +279,9 @@ export interface SaleItemLine {
   lineNet: number
   lineVat: number
   lineTotal: number
+  originalUnitPrice?: number | null
+  priceLevelAdjustment?: number
+  promotionDiscount?: number
   modifiers?: ItemModifierLine[]
 }
 
@@ -299,6 +302,13 @@ export interface Sale {
   totalVat: number
   total: number
   soldAt: string
+  priceLevelId: string | null
+  priceLevelName: string | null
+  priceLevelAdjustmentPercent: number | null
+  customerId: string | null
+  redeemPoints: number
+  redeemDiscount: number
+  earnedPoints: number
   items: SaleItemLine[]
 }
 

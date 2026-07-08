@@ -121,6 +121,13 @@ function sale() {
     tipAmount: 0,
     cashReceived: null,
     cashChange: null,
+    priceLevelId: null,
+    priceLevelName: null,
+    priceLevelAdjustmentPercent: null,
+    customerId: null,
+    redeemPoints: 0,
+    redeemDiscount: 0,
+    earnedPoints: 0,
     items: [
       {
         id: 'sale-item-1',
@@ -128,6 +135,9 @@ function sale() {
         name: product.name,
         quantity: 1,
         unitPrice: 209,
+        originalUnitPrice: 209,
+        priceLevelAdjustment: 0,
+        promotionDiscount: 0,
         vatRate: product.vatRate,
         lineNet: 186.61,
         lineVat: 22.39,
@@ -270,6 +280,9 @@ test('pilotní gastro průchod: účet u stolu, kuchyň, platba a nenulová uzá
     if (method === 'GET' && path === '/sales') {
       return route.fulfill({ json: paged(paid ? [sale()] : [], 100) })
     }
+    if (method === 'GET' && path === '/sales/sale-1') {
+      return route.fulfill({ json: sale() })
+    }
     if (method === 'GET' && path === '/sales/summary') {
       expect(url.searchParams.get('locationId')).toBe(location.id)
       const forBusinessDate = url.searchParams.get('date') === businessDate
@@ -310,7 +323,13 @@ test('pilotní gastro průchod: účet u stolu, kuchyň, platba a nenulová uzá
   await page.getByRole('button', { name: 'Kartou' }).click()
   await page.getByRole('button', { name: 'Platba prošla' }).click()
   await expect(page.getByText('Zaplaceno 209,00 Kč kartou.')).toBeVisible()
-  expect(paymentPayload).toEqual({ paymentMethod: 'Card', cashReceived: null, priceLevelId: null })
+  expect(paymentPayload).toEqual({
+    paymentMethod: 'Card',
+    cashReceived: null,
+    priceLevelId: null,
+    customerId: null,
+    redeemPoints: 0,
+  })
 
   await page.goto('/app/uzaverka')
   await page.locator('#uzaverka-date').fill(businessDate)
