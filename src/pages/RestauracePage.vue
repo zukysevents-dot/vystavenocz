@@ -200,6 +200,9 @@ function backToMap() {
   selectedPriceLevelId.value = STANDARD_PRICE_LEVEL
   pricePreviewSeq++
   pricePreview.value = null
+  splitPricePreviewSeq++
+  splitPricePreview.value = null
+  splitPricePreviewGroupId.value = null
 }
 
 // --- Sleva na účet + spropitné (ukládá se průběžně, ne až při platbě) ---
@@ -213,6 +216,9 @@ const pricePreview = ref<PromotionCalculation | null>(null)
 const pricePreviewLoading = ref(false)
 const pricePreviewError = ref(false)
 let pricePreviewSeq = 0
+const splitPricePreview = ref<PromotionCalculation | null>(null)
+const splitPricePreviewGroupId = ref<string | null>(null)
+let splitPricePreviewSeq = 0
 const selectedPriceLevel = computed(
   () => priceLevels.value.find((level) => level.id === selectedPriceLevelId.value) ?? null,
 )
@@ -262,8 +268,12 @@ async function loadPriceLevels() {
 }
 
 function previewLines(): PromotionLineInput[] {
+  return promotionLinesForItems(currentOrder.value?.items ?? [])
+}
+
+function promotionLinesForItems(items: OrderItemLine[]): PromotionLineInput[] {
   const productById = new Map(products.value.map((product) => [product.id, product]))
-  return (currentOrder.value?.items ?? []).map((item) => {
+  return items.map((item) => {
     const product = item.productId ? productById.get(item.productId) : null
     return {
       productId: item.productId,
@@ -284,6 +294,7 @@ async function refreshPricePreview() {
     return
   }
   const seq = ++pricePreviewSeq
+  pricePreview.value = null
   pricePreviewLoading.value = true
   pricePreviewError.value = false
   try {
@@ -306,8 +317,26 @@ async function refreshPricePreview() {
 }
 
 function applyAccountAdjustments(baseGross: number): number {
-  const afterDiscount = baseGross * (1 - clampPercent(accountDiscountPercent.value) / 100)
-  return round2(afterDiscount + clampAmount(tipAmount.value))
+  return round2(accountAdjustedBase(baseGross) + clampAmount(tipAmount.value))
+}
+
+function accountAdjustedBase(baseGross: number): number {
+  return round2(baseGross * (1 - clampPercent(accountDiscountPercent.value) / 100))
+}
+
+function accountDiscountAmount(baseGross: number): number {
+  return round2(baseGross * (clampPercent(accountDiscountPercent.value) / 100))
+}
+
+function receiptDiscountAmount(
+  originalGross: number,
+  afterPriceLevelAndPromo: number,
+  accountDiscountBase: number,
+): number {
+  return round2(
+    Math.max(0, originalGross - afterPriceLevelAndPromo) +
+      accountDiscountAmount(accountDiscountBase),
+  )
 }
 
 function formatPriceLevelImpact(value: number): string {
@@ -374,18 +403,26 @@ const checkoutTotal = computed(() =>
     ? applyAccountAdjustments(pricePreview.value.total)
     : (totals.value?.total ?? currentOrder.value?.total ?? 0),
 )
+const pricingReady = computed(
+  () =>
+    !apiMode || !loyaltyEnabled.value || (!pricePreviewLoading.value && !pricePreviewError.value),
+)
 
 watch(
   [currentOrder, activePriceLevelId],
   () => {
     void refreshPricePreview()
+    if (paymentSplitGroup.value) void refreshSplitPricePreview(paymentSplitGroup.value)
   },
   { deep: true },
 )
 
 function setTipPercent(pct: number) {
   if (!totals.value) return
-  tipAmount.value = round2((totals.value.subtotalGross - totals.value.discountAmount) * (pct / 100))
+  const base = pricePreview.value
+    ? accountAdjustedBase(pricePreview.value.total)
+    : totals.value.subtotalGross - totals.value.discountAmount
+  tipAmount.value = round2(base * (pct / 100))
 }
 
 // Účet mezitím uzavřel/zrušil jiný terminál nebo host doplatil přes QR (404/409). Sjednocené zpracování:
@@ -596,6 +633,76 @@ function splitPaymentItems(group: OrderSplitGroup) {
   }))
 }
 
+function splitPreviewLines(group: OrderSplitGroup): PromotionLineInput[] {
+  if (!currentOrder.value) return []
+  const itemById = new Map(currentOrder.value.items.map((item) => [item.id, item]))
+  const splitItems = splitGroupPayment(group)?.items ?? []
+  return promotionLinesForItems(
+    splitItems
+      .map((row) => {
+        const item = itemById.get(row.itemId)
+        return item ? { ...item, quantity: row.quantity } : null
+      })
+      .filter((item): item is OrderItemLine => item !== null),
+  )
+}
+
+async function refreshSplitPricePreview(group: OrderSplitGroup | null) {
+  if (!group || !apiMode || !loyaltyEnabled.value) {
+    splitPricePreviewSeq++
+    splitPricePreview.value = null
+    splitPricePreviewGroupId.value = null
+    return
+  }
+  const lines = splitPreviewLines(group)
+  if (!lines.length) {
+    splitPricePreviewSeq++
+    splitPricePreview.value = null
+    splitPricePreviewGroupId.value = group.id
+    return
+  }
+  const seq = ++splitPricePreviewSeq
+  splitPricePreviewGroupId.value = group.id
+  try {
+    const result = await promotions.calculate(
+      lines,
+      activePriceLevelId.value,
+      [],
+      selectedPriceLevel.value,
+    )
+    if (seq === splitPricePreviewSeq) splitPricePreview.value = result
+  } catch (e) {
+    if (seq === splitPricePreviewSeq) {
+      splitPricePreview.value = null
+    }
+    console.error(e)
+  }
+}
+
+function splitCheckoutTotal(group: OrderSplitGroup): number {
+  const payment = splitGroupPayment(group)
+  if (!payment) return 0
+  if (splitPricePreviewGroupId.value === group.id && splitPricePreview.value) {
+    const afterAccountDiscount =
+      splitPricePreview.value.total * (1 - clampPercent(accountDiscountPercent.value) / 100)
+    return round2(afterAccountDiscount + payment.tipAmount)
+  }
+  return payment.total
+}
+
+function splitDiscountAmount(group: OrderSplitGroup): number {
+  const payment = splitGroupPayment(group)
+  if (!payment) return 0
+  if (splitPricePreviewGroupId.value === group.id && splitPricePreview.value) {
+    return receiptDiscountAmount(
+      splitPricePreview.value.subtotalOriginal,
+      splitPricePreview.value.total,
+      splitPricePreview.value.total,
+    )
+  }
+  return payment.discountAmount
+}
+
 function splitPaymentReceipt(group: OrderSplitGroup) {
   const payment = splitGroupPayment(group)
   if (!payment || !currentOrder.value) return null
@@ -607,10 +714,21 @@ function splitPaymentReceipt(group: OrderSplitGroup) {
       total: row.gross,
       modifiers: itemById.get(row.itemId)?.modifiers ?? [],
     })),
-    discountAmount: payment.discountAmount,
+    discountAmount: splitDiscountAmount(group),
     tipAmount: payment.tipAmount,
-    total: payment.total,
+    total: splitCheckoutTotal(group),
   }
+}
+
+function orderReceiptItems(order: Order) {
+  const preview = pricePreview.value
+  const hasPreviewLines = preview?.lines.length === order.items.length
+  return order.items.map((item, index) => ({
+    name: item.name,
+    qty: item.quantity,
+    total: hasPreviewLines ? preview.lines[index].finalTotal : item.lineTotal,
+    modifiers: item.modifiers ?? [],
+  }))
 }
 
 async function paySplitGroup(
@@ -628,7 +746,13 @@ async function paySplitGroup(
     if (!currentOrder.value) return false
     const orderId = currentOrder.value.id
     const receipt = splitPaymentReceipt(group)
-    const updated = await ordersApi.payItems(orderId, method, items, cashReceived)
+    const updated = await ordersApi.payItems(
+      orderId,
+      method,
+      items,
+      cashReceived,
+      activePriceLevelId.value,
+    )
     currentOrder.value = updated
     syncDiscountFromOrder(updated)
     splitGroups.value = []
@@ -679,7 +803,7 @@ const paymentOpen = ref(false)
 // null = platba celého účtu; jinak platba části za osobu z rozdělení účtu.
 const paymentSplitGroup = ref<OrderSplitGroup | null>(null)
 const paymentTotal = computed(() =>
-  paymentSplitGroup.value ? groupTotal(paymentSplitGroup.value) : checkoutTotal.value,
+  paymentSplitGroup.value ? splitCheckoutTotal(paymentSplitGroup.value) : checkoutTotal.value,
 )
 const paymentLabel = computed(() =>
   paymentSplitGroup.value ? paymentSplitGroup.value.label : selectedTable.value?.name,
@@ -688,13 +812,47 @@ const paymentLabel = computed(() =>
 async function openPayment(group: OrderSplitGroup | null = null) {
   // Platba celého účtu: napřed natáhni aktuální stav — host mohl QR doobjednat, obsluha musí platit podle reality.
   // (Split platba se neobnovuje: rozdělení účtu vychází ze známých položek a refresh by ho rozhodil.)
-  if (group === null) await refreshCurrentOrder()
+  if (group === null) {
+    await refreshCurrentOrder()
+    await refreshPricePreview()
+    if (!pricingReady.value) {
+      toast.error('Cenu se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+      return
+    }
+  }
   if (!currentOrder.value) return // účet se mezitím zavřel a refresh nás vrátil na mapu
   paymentSplitGroup.value = group
+  await refreshSplitPricePreview(group)
+  if (
+    group &&
+    apiMode &&
+    loyaltyEnabled.value &&
+    (splitPricePreviewGroupId.value !== group.id || !splitPricePreview.value)
+  ) {
+    toast.error('Cenu vybrané části se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+    return
+  }
   paymentOpen.value = true
 }
 
 async function confirmPayment(payment: { method: PaymentMethod; cashReceived: number | null }) {
+  if (paymentSplitGroup.value) {
+    await refreshSplitPricePreview(paymentSplitGroup.value)
+    if (
+      apiMode &&
+      loyaltyEnabled.value &&
+      (splitPricePreviewGroupId.value !== paymentSplitGroup.value.id || !splitPricePreview.value)
+    ) {
+      toast.error('Cenu vybrané části se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+      return
+    }
+  } else {
+    await refreshPricePreview()
+    if (!pricingReady.value) {
+      toast.error('Cenu se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+      return
+    }
+  }
   const ok = paymentSplitGroup.value
     ? await paySplitGroup(paymentSplitGroup.value, payment.method, payment.cashReceived)
     : await pay(payment.method, payment.cashReceived)
@@ -817,17 +975,18 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
     await flushDiscountUpdate() // sleva/tip musí být uložené na Order, pay() je bere ze serveru
     if (!currentOrder.value) return false
     const order = currentOrder.value
-    const discountAmountSnapshot = totals.value?.discountAmount
+    const discountAmountSnapshot = pricePreview.value
+      ? receiptDiscountAmount(
+          pricePreview.value.subtotalOriginal,
+          pricePreview.value.total,
+          pricePreview.value.total,
+        )
+      : totals.value?.discountAmount
     const paid = await ordersApi.pay(order.id, method, cashReceived, activePriceLevelId.value)
     const change = cashReceived != null ? round2(cashReceived - paid.total) : null
     receiptData.value = buildReceipt({
       company: companyStore.company,
-      items: order.items.map((i) => ({
-        name: i.name,
-        qty: i.quantity,
-        total: i.lineTotal,
-        modifiers: i.modifiers ?? [],
-      })),
+      items: orderReceiptItems(order),
       discountPercent: paid.discountPercent,
       discountAmount: discountAmountSnapshot,
       tipAmount: paid.tipAmount,
@@ -1283,7 +1442,7 @@ const currentItemCount = computed(() =>
               variant="coral"
               size="lg"
               class="w-full"
-              :disabled="busy || !currentOrder.items.length"
+              :disabled="busy || pricePreviewLoading || !currentOrder.items.length"
               @click="openPayment()"
             >
               <Banknote class="h-4 w-4" /> Zaplatit
@@ -1590,7 +1749,7 @@ const currentItemCount = computed(() =>
       v-model:open="paymentOpen"
       :total="paymentTotal"
       :label="paymentLabel"
-      :busy="busy"
+      :busy="busy || pricePreviewLoading"
       @confirm="confirmPayment"
     />
 

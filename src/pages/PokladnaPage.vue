@@ -142,6 +142,10 @@ const activePriceLevelId = computed(() => selectedPriceLevel.value?.id ?? null)
 const checkoutTotal = computed(() =>
   pricePreview.value ? applyAccountAdjustments(pricePreview.value.total) : totals.value.total,
 )
+const pricingReady = computed(
+  () =>
+    !apiMode || !loyaltyEnabled.value || (!pricePreviewLoading.value && !pricePreviewError.value),
+)
 const priceLevelAdjustment = computed(() =>
   pricePreview.value
     ? round2(pricePreview.value.subtotalOriginal - pricePreview.value.subtotalAfterPriceLevel)
@@ -150,8 +154,23 @@ const priceLevelAdjustment = computed(() =>
 const promoDiscount = computed(() => pricePreview.value?.discountTotal ?? 0)
 
 function applyAccountAdjustments(baseGross: number): number {
-  const afterDiscount = baseGross * (1 - clampPercent(accountDiscountPercent.value) / 100)
-  return round2(afterDiscount + clampAmount(tipAmount.value))
+  return round2(accountAdjustedBase(baseGross) + clampAmount(tipAmount.value))
+}
+
+function accountAdjustedBase(baseGross: number): number {
+  return round2(baseGross * (1 - clampPercent(accountDiscountPercent.value) / 100))
+}
+
+function accountDiscountAmount(baseGross: number): number {
+  return round2(baseGross * (clampPercent(accountDiscountPercent.value) / 100))
+}
+
+function receiptDiscountAmount(): number {
+  if (!pricePreview.value) return totals.value.discountAmount
+  return round2(
+    Math.max(0, pricePreview.value.subtotalOriginal - pricePreview.value.total) +
+      accountDiscountAmount(pricePreview.value.total),
+  )
 }
 
 function previewLines(): PromotionLineInput[] {
@@ -187,6 +206,7 @@ async function refreshPricePreview() {
     return
   }
   const seq = ++pricePreviewSeq
+  pricePreview.value = null
   pricePreviewLoading.value = true
   pricePreviewError.value = false
   try {
@@ -228,7 +248,10 @@ const totals = computed(() =>
 )
 
 function setTipPercent(pct: number) {
-  tipAmount.value = round2((totals.value.subtotalGross - totals.value.discountAmount) * (pct / 100))
+  const base = pricePreview.value
+    ? accountAdjustedBase(pricePreview.value.total)
+    : totals.value.subtotalGross - totals.value.discountAmount
+  tipAmount.value = round2(base * (pct / 100))
 }
 
 onMounted(async () => {
@@ -316,7 +339,22 @@ watch(
 // --- Jednotný platební dialog (hotově s výpočtem vrácení / karta přes terminálový krok) ---
 const paymentOpen = ref(false)
 
+async function openPaymentDialog() {
+  if (!cart.value.length || paying.value) return
+  await refreshPricePreview()
+  if (!pricingReady.value) {
+    toast.error('Cenu se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+    return
+  }
+  paymentOpen.value = true
+}
+
 async function confirmPayment(payment: { method: PaymentMethod; cashReceived: number | null }) {
+  await refreshPricePreview()
+  if (!pricingReady.value) {
+    toast.error('Cenu se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+    return
+  }
   const ok = await pay(payment.method, payment.cashReceived)
   if (ok) paymentOpen.value = false // při chybě zůstává otevřený, obsluha může zkusit znovu
 }
@@ -335,7 +373,7 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
     }))
     // Kč hodnota slevy na účet nejde odvodit ze Sale response (ta nese jen totaly PO slevě),
     // proto se bere z FE snapshotu před odesláním — jen pro zobrazení na účtence.
-    const discountAmountSnapshot = totals.value.discountAmount
+    const discountAmountSnapshot = receiptDiscountAmount()
     const sale = await sales.create(method, items, {
       discountPercent: clampPercent(accountDiscountPercent.value),
       tipAmount: clampAmount(tipAmount.value),
@@ -802,8 +840,8 @@ function saleTime(iso: string): string {
             variant="coral"
             size="lg"
             class="w-full"
-            :disabled="!cart.length || paying"
-            @click="paymentOpen = true"
+            :disabled="!cart.length || paying || pricePreviewLoading"
+            @click="openPaymentDialog"
           >
             <Loader2 v-if="paying" class="h-4 w-4 animate-spin" />
             <Banknote v-else class="h-4 w-4" /> Zaplatit
@@ -905,7 +943,7 @@ function saleTime(iso: string): string {
     <PaymentDialog
       v-model:open="paymentOpen"
       :total="checkoutTotal"
-      :busy="paying"
+      :busy="paying || pricePreviewLoading"
       @confirm="confirmPayment"
     />
 
