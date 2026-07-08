@@ -7,15 +7,25 @@ import {
   FileSpreadsheet,
   ImageUp,
   KeyRound,
+  Pencil,
   Plus,
   Printer,
   RefreshCw,
   Save,
+  Settings2,
   Trash2,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -33,11 +43,15 @@ import {
   useIntegrations,
   type AccountingExportTarget,
   type AccountingExportType,
+  type PaymentConnectionMode,
+  type PaymentConnectionStatus,
   type PaymentProviderCatalogItem,
+  type PaymentProviderConnection,
   type PrintAgent,
   type PrintAgentRegistered,
   type PrintJob,
   type TerminalPayment,
+  type UpsertPaymentProviderConnectionRequest,
 } from '@/composables/useIntegrations'
 import { ApiError, isApiMode } from '@/lib/http'
 import { buildInvoiceNumber, formatCZK } from '@/lib/invoice'
@@ -133,6 +147,18 @@ const paymentProvidersError = ref<string | null>(null)
 const operationalProviderCount = computed(
   () => paymentProviders.value.filter((p) => p.isOperational).length,
 )
+const paymentConnections = ref<PaymentProviderConnection[]>([])
+const providerDialogOpen = ref(false)
+const dialogProvider = ref<PaymentProviderCatalogItem | null>(null)
+const connectionSaving = ref(false)
+const connectionForm = reactive({
+  id: null as string | null,
+  name: '',
+  mode: 'sandbox' as PaymentConnectionMode,
+  status: 'draft' as PaymentConnectionStatus,
+  locationId: 'all',
+  configuredFields: [] as string[],
+})
 const accountingExportForm = reactive({
   type: 'ZReports' as AccountingExportType,
   target: 'Generic' as AccountingExportTarget,
@@ -193,7 +219,12 @@ onMounted(async () => {
   form.defaultPaymentDays = c.defaultPaymentDays ?? 14
   form.publicSlug = c.publicSlug ?? ''
   if (apiMode) {
-    await Promise.all([loadLocations(), refreshIntegrationsRuntime(), loadPaymentProviderCatalog()])
+    await Promise.all([
+      loadLocations(),
+      refreshIntegrationsRuntime(),
+      loadPaymentProviderCatalog(),
+      loadPaymentConnections(),
+    ])
   }
 })
 
@@ -317,9 +348,27 @@ async function loadPaymentProviderCatalog(): Promise<void> {
   }
 }
 
-// Tlačítko Obnovit načte živé fronty i katalog providerů zároveň.
+// Konfigurace napojení providerů. Endpoint je zatím budoucí (backend #223 dodal jen katalog) — proto best-effort:
+// když chybí, katalog to nerozbije a jen se nezobrazí žádné konfigurace. Payload nikdy nenese tajné hodnoty.
+async function loadPaymentConnections(): Promise<void> {
+  if (!integrationRuntimeAvailable.value) {
+    paymentConnections.value = []
+    return
+  }
+  try {
+    paymentConnections.value = await integrationsApi.listPaymentProviderConnections()
+  } catch {
+    paymentConnections.value = []
+  }
+}
+
+// Tlačítko Obnovit načte živé fronty, katalog providerů i jejich konfigurace zároveň.
 async function refreshIntegrations(): Promise<void> {
-  await Promise.all([refreshIntegrationsRuntime(), loadPaymentProviderCatalog()])
+  await Promise.all([
+    refreshIntegrationsRuntime(),
+    loadPaymentProviderCatalog(),
+    loadPaymentConnections(),
+  ])
 }
 
 // Kategorie z katalogu je provider-neutral řetězec; známé přeložíme, jinak zobrazíme, co pošle backend.
@@ -331,6 +380,109 @@ function paymentProviderCategoryLabel(category: string): string {
     wallet: 'Peněženka / QR platby',
   }
   return labels[category.toLowerCase()] ?? category
+}
+
+function connectionsForProvider(key: string): PaymentProviderConnection[] {
+  return paymentConnections.value.filter((c) => c.providerKey === key)
+}
+
+function resetConnectionForm(): void {
+  connectionForm.id = null
+  connectionForm.name = ''
+  connectionForm.mode = 'sandbox'
+  connectionForm.status = 'draft'
+  connectionForm.locationId = 'all'
+  connectionForm.configuredFields = []
+}
+
+function openProviderDialog(provider: PaymentProviderCatalogItem): void {
+  dialogProvider.value = provider
+  resetConnectionForm()
+  providerDialogOpen.value = true
+}
+
+function editConnection(conn: PaymentProviderConnection): void {
+  connectionForm.id = conn.id
+  connectionForm.name = conn.name
+  connectionForm.mode = conn.mode
+  connectionForm.status = conn.status
+  connectionForm.locationId = conn.locationId ?? 'all'
+  connectionForm.configuredFields = [...conn.configuredFields]
+}
+
+// Checklist připravených setup polí. Drží se JEN názvy polí (ne hodnoty) — tajné klíče se do aplikace neukládají.
+function toggleConfiguredField(field: string, on: boolean | 'indeterminate' | undefined): void {
+  if (on === true) {
+    if (!connectionForm.configuredFields.includes(field))
+      connectionForm.configuredFields = [...connectionForm.configuredFields, field]
+    return
+  }
+  connectionForm.configuredFields = connectionForm.configuredFields.filter((f) => f !== field)
+}
+
+async function saveConnection(): Promise<void> {
+  if (!dialogProvider.value || !canManageIntegrations.value) return
+  const name = connectionForm.name.trim()
+  if (!name) {
+    toast.error('Zadejte název konfigurace.')
+    return
+  }
+  connectionSaving.value = true
+  try {
+    // Payload vědomě BEZ tajných hodnot — jen metadata a checklist připravených polí (filtrovaný na setupFields providera).
+    const payload: UpsertPaymentProviderConnectionRequest = {
+      providerKey: dialogProvider.value.key,
+      name,
+      mode: connectionForm.mode,
+      status: connectionForm.status,
+      locationId: connectionForm.locationId === 'all' ? null : connectionForm.locationId,
+      configuredFields: connectionForm.configuredFields.filter((f) =>
+        dialogProvider.value?.setupFields.includes(f),
+      ),
+    }
+    if (connectionForm.id) {
+      await integrationsApi.updatePaymentProviderConnection(connectionForm.id, payload)
+      toast.success('Konfigurace uložena.')
+    } else {
+      await integrationsApi.createPaymentProviderConnection(payload)
+      toast.success('Konfigurace vytvořena.')
+    }
+    await loadPaymentConnections()
+    resetConnectionForm()
+  } catch (e) {
+    toast.error(integrationErrorMessage(e))
+  } finally {
+    connectionSaving.value = false
+  }
+}
+
+async function deleteConnection(conn: PaymentProviderConnection): Promise<void> {
+  if (!canManageIntegrations.value) return
+  connectionSaving.value = true
+  try {
+    await integrationsApi.deletePaymentProviderConnection(conn.id)
+    if (connectionForm.id === conn.id) resetConnectionForm()
+    await loadPaymentConnections()
+    toast.success('Konfigurace smazána.')
+  } catch (e) {
+    toast.error(integrationErrorMessage(e))
+  } finally {
+    connectionSaving.value = false
+  }
+}
+
+function paymentConnectionModeLabel(mode: PaymentConnectionMode): string {
+  return mode === 'production' ? 'Produkce' : 'Sandbox'
+}
+
+function paymentConnectionStatusLabel(status: PaymentConnectionStatus): string {
+  const labels: Record<PaymentConnectionStatus, string> = {
+    draft: 'Rozpracováno',
+    awaiting_credentials: 'Čeká na údaje',
+    ready: 'Připraveno',
+    disabled: 'Vypnuto',
+  }
+  return labels[status]
 }
 
 async function downloadAccountingExport(): Promise<void> {
@@ -1082,6 +1234,21 @@ async function onSubmit(): Promise<void> {
                   • Nastavení: {{ provider.setupFields.join(', ') }}
                 </li>
               </ul>
+              <div class="mt-3 flex items-center justify-between gap-2 border-t border-border pt-2">
+                <span class="text-xs text-muted-foreground">
+                  {{ connectionsForProvider(provider.key).length }} konfigurací
+                </span>
+                <Button
+                  v-if="canManageIntegrations"
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  @click="openProviderDialog(provider)"
+                >
+                  <Settings2 class="h-4 w-4" />
+                  Nastavit
+                </Button>
+              </div>
             </div>
           </div>
           <div
@@ -1236,5 +1403,165 @@ async function onSubmit(): Promise<void> {
         </Button>
       </div>
     </form>
+
+    <!-- Konfigurace platebního providera (bez ukládání tajných hodnot) -->
+    <Dialog v-model:open="providerDialogOpen">
+      <DialogContent class="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Nastavit {{ dialogProvider?.name }}</DialogTitle>
+          <DialogDescription>
+            Tajné klíče se do aplikace neukládají jako plaintext. Zde jen evidujete konfiguraci a
+            označíte, které údaje máte bezpečně připravené; ostré spuštění vyžaduje bezpečné
+            napojení credentialů mimo aplikaci.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="space-y-4">
+          <div
+            v-if="dialogProvider && connectionsForProvider(dialogProvider.key).length"
+            class="space-y-2"
+          >
+            <div class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Konfigurace
+            </div>
+            <div
+              v-for="conn in connectionsForProvider(dialogProvider.key)"
+              :key="conn.id"
+              class="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
+            >
+              <div>
+                <div class="font-medium">{{ conn.name }}</div>
+                <div class="mt-0.5 text-xs text-muted-foreground">
+                  {{ paymentConnectionModeLabel(conn.mode) }}
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <Badge variant="outline">{{ paymentConnectionStatusLabel(conn.status) }}</Badge>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  title="Upravit konfiguraci"
+                  @click="editConnection(conn)"
+                >
+                  <Pencil class="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  title="Smazat konfiguraci"
+                  :disabled="connectionSaving"
+                  @click="deleteConnection(conn)"
+                >
+                  <Trash2 class="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-3 border-t border-border pt-3">
+            <div class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {{ connectionForm.id ? 'Upravit konfiguraci' : 'Nová konfigurace' }}
+            </div>
+            <div class="space-y-1.5">
+              <Label for="conn-name">Název konfigurace</Label>
+              <Input
+                id="conn-name"
+                v-model="connectionForm.name"
+                placeholder="např. ČSOB terminál Praha"
+              />
+            </div>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <div class="space-y-1.5">
+                <Label for="conn-mode">Režim</Label>
+                <Select
+                  :model-value="connectionForm.mode"
+                  @update:model-value="(v) => (connectionForm.mode = v as PaymentConnectionMode)"
+                >
+                  <SelectTrigger id="conn-mode"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sandbox">Sandbox</SelectItem>
+                    <SelectItem value="production">Produkce</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div class="space-y-1.5">
+                <Label for="conn-status">Stav</Label>
+                <Select
+                  :model-value="connectionForm.status"
+                  @update:model-value="
+                    (v) => (connectionForm.status = v as PaymentConnectionStatus)
+                  "
+                >
+                  <SelectTrigger id="conn-status"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Rozpracováno</SelectItem>
+                    <SelectItem value="awaiting_credentials">Čeká na údaje</SelectItem>
+                    <SelectItem value="ready">Připraveno</SelectItem>
+                    <SelectItem value="disabled">Vypnuto</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div class="space-y-1.5">
+              <Label for="conn-location">Provozovna</Label>
+              <Select v-model="connectionForm.locationId">
+                <SelectTrigger id="conn-location"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Všechny</SelectItem>
+                  <SelectItem v-for="location in locations" :key="location.id" :value="location.id">
+                    {{ location.name }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div v-if="dialogProvider?.setupFields.length" class="space-y-2">
+              <Label>Potřebné údaje</Label>
+              <p class="text-xs text-muted-foreground">
+                Zaškrtněte, které údaje máte bezpečně připravené. Hodnoty se do aplikace neukládají
+                — tajné klíče se napojují mimo aplikaci.
+              </p>
+              <div
+                v-for="field in dialogProvider.setupFields"
+                :key="field"
+                class="flex items-center gap-3 rounded-md border border-border px-3 py-2"
+              >
+                <Checkbox
+                  :id="`conn-field-${field}`"
+                  :model-value="connectionForm.configuredFields.includes(field)"
+                  @update:model-value="(v) => toggleConfiguredField(field, v)"
+                />
+                <div class="flex-1 space-y-1">
+                  <Label :for="`conn-field-${field}`" class="text-sm font-medium">{{
+                    field
+                  }}</Label>
+                  <Input
+                    class="text-xs"
+                    placeholder="Uloží se bezpečně mimo aplikaci"
+                    disabled
+                    aria-hidden="true"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="ghost" @click="providerDialogOpen = false">Zavřít</Button>
+          <Button
+            type="button"
+            variant="coral"
+            :disabled="connectionSaving || !canManageIntegrations"
+            @click="saveConnection"
+          >
+            <Save class="h-4 w-4" />
+            {{ connectionForm.id ? 'Uložit změny' : 'Vytvořit konfiguraci' }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

@@ -3,7 +3,7 @@ import { useIntegrations } from '@/composables/useIntegrations'
 import { http } from '@/lib/http'
 
 vi.mock('@/lib/http', () => ({
-  http: { get: vi.fn(), post: vi.fn(), del: vi.fn(), download: vi.fn() },
+  http: { get: vi.fn(), post: vi.fn(), put: vi.fn(), del: vi.fn(), download: vi.fn() },
 }))
 
 beforeEach(() => {
@@ -83,5 +83,53 @@ describe('useIntegrations - backend foundation contract', () => {
     vi.mocked(http.get).mockResolvedValue([] as never)
     await useIntegrations().listPaymentProviderCatalog()
     expect(http.get).toHaveBeenCalledWith('/integrations/payment-providers/catalog')
+  })
+
+  it('listPaymentProviderConnections volá seznam konfigurací providerů', async () => {
+    vi.mocked(http.get).mockResolvedValue([] as never)
+    await useIntegrations().listPaymentProviderConnections()
+    expect(http.get).toHaveBeenCalledWith('/integrations/payment-provider-connections')
+  })
+
+  it('createPaymentProviderConnection posílá metadata bez tajných hodnot', async () => {
+    vi.mocked(http.post).mockResolvedValue({ id: 'conn-1' } as never)
+    await useIntegrations().createPaymentProviderConnection({
+      providerKey: 'csob',
+      name: 'ČSOB terminál Praha',
+      mode: 'sandbox',
+      status: 'awaiting_credentials',
+      locationId: 'loc-1',
+      configuredFields: ['merchantId'],
+    })
+    expect(http.post).toHaveBeenCalledWith('/integrations/payment-provider-connections', {
+      providerKey: 'csob',
+      name: 'ČSOB terminál Praha',
+      mode: 'sandbox',
+      status: 'awaiting_credentials',
+      locationId: 'loc-1',
+      configuredFields: ['merchantId'],
+    })
+  })
+
+  it('updatePaymentProviderConnection volá PUT s id konfigurace', async () => {
+    vi.mocked(http.put).mockResolvedValue({ id: 'conn-1' } as never)
+    await useIntegrations().updatePaymentProviderConnection('conn-1', {
+      providerKey: 'csob',
+      name: 'ČSOB',
+      mode: 'production',
+      status: 'ready',
+    })
+    expect(http.put).toHaveBeenCalledWith('/integrations/payment-provider-connections/conn-1', {
+      providerKey: 'csob',
+      name: 'ČSOB',
+      mode: 'production',
+      status: 'ready',
+    })
+  })
+
+  it('deletePaymentProviderConnection ruší konfiguraci podle id', async () => {
+    vi.mocked(http.del).mockResolvedValue(undefined as never)
+    await useIntegrations().deletePaymentProviderConnection('conn-1')
+    expect(http.del).toHaveBeenCalledWith('/integrations/payment-provider-connections/conn-1')
   })
 })
