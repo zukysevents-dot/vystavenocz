@@ -16,7 +16,9 @@ Tento checklist je rychlá brána pro ruční deploy na VPS. Produkce je pull-ba
    - `DB_PASSWORD`
    - `JWT_SECRET`
    - `STRIPE_SECRET_KEY`
+   - `INTEGRATIONS_SECRET_ENCRYPTION_KEY` (`openssl rand -base64 32`)
 6. Pokud se mají používat online platby faktur přes Stripe webhook, musí být v API prostředí doplněné i `Stripe__WebhookSecret`. Gastro POS deploy bez něj běží, ale webhook platby faktur nebude spolehlivě uzavírat.
+7. Credential vault pro platební providery bez `INTEGRATIONS_SECRET_ENCRYPTION_KEY` bezpečně vrací 503 při ukládání secretů; to je chyba konfigurace deploye, ne UI.
 
 ## 2. Deploy příkazy na VPS
 
@@ -87,7 +89,7 @@ Proveď na testovací firmě / testovacím účtu:
 
 - Platební provider katalog a konfigurace jsou hotové.
 - Skutečné ostré stržení přes ČSOB/NFCTRON/Comgate/SumUp/GP webpay vyžaduje další runtime adaptér a vendor sandbox/credentials.
-- Secret/credential store je navazující backend milestone; do běžných UI polí se tajné klíče nepíšou.
+- Secret/credential store je hotový backend milestone; raw klíče se píšou jen do vault endpointů a nikdy do běžných UI polí ani poznámek.
 - BankID podpis je samostatný plánovaný modul, ne blokace gastro/VPS deploye.
 
 ## 6. Když deploy selže
@@ -96,6 +98,6 @@ Proveď na testovací firmě / testovacím účtu:
 2. `docker compose ... logs -f api`
 3. `docker compose ... logs -f web`
 4. `docker compose ... logs -f caddy`
-5. Ověř `.env`, hlavně `DB_PASSWORD`, `JWT_SECRET`, `STRIPE_SECRET_KEY`, `DOMAIN`.
+5. Ověř `.env`, hlavně `DB_PASSWORD`, `JWT_SECRET`, `STRIPE_SECRET_KEY`, `INTEGRATIONS_SECRET_ENCRYPTION_KEY`, `DOMAIN`.
 6. Ověř DNS domény na IP VPS a otevřené porty 80/443.
 7. Pokud selže migrace, nevracej DB ručně. Nejdřív zazálohuj databázi a řeš konkrétní chybu migrace.

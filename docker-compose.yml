@@ -1,6 +1,6 @@
 # Single-box nasazení: nginx (SPA + reverse-proxy /api) → .NET API → PostgreSQL.
 # Spuštění z adresáře vystavenocz:
-# `DB_PASSWORD=<silné-heslo> JWT_SECRET=<min-32-znaků> STRIPE_SECRET_KEY=<sk_test...> docker compose up --build`
+# `DB_PASSWORD=<silné-heslo> JWT_SECRET=<min-32-znaků> STRIPE_SECRET_KEY=<sk_test...> INTEGRATIONS_SECRET_ENCRYPTION_KEY=<openssl rand -base64 32> docker compose up --build`
 # Vyžaduje sousední repo ../vystaveno-api (build kontext API). App poběží na http://localhost:8080.
 services:
   db:
@@ -27,6 +27,7 @@ services:
       Database__ConnectionString: 'Host=db;Database=vystaveno;Username=vystaveno;Password=${DB_PASSWORD:?nastav DB_PASSWORD}'
       Jwt__Secret: ${JWT_SECRET:?nastav JWT_SECRET (min. 32 znaků)}
       Stripe__SecretKey: ${STRIPE_SECRET_KEY:?nastav STRIPE_SECRET_KEY}
+      Integrations__SecretEncryptionKey: ${INTEGRATIONS_SECRET_ENCRYPTION_KEY:?nastav INTEGRATIONS_SECRET_ENCRYPTION_KEY (openssl rand -base64 32)}
       # Same-origin přes nginx → CORS netřeba (browser nevolá cross-origin). Cors__AllowedOrigins necháváme prázdné.
     depends_on:
       db:
