@@ -127,6 +127,17 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 7. Cenová hladina se posílá na server až při zaplacení. Když náhled ceny není dostupný, finální cenu pořád dopočítá server při platbě.
 8. QR objednávky zatím používají běžné automatické akce; výběr VIP hladiny u hosta bez obsluhy je samostatný další krok.
 
+## Věrnostní program
+
+1. Otevřete `Věrnost`.
+2. Nastavte, kolik Kč znamená jeden získaný bod, kolik Kč má jeden bod při uplatnění a maximální počet bodů na jednu účtenku.
+3. Založte zákazníka nebo otevřete existujícího zákazníka. U každého vidíte aktuální stav bodů a historii změn.
+4. Ruční úpravu bodů používejte jen s poznámkou, například kompenzace, reklamace nebo převod z původního systému.
+5. Při prodeji v `Pokladna` nebo při platbě celého účtu v `Restaurace` vyberte zákazníka před zaplacením.
+6. Pokud má zákazník body, zadejte počet bodů k uplatnění. Systém hned ukáže slevu z bodů, finální částku a předpokládaný počet nově získaných bodů.
+7. Po zaplacení server uloží body do ledgeru, účtenka ukáže uplatněné i získané body a zákazník má aktualizovaný zůstatek.
+8. Částečná platba osoby z rozdělení účtu zatím věrnostní body neuplatňuje. Body použijte u celé platby účtu.
+
 ## Inventura a zrcadlo
 
 1. Inventura porovnává `Stav má být` se skutečně napočítanou `Realitou`.

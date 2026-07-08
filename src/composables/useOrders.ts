@@ -84,11 +84,15 @@ export function useOrders() {
     method: PaymentMethod,
     cashReceived?: number | null,
     priceLevelId?: string | null,
+    customerId?: string | null,
+    redeemPoints = 0,
   ): Promise<Order> {
     return http.post<Order>(`/orders/${orderId}/pay`, {
       paymentMethod: method,
       cashReceived: cashReceived ?? null,
       priceLevelId: priceLevelId ?? null,
+      customerId: customerId ?? null,
+      redeemPoints,
     })
   }
   function payItems(

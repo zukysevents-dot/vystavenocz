@@ -107,6 +107,13 @@ async function seedLocationsAndSales(): Promise<void> {
         totalVat: round2(revenue - net),
         total: round2(revenue + tip),
         soldAt,
+        priceLevelId: null,
+        priceLevelName: null,
+        priceLevelAdjustmentPercent: null,
+        customerId: null,
+        redeemPoints: 0,
+        redeemDiscount: 0,
+        earnedPoints: 0,
         items: [],
       }
     }

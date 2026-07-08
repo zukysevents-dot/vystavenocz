@@ -10,6 +10,7 @@ export interface ReceiptInfo {
   receiptNumber: string
   dateTime: string
   table?: string
+  customerName?: string
   items: ReceiptLine[]
   discountPercent?: number
   discountAmount?: number
@@ -19,6 +20,8 @@ export interface ReceiptInfo {
   /** Přijatá hotovost a vrácení (jen platba hotově se zadanou částkou). */
   cashReceived?: number
   cashChange?: number
+  loyaltyEarnedPoints?: number
+  loyaltyRedeemedPoints?: number
 }
 
 interface BuildReceiptArgs {
@@ -32,8 +35,11 @@ interface BuildReceiptArgs {
   /** Zdroj čísla účtenky (id prodeje/účtu) — zkrátí se na čitelný kód. */
   id: string
   table?: string
+  customerName?: string
   cashReceived?: number | null
   cashChange?: number | null
+  loyaltyEarnedPoints?: number
+  loyaltyRedeemedPoints?: number
 }
 
 export function buildReceipt({
@@ -46,8 +52,11 @@ export function buildReceipt({
   method,
   id,
   table,
+  customerName,
   cashReceived,
   cashChange,
+  loyaltyEarnedPoints,
+  loyaltyRedeemedPoints,
 }: BuildReceiptArgs): ReceiptInfo {
   const address = [company?.street, [company?.zip, company?.city].filter(Boolean).join(' ')]
     .filter(Boolean)
@@ -66,6 +75,7 @@ export function buildReceipt({
       minute: '2-digit',
     }),
     table,
+    customerName: customerName || undefined,
     items,
     discountPercent: discountPercent || undefined,
     discountAmount: discountAmount || undefined,
@@ -75,5 +85,7 @@ export function buildReceipt({
     // „Přijato / Vráceno" jen u hotovosti se zadanou částkou; vrácení 0 (přesně) se tiskne taky.
     cashReceived: cashReceived ?? undefined,
     cashChange: cashChange ?? undefined,
+    loyaltyEarnedPoints: loyaltyEarnedPoints || undefined,
+    loyaltyRedeemedPoints: loyaltyRedeemedPoints || undefined,
   }
 }
