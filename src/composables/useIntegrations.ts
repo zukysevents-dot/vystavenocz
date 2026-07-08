@@ -38,6 +38,23 @@ export interface PrintJob {
   updatedAt: string
 }
 
+export interface PrintAgent {
+  id: string
+  name: string
+  locationId: string | null
+  lastSeenAt: string | null
+  createdAt: string
+}
+
+export interface PrintAgentRegistered extends PrintAgent {
+  token: string
+}
+
+export interface RegisterPrintAgentRequest {
+  name: string
+  locationId?: string | null
+}
+
 export interface AccountingVatLine {
   vatRate: number
   net: number
@@ -128,6 +145,18 @@ export function useIntegrations() {
     return http.get<AccountingExportResult>(`/integrations/exports?${params.toString()}`)
   }
 
+  function listPrintAgents(): Promise<PrintAgent[]> {
+    return http.get<PrintAgent[]>('/integrations/print-agents')
+  }
+
+  function registerPrintAgent(request: RegisterPrintAgentRequest): Promise<PrintAgentRegistered> {
+    return http.post<PrintAgentRegistered>('/integrations/print-agents', request)
+  }
+
+  function revokePrintAgent(id: string): Promise<void> {
+    return http.del(`/integrations/print-agents/${id}`)
+  }
+
   function downloadAccountingExport(query: AccountingExportQuery): Promise<DownloadResponse> {
     const params = new URLSearchParams({
       type: query.type,
@@ -140,5 +169,13 @@ export function useIntegrations() {
     return http.download(`/integrations/exports/download?${params.toString()}`)
   }
 
-  return { listTerminalPayments, listPrintJobs, buildAccountingExport, downloadAccountingExport }
+  return {
+    listTerminalPayments,
+    listPrintJobs,
+    listPrintAgents,
+    registerPrintAgent,
+    revokePrintAgent,
+    buildAccountingExport,
+    downloadAccountingExport,
+  }
 }

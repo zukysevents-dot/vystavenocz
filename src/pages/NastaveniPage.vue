@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import {
+  Copy,
   Download,
   FileSpreadsheet,
   ImageUp,
+  KeyRound,
+  Plus,
   Printer,
   RefreshCw,
   Save,
@@ -29,6 +32,8 @@ import {
   useIntegrations,
   type AccountingExportTarget,
   type AccountingExportType,
+  type PrintAgent,
+  type PrintAgentRegistered,
   type PrintJob,
   type TerminalPayment,
 } from '@/composables/useIntegrations'
@@ -108,19 +113,27 @@ const integrationReadiness = INTEGRATION_READINESS_ITEMS
 const integrationSummary = computed(() => summarizeIntegrationReadiness(integrationReadiness))
 const integrationsModuleEnabled = computed(() => enabledModules.value.includes('integrations'))
 const integrationRuntimeAvailable = computed(() => apiMode && integrationsModuleEnabled.value)
+const canManageIntegrations = computed(() => auth.hasRole('Owner', 'Admin', 'Manager'))
 const terminalPayments = ref<TerminalPayment[]>([])
 const printJobs = ref<PrintJob[]>([])
+const printAgents = ref<PrintAgent[]>([])
 const pendingTerminalPayments = ref(0)
 const queuedPrintJobs = ref(0)
 const integrationsLoading = ref(false)
 const integrationsError = ref<string | null>(null)
 const accountingExportLoading = ref(false)
 const lastAccountingExportFile = ref<string | null>(null)
+const printAgentLoading = ref(false)
+const registeredPrintAgent = ref<PrintAgentRegistered | null>(null)
 const accountingExportForm = reactive({
   type: 'ZReports' as AccountingExportType,
   target: 'Generic' as AccountingExportTarget,
   from: monthStartIso(),
   to: todayIso(),
+  locationId: 'all',
+})
+const printAgentForm = reactive({
+  name: '',
   locationId: 'all',
 })
 
@@ -243,6 +256,7 @@ async function refreshIntegrationsRuntime(): Promise<void> {
   if (!integrationRuntimeAvailable.value) {
     terminalPayments.value = []
     printJobs.value = []
+    printAgents.value = []
     pendingTerminalPayments.value = 0
     queuedPrintJobs.value = 0
     integrationsError.value = null
@@ -251,20 +265,23 @@ async function refreshIntegrationsRuntime(): Promise<void> {
   integrationsLoading.value = true
   integrationsError.value = null
   try {
-    const [terminals, pendingTerminals, jobs, queuedJobs] = await Promise.all([
+    const [terminals, pendingTerminals, jobs, queuedJobs, agents] = await Promise.all([
       integrationsApi.listTerminalPayments({ pageSize: 5 }),
       integrationsApi.listTerminalPayments({ pageSize: 1, status: 'Pending' }),
       integrationsApi.listPrintJobs({ pageSize: 5 }),
       integrationsApi.listPrintJobs({ pageSize: 1, status: 'Queued' }),
+      integrationsApi.listPrintAgents(),
     ])
     terminalPayments.value = terminals.items
     pendingTerminalPayments.value = pendingTerminals.total
     printJobs.value = jobs.items
     queuedPrintJobs.value = queuedJobs.total
+    printAgents.value = agents
   } catch (e) {
     integrationsError.value = integrationErrorMessage(e)
     terminalPayments.value = []
     printJobs.value = []
+    printAgents.value = []
     pendingTerminalPayments.value = 0
     queuedPrintJobs.value = 0
   } finally {
@@ -293,6 +310,56 @@ async function downloadAccountingExport(): Promise<void> {
     toast.error(accountingExportErrorMessage(e))
   } finally {
     accountingExportLoading.value = false
+  }
+}
+
+async function registerPrintAgent(): Promise<void> {
+  if (!integrationRuntimeAvailable.value || !canManageIntegrations.value) return
+  const name = printAgentForm.name.trim()
+  if (!name) {
+    toast.error('Zadejte název tiskového agenta.')
+    return
+  }
+  printAgentLoading.value = true
+  try {
+    const agent = await integrationsApi.registerPrintAgent({
+      name,
+      locationId: printAgentForm.locationId === 'all' ? null : printAgentForm.locationId,
+    })
+    registeredPrintAgent.value = agent
+    printAgentForm.name = ''
+    await refreshIntegrationsRuntime()
+    toast.success('Tiskový agent vytvořen. Token si uložte, znovu se nezobrazí.')
+  } catch (e) {
+    toast.error(integrationErrorMessage(e))
+  } finally {
+    printAgentLoading.value = false
+  }
+}
+
+async function revokePrintAgent(agent: PrintAgent): Promise<void> {
+  if (!canManageIntegrations.value) return
+  printAgentLoading.value = true
+  try {
+    await integrationsApi.revokePrintAgent(agent.id)
+    if (registeredPrintAgent.value?.id === agent.id) registeredPrintAgent.value = null
+    await refreshIntegrationsRuntime()
+    toast.success('Tiskový agent zrušen.')
+  } catch (e) {
+    toast.error(integrationErrorMessage(e))
+  } finally {
+    printAgentLoading.value = false
+  }
+}
+
+async function copyPrintAgentToken(): Promise<void> {
+  const token = registeredPrintAgent.value?.token
+  if (!token) return
+  try {
+    await navigator.clipboard.writeText(token)
+    toast.success('Token zkopírován.')
+  } catch {
+    toast.error('Token se nepodařilo zkopírovat.')
   }
 }
 
@@ -362,6 +429,23 @@ function printJobTypeLabel(type: PrintJob['type']): string {
     ZReport: 'Z-report',
   }
   return labels[type]
+}
+
+function printAgentLocationName(locationId: string | null): string {
+  if (!locationId) return 'Všechny provozovny'
+  return (
+    locations.value.find((location) => location.id === locationId)?.name ?? 'Neznámá provozovna'
+  )
+}
+
+function printAgentIsOnline(agent: PrintAgent): boolean {
+  if (!agent.lastSeenAt) return false
+  return Date.now() - new Date(agent.lastSeenAt).getTime() < 2 * 60 * 1000
+}
+
+function printAgentSeenLabel(agent: PrintAgent): string {
+  if (!agent.lastSeenAt) return 'Ještě se nepřipojil'
+  return `Naposledy ${shortDateTime(agent.lastSeenAt)}`
 }
 
 function shortDateTime(value: string): string {
@@ -748,6 +832,128 @@ async function onSubmit(): Promise<void> {
                     Bez tiskových jobů.
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-lg border border-border p-4 lg:col-span-2">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2 font-medium">
+                  <KeyRound class="h-4 w-4 text-primary" />
+                  Tiskoví agenti
+                </div>
+                <p class="mt-1 text-xs text-muted-foreground">
+                  Lokální program u tiskárny čte frontu přes vlastní token. Token se zobrazí jen při
+                  vytvoření.
+                </p>
+              </div>
+              <Badge variant="secondary">{{ printAgents.length }} aktivních</Badge>
+            </div>
+
+            <div
+              v-if="canManageIntegrations"
+              class="mt-4 grid gap-3 border-b border-border pb-4 md:grid-cols-[1fr_220px_auto]"
+            >
+              <div class="space-y-1.5">
+                <Label for="print-agent-name">Název agenta</Label>
+                <Input
+                  id="print-agent-name"
+                  v-model="printAgentForm.name"
+                  placeholder="Kuchyně tiskárna"
+                />
+              </div>
+              <div class="space-y-1.5">
+                <Label for="print-agent-location">Provozovna</Label>
+                <Select v-model="printAgentForm.locationId">
+                  <SelectTrigger id="print-agent-location">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Všechny</SelectItem>
+                    <SelectItem
+                      v-for="location in locations"
+                      :key="location.id"
+                      :value="location.id"
+                    >
+                      {{ location.name }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div class="flex items-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  class="w-full"
+                  :disabled="printAgentLoading"
+                  @click="registerPrintAgent"
+                >
+                  <Plus class="h-4 w-4" />
+                  Přidat
+                </Button>
+              </div>
+            </div>
+
+            <div
+              v-if="registeredPrintAgent"
+              class="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-3"
+            >
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div class="text-sm font-medium">Token pro {{ registeredPrintAgent.name }}</div>
+                  <div class="text-xs text-muted-foreground">
+                    Uložte ho do lokálního tiskového agenta. Znovu se nezobrazí.
+                  </div>
+                </div>
+                <Button type="button" variant="outline" size="sm" @click="copyPrintAgentToken">
+                  <Copy class="h-4 w-4" />
+                  Kopírovat
+                </Button>
+              </div>
+              <Input
+                id="print-agent-token"
+                class="mt-3 font-mono text-xs"
+                :model-value="registeredPrintAgent.token"
+                readonly
+              />
+            </div>
+
+            <div class="mt-4 grid gap-2">
+              <div
+                v-for="agent in printAgents"
+                :key="agent.id"
+                class="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm"
+              >
+                <div>
+                  <div class="font-medium">{{ agent.name }}</div>
+                  <div class="mt-1 text-xs text-muted-foreground">
+                    {{ printAgentLocationName(agent.locationId) }} ·
+                    {{ printAgentSeenLabel(agent) }}
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <Badge :variant="printAgentIsOnline(agent) ? 'default' : 'outline'">
+                    {{ printAgentIsOnline(agent) ? 'Online' : 'Offline' }}
+                  </Badge>
+                  <Button
+                    v-if="canManageIntegrations"
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    title="Zrušit agenta"
+                    :disabled="printAgentLoading"
+                    @click="revokePrintAgent(agent)"
+                  >
+                    <Trash2 class="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+              <div
+                v-if="!printAgents.length && !integrationsLoading"
+                class="rounded-md border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground"
+              >
+                Zatím není registrovaný žádný tiskový agent.
               </div>
             </div>
           </div>
