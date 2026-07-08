@@ -1,6 +1,6 @@
 # Vystaveno modular business roadmap
 
-Last updated: 2026-07-05
+Last updated: 2026-07-08
 
 ## Implementation status
 
@@ -37,6 +37,7 @@ The shared core is mandatory for all verticals:
 - customers, suppliers, contacts, notes, tasks, documents, and attachments
 - products, services, tax profiles, numbering series, and payment methods
 - invoices, receipts, credit notes, exports, and accounting-ready document history
+- verified document signing as an optional add-on module, with BankID/provider adapters and legal/compliance review before launch
 - audit log for critical business actions
 - notifications and reminders
 - subscription, enabled modules, feature flags, limits, and runtime capabilities
@@ -201,6 +202,15 @@ Vystaveno should win through:
 
 - accounting, payments, terminals, bank imports, e-shops, calendars, food delivery, public API, webhooks
 
+### Verified Signing
+
+- optional add-on module for companies that need verified document signing
+- use cases: contracts, handover protocols, offers, order confirmations, employee documents, client approvals, and service/job protocols
+- planned provider path: BankID-style verified identity/signature adapter first, with provider-specific contracts isolated behind an integration interface
+- must store a signing envelope/audit trail per document: signer identity metadata allowed by the provider, timestamps, document hash, status, provider reference, and immutable evidence
+- must stay separate from ordinary invoice sending; invoices do not require a handwritten signature, while verified signing is a premium workflow for documents where proof of identity/consent matters
+- legal/compliance wording must be reviewed before public launch; the UI must not overstate legal effect beyond the selected provider contract
+
 ## Implementation order
 
 1. Stabilize module capability resolver, permissions, navigation rules, and module settings.
@@ -212,8 +222,9 @@ Vystaveno should win through:
 7. Add modular onboarding and templates per business type (foundation: profile-specific onboarding checklist and first-step routing).
 8. Add services and jobs as the next non-gastro verticals.
 9. Add accounting and payment integrations.
-10. Add AI insights after the underlying data is reliable.
-11. Add EET 2.0 when final technical requirements are published.
+10. Add verified document signing as a standalone module after the document model and provider contract are designed.
+11. Add AI insights after the underlying data is reliable.
+12. Add EET 2.0 when final technical requirements are published.
 
 ## Acceptance criteria
 
