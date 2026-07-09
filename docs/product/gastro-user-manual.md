@@ -175,6 +175,17 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 11. Money/SuperFaktura zatím nejsou přímé adaptéry. Používejte Generic CSV nebo Pohoda XML podle účetního systému.
 12. `Plánováno` znamená, že funkce je v roadmapě, ale nemá se tvářit jako hotová integrace.
 
+## Ověřené podpisy (add-on modul)
+
+Samostatný placený add-on pro ověřený podpis dokumentů (smlouvy, předávací protokoly, dohody, objednávky). Není součástí gastro prodeje ani fakturace. Zobrazí se jen firmám se zapnutým modulem `Podpisy`.
+
+1. Otevřete `Podpisy`. Stránka má dva taby: `Obálky` a `Provider podpisů`.
+2. V `Provider podpisů` (manažerská role) je katalog poskytovatelů. `Testovací poskytovatel` je aktivní pro zkoušení, `BankID` je „Připraveno k napojení". U providera `Nastavit` založíte konfiguraci (název, režim sandbox/produkce, stav) a v zabezpečeném trezoru uložíte přístupové klíče — po uložení se pole vyčistí a hodnota se už nikdy nezobrazí.
+3. V `Obálky` přes `Nová obálka` připravíte dokument k podpisu: název, typ, podepisující osobu a poskytovatele.
+4. V detailu obálky dáte `Odeslat k podpisu`. Máte-li konfiguraci poskytovatele ve stavu `Připraveno`, můžete odeslání nasměrovat přes ni; jinak proběhne základní odeslání.
+5. **Zatím jde o přípravu obálky a evidenci, ne ostrý právní podpis.** Odeslání přes BankID poctivě hlásí, že ostrý adapter čeká na zapnutí — živý BankID podpis se zapne až po napojení poskytovatele, credentialech a potvrzeném právním znění. Netvrďte zákazníkovi, že „BankID podpis je hotový".
+6. Přehled, co je v celém produktu ostré a co jen připravené, je v [`interni-test-manual.md`](interni-test-manual.md).
+
 ## Provozní přehled
 
 1. `Provozní přehled` používá majitel, manažer nebo admin.

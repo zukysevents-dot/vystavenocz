@@ -32,6 +32,8 @@ export interface SignatureEnvelope {
   providerLabel: string | null
   signer: SignatureSigner
   evidenceHash: string | null
+  // Reference transakce u poskytovatele (vrací runtime adapter po odeslání přes provider connection); null u foundation.
+  providerReference?: string | null
   createdAt: string
   sentAt: string | null
   signedAt: string | null
@@ -169,9 +171,17 @@ export function useVerifiedSigning() {
     return http.post<SignatureEnvelope>('/verified-signing/envelopes', input)
   }
 
-  async function sendEnvelope(id: string): Promise<SignatureEnvelope> {
-    if (!isApiMode()) return transitionMockEnvelope(id, 'sent')
-    return http.post<SignatureEnvelope>(`/verified-signing/envelopes/${id}/send`, {})
+  // Runtime seam: volitelný providerConnectionId nasměruje odeslání přes konkrétní Ready konfiguraci (a její adapter).
+  // Bez něj zůstává staré foundation odeslání. Backend s connection ověří Ready/provider match/credentialy/adapter.
+  async function sendEnvelope(
+    id: string,
+    providerConnectionId?: string | null,
+  ): Promise<SignatureEnvelope> {
+    if (!isApiMode()) return transitionMockEnvelope(id, 'sent', providerConnectionId)
+    return http.post<SignatureEnvelope>(
+      `/verified-signing/envelopes/${id}/send`,
+      providerConnectionId ? { providerConnectionId } : {},
+    )
   }
 
   async function cancelEnvelope(id: string): Promise<SignatureEnvelope> {
@@ -326,12 +336,20 @@ function createMockEnvelope(input: CreateSignatureEnvelopeInput): SignatureEnvel
   return envelope
 }
 
-function transitionMockEnvelope(id: string, to: SignatureEnvelopeStatus): SignatureEnvelope {
+function transitionMockEnvelope(
+  id: string,
+  to: SignatureEnvelopeStatus,
+  providerConnectionId?: string | null,
+): SignatureEnvelope {
   const items = readMockEnvelopes()
   const envelope = items.find((e) => e.id === id)
   if (!envelope) throw new Error('Podpisová obálka nenalezena.')
   envelope.status = to
-  if (to === 'sent' && !envelope.sentAt) envelope.sentAt = new Date().toISOString()
+  if (to === 'sent') {
+    if (!envelope.sentAt) envelope.sentAt = new Date().toISOString()
+    // Přes konkrétní konfiguraci mock „adapter" vrátí referenci; foundation odeslání ji nechá prázdnou.
+    if (providerConnectionId) envelope.providerReference = `mock-${crypto.randomUUID().slice(0, 8)}`
+  }
   writeMockEnvelopes(items)
   return envelope
 }

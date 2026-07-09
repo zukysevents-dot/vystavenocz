@@ -1,0 +1,105 @@
+# Interní testovací manuál (VPS staging)
+
+Tenhle manuál je pro **interní test** produktu na staging/VPS před ostrým spuštěním. Provede vás hlavními částmi tak, jak je uvidí zákazník, a hlavně **jasně říká, co už je ostré a co je zatím jen připravené k napojení**. Cílem není znát techniku — stačí projít kroky a všímat si, jestli se chová podle očekávání.
+
+- Podrobný provozní manuál pro obsluhu je v [`gastro-user-manual.md`](gastro-user-manual.md).
+- Technický deploy + kontrola po nasazení je v [`../deploy-smoke-checklist.md`](../deploy-smoke-checklist.md).
+
+## Než začnete
+
+1. Přihlaste se testovacím účtem na staging adrese aplikace.
+2. Zkontrolujte, že jste ve správné testovací firmě a provozovně (vlevo nahoře).
+3. Testujte v klidu, na testovacích datech. Nic z toho není ostrý provoz.
+4. Když se něco chová jinak, než popisuje tento manuál, poznamenejte: co jste dělali, co jste čekali a co se stalo.
+
+## 1. Gastro rychlý start
+
+Cíl: prodat na pokladně a obsloužit stůl.
+
+1. Otevřete `Pokladna`. Přidejte pár položek (klik na dlaždici, hledání podle názvu/SKU/EAN, nebo `Sken / EAN` čtečkou).
+2. Klikněte `Zaplatit`, zvolte `Hotově` nebo `Kartou`. U hotovosti zadejte přijatou částku — systém ukáže, kolik vrátit. U karty potvrďte `Platba prošla` (terminál zatím potvrzuje obsluha ručně).
+3. Otevřete `Restaurace`, vyberte stůl, přidejte položky, dejte `Odeslat` (bon jde do kuchyně) a nakonec `Zaplatit`.
+4. V `Kuchyně` posuňte bon přes stavy `Odesláno → Připravuje se → Hotovo → Vydáno`.
+
+Co ověřit: prodej se objeví v tržbách, bon projde kuchyní, po zaplacení účtu zůstane jen nezaplacený zbytek (nebo se stůl uvolní).
+
+## 2. Sklad a inventura
+
+Cíl: vidět, že sklad sedí a rozdíly se dají vysvětlit.
+
+1. Otevřete `Naskladnění`, vyberte pobočku skladu (má-li firma víc poboček), vyplňte dodavatele/doklad/datum, přidejte zboží s množstvím a uložte příjemku.
+2. Otevřete `Zásoby`. Vpravo je tab `Zrcadlo` — porovnává `Stav má být`, `Realitu` a `Rozdíl`. V detailu řádku uvidíte výpočet (otevření + příjem + storno − prodej − výdej = stav má být).
+3. Spusťte `Inventuru` na konkrétní pobočku: zadejte fyzicky napočítané množství a uložte. `Rozdíl` = realita minus systém, ukazuje se v kusech i v Kč.
+
+Co ověřit: příjemka zvýší stav, prodej ho sníží, inventura/korekce se projeví jako rozdíl ve zrcadle. Inventura ani výdej nejdou spustit pro „Všechny pobočky" — vždy pro konkrétní sklad.
+
+## 3. Uzávěrka
+
+Cíl: zavřít den a mít čísla pro účetní.
+
+1. Na konci dne otevřete `Uzávěrka`.
+2. Zkontrolujte tržby, hotovost, karty, spropitné, storna, slevy, DPH a prodané položky.
+3. Zadejte hotovostní počátek, vklady, výběry, napočítanou hotovost a odvod.
+4. Doplaťte nebo zrušte všechny otevřené účty — jinak systém zavření dne zablokuje (to je správně).
+5. Zavřete den. Z-report se uzamkne a čísla se dál nemění.
+6. Vyzkoušejte exporty: běžný CSV, účetní CSV, `Export předávky CSV` a měsíční `Export měsíc účetní CSV` / `Export měsíc souhrn CSV`.
+
+Co ověřit: tržby po testovacím prodeji nejsou nulové, otevřený účet blokuje zavření, exporty se stáhnou.
+
+## 4. Integrace a exporty
+
+Cíl: vidět účetní exporty, tiskovou frontu a katalog platebních providerů.
+
+1. Otevřete `Nastavení firmy` → `Integrace a exporty`.
+2. **Účetní export:** vyberte cíl `Generic CSV` nebo `Pohoda XML`, typ `Z-reporty` / `Prodeje`, datum od/do a stáhněte soubor. Pohoda XML je soubor pro **ruční import** v Pohodě, ne živá synchronizace.
+3. **Tiskoví agenti:** klikněte `Přidat`, pojmenujte agenta a uložte. Token se ukáže **jen jednou**. `Revoke` token okamžitě zneplatní. Bez lokálního agenta tisk běží stávající cestou.
+4. **Platební provideri:** otevřete katalog (ČSOB, NFCTRON, Comgate, SumUp, GP webpay). U providera `Nastavit` → založte konfiguraci → v `Zabezpečeném trezoru credentialů` uložte testovací klíč. Po uložení se pole vyčistí a přejde na `Uloženo`; hodnota se nikdy nezobrazí zpět.
+
+Co ověřit: exporty se stáhnou, token se ukáže jen jednou, uložení klíče do trezoru vyčistí input. **Uložení klíče nespouští žádnou platbu** — ostré platby čekají na runtime adaptér.
+
+## 5. Ověřené podpisy (modul BankID / Podpisy)
+
+Cíl: připravit podpisovou obálku a vyzkoušet nastavení poskytovatele + trezor. Modul je samostatný placený add-on, není součástí gastro/POS.
+
+1. Otevřete `Podpisy`.
+2. Tab `Provider podpisů`: v katalogu je `Testovací poskytovatel` (`Aktivní`) a `BankID` (`Připraveno k napojení`).
+   - `Testovací poskytovatel` jde bez credentialů rovnou nastavit na `Připraveno`.
+   - U `BankID` založte konfiguraci a v trezoru uložte testovací klíč (stejně jako u plateb — input se vyčistí, hodnota se nezobrazí zpět).
+3. Tab `Obálky`: `Nová obálka` → vyplňte název dokumentu, podepisující osobu a poskytovatele. V detailu obálky dejte `Odeslat k podpisu`.
+   - Základní odeslání přepne obálku na `Odesláno` — jde o **přípravu obálky a evidenci**, ne ostrý právní podpis.
+   - Pokud máte `BankID` konfiguraci ve stavu `Připraveno`, detail nabídne výběr konfigurace poskytovatele. Odeslání přes BankID zatím **poctivě** vrátí hlášku „BankID konfigurace je připravená, ale ostrý adapter ještě není zapnutý." — to je očekávané, ne chyba.
+
+Co ověřit: obálka se založí a odešle (stav `Odesláno`), trezor vyčistí input, BankID poctivě hlásí, že ostrý adapter čeká na zapnutí. Pokud odeslání přes konfiguraci vrátí, že konfigurace není připravená / chybí credentialy, hláška vás nasměruje do tabu `Provider podpisů`.
+
+## 6. Veřejné / QR menu (pokud je dostupné)
+
+1. V `Nastavení firmy` ověřte veřejný slug (např. `moje-bistro`).
+2. Otevřete `/objednavka/<slug>` v anonymním okně (bez přihlášení). Menu se načte, u položek jsou alergeny, ceny počítá server.
+3. QR odkaz ke stolu (`/objednavka/<slug>?table=<id>&name=<název>`) skryje výdej/rozvoz a připíše objednávku do účtu stolu.
+
+## 7. Co je ostré a co je zatím připravené
+
+Tohle je nejdůležitější tabulka pro interní test. **Netvrďte zákazníkovi, že „připravené" věci už ostře fungují.**
+
+| Oblast                                                        | Stav                      | Poznámka                                                                                                                   |
+| ------------------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Gastro POS prodej (hotovost/karta)                            | **Ostré**                 | Karta: výsledek potvrzuje obsluha ručně, terminál není propojený.                                                          |
+| Restaurace, stoly, kuchyně (KDS)                              | **Ostré**                 | Účty, sloučení, split, bony, historie.                                                                                     |
+| Sklad, naskladnění, inventura, zrcadlo                        | **Ostré**                 | Odečet surovin přes receptury, per-pobočka.                                                                                |
+| Uzávěrka + Z-report + exporty                                 | **Ostré**                 | Denní i měsíční účetní CSV, předávka.                                                                                      |
+| Akce/ceny, věrnost, audit                                     | **Ostré**                 | Serverový výpočet promo a bodů.                                                                                            |
+| Veřejné / QR objednávky                                       | **Ostré**                 | Bez přihlášení, ceny ze serveru.                                                                                           |
+| Účetní export Generic CSV / Pohoda XML                        | **Ostré**                 | Pohoda = soubor pro ruční import, ne živá synchronizace.                                                                   |
+| Tiskoví agenti (registrace/token/revoke)                      | **Ostré**                 | Vlastní lokální tiskový program u tiskárny.                                                                                |
+| Credential trezor (platby i podpisy)                          | **Ostré**                 | Uložit/rotovat/smazat/revokovat klíče; hodnoty se nikdy nevrací.                                                           |
+| Platební brány ČSOB/NFCTRON/Comgate/SumUp/GP                  | **Připraveno k napojení** | Katalog + konfigurace hotové; ostré stržení čeká na runtime adaptér a smlouvu. Žádné tlačítko „zaplatit online".           |
+| Ověřené podpisy — obálky, evidence, provider settings, trezor | **Ostré (příprava)**      | Zakládání obálek, evidence a nastavení fungují.                                                                            |
+| Ověřené podpisy — odeslání                                    | **Připraveno k napojení** | Základní/testovací odeslání = příprava a evidence, ne právní podpis.                                                       |
+| **BankID ostrý podpis**                                       | **Není ostré**            | Čeká na BankID credentials + runtime adaptér + potvrzený právní wording. Do té doby poctivé 422 „adapter čeká na zapnutí". |
+| Money / SuperFaktura přímý adaptér                            | **Není**                  | Používejte Generic CSV nebo Pohoda XML.                                                                                    |
+
+## Když něco nefunguje
+
+- Zapište krok, očekávání a skutečnost (ideálně se screenshotem).
+- Hlášky `503` u trezoru = chybí serverový šifrovací klíč na VPS/backendu (chyba deploye, ne UI) — nahlaste, ať se doplní.
+- Techniku a nasazení řeší [`../deploy-smoke-checklist.md`](../deploy-smoke-checklist.md).
