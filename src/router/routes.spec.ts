@@ -23,4 +23,12 @@ describe('app routes — role gates', () => {
     expect(route?.meta.requiresRole).toEqual(['Owner', 'Admin'])
     expect(route?.meta.requiresModule).toBe('core')
   })
+
+  it('gates verified signing behind its own add-on module', () => {
+    const route = router.getRoutes().find((r) => r.name === 'app-podpisy')
+
+    expect(route?.path).toBe('/app/podpisy')
+    expect(route?.meta.requiresModule).toBe('verified_signing')
+    expect(route?.meta.requiresAuth).toBe(true)
+  })
 })
