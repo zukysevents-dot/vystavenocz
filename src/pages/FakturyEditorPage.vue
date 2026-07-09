@@ -43,12 +43,14 @@ import {
   buildInvoiceNumber,
   calcLine,
   calcTotals,
+  documentTypeLabel,
   formatCZK,
   variableSymbolFromInvoiceNumber,
 } from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
 import type {
   ClientSnapshot,
+  DocumentType,
   Invoice,
   InvoiceItem,
   InvoiceStatus,
@@ -91,6 +93,14 @@ const pdfDocEl = ref<HTMLElement | null>(null)
 const editingId = ref<string | null>(null)
 const status = ref<InvoiceStatus>('draft')
 const paidAt = ref<string | null>(null)
+// Typ dokladu: editor tvoří jen fakturu / zálohovou (proforma). Dobropis vzniká akcí ze seznamu
+// (serverově, se zápornými částkami) a v editoru se needituje. Typ jde měnit jen u konceptu.
+const documentType = ref<DocumentType>('invoice')
+const documentTypeOptions = [
+  { value: 'invoice', label: 'Faktura' },
+  { value: 'proforma', label: 'Zálohová faktura' },
+] as const
+const canChooseType = computed(() => status.value === 'draft')
 
 // Stav hlavičky.
 const selectedClientId = ref('')
@@ -160,8 +170,16 @@ onMounted(async () => {
   if (id) {
     const inv = getById(id)
     if (inv) {
+      // Dobropis je odvozený daňový doklad se zápornými částkami — editor přepočítává KLADNÉ součty,
+      // takže by ho zkorumpoval. Tvrdý guard (i proti přímé URL): dobropis se needituje.
+      if (inv.documentType === 'credit_note') {
+        toast.error('Dobropis je odvozený doklad a needituje se.')
+        router.replace('/app/faktury')
+        return
+      }
       editingId.value = id
       status.value = inv.status
+      documentType.value = inv.documentType
       paidAt.value = inv.paidAt
       invoiceNumber.value = inv.invoiceNumber ?? ''
       issueDate.value = inv.issueDate
@@ -303,7 +321,7 @@ async function persist(): Promise<void> {
     }
   })
   const input: InvoiceInput = {
-    documentType: 'invoice',
+    documentType: documentType.value,
     status: status.value,
     invoiceNumber: invoiceNumber.value.trim(),
     clientId: selectedClientId.value || null,
@@ -436,9 +454,11 @@ async function onCancel() {
         </Button>
         <div>
           <h1 class="text-2xl font-bold tracking-tight">
-            {{ editingId ? 'Upravit fakturu' : 'Nová faktura' }}
+            {{ documentTypeLabel(documentType) }}
           </h1>
-          <p class="text-sm text-muted-foreground">Editor faktury</p>
+          <p class="text-sm text-muted-foreground">
+            {{ editingId ? 'Úprava dokladu' : 'Nový doklad' }}
+          </p>
         </div>
       </div>
       <div class="flex flex-wrap items-center justify-end gap-2">
@@ -527,6 +547,25 @@ async function onCancel() {
           Detaily faktury
         </h2>
         <div class="mt-4 grid gap-4 sm:grid-cols-2">
+          <div class="space-y-2">
+            <Label for="inv-doctype">Typ dokladu</Label>
+            <Select v-if="canChooseType" v-model="documentType">
+              <SelectTrigger id="inv-doctype">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="t in documentTypeOptions" :key="t.value" :value="t.value">
+                  {{ t.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <div
+              v-else
+              class="flex h-9 items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-muted-foreground"
+            >
+              {{ documentTypeLabel(documentType) }}
+            </div>
+          </div>
           <div class="space-y-2">
             <Label for="inv-number">Číslo faktury</Label>
             <Input id="inv-number" v-model="invoiceNumber" />

@@ -272,7 +272,12 @@ export function isdocFilename(inv: Invoice): string {
  * Radši nenabízet než exportovat špatně.
  */
 export function canExportIsdoc(inv: Invoice): boolean {
-  return (!inv.currency || inv.currency === 'CZK') && inv.items.length > 0
+  // Proforma (zálohová) není daňový doklad → ISDOC se pro ni nenabízí.
+  return (
+    inv.documentType !== 'proforma' &&
+    (!inv.currency || inv.currency === 'CZK') &&
+    inv.items.length > 0
+  )
 }
 
 // --- Stažení v prohlížeči (mimo unit testy) ---

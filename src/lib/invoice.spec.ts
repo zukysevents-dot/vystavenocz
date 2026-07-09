@@ -7,8 +7,10 @@ import {
   variableSymbolFromInvoiceNumber,
   czAccountToIban,
   toImportRequest,
+  documentTypeLabel,
+  creditNoteItems,
 } from '@/lib/invoice'
-import type { Invoice } from '@/lib/types'
+import type { Invoice, InvoiceItem } from '@/lib/types'
 
 describe('round2', () => {
   it('zaokrouhlí na 2 desetinná místa', () => {
@@ -189,5 +191,42 @@ describe('toImportRequest', () => {
     const r = toImportRequest({ ...base, status: 'issued', paidAt: null })
     expect(r.status).toBe('Issued')
     expect(r.paidDate).toBeNull()
+  })
+})
+
+describe('documentTypeLabel', () => {
+  it('mapuje typ dokladu na český label', () => {
+    expect(documentTypeLabel('invoice')).toBe('Faktura')
+    expect(documentTypeLabel('proforma')).toBe('Zálohová faktura')
+    expect(documentTypeLabel('credit_note')).toBe('Dobropis')
+  })
+})
+
+describe('creditNoteItems (mock stand-in)', () => {
+  const item: InvoiceItem = {
+    id: 'orig',
+    description: 'Práce',
+    quantity: 2,
+    unit: 'ks',
+    unitPrice: 1000,
+    vatRate: 21,
+    lineSubtotal: 2000,
+    lineVat: 420,
+    lineTotal: 2420,
+  }
+
+  it('množství zůstává KLADNÉ, částky se otočí do záporných', () => {
+    const [r] = creditNoteItems([item])
+    // Backend validator vyžaduje Quantity > 0 — dobropis nikdy nemá záporné množství.
+    expect(r.quantity).toBe(2)
+    expect(r.lineSubtotal).toBe(-2000)
+    expect(r.lineVat).toBe(-420)
+    expect(r.lineTotal).toBe(-2420)
+  })
+
+  it('přiřadí nové id řádku (nekoliduje s originálem)', () => {
+    const [r] = creditNoteItems([item])
+    expect(r.id).not.toBe(item.id)
+    expect(typeof r.id).toBe('string')
   })
 })
