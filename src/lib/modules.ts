@@ -11,6 +11,9 @@ export const APP_MODULES = [
   'loyalty',
   'ai',
   'integrations',
+  // Samostatný placený add-on: ověřené podpisy dokumentů přes připojeného poskytovatele (BankID = jeden kanál).
+  // Není součást gastro/pokladny — zapíná se zvlášť; backend provider kontrakt se dodělává paralelně.
+  'verified_signing',
 ] as const
 
 export type AppModuleId = (typeof APP_MODULES)[number]
@@ -208,6 +211,7 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
   { to: '/app/vernost', label: 'Věrnost', module: 'loyalty' },
   { to: '/app/akce-ceny', label: 'Akce a ceny', module: 'loyalty', hiddenForRoles: ['Employee'] },
   { to: '/app/zakazky', label: 'Zakázky', module: 'jobs' },
+  { to: '/app/podpisy', label: 'Podpisy', module: 'verified_signing' },
   { to: '/app/predplatne', label: 'Předplatné', module: 'core' },
   { to: '/app/nastaveni', label: 'Nastavení', module: 'core' },
 ]

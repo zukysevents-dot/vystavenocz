@@ -34,6 +34,7 @@ import {
   X,
   History,
   ShieldCheck,
+  FileSignature,
 } from 'lucide-vue-next'
 import SiteLogo from '@/components/SiteLogo.vue'
 import { Button } from '@/components/ui/button'
@@ -68,6 +69,7 @@ const navIcons = {
   '/app/import': Upload,
   '/app/vernost': Heart,
   '/app/zakazky': Wrench,
+  '/app/podpisy': FileSignature,
   '/app/predplatne': CreditCard,
   '/app/nastaveni': Settings,
 } as const

@@ -241,6 +241,17 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Zakázky & výjezdy', layout: 'app', requiresAuth: true, requiresModule: 'jobs' },
   },
   {
+    path: '/app/podpisy',
+    name: 'app-podpisy',
+    component: () => import('@/pages/PodpisyPage.vue'),
+    meta: {
+      title: 'Ověřené podpisy',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'verified_signing',
+    },
+  },
+  {
     path: '/app/nabidky',
     name: 'app-nabidky',
     component: () => import('@/pages/NabidkyPage.vue'),

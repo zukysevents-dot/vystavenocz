@@ -210,6 +210,7 @@ Vystaveno should win through:
 - must store a signing envelope/audit trail per document: signer identity metadata allowed by the provider, timestamps, document hash, status, provider reference, and immutable evidence
 - must stay separate from ordinary invoice sending; invoices do not require a handwritten signature, while verified signing is a premium workflow for documents where proof of identity/consent matters
 - legal/compliance wording must be reviewed before public launch; the UI must not overstate legal effect beyond the selected provider contract
+- **frontend foundation shipped:** module `verified_signing`, page `/app/podpisy` (list of signing envelopes with Draft/Ready/Sent/Signed/Rejected/Cancelled/Expired states, status filter, "Nová obálka", detail with document name, external reference, signer + contact, provider/channel, evidence hash, created/sent/signed timestamps, and evidence trail), composable `useVerifiedSigning` prepared against the `/api/v1/verified-signing/*` contract; provider-neutral (BankID is one channel), runs on demo data in mock mode. Backend provider contract is being built in parallel; live signing turns on only once a real provider adapter + contract exists — the UI must not claim live BankID signing is done.
 
 ## Implementation order
 
