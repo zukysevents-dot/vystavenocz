@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from '@/components/ui/sonner'
+import { ApiError, isApiMode } from '@/lib/http'
 import SigningProviderSettings from '@/components/app/SigningProviderSettings.vue'
 import {
   useVerifiedSigning,
@@ -30,9 +31,12 @@ import {
   type SignatureEnvelope,
   type SignatureEnvelopeStatus,
   type SignatureEvidence,
+  type SigningConnectionStatus,
+  type SigningProviderConnection,
 } from '@/composables/useVerifiedSigning'
 
 const signing = useVerifiedSigning()
+const apiMode = isApiMode()
 
 const envelopes = ref<SignatureEnvelope[]>([])
 const loading = ref(true)
@@ -44,6 +48,32 @@ const detail = ref<SignatureEnvelope | null>(null)
 const evidence = ref<SignatureEvidence | null>(null)
 const evidenceLoading = ref(false)
 const actionBusy = ref(false)
+
+// Runtime seam: odeslání lze nasměrovat přes konkrétní provider connection (jen API režim). '__foundation__' = základní
+// odeslání bez konfigurace (jako dosud). Nabízí se jen konfigurace stejného providera jako obálka.
+const FOUNDATION_SEND = '__foundation__'
+const providerConnections = ref<SigningProviderConnection[]>([])
+const selectedConnectionId = ref<string>(FOUNDATION_SEND)
+
+const CONN_STATUS_LABELS: Record<SigningConnectionStatus, string> = {
+  draft: 'Rozpracováno',
+  awaiting_credentials: 'Čeká na údaje',
+  ready: 'Připraveno',
+  disabled: 'Vypnuto',
+}
+function connStatusLabel(status: SigningConnectionStatus): string {
+  return CONN_STATUS_LABELS[status]
+}
+
+// Konfigurace stejného providera; Ready napřed (nabízí se přednostně).
+const matchingConnections = computed<SigningProviderConnection[]>(() => {
+  const provider = detail.value?.provider
+  if (!provider) return []
+  return providerConnections.value
+    .filter((c) => c.providerKey === provider)
+    .slice()
+    .sort((a, b) => Number(b.status === 'ready') - Number(a.status === 'ready'))
+})
 
 const createOpen = ref(false)
 const creating = ref(false)
@@ -135,8 +165,12 @@ const canCancel = (e: SignatureEnvelope): boolean =>
 async function openDetail(envelope: SignatureEnvelope): Promise<void> {
   detail.value = envelope
   evidence.value = null
+  providerConnections.value = []
+  selectedConnectionId.value = FOUNDATION_SEND
   detailOpen.value = true
   evidenceLoading.value = true
+  // Provider connections jen v API režimu (endpoint neběží v mock režimu) a jen pro obálky, které lze odeslat.
+  if (isApiMode() && canSend(envelope)) void loadSendConnections(envelope.provider)
   try {
     evidence.value = await signing.getEvidence(envelope.id)
   } catch {
@@ -146,21 +180,56 @@ async function openDetail(envelope: SignatureEnvelope): Promise<void> {
   }
 }
 
+async function loadSendConnections(provider: string): Promise<void> {
+  try {
+    providerConnections.value = await signing.listProviderConnections()
+  } catch {
+    providerConnections.value = []
+  }
+  // Předvyber Ready konfiguraci stejného providera, pokud existuje; jinak zůstane základní odeslání.
+  const ready = providerConnections.value.find(
+    (c) => c.providerKey === provider && c.status === 'ready',
+  )
+  selectedConnectionId.value = ready?.id ?? FOUNDATION_SEND
+}
+
 function refreshInList(updated: SignatureEnvelope): void {
   envelopes.value = envelopes.value.map((e) => (e.id === updated.id ? updated : e))
   if (detail.value?.id === updated.id) detail.value = updated
 }
 
 async function doSend(envelope: SignatureEnvelope): Promise<void> {
+  const connectionId =
+    selectedConnectionId.value === FOUNDATION_SEND ? undefined : selectedConnectionId.value
   actionBusy.value = true
   try {
-    refreshInList(await signing.sendEnvelope(envelope.id))
-    toast.success('Obálka odeslána k ověřenému podpisu.')
-  } catch {
-    toast.error('Obálku se nepodařilo odeslat.')
+    const updated = await signing.sendEnvelope(envelope.id, connectionId)
+    refreshInList(updated)
+    toast.success(
+      updated.providerReference
+        ? `Obálka odeslána přes poskytovatele (ref: ${updated.providerReference}).`
+        : 'Obálka odeslána k ověřenému podpisu.',
+    )
+  } catch (e) {
+    toast.error(sendErrorMessage(e, Boolean(connectionId)))
   } finally {
     actionBusy.value = false
   }
+}
+
+// Chybové stavy odeslání přes provider connection (runtime seam).
+function sendErrorMessage(e: unknown, hadConnection: boolean): string {
+  if (e instanceof ApiError && e.status === 403)
+    return 'Modul Ověřené podpisy není povolený nebo nemáte oprávnění.'
+  if (e instanceof ApiError && e.status === 422) {
+    const msg = e.message ?? ''
+    if (/adapter/i.test(msg))
+      return 'BankID konfigurace je připravená, ale ostrý adapter ještě není zapnutý.'
+    if (hadConnection)
+      return 'Konfigurace poskytovatele není připravená (chybí credentialy nebo stav Připraveno). Dokončete ji v tabu „Provider podpisů".'
+    return msg || 'Obálku se nepodařilo odeslat.'
+  }
+  return 'Obálku se nepodařilo odeslat.'
 }
 
 async function doCancel(envelope: SignatureEnvelope): Promise<void> {
@@ -376,6 +445,10 @@ async function submitCreate(): Promise<void> {
             <dd>{{ formatDateTime(detail.createdAt) }}</dd>
             <dt class="text-muted-foreground">Odesláno</dt>
             <dd>{{ formatDateTime(detail.sentAt) }}</dd>
+            <template v-if="detail.providerReference">
+              <dt class="text-muted-foreground">Reference poskytovatele</dt>
+              <dd data-testid="provider-reference">{{ detail.providerReference }}</dd>
+            </template>
             <dt class="text-muted-foreground">Podepsáno</dt>
             <dd>{{ formatDateTime(detail.signedAt) }}</dd>
             <dt class="text-muted-foreground">Platnost do</dt>
@@ -420,6 +493,35 @@ async function submitCreate(): Promise<void> {
               </li>
             </ol>
             <p v-else class="text-xs text-muted-foreground">Zatím žádné kroky evidence.</p>
+          </div>
+
+          <!-- Runtime seam: odeslat přes konkrétní provider connection (Ready) — jen API režim. -->
+          <div
+            v-if="canSend(detail) && apiMode && matchingConnections.length"
+            class="space-y-1.5"
+            data-testid="send-connection-picker"
+          >
+            <Label for="send-connection">Odeslat přes konfiguraci poskytovatele</Label>
+            <Select v-model="selectedConnectionId">
+              <SelectTrigger id="send-connection"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem :value="FOUNDATION_SEND">
+                  Bez konkrétní konfigurace (základní odeslání)
+                </SelectItem>
+                <SelectItem
+                  v-for="c in matchingConnections"
+                  :key="c.id"
+                  :value="c.id"
+                  :disabled="c.status !== 'ready'"
+                >
+                  {{ c.name }} — {{ connStatusLabel(c.status) }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p class="text-xs text-muted-foreground">
+              Konfigurace ve stavu Připraveno odešle přes poskytovatele; bez výběru proběhne
+              základní odeslání.
+            </p>
           </div>
         </div>
 

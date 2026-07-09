@@ -82,6 +82,106 @@ test('provider podpisů: 503 při chybějícím serverovém šifrovacím klíči
   await expect(page.getByText(/šifrovací klíč na backendu/i)).toBeVisible()
 })
 
+test('podpisy: odeslat obálku přes Ready provider connection (providerConnectionId + reference)', async ({
+  page,
+}) => {
+  await seedApiMode(page)
+  let sendBody: Record<string, unknown> | null = null
+
+  await page.route(API, async (route: Route) => {
+    const request = route.request()
+    const url = new URL(request.url())
+    const path = url.pathname.replace('/api/v1', '')
+    const method = request.method()
+
+    if (method === 'GET' && path === '/company/modules') {
+      return route.fulfill({ json: { modules: ['core', 'verified_signing'] } })
+    }
+    if (method === 'GET' && path === '/company') {
+      return route.fulfill({ json: { id: 'c_e2e', name: 'E2E', currency: 'CZK' } })
+    }
+    if (method === 'GET' && path === '/verified-signing/envelopes') {
+      return route.fulfill({ json: [readyEnvelope()] })
+    }
+    if (method === 'GET' && path === '/verified-signing/envelopes/env-1/evidence') {
+      return route.fulfill({
+        json: {
+          envelopeId: 'env-1',
+          documentName: 'Smlouva k podpisu',
+          evidenceHash: 'abc',
+          provider: 'bankid',
+          entries: [],
+        },
+      })
+    }
+    if (method === 'GET' && path === '/verified-signing/providers') {
+      return route.fulfill({ json: [] })
+    }
+    if (method === 'GET' && path === '/verified-signing/provider-connections') {
+      return route.fulfill({
+        json: [
+          {
+            id: 'sign-conn-ready',
+            providerKey: 'bankid',
+            name: 'BankID produkce',
+            mode: 'production',
+            status: 'ready',
+            configuredFields: ['clientId'],
+            requiredCredentialFields: BANKID_CREDENTIAL_FIELDS,
+            storedCredentialFields: BANKID_CREDENTIAL_FIELDS,
+            createdAt: '2026-07-09T10:00:00Z',
+            updatedAt: '2026-07-09T10:00:00Z',
+          },
+        ],
+      })
+    }
+    if (method === 'POST' && path === '/verified-signing/envelopes/env-1/send') {
+      sendBody = request.postDataJSON() as Record<string, unknown>
+      return route.fulfill({
+        json: {
+          ...readyEnvelope(),
+          status: 'sent',
+          sentAt: '2026-07-09T15:00:00Z',
+          providerReference: 'prov-ref-XYZ',
+        },
+      })
+    }
+    return route.fulfill({ status: 404, json: { title: `Unhandled ${method} ${path}` } })
+  })
+
+  await page.goto('/app/podpisy')
+
+  // Obálky tab je výchozí; otevři Ready obálku → detail nabídne výběr provider connection (předvybraná Ready).
+  await page.getByTestId('envelope-env-1').click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByTestId('send-connection-picker')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Odeslat k podpisu' }).click()
+
+  await expect(page.getByTestId('provider-reference')).toHaveText('prov-ref-XYZ')
+  await expect(page.getByTestId('detail-status')).toHaveText('Odesláno')
+  expect(sendBody).toEqual({ providerConnectionId: 'sign-conn-ready' })
+})
+
+function readyEnvelope(): Record<string, unknown> {
+  return {
+    id: 'env-1',
+    documentName: 'Smlouva k podpisu',
+    documentType: 'contract',
+    externalReference: 'ORDER-1',
+    status: 'ready',
+    provider: 'bankid',
+    providerLabel: 'BankID',
+    signer: { name: 'Jan Novák', email: null, phone: null },
+    evidenceHash: 'abc',
+    providerReference: null,
+    createdAt: '2026-07-09T09:00:00Z',
+    sentAt: null,
+    signedAt: null,
+    expiresAt: null,
+  }
+}
+
 async function routeSigning(
   page: Page,
   connections: Array<Record<string, unknown>>,

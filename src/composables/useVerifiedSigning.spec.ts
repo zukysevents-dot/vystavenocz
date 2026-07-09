@@ -52,10 +52,18 @@ describe('useVerifiedSigning — API kontrakt /verified-signing/*', () => {
     expect(http.post).toHaveBeenCalledWith('/verified-signing/envelopes', input)
   })
 
-  it('sendEnvelope volá send akci', async () => {
+  it('sendEnvelope bez konfigurace posílá prázdné tělo (foundation odeslání)', async () => {
     vi.mocked(http.post).mockResolvedValue({ id: 'e1' } as never)
     await useVerifiedSigning().sendEnvelope('e1')
     expect(http.post).toHaveBeenCalledWith('/verified-signing/envelopes/e1/send', {})
+  })
+
+  it('sendEnvelope s providerConnectionId nasměruje odeslání přes konfiguraci', async () => {
+    vi.mocked(http.post).mockResolvedValue({ id: 'e1' } as never)
+    await useVerifiedSigning().sendEnvelope('e1', 'conn-9')
+    expect(http.post).toHaveBeenCalledWith('/verified-signing/envelopes/e1/send', {
+      providerConnectionId: 'conn-9',
+    })
   })
 
   it('cancelEnvelope volá cancel akci', async () => {
@@ -89,6 +97,14 @@ describe('useVerifiedSigning — mock režim (demo data)', () => {
     const updated = await signing.sendEnvelope('env-agreement')
     expect(updated.status).toBe('sent')
     expect(updated.sentAt).not.toBeNull()
+    expect(updated.providerReference ?? null).toBeNull() // foundation odeslání = bez reference
+  })
+
+  it('mock send přes konfiguraci doplní referenci poskytovatele', async () => {
+    const signing = useVerifiedSigning()
+    const updated = await signing.sendEnvelope('env-agreement', 'conn-mock')
+    expect(updated.status).toBe('sent')
+    expect(updated.providerReference).toBeTruthy()
   })
 
   it('mock createEnvelope založí novou obálku ve stavu draft', async () => {
