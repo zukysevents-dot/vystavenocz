@@ -37,6 +37,9 @@ function selectAll() {
 }
 
 const allSelected = computed(() => selected.value.length >= PRICING_MODULES.length)
+const selectedNames = computed(() =>
+  PRICING_MODULES.filter((m) => selected.value.includes(m.key)).map((m) => m.name),
+)
 const baseMonthly = computed(() => modulesMonthly(selected.value))
 const perMonth = computed(() =>
   yearly.value ? yearlyPerMonth(baseMonthly.value) : baseMonthly.value,
@@ -64,7 +67,7 @@ const modulesWord = computed(() => {
 </script>
 
 <template>
-  <section id="cenik" class="bg-background py-16 sm:py-20">
+  <section id="cenik" class="py-16 sm:py-20">
     <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
       <!-- Segment / typ provozu -->
       <SegmentPicker v-model="segment" />
@@ -123,6 +126,7 @@ const modulesWord = computed(() => {
         <div class="lg:sticky lg:top-24 lg:self-start">
           <PricingSummary
             :selected-count="selected.length"
+            :selected-names="selectedNames"
             :per-month="perMonth"
             :yearly="yearly"
             :yearly-total="yearlyTotal"

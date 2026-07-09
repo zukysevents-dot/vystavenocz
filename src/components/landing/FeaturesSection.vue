@@ -5,10 +5,13 @@ import {
   UtensilsCrossed,
   Tags,
   Package,
-  Bell,
+  ChefHat,
+  Scale,
   Clock,
   CalendarDays,
   FileText,
+  ClipboardCheck,
+  BarChart3,
   Contact,
   Building2,
   ShieldCheck,
@@ -17,6 +20,7 @@ import {
   Landmark,
   ToggleRight,
 } from 'lucide-vue-next'
+import { vReveal } from '@/lib/reveal'
 
 const features = [
   {
@@ -49,17 +53,38 @@ const features = [
   },
   {
     icon: Package,
-    title: 'Sklad a inventura',
-    desc: 'Příjem, výdej i korekce zásob, inventura skladu. Stav se odečítá automaticky při prodeji.',
+    title: 'Sklad, příjemky a zásoby',
+    desc: 'Nákupní příjemky, výdeje i korekce. Systém hlídá minima a doporučí, co doobjednat.',
     color: 'text-foreground',
     bg: 'bg-mint/30',
   },
   {
-    icon: Bell,
-    title: 'Hlídání nízkých zásob',
-    desc: 'Nastavíš minimální množství a systém včas upozorní, co je potřeba doobjednat.',
+    icon: ChefHat,
+    title: 'Receptury a food cost',
+    desc: 'Prodej porce odečte suroviny podle receptury. U každého jídla vidíte náklad, marži i food cost.',
+    color: 'text-coral',
+    bg: 'bg-coral/10',
+  },
+  {
+    icon: Scale,
+    title: 'Skladové zrcadlo a inventura',
+    desc: 'Stav má být vs. realita vs. rozdíl — v kusech i korunách. Inventura bez papírů a slepých míst.',
     color: 'text-primary',
     bg: 'bg-primary-soft',
+  },
+  {
+    icon: ClipboardCheck,
+    title: 'Uzávěrky a Z-report',
+    desc: 'Denní uzávěrka s kontrolou hotovosti, DPH, spropitným a exportem CSV pro účetní.',
+    color: 'text-foreground',
+    bg: 'bg-mint/30',
+  },
+  {
+    icon: BarChart3,
+    title: 'Provozní přehled',
+    desc: 'Tržby, marže, výkon obsluhy, ztráty skladu i ležáky. Manažerský pohled, ne jen pokladna.',
+    color: 'text-coral',
+    bg: 'bg-coral/10',
   },
   {
     icon: Clock,
@@ -135,12 +160,13 @@ const features = [
 </script>
 
 <template>
-  <section id="funkce" class="bg-background py-16 sm:py-20">
+  <section id="funkce" class="py-16 sm:py-20">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <div
-          v-for="f in features"
+          v-for="(f, i) in features"
           :key="f.title"
+          v-reveal="{ delay: (i % 3) * 80 }"
           class="group rounded-2xl border border-border bg-card p-6 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-soft"
         >
           <div
