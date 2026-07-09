@@ -19,6 +19,7 @@ Tento checklist je rychlá brána pro ruční deploy na VPS. Produkce je pull-ba
    - `INTEGRATIONS_SECRET_ENCRYPTION_KEY` (`openssl rand -base64 32`)
 6. Pokud se mají používat online platby faktur přes Stripe webhook, musí být v API prostředí doplněné i `Stripe__WebhookSecret`. Gastro POS deploy bez něj běží, ale webhook platby faktur nebude spolehlivě uzavírat.
 7. Credential vault pro platební providery bez `INTEGRATIONS_SECRET_ENCRYPTION_KEY` bezpečně vrací 503 při ukládání secretů; to je chyba konfigurace deploye, ne UI.
+8. Credential trezor pro **ověřené podpisy** (modul `verified_signing`) potřebuje serverový šifrovací klíč na backendu; bez něj ukládání secretů podpisů bezpečně vrací 503 (opět chyba deploye, ne UI). Konkrétní název proměnné drží backend (`vystaveno-api`) — ověř v jeho deploy dokumentaci před zapnutím modulu.
 
 ## 2. Deploy příkazy na VPS
 
@@ -53,45 +54,39 @@ Očekávání:
 - `https://vystaveno.cz/app` otevře aplikaci přes HTTPS.
 - Browser nehlásí mixed content ani CORS chyby.
 
-## 4. Smoke test v aplikaci
+## 4. Smoke test v aplikaci (VPS staging readiness)
 
-Proveď na testovací firmě / testovacím účtu:
+Proveď na testovací firmě / testovacím účtu. Pořadí odpovídá tomu, jak si zákazník produkt projde. Každý krok má jasné „očekávání" — když nesedí, poznamenej do reportu z deploye.
 
-1. Přihlášení a načtení `/app`.
-2. `Nastavení firmy`:
-   - ověř moduly,
-   - ověř `Integrace a exporty`,
-   - u účetních exportů stáhni Generic CSV nebo Pohoda XML,
-   - u `Platební provideri` otevři katalog a konfiguraci providera,
-   - u uložené konfigurace otevři `Nastavit` → uprav → v `Zabezpečeném trezoru credentialů` vlož testovací klíč a ulož: input se musí vyčistit, pole přejde na `Uloženo`. Pokud přijde hláška o chybějícím šifrovacím klíči (503), doplň `INTEGRATIONS_SECRET_ENCRYPTION_KEY` na VPS.
-3. `Pokladna`:
-   - prodej 1 položku kartou,
-   - ověř, že se prodej objeví v tržbách.
-4. `Restaurace`:
-   - otevři účet na stole,
-   - přidej položku,
-   - odešli bon do kuchyně,
-   - zaplať účet.
-5. `Kuchyně`:
-   - ověř, že bon jde posunout přes stavy.
-6. `Uzávěrka`:
-   - otevři dnešní den,
-   - ověř, že tržby nejsou nulové po testovacím prodeji,
-   - nezavírej produkční den, pokud jde o ostrý provoz.
-7. `Zásoby`:
-   - otevři zrcadlo,
-   - ověř slovník `Stav má být`, `Realita`, `Rozdíl`.
-8. `Akce a ceny`:
-   - ověř načtení cenových hladin a promo pravidel.
-9. `Audit`:
-   - ověř, že citlivé akce vznikají v audit logu.
+1. **Přihlášení** — přihlas se a načti `/app`. Očekávání: dashboard naběhne, konzole bez chyb, žádné mixed content / CORS.
+2. **Moduly** — v `Nastavení firmy` ověř zapnuté moduly. Očekávání: nav vlevo ukazuje jen položky zapnutých modulů (Gastro: Pokladna, Restaurace, Kuchyně, Zásoby, Naskladnění, Uzávěrka; add-ony podle plánu — Integrace, Podpisy).
+3. **Pokladna prodej** — prodej 1 položku kartou (potvrď `Platba prošla`). Očekávání: vznikne prodej + DPH rozpad, objeví se v tržbách, u produktu s recepturou se odečtou suroviny.
+4. **Restaurace účet/stůl** — otevři účet na stole, přidej položku, odešli bon do kuchyně, zaplať účet. Očekávání: účet se otevře, bon odejde, po platbě zůstane jen nezaplacený zbytek (nebo se stůl uvolní).
+5. **Kuchyně** — ověř, že bon jde posunout `Odesláno → Připravuje se → Hotovo → Vydáno`. Očekávání: stavy se mění, historie vydaných bonů je read-only.
+6. **Uzávěrka** — otevři dnešní den, zkontroluj tržby/DPH/hotovost/karty. Očekávání: tržby nejsou nulové po testovacím prodeji. **Nezavírej produkční den**, pokud jde o ostrý provoz. Otevřený gastro účet zavření dne zablokuje (409) — to je správně.
+7. **Sklad / inventura / zrcadlo** — v `Zásoby`:
+   - otevři tab `Zrcadlo`, ověř slovník `Stav má být`, `Realita`, `Rozdíl` a v detailu řádku výpočet,
+   - spusť malou `Inventuru` na konkrétní pobočku (ne `Všechny pobočky`): zadej napočítanou realitu, ulož a ověř, že se rozdíl promítne do zrcadla. Očekávání: `Rozdíl` = realita minus systém, v kusech i Kč.
+8. **Pohoda XML export** — v `Nastavení firmy` → `Integrace a exporty` → účetní export vyber cíl `Pohoda XML`, typ `Z-reporty`, datum od/do a stáhni soubor. Očekávání: stáhne se XML k ručnímu importu. Pokud hlásí chybějící IČO, doplň IČO firmy v nastavení. (Generic CSV ověř analogicky.)
+9. **Tiskový agent — nastavení** — v `Integrace a exporty` → `Tiskoví agenti` klikni `Přidat`, pojmenuj agenta, ulož. Očekávání: token se zobrazí **jen jednou**; `Revoke` token okamžitě zneplatní. Bez lokálního agenta tisk běží stávající cestou (funkce nesmí spadnout).
+10. **Platební provider settings + vault** — v `Integrace a exporty` → `Platební provideri`:
+    - otevři katalog (ČSOB / NFCTRON / Comgate / SumUp / GP webpay) — ověř stavy `Aktivní` / `Připraveno k napojení`,
+    - u providera `Nastavit` → založ konfiguraci → v `Zabezpečeném trezoru credentialů` vlož testovací klíč a ulož. Očekávání: input se **vyčistí**, pole přejde na `Uloženo`, hodnota se nikdy nezobrazí zpět. 503 = doplň `INTEGRATIONS_SECRET_ENCRYPTION_KEY` na VPS (chyba deploye, ne UI). Uložení klíče **nespouští žádnou platbu**.
+11. **Podpisy — provider settings + vault + odeslání** (modul `verified_signing`) — otevři `Podpisy`:
+    - tab `Provider podpisů`: katalog ukazuje `Testovací poskytovatel` = `Aktivní` a `BankID` = `Připraveno k napojení`. Založ konfiguraci `BankID`, otevři ji a v trezoru ulož testovací klíč (input se vyčistí, pole `Uloženo`; 503 = chybí serverový šifrovací klíč na backendu — chyba deploye). Konfiguraci `Testovací poskytovatel` lze bez credentialů nastavit rovnou na `Připraveno`,
+    - tab `Obálky`: založ novou obálku, otevři detail a dej `Odeslat k podpisu` (základní odeslání). Očekávání: stav přejde na `Odesláno`. Jde o **přípravné odeslání a evidenci, ne ostrý právní podpis**.
+    - Pokud existuje `BankID` konfigurace ve stavu `Připraveno`, detail obálky nabídne výběr konfigurace poskytovatele; odeslání přes ni **poctivě** vrátí hlášku „BankID konfigurace je připravená, ale ostrý adapter ještě není zapnutý." — to je očekávané chování, ne chyba. Pokud konfigurace není připravená / chybí credentialy (422), hláška nasměruje do tabu `Provider podpisů`.
+12. **Veřejné / QR menu** (pokud je slug a menu dostupné) — v `Nastavení firmy` ověř veřejný slug, pak otevři `/objednavka/<slug>` (anonymně, bez přihlášení). Očekávání: menu se načte, u položek se ukážou alergeny, host přidá do košíku a projde k odeslání; ceny počítá server. QR ke stolu (`?table=<id>&name=<název>`) skryje výdej/rozvoz a připíše se do účtu stolu.
+13. **Audit** — v `Audit` ověř, že citlivé akce (storno, sleva, uzávěrka, změna ceny) vznikají v logu s časem, aktérem a entitou.
 
-## 5. Aktuální hranice funkcí
+## 5. Aktuální hranice funkcí (co je ostré vs. připravené)
 
-- Platební provider katalog a konfigurace jsou hotové.
-- Skutečné ostré stržení přes ČSOB/NFCTRON/Comgate/SumUp/GP webpay vyžaduje další runtime adaptér a vendor sandbox/credentials.
-- Secret/credential vault je hotový backend milestone (#225) a frontend ho plně obsluhuje (uložit/rotovat/smazat/revokovat klíče v `Nastavit`); raw klíče se píšou jen do vault endpointů a nikdy do běžných UI polí ani poznámek. Uložení klíče ostrou platbu NESPOUŠTÍ — ta čeká na runtime adaptér.
-- BankID podpis je samostatný plánovaný modul, ne blokace gastro/VPS deploye.
+- **Ostré / hotové na VPS:** login a moduly, gastro POS prodej, restaurace/stoly/kuchyně, uzávěrka + Z-report, sklad/inventura/zrcadlo/naskladnění, akce a ceny, věrnost, audit, veřejné/QR objednávky, účetní export Generic CSV a Pohoda XML (soubor pro ruční import, ne živá synchronizace), tiskoví agenti (registrace/token/revoke), credential trezor plateb i podpisů (uložit/rotovat/smazat/revokovat klíče).
+- **Připraveno k napojení (čeká na runtime adaptér + vendor smlouvu/credentials):**
+  - Platební brány ČSOB / NFCTRON / Comgate / SumUp / GP webpay — katalog a konfigurace hotové, ostré stržení přes ně čeká na runtime adaptér. Katalog žádnou platbu nespouští, obsluha dál potvrzuje výsledek karty ručně.
+  - **Ověřené podpisy / BankID** — obálky, evidence, provider katalog, konfigurace a credential trezor jsou hotové. Odeslání přes provider connection posílá volitelné `providerConnectionId`; mock/testovací poskytovatel a základní odeslání fungují jako **přípravné odeslání a evidence**, ne ostrý právní podpis. BankID vrací poctivě 422 „ostrý adapter čeká na zapnutí", dokud nejsou BankID credentials + runtime adaptér + potvrzený právní wording. Do UI ani obchodních textů netvrď právní účinek podpisu ani „živé BankID je hotové".
+- Secret/credential vault (platby #225, podpisy) šifruje AES-GCM server-side; raw klíče se píšou jen do vault endpointů, nikdy do běžných UI polí ani poznámek. Uložení klíče žádnou ostrou platbu ani ostrý podpis NESPOUŠTÍ — to čeká na runtime adaptér.
+- Money / SuperFaktura nejsou přímé adaptéry — používej Generic CSV nebo Pohoda XML.
 
 ## 6. Když deploy selže
 

@@ -17,7 +17,7 @@ Tento repozitář = **frontend**: Vue 3 (`<script setup>` SFC) + Vite + TypeScri
 Migrace ze staré React appky (zazálohovaná ve větvi `legacy-react`, nevracet do working tree).
 
 Produktová roadmapa modulárního Vystaveno + gastro priority je v `docs/product/modular-business-roadmap.md`. Při změně zásadního produktového směru ji aktualizuj společně s tímto kontextem.
-Jednoduchý uživatelský manuál pro gastro je v `docs/product/gastro-user-manual.md`; při každé uživatelsky viditelné gastro změně ho aktualizuj tak, aby obsluha pochopila workflow bez technických znalostí.
+Jednoduchý uživatelský manuál pro gastro je v `docs/product/gastro-user-manual.md`; při každé uživatelsky viditelné gastro změně ho aktualizuj tak, aby obsluha pochopila workflow bez technických znalostí. `docs/product/interni-test-manual.md` je stručný průvodce pro interní test na VPS staging (gastro start, sklad/inventura, uzávěrka, integrace, podpisy) s tabulkou „co je ostré vs. jen připraveno k napojení" — drž ji pravdivou.
 Claude Code continuation prompt pro samostatnou pipeline práci nad gastro roadmapou je v `docs/agent-workflow/claude-gastro-pipeline-prompt.md`; používej ho při předávání práce do Claude Code nebo po delší pauze.
 
 Modulární runtime základ: backend `/me` vrací `modules` + `features`; frontend je drží v `src/stores/auth.ts` a app shell filtruje navigaci/routy přes `src/lib/modules.ts`. Backend ukládá tenant-selected moduly v `company_modules`; staré firmy bez řádků mají fallback na všechny default moduly. Onboarding vybírá první modulový balíček podle typu podnikání a ukazuje profilový checklist `setupSteps`; po uložení pošle firmu na první doporučený krok (Gastro začíná v `Pobočky`). `Nastavení firmy` umožňuje pozdější změnu modulů přes `/company/modules`. Modul `core` je povinný a normalizace ho vždy doplní.
@@ -125,7 +125,7 @@ sudo sysctl -w net.ipv6.conf.all.disable_ipv6=0
 
 `Dockerfile` zapéká `ARG VITE_API_URL=/api/v1` do buildu → přebíjí `.env.production` (ten je pro VPS irelevantní, needituj ho kvůli produkci).
 Migrace databáze naskočí samy při startu API. Ověření živého stavu: `curl https://vystaveno.cz/health/ready` → 200 „Healthy".
-Po deployi projdi `docs/deploy-smoke-checklist.md` (health/live, health/ready, `/api/v1/ping`, přihlášení, integrace, POS, restaurace, kuchyně, uzávěrka, zásoby, akce a audit). Před deployem ověř zálohu DB; migrace jsou forward-only.
+Po deployi projdi `docs/deploy-smoke-checklist.md` (health/live, health/ready, `/api/v1/ping`, přihlášení, moduly, POS prodej, restaurace/stůl, kuchyně, uzávěrka, sklad/inventura/zrcadlo, Pohoda XML export, tiskový agent, platební provider settings + vault, podpisy provider settings + vault + odeslání, veřejné/QR menu a audit). Před deployem ověř zálohu DB; migrace jsou forward-only.
 
 ## Konvence (dodržuj)
 
