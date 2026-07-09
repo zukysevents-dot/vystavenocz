@@ -8,9 +8,10 @@ Tenhle manuál je pro **interní test** produktu na staging/VPS před ostrým sp
 ## Než začnete
 
 1. Přihlaste se testovacím účtem na staging adrese aplikace.
-2. Zkontrolujte, že jste ve správné testovací firmě a provozovně (vlevo nahoře).
-3. Testujte v klidu, na testovacích datech. Nic z toho není ostrý provoz.
-4. Když se něco chová jinak, než popisuje tento manuál, poznamenejte: co jste dělali, co jste čekali a co se stalo.
+2. Pokud je staging naplněný backend příkazem `seed-demo`, použijte účet `demo@vystaveno.cz` / `DemoGastro.2026`. Demo firma `Vystaveno Demo Gastro` má 3 pobočky a zapnuté všechny relevantní moduly pro průchod celou aplikací.
+3. Zkontrolujte, že jste ve správné testovací firmě a provozovně (vlevo nahoře).
+4. Testujte v klidu, na testovacích datech. Nic z toho není ostrý provoz.
+5. Když se něco chová jinak, než popisuje tento manuál, poznamenejte: co jste dělali, co jste čekali a co se stalo.
 
 ## 1. Gastro rychlý start
 

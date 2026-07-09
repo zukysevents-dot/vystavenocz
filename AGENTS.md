@@ -128,6 +128,7 @@ VPS `.env` musí obsahovat i `PAYMENTS_PORTAL_BASE_URL` (veřejná URL aplikace,
 Migrace databáze naskočí samy při startu API. Ověření živého stavu: `curl https://$DOMAIN/health/ready` → 200 „Healthy".
 Po deployi projdi `docs/deploy-smoke-checklist.md` (health/live, health/ready, `/api/v1/ping`, přihlášení, moduly, POS prodej, restaurace/stůl, kuchyně, uzávěrka, sklad/inventura/zrcadlo, Pohoda XML export, tiskový agent, platební provider settings + vault, podpisy provider settings + vault + odeslání, veřejné/QR menu a audit). Před deployem ověř zálohu DB; migrace jsou forward-only.
 Veřejná landing page na `/` musí při VPS deployi zůstat zachovaná; aplikace běží pod `/app` a API pod `/api`. Deploy smoke kontroluje `/` zvlášť, aby se homepage omylem nepřepsala.
+Staging demo data: backend `vystaveno-api` má explicitní CLI helper `dotnet Vystaveno.Api.dll seed-demo`, který se spouští jednorázově přes Docker exec s `Seed__AllowDemo=true` (viz `docs/deploy-smoke-checklist.md`). Naplní demo firmu `Vystaveno Demo Gastro` pro interní smoke test; login je `demo@vystaveno.cz` / `DemoGastro.2026`. Není to běžná produkční funkce, nespouští se při startu aplikace a nespouštěj ho na reálné produkční databázi.
 
 ## Konvence (dodržuj)
 

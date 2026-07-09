@@ -56,11 +56,28 @@ Očekávání:
 - `https://$DOMAIN/app` otevře aplikaci přes HTTPS.
 - Browser nehlásí mixed content ani CORS chyby.
 
-## 4. Smoke test v aplikaci (VPS staging readiness)
+## 4. Volitelně: demo data pro staging
+
+Na čistém stagingu můžeš naplnit realistickou demo firmu přímo z backendu. Seeder běží jen explicitním CLI příkazem, je idempotentní a nemaže cizí data; na produkčním prostředí se bez jednorázového `Seed__AllowDemo=true` odmítne spustit.
+
+```bash
+cd ~/vystavenocz
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec \
+  -e Seed__AllowDemo=true api dotnet Vystaveno.Api.dll seed-demo
+```
+
+Očekávání:
+
+- Vznikne nebo se přeskočí demo firma `Vystaveno Demo Gastro`.
+- Demo obsahuje 3 pobočky, gastro katalog, stoly, účty, kuchyň, sklad, inventuru, věrnost, akce/ceny, integrace a podpisy v mock/draft stavu.
+- Přihlášení pro interní smoke test: `demo@vystaveno.cz` / `DemoGastro.2026`.
+- Nespouštěj to na reálné produkční databázi se zákaznickými daty; je to staging/demo helper, ne produktová funkce pro zákazníky.
+
+## 5. Smoke test v aplikaci (VPS staging readiness)
 
 Proveď na testovací firmě / testovacím účtu. Pořadí odpovídá tomu, jak si zákazník produkt projde. Každý krok má jasné „očekávání" — když nesedí, poznamenej do reportu z deploye.
 
-1. **Přihlášení** — přihlas se a načti `/app`. Očekávání: dashboard naběhne, konzole bez chyb, žádné mixed content / CORS.
+1. **Přihlášení** — přihlas se a načti `/app`. Na stagingu po demo seedu použij `demo@vystaveno.cz` / `DemoGastro.2026`. Očekávání: dashboard naběhne, konzole bez chyb, žádné mixed content / CORS.
 2. **Moduly** — v `Nastavení firmy` ověř zapnuté moduly. Očekávání: nav vlevo ukazuje jen položky zapnutých modulů (Gastro: Pokladna, Restaurace, Kuchyně, Zásoby, Naskladnění, Uzávěrka; add-ony podle plánu — Integrace, Podpisy).
 3. **Pokladna prodej** — prodej 1 položku kartou (potvrď `Platba prošla`). Očekávání: vznikne prodej + DPH rozpad, objeví se v tržbách, u produktu s recepturou se odečtou suroviny.
 4. **Restaurace účet/stůl** — otevři účet na stole, přidej položku, odešli bon do kuchyně, zaplať účet. Očekávání: účet se otevře, bon odejde, po platbě zůstane jen nezaplacený zbytek (nebo se stůl uvolní).
@@ -81,16 +98,17 @@ Proveď na testovací firmě / testovacím účtu. Pořadí odpovídá tomu, jak
 12. **Veřejné / QR menu** (pokud je slug a menu dostupné) — v `Nastavení firmy` ověř veřejný slug, pak otevři `/objednavka/<slug>` (anonymně, bez přihlášení). Očekávání: menu se načte, u položek se ukážou alergeny, host přidá do košíku a projde k odeslání; ceny počítá server. QR ke stolu (`?table=<id>&name=<název>`) skryje výdej/rozvoz a připíše se do účtu stolu.
 13. **Audit** — v `Audit` ověř, že citlivé akce (storno, sleva, uzávěrka, změna ceny) vznikají v logu s časem, aktérem a entitou.
 
-## 5. Aktuální hranice funkcí (co je ostré vs. připravené)
+## 6. Aktuální hranice funkcí (co je ostré vs. připravené)
 
 - **Ostré / hotové na VPS:** login a moduly, gastro POS prodej, restaurace/stoly/kuchyně, uzávěrka + Z-report, sklad/inventura/zrcadlo/naskladnění, akce a ceny, věrnost, audit, veřejné/QR objednávky, účetní export Generic CSV a Pohoda XML (soubor pro ruční import, ne živá synchronizace), tiskoví agenti (registrace/token/revoke), credential trezor plateb i podpisů (uložit/rotovat/smazat/revokovat klíče).
+- **Interní staging helper:** backend CLI `seed-demo` naplní demo firmu pro smoke test a obchodní průchod produktem. Není to zákaznická funkce a nespouští se při běžném startu aplikace.
 - **Připraveno k napojení (čeká na runtime adaptér + vendor smlouvu/credentials):**
   - Platební brány ČSOB / NFCTRON / Comgate / SumUp / GP webpay — katalog a konfigurace hotové, ostré stržení přes ně čeká na runtime adaptér. Katalog žádnou platbu nespouští, obsluha dál potvrzuje výsledek karty ručně.
   - **Ověřené podpisy / BankID** — obálky, evidence, provider katalog, konfigurace a credential trezor jsou hotové. Odeslání přes provider connection posílá volitelné `providerConnectionId`; mock/testovací poskytovatel a základní odeslání fungují jako **přípravné odeslání a evidence**, ne ostrý právní podpis. BankID vrací poctivě 422 „ostrý adapter čeká na zapnutí", dokud nejsou BankID credentials + runtime adaptér + potvrzený právní wording. Do UI ani obchodních textů netvrď právní účinek podpisu ani „živé BankID je hotové".
 - Secret/credential vault (platby #225, podpisy) šifruje AES-GCM server-side; raw klíče se píšou jen do vault endpointů, nikdy do běžných UI polí ani poznámek. Uložení klíče žádnou ostrou platbu ani ostrý podpis NESPOUŠTÍ — to čeká na runtime adaptér.
 - Money / SuperFaktura nejsou přímé adaptéry — používej Generic CSV nebo Pohoda XML.
 
-## 6. Když deploy selže
+## 7. Když deploy selže
 
 1. `docker compose ... ps`
 2. `docker compose ... logs -f api`
