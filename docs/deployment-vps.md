@@ -45,7 +45,7 @@ INTEGRATIONS_SECRET_ENCRYPTION_KEY=<32B base64> # vygeneruj: openssl rand -base6
 ```
 
 `JWT_SECRET`, `DB_PASSWORD`, `STRIPE_SECRET_KEY` a `INTEGRATIONS_SECRET_ENCRYPTION_KEY` jsou **server-only secrety** — nikdy do gitu ani do frontend buildu.
-`INTEGRATIONS_SECRET_ENCRYPTION_KEY` šifruje credential vault pro platební providery; bez něj backend bezpečně odmítne ukládání credentialů (`503`).
+`INTEGRATIONS_SECRET_ENCRYPTION_KEY` šifruje credential vault pro platební providery i ověřené podpisy; v API se mapuje na `Integrations__SecretEncryptionKey`. Bez něj backend bezpečně odmítne ukládání credentialů (`503`).
 
 ## 4. Spuštění
 
@@ -89,11 +89,11 @@ Migrace se dorovnají při startu. Rollback: `git checkout <předchozí commit>`
 
 ## Časté problémy
 
-| Příznak                                 | Příčina                                                                | Řešení                                                                   |
-| --------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Caddy nezíská cert (TLS chyba)          | DNS nemíří na VPS / port 80 zavřený                                    | Zkontroluj A záznam a firewall (80+443); `docker compose ... logs caddy` |
-| `/health/ready` → 503                   | DB nedostupná / špatné `DB_PASSWORD`                                   | Zkontroluj `.env` a `logs db`                                            |
-| API spadne hned po startu               | chybí `JWT_SECRET`, `DB_PASSWORD` nebo `STRIPE_SECRET_KEY` (fail-fast) | Doplň `.env`, `up -d`                                                    |
-| Uložení credentialů providera vrací 503 | chybí/neplatný `INTEGRATIONS_SECRET_ENCRYPTION_KEY`                    | Vygeneruj 32B base64 klíč, doplň `.env`, redeploy API                    |
-| `!reset` v compose hlásí chybu          | stará Compose verze                                                    | Upgrade Docker Compose na ≥ 2.24.4                                       |
-| `web` build bere špatnou API URL        | cache                                                                  | `up -d --build --force-recreate` (build arg `VITE_API_URL=/api/v1`)      |
+| Příznak                                         | Příčina                                                                | Řešení                                                                   |
+| ----------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Caddy nezíská cert (TLS chyba)                  | DNS nemíří na VPS / port 80 zavřený                                    | Zkontroluj A záznam a firewall (80+443); `docker compose ... logs caddy` |
+| `/health/ready` → 503                           | DB nedostupná / špatné `DB_PASSWORD`                                   | Zkontroluj `.env` a `logs db`                                            |
+| API spadne hned po startu                       | chybí `JWT_SECRET`, `DB_PASSWORD` nebo `STRIPE_SECRET_KEY` (fail-fast) | Doplň `.env`, `up -d`                                                    |
+| Uložení credentialů providera/podpisů vrací 503 | chybí/neplatný `INTEGRATIONS_SECRET_ENCRYPTION_KEY`                    | Vygeneruj 32B base64 klíč, doplň `.env`, redeploy API                    |
+| `!reset` v compose hlásí chybu                  | stará Compose verze                                                    | Upgrade Docker Compose na ≥ 2.24.4                                       |
+| `web` build bere špatnou API URL                | cache                                                                  | `up -d --build --force-recreate` (build arg `VITE_API_URL=/api/v1`)      |
