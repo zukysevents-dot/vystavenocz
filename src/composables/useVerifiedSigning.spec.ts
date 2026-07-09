@@ -104,3 +104,93 @@ describe('useVerifiedSigning — mock režim (demo data)', () => {
     expect(all.some((e) => e.id === created.id)).toBe(true)
   })
 })
+
+describe('useVerifiedSigning — nastavení poskytovatelů + credential trezor', () => {
+  it('listSigningProviders volá katalog poskytovatelů', async () => {
+    vi.mocked(http.get).mockResolvedValue([] as never)
+    await useVerifiedSigning().listSigningProviders()
+    expect(http.get).toHaveBeenCalledWith('/verified-signing/providers')
+  })
+
+  it('listSigningProviders umí i stránkovanou odpověď', async () => {
+    vi.mocked(http.get).mockResolvedValue({ items: [{ key: 'bankid' }], total: 1 } as never)
+    const result = await useVerifiedSigning().listSigningProviders()
+    expect(result).toEqual([{ key: 'bankid' }])
+  })
+
+  it('listProviderConnections volá výpis konfigurací', async () => {
+    vi.mocked(http.get).mockResolvedValue([] as never)
+    await useVerifiedSigning().listProviderConnections()
+    expect(http.get).toHaveBeenCalledWith('/verified-signing/provider-connections')
+  })
+
+  it('getProviderConnection volá detail konfigurace', async () => {
+    vi.mocked(http.get).mockResolvedValue({ id: 'c1' } as never)
+    await useVerifiedSigning().getProviderConnection('c1')
+    expect(http.get).toHaveBeenCalledWith('/verified-signing/provider-connections/c1')
+  })
+
+  it('createProviderConnection posílá metadata bez tajných hodnot', async () => {
+    vi.mocked(http.post).mockResolvedValue({ id: 'c1' } as never)
+    const payload = {
+      providerKey: 'bankid',
+      name: 'BankID produkce',
+      mode: 'production' as const,
+      status: 'awaiting_credentials' as const,
+      configuredFields: ['clientId'],
+    }
+    await useVerifiedSigning().createProviderConnection(payload)
+    expect(http.post).toHaveBeenCalledWith('/verified-signing/provider-connections', payload)
+  })
+
+  it('updateProviderConnection volá PUT s id konfigurace', async () => {
+    vi.mocked(http.put).mockResolvedValue({ id: 'c1' } as never)
+    await useVerifiedSigning().updateProviderConnection('c1', {
+      providerKey: 'bankid',
+      name: 'BankID',
+      mode: 'sandbox',
+      status: 'ready',
+    })
+    expect(http.put).toHaveBeenCalledWith('/verified-signing/provider-connections/c1', {
+      providerKey: 'bankid',
+      name: 'BankID',
+      mode: 'sandbox',
+      status: 'ready',
+    })
+  })
+
+  it('deleteProviderConnection ruší konfiguraci podle id', async () => {
+    vi.mocked(http.del).mockResolvedValue(undefined as never)
+    await useVerifiedSigning().deleteProviderConnection('c1')
+    expect(http.del).toHaveBeenCalledWith('/verified-signing/provider-connections/c1')
+  })
+
+  it('listConnectionSecrets čte stav trezoru (bez hodnot)', async () => {
+    vi.mocked(http.get).mockResolvedValue({ fields: [] } as never)
+    await useVerifiedSigning().listConnectionSecrets('c1')
+    expect(http.get).toHaveBeenCalledWith('/verified-signing/provider-connections/c1/secrets')
+  })
+
+  it('storeConnectionSecret posílá raw hodnotu v body { value }', async () => {
+    vi.mocked(http.put).mockResolvedValue({ fields: [] } as never)
+    await useVerifiedSigning().storeConnectionSecret('c1', 'clientSecretRef', 'sk_live_secret')
+    expect(http.put).toHaveBeenCalledWith(
+      '/verified-signing/provider-connections/c1/secrets/clientSecretRef',
+      { value: 'sk_live_secret' },
+    )
+  })
+
+  it('deleteConnectionSecret maže jedno credential pole', async () => {
+    vi.mocked(http.del).mockResolvedValue(undefined as never)
+    await useVerifiedSigning().deleteConnectionSecret('c1', 'clientSecretRef')
+    expect(http.del).toHaveBeenCalledWith(
+      '/verified-signing/provider-connections/c1/secrets/clientSecretRef',
+    )
+  })
+
+  it('revokeConnectionSecrets revokuje všechny klíče konfigurace', async () => {
+    vi.mocked(http.del).mockResolvedValue(undefined as never)
+    await useVerifiedSigning().revokeConnectionSecrets('c1')
+    expect(http.del).toHaveBeenCalledWith('/verified-signing/provider-connections/c1/secrets')
+  })
+})

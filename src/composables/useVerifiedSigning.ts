@@ -63,6 +63,65 @@ export interface SignatureEvidence {
   entries: SignatureEvidenceEntry[]
 }
 
+// --- Nastavení poskytovatelů podpisů (provider katalog + konfigurace + credential trezor) ---
+// Analogie k payment provider credential vault, ale pro modul verified_signing. Backend (Codex) je jediný zdroj pravdy
+// o tom, co je reálně napojené (`isOperational`); UI nikdy netvrdí, že ostrý podpis přes BankID už funguje.
+
+export type SigningConnectionMode = 'sandbox' | 'production'
+export type SigningConnectionStatus = 'draft' | 'awaiting_credentials' | 'ready' | 'disabled'
+
+// Provider ověřených podpisů z katalogu. `credentialFields` (sufix `Ref`) jsou tajemství → patří do trezoru, ne do
+// checklistu `configuredFields`. Mock = testovací poskytovatel bez credentialů; BankID = připravený cíl adaptéru.
+export interface SigningProviderCatalogItem {
+  key: string
+  name: string
+  category: string
+  status: string
+  isOperational: boolean
+  requiresPartnerContract: boolean
+  requiresCredentials: boolean
+  setupFields: string[]
+  credentialFields: string[]
+  notes: string
+}
+
+// Konfigurace napojení poskytovatele. NIKDY nenese tajné hodnoty — jen metadata a checklist připravených setup polí.
+export interface SigningProviderConnection {
+  id: string
+  providerKey: string
+  name: string
+  mode: SigningConnectionMode
+  status: SigningConnectionStatus
+  configuredFields: string[]
+  requiredCredentialFields?: string[]
+  storedCredentialFields?: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface UpsertSigningProviderConnectionRequest {
+  providerKey: string
+  name: string
+  mode: SigningConnectionMode
+  status: SigningConnectionStatus
+  configuredFields?: string[]
+}
+
+// Stav jednoho credential pole v trezoru — NIKDY hodnota, jen jestli je klíč uložený a odkdy.
+export interface SigningSecretFieldStatus {
+  fieldName: string
+  required: boolean
+  hasSecret: boolean
+  updatedAt: string | null
+}
+
+export interface SigningSecretsStatus {
+  connectionId: string
+  providerKey: string
+  fields: SigningSecretFieldStatus[]
+  allRequiredPresent: boolean
+}
+
 // Provider-neutral číselník kanálů pro UI (foundation). Backend později dodá skutečný katalog přes provider kontrakt —
 // BankID je jen jeden z kanálů, ne výchozí jediná technologie.
 export const SIGNATURE_PROVIDERS: { key: string; label: string }[] = [
@@ -125,6 +184,78 @@ export function useVerifiedSigning() {
     return http.get<SignatureEvidence>(`/verified-signing/envelopes/${id}/evidence`)
   }
 
+  // --- Nastavení poskytovatelů (jen API režim; mock/dev ukáže v UI poznámku) ---
+  // Provider katalog + konfigurace + credential trezor. Vault nikdy nevrací hodnoty (jen stav polí).
+
+  function listSigningProviders(): Promise<SigningProviderCatalogItem[]> {
+    return normalizeList(
+      http.get<SigningProviderCatalogItem[] | PagedResult<SigningProviderCatalogItem>>(
+        '/verified-signing/providers',
+      ),
+    )
+  }
+
+  function listProviderConnections(): Promise<SigningProviderConnection[]> {
+    return normalizeList(
+      http.get<SigningProviderConnection[] | PagedResult<SigningProviderConnection>>(
+        '/verified-signing/provider-connections',
+      ),
+    )
+  }
+
+  function getProviderConnection(id: string): Promise<SigningProviderConnection> {
+    return http.get<SigningProviderConnection>(`/verified-signing/provider-connections/${id}`)
+  }
+
+  function createProviderConnection(
+    request: UpsertSigningProviderConnectionRequest,
+  ): Promise<SigningProviderConnection> {
+    return http.post<SigningProviderConnection>('/verified-signing/provider-connections', request)
+  }
+
+  function updateProviderConnection(
+    id: string,
+    request: UpsertSigningProviderConnectionRequest,
+  ): Promise<SigningProviderConnection> {
+    return http.put<SigningProviderConnection>(
+      `/verified-signing/provider-connections/${id}`,
+      request,
+    )
+  }
+
+  function deleteProviderConnection(id: string): Promise<void> {
+    return http.del(`/verified-signing/provider-connections/${id}`)
+  }
+
+  // Credential trezor konfigurace: čtení vrací JEN stav polí, zápis posílá raw hodnotu jednorázově (backend ji
+  // zašifruje a už nikdy nevrací), mazání/revoke degraduje konfiguraci (Ready → čeká na údaje řeší UI/backend).
+  function listConnectionSecrets(connectionId: string): Promise<SigningSecretsStatus> {
+    return http.get<SigningSecretsStatus>(
+      `/verified-signing/provider-connections/${connectionId}/secrets`,
+    )
+  }
+
+  function storeConnectionSecret(
+    connectionId: string,
+    field: string,
+    value: string,
+  ): Promise<SigningSecretsStatus> {
+    return http.put<SigningSecretsStatus>(
+      `/verified-signing/provider-connections/${connectionId}/secrets/${encodeURIComponent(field)}`,
+      { value },
+    )
+  }
+
+  function deleteConnectionSecret(connectionId: string, field: string): Promise<void> {
+    return http.del(
+      `/verified-signing/provider-connections/${connectionId}/secrets/${encodeURIComponent(field)}`,
+    )
+  }
+
+  function revokeConnectionSecrets(connectionId: string): Promise<void> {
+    return http.del(`/verified-signing/provider-connections/${connectionId}/secrets`)
+  }
+
   return {
     listEnvelopes,
     getEnvelope,
@@ -132,7 +263,23 @@ export function useVerifiedSigning() {
     sendEnvelope,
     cancelEnvelope,
     getEvidence,
+    listSigningProviders,
+    listProviderConnections,
+    getProviderConnection,
+    createProviderConnection,
+    updateProviderConnection,
+    deleteProviderConnection,
+    listConnectionSecrets,
+    storeConnectionSecret,
+    deleteConnectionSecret,
+    revokeConnectionSecrets,
   }
+}
+
+// Backend může vracet pole nebo stránkovaný výsledek — normalizujeme na pole.
+async function normalizeList<T>(promise: Promise<T[] | PagedResult<T>>): Promise<T[]> {
+  const res = await promise
+  return Array.isArray(res) ? res : res.items
 }
 
 // ---- Mock režim (lokální demo data) ----

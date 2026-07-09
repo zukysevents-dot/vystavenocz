@@ -20,7 +20,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from '@/components/ui/sonner'
+import SigningProviderSettings from '@/components/app/SigningProviderSettings.vue'
 import {
   useVerifiedSigning,
   SIGNATURE_PROVIDERS,
@@ -216,19 +218,11 @@ async function submitCreate(): Promise<void> {
 
 <template>
   <div class="mx-auto max-w-6xl p-4 sm:p-6 md:p-8" data-testid="signing-page">
-    <div class="flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Ověřené podpisy</h1>
-        <p class="mt-1 text-muted-foreground">
-          Samostatný add-on modul pro ověřený podpis dokumentů přes připojeného poskytovatele.
-        </p>
-      </div>
-      <div class="flex items-center gap-2">
-        <Button variant="ghost" size="icon" title="Obnovit" :disabled="loading" @click="load">
-          <RefreshCw class="h-4 w-4" :class="loading ? 'animate-spin' : ''" />
-        </Button>
-        <Button variant="coral" @click="openCreate"> <Plus class="h-4 w-4" /> Nová obálka </Button>
-      </div>
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Ověřené podpisy</h1>
+      <p class="mt-1 text-muted-foreground">
+        Samostatný add-on modul pro ověřený podpis dokumentů přes připojeného poskytovatele.
+      </p>
     </div>
 
     <!-- Provider-neutral disclaimer: netvrdíme právní účinek ani hotové živé podepisování. -->
@@ -244,85 +238,110 @@ async function submitCreate(): Promise<void> {
       </p>
     </div>
 
-    <!-- Filtr podle stavu -->
-    <div class="mt-6 flex flex-wrap items-center gap-2">
-      <Label for="signing-status-filter" class="text-sm text-muted-foreground">Stav</Label>
-      <Select v-model="statusFilter">
-        <SelectTrigger id="signing-status-filter" class="w-52"><SelectValue /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Všechny stavy</SelectItem>
-          <SelectItem v-for="s in STATUS_ORDER" :key="s" :value="s">
-            {{ STATUS_LABELS[s] }}
-          </SelectItem>
-        </SelectContent>
-      </Select>
-      <span class="text-sm text-muted-foreground">
-        {{ visibleEnvelopes.length }} z {{ envelopes.length }}
-      </span>
-    </div>
+    <Tabs default-value="envelopes" class="mt-6">
+      <TabsList>
+        <TabsTrigger value="envelopes">Obálky</TabsTrigger>
+        <TabsTrigger value="providers">Provider podpisů</TabsTrigger>
+      </TabsList>
 
-    <div v-if="loading" class="mt-12 flex justify-center">
-      <Loader2 class="h-6 w-6 animate-spin text-primary" />
-    </div>
+      <TabsContent value="envelopes">
+        <!-- Toolbar: filtr stavu + akce -->
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <Label for="signing-status-filter" class="text-sm text-muted-foreground">Stav</Label>
+            <Select v-model="statusFilter">
+              <SelectTrigger id="signing-status-filter" class="w-52"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Všechny stavy</SelectItem>
+                <SelectItem v-for="s in STATUS_ORDER" :key="s" :value="s">
+                  {{ STATUS_LABELS[s] }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <span class="text-sm text-muted-foreground">
+              {{ visibleEnvelopes.length }} z {{ envelopes.length }}
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <Button variant="ghost" size="icon" title="Obnovit" :disabled="loading" @click="load">
+              <RefreshCw class="h-4 w-4" :class="loading ? 'animate-spin' : ''" />
+            </Button>
+            <Button variant="coral" @click="openCreate">
+              <Plus class="h-4 w-4" /> Nová obálka
+            </Button>
+          </div>
+        </div>
 
-    <div
-      v-else-if="loadError"
-      class="mt-6 rounded-2xl border border-border bg-card p-8 text-center"
-    >
-      <p class="text-sm text-muted-foreground">Podpisy se nepodařilo načíst.</p>
-      <Button variant="outline" class="mt-4" @click="load">Zkusit znovu</Button>
-    </div>
+        <div v-if="loading" class="mt-12 flex justify-center">
+          <Loader2 class="h-6 w-6 animate-spin text-primary" />
+        </div>
 
-    <div
-      v-else-if="visibleEnvelopes.length === 0"
-      class="mt-12 rounded-2xl border border-border bg-card p-12 text-center"
-    >
-      <FileSignature class="mx-auto h-12 w-12 text-muted-foreground" />
-      <h2 class="mt-4 text-lg font-semibold">Žádné obálky v tomto stavu</h2>
-      <p class="mt-1 text-sm text-muted-foreground">
-        Založte novou podpisovou obálku, nebo změňte filtr stavu.
-      </p>
-      <Button variant="coral" class="mt-4" @click="openCreate">
-        <Plus class="h-4 w-4" /> Nová obálka
-      </Button>
-    </div>
+        <div
+          v-else-if="loadError"
+          class="mt-6 rounded-2xl border border-border bg-card p-8 text-center"
+        >
+          <p class="text-sm text-muted-foreground">Podpisy se nepodařilo načíst.</p>
+          <Button variant="outline" class="mt-4" @click="load">Zkusit znovu</Button>
+        </div>
 
-    <div v-else class="mt-6 space-y-3">
-      <button
-        v-for="envelope in visibleEnvelopes"
-        :key="envelope.id"
-        type="button"
-        class="w-full rounded-xl border border-border bg-card p-4 text-left transition-colors hover:bg-muted/40"
-        :data-testid="`envelope-${envelope.id}`"
-        @click="openDetail(envelope)"
-      >
-        <div class="flex flex-wrap items-start justify-between gap-2">
-          <div class="min-w-0">
-            <div class="truncate font-semibold">{{ envelope.documentName }}</div>
-            <div class="mt-0.5 text-sm text-muted-foreground">
-              {{ docTypeLabel(envelope.documentType) }} · {{ envelope.signer.name }}
-              <template v-if="envelope.externalReference">
-                · {{ envelope.externalReference }}</template
+        <div
+          v-else-if="visibleEnvelopes.length === 0"
+          class="mt-12 rounded-2xl border border-border bg-card p-12 text-center"
+        >
+          <FileSignature class="mx-auto h-12 w-12 text-muted-foreground" />
+          <h2 class="mt-4 text-lg font-semibold">Žádné obálky v tomto stavu</h2>
+          <p class="mt-1 text-sm text-muted-foreground">
+            Založte novou podpisovou obálku, nebo změňte filtr stavu.
+          </p>
+          <Button variant="coral" class="mt-4" @click="openCreate">
+            <Plus class="h-4 w-4" /> Nová obálka
+          </Button>
+        </div>
+
+        <div v-else class="mt-6 space-y-3">
+          <button
+            v-for="envelope in visibleEnvelopes"
+            :key="envelope.id"
+            type="button"
+            class="w-full rounded-xl border border-border bg-card p-4 text-left transition-colors hover:bg-muted/40"
+            :data-testid="`envelope-${envelope.id}`"
+            @click="openDetail(envelope)"
+          >
+            <div class="flex flex-wrap items-start justify-between gap-2">
+              <div class="min-w-0">
+                <div class="truncate font-semibold">{{ envelope.documentName }}</div>
+                <div class="mt-0.5 text-sm text-muted-foreground">
+                  {{ docTypeLabel(envelope.documentType) }} · {{ envelope.signer.name }}
+                  <template v-if="envelope.externalReference">
+                    · {{ envelope.externalReference }}</template
+                  >
+                </div>
+              </div>
+              <div class="flex shrink-0 items-center gap-2">
+                <Badge variant="outline">{{ envelope.providerLabel ?? envelope.provider }}</Badge>
+                <Badge
+                  :variant="STATUS_VARIANTS[envelope.status]"
+                  :data-testid="`status-${envelope.id}`"
+                >
+                  {{ statusLabel(envelope.status) }}
+                </Badge>
+              </div>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
+              <span>Vytvořeno: {{ formatDateTime(envelope.createdAt) }}</span>
+              <span v-if="envelope.sentAt">Odesláno: {{ formatDateTime(envelope.sentAt) }}</span>
+              <span v-if="envelope.signedAt"
+                >Podepsáno: {{ formatDateTime(envelope.signedAt) }}</span
               >
             </div>
-          </div>
-          <div class="flex shrink-0 items-center gap-2">
-            <Badge variant="outline">{{ envelope.providerLabel ?? envelope.provider }}</Badge>
-            <Badge
-              :variant="STATUS_VARIANTS[envelope.status]"
-              :data-testid="`status-${envelope.id}`"
-            >
-              {{ statusLabel(envelope.status) }}
-            </Badge>
-          </div>
+          </button>
         </div>
-        <div class="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
-          <span>Vytvořeno: {{ formatDateTime(envelope.createdAt) }}</span>
-          <span v-if="envelope.sentAt">Odesláno: {{ formatDateTime(envelope.sentAt) }}</span>
-          <span v-if="envelope.signedAt">Podepsáno: {{ formatDateTime(envelope.signedAt) }}</span>
-        </div>
-      </button>
-    </div>
+      </TabsContent>
+
+      <TabsContent value="providers">
+        <SigningProviderSettings class="mt-4" />
+      </TabsContent>
+    </Tabs>
 
     <!-- Detail obálky + evidence -->
     <Dialog v-model:open="detailOpen">
