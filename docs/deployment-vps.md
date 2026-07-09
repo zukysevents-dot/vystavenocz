@@ -79,8 +79,9 @@ cd ../vystavenocz
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
-Migrace se dorovnají při startu. Rollback: `git checkout <předchozí commit>` v obou repech + znovu `up -d --build`
-(migrace jsou forward-only — viz `vystaveno-api/docs/deployment.md`).
+Migrace se dorovnají při startu. Rollback kódu je možný přes `git checkout <předchozí commit>` a znovu `up -d --build`,
+ale migrace jsou forward-only — rollback kódu **nevrací DB schéma zpět**. Praktický recovery postup je v
+[`docs/deploy-smoke-checklist.md`](deploy-smoke-checklist.md#8-recovery--návrat-po-špatném-deployi).
 
 ## 7. Provoz
 
@@ -88,6 +89,7 @@ Migrace se dorovnají při startu. Rollback: `git checkout <předchozí commit>`
 - **Restart po rebootu:** služby mají `restart: unless-stopped` → naběhnou samy.
 - **Zálohy DB** (volume `pgdata`) — nastav cron `pg_dump`, postup viz `vystaveno-api/docs/deployment.md` (sekce Zálohy a obnova). **Záloha bez ověřené obnovy není záloha.**
 - **TLS certy** přežijí restart ve volume `caddy_data`.
+- **Vault klíč** `INTEGRATIONS_SECRET_ENCRYPTION_KEY` neměň jako rychlou opravu. Změna klíče zneplatní uložené credentialy platebních providerů a ověřených podpisů; rotace vyžaduje plánované znovuzadání secretů.
 
 ## Časté problémy
 
