@@ -261,7 +261,10 @@ const routes: RouteRecordRaw[] = [
     path: '/app/klienti',
     name: 'app-klienti',
     component: () => import('@/pages/KlientiPage.vue'),
-    meta: { title: 'Klienti', layout: 'app', requiresAuth: true, requiresModule: 'core' },
+    // Klienti jsou fakturační entita — backend /clients gatuje modulem invoicing (Permissions.Invoices.Read →
+    // ProductModules.Invoicing). Bez modulu backend vrací 403 a stránka ukazovala zavádějící „Server je momentálně
+    // nedostupný" (stejný symptom jako #156). Route i nav proto patří pod invoicing, ne core.
+    meta: { title: 'Klienti', layout: 'app', requiresAuth: true, requiresModule: 'invoicing' },
   },
   {
     path: '/app/import',

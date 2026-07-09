@@ -206,7 +206,7 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
   { to: '/app/cashflow', label: 'Cashflow', module: 'invoicing' },
   { to: '/app/uctarna', label: 'Účtárna', module: 'invoicing' },
   { to: '/app/dph', label: 'Přehled DPH', module: 'invoicing' },
-  { to: '/app/klienti', label: 'Klienti', module: 'core', hiddenForRoles: ['Employee'] },
+  { to: '/app/klienti', label: 'Klienti', module: 'invoicing', hiddenForRoles: ['Employee'] },
   { to: '/app/import', label: 'Import dat', module: 'integrations', hiddenForRoles: ['Employee'] },
   { to: '/app/vernost', label: 'Věrnost', module: 'loyalty' },
   { to: '/app/akce-ceny', label: 'Akce a ceny', module: 'loyalty', hiddenForRoles: ['Employee'] },
