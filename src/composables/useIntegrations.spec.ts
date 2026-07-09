@@ -132,4 +132,37 @@ describe('useIntegrations - backend foundation contract', () => {
     await useIntegrations().deletePaymentProviderConnection('conn-1')
     expect(http.del).toHaveBeenCalledWith('/integrations/payment-provider-connections/conn-1')
   })
+
+  it('listPaymentProviderSecrets čte stav trezoru (bez hodnot) konfigurace', async () => {
+    vi.mocked(http.get).mockResolvedValue({ fields: [] } as never)
+    await useIntegrations().listPaymentProviderSecrets('conn-1')
+    expect(http.get).toHaveBeenCalledWith(
+      '/integrations/payment-provider-connections/conn-1/secrets',
+    )
+  })
+
+  it('storePaymentProviderSecret posílá raw hodnotu v body { value } na PUT pole', async () => {
+    vi.mocked(http.put).mockResolvedValue({ fields: [] } as never)
+    await useIntegrations().storePaymentProviderSecret('conn-1', 'apiKeyRef', 'sk_live_secret')
+    expect(http.put).toHaveBeenCalledWith(
+      '/integrations/payment-provider-connections/conn-1/secrets/apiKeyRef',
+      { value: 'sk_live_secret' },
+    )
+  })
+
+  it('deletePaymentProviderSecret maže jedno credential pole (url-encode názvu)', async () => {
+    vi.mocked(http.del).mockResolvedValue(undefined as never)
+    await useIntegrations().deletePaymentProviderSecret('conn-1', 'apiKeyRef')
+    expect(http.del).toHaveBeenCalledWith(
+      '/integrations/payment-provider-connections/conn-1/secrets/apiKeyRef',
+    )
+  })
+
+  it('revokePaymentProviderSecrets revokuje všechny klíče konfigurace', async () => {
+    vi.mocked(http.del).mockResolvedValue(undefined as never)
+    await useIntegrations().revokePaymentProviderSecrets('conn-1')
+    expect(http.del).toHaveBeenCalledWith(
+      '/integrations/payment-provider-connections/conn-1/secrets',
+    )
+  })
 })

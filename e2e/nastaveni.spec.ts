@@ -224,7 +224,8 @@ test('nastavení v API režimu ukáže živý stav integrací a stáhne účetn�
             supportsWebhooks: true,
             requiresPartnerContract: true,
             requiresCredentials: true,
-            setupFields: ['merchantId', 'apiKey'],
+            setupFields: ['merchantId', 'apiKeyRef', 'privateKeyRef'],
+            credentialFields: ['apiKeyRef', 'privateKeyRef'],
             notes: 'Vyžaduje smlouvu s ČSOB a přístup do platební brány.',
           },
           {
@@ -364,6 +365,206 @@ test('veřejný slug se normalizuje pro online objednávky a QR stoly', async ({
   })
   expect(storedSlug).toBe('zlutoucky-bistro-2026')
 })
+
+test('platební provideri — trezor credentialů: stav, uložení (vyčistí input) a smazání', async ({
+  page,
+}) => {
+  await seedApiMode(page)
+  const secrets: Record<string, string> = {} // uložené klíče konfigurace conn-1 (fieldName → updatedAt)
+  await routeCredentialVault(page, secrets)
+  await page.goto('/app/nastaveni')
+
+  // Otevřít dialog ČSOB (2. karta: manual, csob) a editovat existující konfiguraci → načte se stav trezoru.
+  await page.getByRole('button', { name: 'Nastavit' }).nth(1).click()
+  await expect(page.getByRole('heading', { name: 'Nastavit ČSOB' })).toBeVisible()
+  await page.getByTitle('Upravit konfiguraci').click()
+
+  await expect(page.getByText('Zabezpečený trezor credentialů')).toBeVisible()
+  const apiField = page.getByTestId('secret-field-apiKeyRef')
+  await expect(apiField.getByTestId('secret-state-apiKeyRef')).toHaveText('Chybí')
+  await expect(page.getByTestId('secret-field-privateKeyRef')).toBeVisible()
+
+  // Uložit klíč → input se VŽDY vyčistí a stav pole přejde na Uloženo (hodnota se nikdy nezobrazí zpět).
+  await page.locator('#secret-input-apiKeyRef').fill('sk_live_super_secret_value')
+  await apiField.getByRole('button', { name: 'Uložit klíč' }).click()
+  await expect(apiField.getByTestId('secret-state-apiKeyRef')).toHaveText('Uloženo')
+  await expect(page.locator('#secret-input-apiKeyRef')).toHaveValue('')
+  await expect(page.getByText('Klíč uložen do zabezpečeného trezoru.')).toBeVisible()
+
+  // Smazat klíč → zpět na Chybí.
+  await apiField.getByTitle('Odstranit klíč z trezoru').click()
+  await expect(apiField.getByTestId('secret-state-apiKeyRef')).toHaveText('Chybí')
+})
+
+test('platební provideri — trezor: 503 hláška při chybějícím serverovém šifrovacím klíči', async ({
+  page,
+}) => {
+  // 503 z PUT secret schválně → prohlížeč zaloguje network chybu; povolíme ji (test ověřuje UI hlášku, ne absenci 503).
+  test.info().annotations.push({ type: 'allowConsoleError', description: 'status of 503' })
+  await seedApiMode(page)
+  await routeCredentialVault(page, {}, { put503: true })
+  await page.goto('/app/nastaveni')
+
+  await page.getByRole('button', { name: 'Nastavit' }).nth(1).click()
+  await page.getByTitle('Upravit konfiguraci').click()
+  await page.locator('#secret-input-apiKeyRef').fill('sk_live_secret')
+  await page
+    .getByTestId('secret-field-apiKeyRef')
+    .getByRole('button', { name: 'Uložit klíč' })
+    .click()
+
+  await expect(page.getByText(/šifrovací klíč na VPS/i)).toBeVisible()
+})
+
+// Mock backendu credential vaultu (#225): jedna existující konfigurace conn-1 (ČSOB) + stavové secret endpointy.
+async function routeCredentialVault(
+  page: Parameters<typeof seedApp>[0],
+  secrets: Record<string, string>,
+  opts: { put503?: boolean } = {},
+): Promise<void> {
+  const fieldStatus = () => {
+    const fields = ['apiKeyRef', 'privateKeyRef'].map((f) => ({
+      fieldName: f,
+      required: true,
+      hasSecret: Boolean(secrets[f]),
+      updatedAt: secrets[f] ?? null,
+    }))
+    return {
+      connectionId: 'conn-1',
+      providerKey: 'csob',
+      fields,
+      allRequiredPresent: fields.every((x) => x.hasSecret),
+    }
+  }
+  await page.route(API, async (route: Route) => {
+    const request = route.request()
+    const url = new URL(request.url())
+    const path = url.pathname.replace('/api/v1', '')
+    const method = request.method()
+
+    if (method === 'GET' && path === '/company') {
+      return route.fulfill({
+        json: {
+          id: 'c_e2e',
+          name: 'E2E Bistro',
+          ico: '12345678',
+          dic: null,
+          email: 'e2e@vystaveno.cz',
+          phone: null,
+          logoUrl: null,
+          defaultDueDays: 14,
+          currency: 'CZK',
+          address: { street: 'Testovací 1', city: 'Praha', postalCode: '11000', country: 'CZ' },
+          bankAccount: { accountNumber: '123456789/0100', iban: null, bic: null },
+          publicSlug: 'e2e-bistro',
+        },
+      })
+    }
+    if (method === 'GET' && path === '/company/modules') {
+      return route.fulfill({
+        json: { modules: ['core', 'invoicing', 'pos', 'gastro', 'reporting', 'integrations'] },
+      })
+    }
+    if (method === 'GET' && path === '/locations') {
+      return route.fulfill({
+        json: {
+          items: [{ id: 'loc-1', name: 'Bistro Praha', address: null, isActive: true }],
+          total: 1,
+          page: 1,
+          pageSize: 100,
+        },
+      })
+    }
+    if (method === 'GET' && path === '/integrations/terminal-payments') {
+      return route.fulfill({ json: { items: [], total: 0, page: 1, pageSize: 20 } })
+    }
+    if (method === 'GET' && path === '/integrations/print-jobs') {
+      return route.fulfill({ json: { items: [], total: 0, page: 1, pageSize: 20 } })
+    }
+    if (method === 'GET' && path === '/integrations/print-agents') {
+      return route.fulfill({ json: [] })
+    }
+    if (method === 'GET' && path === '/integrations/payment-providers/catalog') {
+      return route.fulfill({
+        json: [
+          {
+            key: 'manual',
+            name: 'Manuální terminál',
+            category: 'terminal',
+            status: 'operational',
+            isOperational: true,
+            supportsInPerson: true,
+            supportsOnline: false,
+            supportsWebhooks: false,
+            requiresPartnerContract: false,
+            requiresCredentials: false,
+            setupFields: [],
+            credentialFields: [],
+            notes: 'Obsluha potvrzuje výsledek platby ručně.',
+          },
+          {
+            key: 'csob',
+            name: 'ČSOB',
+            category: 'hybrid',
+            status: 'planned',
+            isOperational: false,
+            supportsInPerson: true,
+            supportsOnline: true,
+            supportsWebhooks: true,
+            requiresPartnerContract: true,
+            requiresCredentials: true,
+            setupFields: ['merchantId', 'apiKeyRef', 'privateKeyRef'],
+            credentialFields: ['apiKeyRef', 'privateKeyRef'],
+            notes: 'Vyžaduje smlouvu s ČSOB a přístup do platební brány.',
+          },
+        ],
+      })
+    }
+    if (method === 'GET' && path === '/integrations/payment-provider-connections') {
+      return route.fulfill({
+        json: [
+          {
+            id: 'conn-1',
+            providerKey: 'csob',
+            name: 'ČSOB terminál',
+            mode: 'sandbox',
+            status: 'awaiting_credentials',
+            locationId: null,
+            configuredFields: ['merchantId'],
+            requiredCredentialFields: ['apiKeyRef', 'privateKeyRef'],
+            storedCredentialFields: Object.keys(secrets),
+            createdAt: '2026-07-09T10:00:00Z',
+            updatedAt: '2026-07-09T10:00:00Z',
+          },
+        ],
+      })
+    }
+    if (method === 'GET' && path === '/integrations/payment-provider-connections/conn-1/secrets') {
+      return route.fulfill({ json: fieldStatus() })
+    }
+    if (method === 'PUT' && /\/conn-1\/secrets\/[^/]+$/.test(path)) {
+      if (opts.put503) return route.fulfill({ status: 503, json: { title: 'Vault unavailable' } })
+      secrets[path.split('/').at(-1) ?? ''] = '2026-07-09T11:00:00Z'
+      return route.fulfill({ json: fieldStatus() })
+    }
+    if (method === 'DELETE' && /\/conn-1\/secrets\/[^/]+$/.test(path)) {
+      delete secrets[path.split('/').at(-1) ?? '']
+      return route.fulfill({ status: 204 })
+    }
+    if (
+      method === 'DELETE' &&
+      path === '/integrations/payment-provider-connections/conn-1/secrets'
+    ) {
+      for (const k of Object.keys(secrets)) delete secrets[k]
+      return route.fulfill({ status: 204 })
+    }
+    if (method === 'PUT' && path === '/integrations/payment-provider-connections/conn-1') {
+      return route.fulfill({ json: { id: 'conn-1', ...(request.postDataJSON() as object) } })
+    }
+
+    return route.fulfill({ status: 404, json: { title: `Unhandled ${method} ${path}` } })
+  })
+}
 
 async function seedApiMode(page: Parameters<typeof seedApp>[0]): Promise<void> {
   await page.addInitScript(() => {

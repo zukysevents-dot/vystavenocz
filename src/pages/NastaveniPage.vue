@@ -43,6 +43,7 @@ import {
   useIntegrations,
   type AccountingExportTarget,
   type AccountingExportType,
+  type IntegrationSecretsStatus,
   type PaymentConnectionMode,
   type PaymentConnectionStatus,
   type PaymentProviderCatalogItem,
@@ -159,6 +160,12 @@ const connectionForm = reactive({
   locationId: 'all',
   configuredFields: [] as string[],
 })
+// Zabezpečený trezor credentialů editované konfigurace: stav polí (bez hodnot) + rozepsané vstupy pro uložení/rotaci.
+const secretStatus = ref<IntegrationSecretsStatus | null>(null)
+const secretLoading = ref(false)
+const secretError = ref<string | null>(null)
+const secretInputs = reactive<Record<string, string>>({})
+const secretBusyField = ref<string | null>(null) // pole (nebo '__all__') s právě probíhající akcí
 const accountingExportForm = reactive({
   type: 'ZReports' as AccountingExportType,
   target: 'Generic' as AccountingExportTarget,
@@ -393,6 +400,16 @@ function resetConnectionForm(): void {
   connectionForm.status = 'draft'
   connectionForm.locationId = 'all'
   connectionForm.configuredFields = []
+  clearSecretVaultState()
+}
+
+// Trezor se váže na konkrétní uloženou konfiguraci — při novém formuláři / přepnutí ho vždy vyprázdníme.
+function clearSecretVaultState(): void {
+  secretStatus.value = null
+  secretError.value = null
+  secretLoading.value = false
+  secretBusyField.value = null
+  for (const key of Object.keys(secretInputs)) delete secretInputs[key]
 }
 
 function openProviderDialog(provider: PaymentProviderCatalogItem): void {
@@ -408,6 +425,8 @@ function editConnection(conn: PaymentProviderConnection): void {
   connectionForm.status = conn.status
   connectionForm.locationId = conn.locationId ?? 'all'
   connectionForm.configuredFields = [...conn.configuredFields]
+  clearSecretVaultState()
+  void loadSecretStatus(conn.id) // načte stav trezoru credentialů (bez hodnot)
 }
 
 // Checklist připravených setup polí. Drží se JEN názvy polí (ne hodnoty) — tajné klíče se do aplikace neukládají.
@@ -468,6 +487,137 @@ async function deleteConnection(conn: PaymentProviderConnection): Promise<void> 
     toast.error(integrationErrorMessage(e))
   } finally {
     connectionSaving.value = false
+  }
+}
+
+// --- Zabezpečený trezor credentialů (backend #225) ---
+// Credential pole providera z katalogu (podmnožina setupFields se sufixem `Ref`); tyto se ukládají do trezoru,
+// ne do checklistu configuredFields. Chybí-li v katalogu (starší backend), trezor pracuje podle backendem
+// vráceného stavu polí.
+const dialogCredentialFields = computed<string[]>(
+  () => dialogProvider.value?.credentialFields ?? [],
+)
+// Do checklistu „Potřebné údaje" patří jen NE-tajná setup pole; tajemství řeší trezor níže.
+const dialogChecklistFields = computed<string[]>(() =>
+  (dialogProvider.value?.setupFields ?? []).filter(
+    (f) => !dialogCredentialFields.value.includes(f),
+  ),
+)
+// Trezor ukazujeme, když provider má credential pole (katalog) nebo backend vrátil pole ke konkrétní konfiguraci.
+const showCredentialVault = computed<boolean>(
+  () => dialogCredentialFields.value.length > 0 || (secretStatus.value?.fields.length ?? 0) > 0,
+)
+
+async function loadSecretStatus(connectionId: string): Promise<void> {
+  if (!integrationRuntimeAvailable.value) return
+  secretLoading.value = true
+  secretError.value = null
+  try {
+    secretStatus.value = await integrationsApi.listPaymentProviderSecrets(connectionId)
+  } catch (e) {
+    secretStatus.value = null
+    secretError.value = integrationErrorMessage(e)
+  } finally {
+    secretLoading.value = false
+  }
+}
+
+// Uložení/rotace jednoho klíče. Raw hodnota jde na backend jednorázově, zašifruje se a už se nikdy nevrací.
+// Po úspěchu vstup VŽDY vyprázdníme, aby v UI nezůstala citlivá hodnota.
+async function saveSecret(field: string): Promise<void> {
+  if (!connectionForm.id || !canManageIntegrations.value) return
+  const value = (secretInputs[field] ?? '').trim()
+  if (!value) {
+    toast.error('Zadejte hodnotu klíče.')
+    return
+  }
+  secretBusyField.value = field
+  try {
+    secretStatus.value = await integrationsApi.storePaymentProviderSecret(
+      connectionForm.id,
+      field,
+      value,
+    )
+    secretInputs[field] = '' // po úspěšném uložení vstup vždy vyčistit (nikdy neponechat hodnotu v UI)
+    toast.success('Klíč uložen do zabezpečeného trezoru.')
+  } catch (e) {
+    toast.error(integrationErrorMessage(e))
+  } finally {
+    secretBusyField.value = null
+  }
+}
+
+async function deleteSecret(field: string): Promise<void> {
+  if (!connectionForm.id || !canManageIntegrations.value) return
+  secretBusyField.value = field
+  try {
+    await integrationsApi.deletePaymentProviderSecret(connectionForm.id, field)
+    secretInputs[field] = ''
+    await loadSecretStatus(connectionForm.id)
+    await maybeDowngradeAfterCredentialRemoval()
+    toast.success('Klíč odstraněn z trezoru.')
+  } catch (e) {
+    toast.error(integrationErrorMessage(e))
+  } finally {
+    secretBusyField.value = null
+  }
+}
+
+async function revokeAllSecrets(): Promise<void> {
+  if (!connectionForm.id || !canManageIntegrations.value) return
+  secretBusyField.value = '__all__'
+  try {
+    await integrationsApi.revokePaymentProviderSecrets(connectionForm.id)
+    for (const key of Object.keys(secretInputs)) secretInputs[key] = ''
+    await loadSecretStatus(connectionForm.id)
+    await maybeDowngradeAfterCredentialRemoval()
+    toast.success('Všechny klíče byly z trezoru revokovány.')
+  } catch (e) {
+    toast.error(integrationErrorMessage(e))
+  } finally {
+    secretBusyField.value = null
+  }
+}
+
+// Ready vyžaduje kompletní credential set → po odebrání klíče degradujeme konfiguraci na „čeká na údaje"
+// (backend Ready gate to vynucuje jen při zápisu, takže konzistenci po smazání dorovná frontend).
+async function maybeDowngradeAfterCredentialRemoval(): Promise<void> {
+  const id = connectionForm.id
+  if (!id || connectionForm.status !== 'ready') return
+  if (secretStatus.value?.allRequiredPresent) return
+  const conn = paymentConnections.value.find((c) => c.id === id)
+  if (!conn) return
+  try {
+    await integrationsApi.updatePaymentProviderConnection(id, {
+      providerKey: conn.providerKey,
+      name: conn.name,
+      mode: conn.mode,
+      status: 'awaiting_credentials',
+      locationId: conn.locationId,
+      configuredFields: conn.configuredFields,
+    })
+    connectionForm.status = 'awaiting_credentials'
+    await loadPaymentConnections()
+    toast.info('Konfigurace přepnuta na „Čeká na údaje" — chybí klíč v trezoru.')
+  } catch {
+    // Degradace je best-effort; klíč je odstraněný i kdyby se stav nepřepsal.
+  }
+}
+
+function secretUpdatedAtLabel(iso: string | null): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('cs-CZ')
+}
+
+// Souhrn trezoru pro řádek konfigurace v seznamu (kolik povinných klíčů už je uložených).
+function connectionVaultSummary(conn: PaymentProviderConnection): {
+  stored: number
+  required: number
+} {
+  return {
+    stored: conn.storedCredentialFields?.length ?? 0,
+    required: conn.requiredCredentialFields?.length ?? 0,
   }
 }
 
@@ -594,6 +744,8 @@ function accountingExportErrorMessage(e: unknown): string {
 function integrationErrorMessage(e: unknown): string {
   if (e instanceof ApiError && e.status === 403)
     return 'Modul Integrace není povolený nebo nemáte oprávnění.'
+  if (e instanceof ApiError && e.status === 503)
+    return 'Zabezpečený trezor credentialů není na serveru nakonfigurovaný (chybí šifrovací klíč na VPS). Kontaktujte správce.'
   if (e instanceof ApiError && e.status === 422) return e.message
   if (e instanceof ApiError && e.status === 0) return 'API není dostupné.'
   return 'Integrace se nepodařilo načíst.'
@@ -1431,8 +1583,23 @@ async function onSubmit(): Promise<void> {
             >
               <div>
                 <div class="font-medium">{{ conn.name }}</div>
-                <div class="mt-0.5 text-xs text-muted-foreground">
-                  {{ paymentConnectionModeLabel(conn.mode) }}
+                <div
+                  class="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground"
+                >
+                  <span>{{ paymentConnectionModeLabel(conn.mode) }}</span>
+                  <Badge
+                    v-if="connectionVaultSummary(conn).required > 0"
+                    :variant="
+                      connectionVaultSummary(conn).stored >= connectionVaultSummary(conn).required
+                        ? 'secondary'
+                        : 'outline'
+                    "
+                  >
+                    <KeyRound class="mr-1 h-3 w-3" />
+                    Trezor {{ connectionVaultSummary(conn).stored }}/{{
+                      connectionVaultSummary(conn).required
+                    }}
+                  </Badge>
                 </div>
               </div>
               <div class="flex items-center gap-2">
@@ -1517,14 +1684,15 @@ async function onSubmit(): Promise<void> {
               </Select>
             </div>
 
-            <div v-if="dialogProvider?.setupFields.length" class="space-y-2">
-              <Label>Potřebné údaje</Label>
+            <div v-if="dialogChecklistFields.length" class="space-y-2">
+              <Label>Potřebné údaje (bez tajných klíčů)</Label>
               <p class="text-xs text-muted-foreground">
-                Zaškrtněte, které údaje máte bezpečně připravené. Hodnoty se do aplikace neukládají
-                — tajné klíče se napojují mimo aplikaci.
+                Zaškrtněte, které nastavovací údaje (např. ID obchodníka, callback URL) máte
+                bezpečně připravené. Tajné klíče sem nepatří — ty vložíte do zabezpečeného trezoru
+                níže.
               </p>
               <div
-                v-for="field in dialogProvider.setupFields"
+                v-for="field in dialogChecklistFields"
                 :key="field"
                 class="flex items-center gap-3 rounded-md border border-border px-3 py-2"
               >
@@ -1533,18 +1701,141 @@ async function onSubmit(): Promise<void> {
                   :model-value="connectionForm.configuredFields.includes(field)"
                   @update:model-value="(v) => toggleConfiguredField(field, v)"
                 />
-                <div class="flex-1 space-y-1">
-                  <Label :for="`conn-field-${field}`" class="text-sm font-medium">{{
-                    field
-                  }}</Label>
-                  <Input
-                    class="text-xs"
-                    placeholder="Uloží se bezpečně mimo aplikaci"
-                    disabled
-                    aria-hidden="true"
-                  />
-                </div>
+                <Label :for="`conn-field-${field}`" class="flex-1 text-sm font-medium">{{
+                  field
+                }}</Label>
               </div>
+            </div>
+
+            <!-- Zabezpečený trezor credentialů (tajné klíče) — backend #225 -->
+            <div
+              v-if="showCredentialVault"
+              class="space-y-2 rounded-md border border-border bg-muted/30 p-3"
+              data-testid="credential-vault"
+            >
+              <div class="flex items-center gap-2">
+                <KeyRound class="h-4 w-4 text-muted-foreground" />
+                <Label class="text-sm font-semibold">Zabezpečený trezor credentialů</Label>
+              </div>
+              <p class="text-xs text-muted-foreground">
+                Klíče se ukládají zašifrovaně na serveru a už se nikdy nezobrazí. Uložení klíče
+                nespouští platby — ostré strhávání zapne až samostatný provider adaptér (další
+                milestone).
+              </p>
+
+              <p v-if="!connectionForm.id" class="text-xs text-muted-foreground">
+                Nejdřív konfiguraci uložte, pak sem můžete bezpečně vložit klíče do trezoru.
+              </p>
+
+              <template v-else>
+                <p v-if="secretLoading" class="text-xs text-muted-foreground">
+                  Načítám stav trezoru…
+                </p>
+                <p v-else-if="secretError" class="text-xs text-destructive">{{ secretError }}</p>
+                <template v-else-if="secretStatus">
+                  <div
+                    v-for="fieldStatus in secretStatus.fields"
+                    :key="fieldStatus.fieldName"
+                    class="space-y-1.5 rounded-md border border-border bg-background px-3 py-2"
+                    :data-testid="`secret-field-${fieldStatus.fieldName}`"
+                  >
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                      <Label
+                        :for="`secret-input-${fieldStatus.fieldName}`"
+                        class="text-sm font-medium"
+                      >
+                        {{ fieldStatus.fieldName }}
+                      </Label>
+                      <div class="flex items-center gap-1.5">
+                        <Badge :variant="fieldStatus.required ? 'outline' : 'secondary'">
+                          {{ fieldStatus.required ? 'povinné' : 'volitelné' }}
+                        </Badge>
+                        <Badge
+                          :variant="fieldStatus.hasSecret ? 'secondary' : 'outline'"
+                          :data-testid="`secret-state-${fieldStatus.fieldName}`"
+                        >
+                          {{ fieldStatus.hasSecret ? 'Uloženo' : 'Chybí' }}
+                        </Badge>
+                      </div>
+                    </div>
+                    <p
+                      v-if="fieldStatus.hasSecret && secretUpdatedAtLabel(fieldStatus.updatedAt)"
+                      class="text-[11px] text-muted-foreground"
+                    >
+                      Naposledy uloženo: {{ secretUpdatedAtLabel(fieldStatus.updatedAt) }}
+                    </p>
+                    <div class="flex items-center gap-2">
+                      <Input
+                        :id="`secret-input-${fieldStatus.fieldName}`"
+                        v-model="secretInputs[fieldStatus.fieldName]"
+                        type="password"
+                        autocomplete="off"
+                        class="text-xs"
+                        :placeholder="
+                          fieldStatus.hasSecret
+                            ? 'Nová hodnota pro rotaci klíče'
+                            : 'Vložte hodnotu klíče'
+                        "
+                        :disabled="
+                          !canManageIntegrations || secretBusyField === fieldStatus.fieldName
+                        "
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        :disabled="
+                          !canManageIntegrations ||
+                          secretBusyField !== null ||
+                          !(secretInputs[fieldStatus.fieldName] ?? '').trim()
+                        "
+                        @click="saveSecret(fieldStatus.fieldName)"
+                      >
+                        {{ fieldStatus.hasSecret ? 'Rotovat klíč' : 'Uložit klíč' }}
+                      </Button>
+                      <Button
+                        v-if="fieldStatus.hasSecret"
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        title="Odstranit klíč z trezoru"
+                        :disabled="!canManageIntegrations || secretBusyField !== null"
+                        @click="deleteSecret(fieldStatus.fieldName)"
+                      >
+                        <Trash2 class="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <p
+                      class="text-xs"
+                      :class="
+                        secretStatus.allRequiredPresent
+                          ? 'text-muted-foreground'
+                          : 'text-amber-600 dark:text-amber-500'
+                      "
+                    >
+                      {{
+                        secretStatus.allRequiredPresent
+                          ? 'Všechny povinné klíče jsou v trezoru — konfiguraci lze přepnout na Připraveno.'
+                          : 'Stav Připraveno vyžaduje všechny povinné klíče v trezoru.'
+                      }}
+                    </p>
+                    <Button
+                      v-if="secretStatus.fields.some((f) => f.hasSecret)"
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      class="text-destructive"
+                      :disabled="!canManageIntegrations || secretBusyField !== null"
+                      @click="revokeAllSecrets"
+                    >
+                      Revokovat všechny klíče
+                    </Button>
+                  </div>
+                </template>
+              </template>
             </div>
           </div>
         </div>
