@@ -9,3 +9,8 @@
 	encode gzip
 	reverse_proxy web:80
 }
+
+# www → apex (ops: kanonická doména bez www).
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}

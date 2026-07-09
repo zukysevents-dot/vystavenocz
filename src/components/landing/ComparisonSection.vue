@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Check, Minus } from 'lucide-vue-next'
+import { vReveal } from '@/lib/reveal'
 
 type Row = {
   label: string
@@ -18,11 +19,32 @@ const ourFeatures: Row[] = [
     fakturoid: false,
   },
   {
-    label: 'Faktury s DPH a QR (ČBA standard)',
+    label: 'Modulární — platíte jen za zapnuté moduly',
+    us: true,
+    dotykacka: false,
+    storyous: false,
+    fakturoid: false,
+  },
+  {
+    label: 'Receptury, suroviny a food cost',
+    us: true,
+    dotykacka: 'Doplněk',
+    storyous: 'Doplněk',
+    fakturoid: false,
+  },
+  {
+    label: 'Skladové zrcadlo: má být / realita / rozdíl v Kč',
     us: true,
     dotykacka: 'Omezeně',
     storyous: 'Omezeně',
-    fakturoid: true,
+    fakturoid: false,
+  },
+  {
+    label: 'Provozní přehled: marže, výkon obsluhy, ztráty, ležáky',
+    us: true,
+    dotykacka: 'Omezeně',
+    storyous: 'Omezeně',
+    fakturoid: false,
   },
   {
     label: 'Rezervace s hlídáním kolizí',
@@ -32,21 +54,14 @@ const ourFeatures: Row[] = [
     fakturoid: false,
   },
   {
-    label: 'Docházka + export do CSV',
+    label: 'Docházka + export pro mzdy',
     us: true,
     dotykacka: false,
     storyous: false,
     fakturoid: false,
   },
   {
-    label: 'Modulární — platíš jen co používáš',
-    us: true,
-    dotykacka: false,
-    storyous: false,
-    fakturoid: false,
-  },
-  {
-    label: 'AI pomocník u faktur (česky)',
+    label: 'Zakázky a servisní výjezdy',
     us: true,
     dotykacka: false,
     storyous: false,
@@ -72,6 +87,20 @@ const standardFeatures: Row[] = [
   },
   { label: 'Sklad a inventura', us: true, dotykacka: true, storyous: true, fakturoid: false },
   {
+    label: 'Uzávěrky a denní Z-report',
+    us: true,
+    dotykacka: true,
+    storyous: true,
+    fakturoid: false,
+  },
+  {
+    label: 'Faktury s DPH a QR (ČBA standard)',
+    us: true,
+    dotykacka: 'Omezeně',
+    storyous: 'Omezeně',
+    fakturoid: true,
+  },
+  {
     label: 'Mobil / tablet bez instalace (PWA)',
     us: true,
     dotykacka: 'Aplikace',
@@ -83,15 +112,22 @@ const standardFeatures: Row[] = [
 
 const honestFeatures: Row[] = [
   {
-    label: 'EET a tisk na pokladní tiskárně',
-    us: 'Brzy',
+    label: 'Veřejná registrace bez čekání',
+    us: 'Early access',
+    dotykacka: true,
+    storyous: true,
+    fakturoid: true,
+  },
+  {
+    label: 'Tisk na pokladní tiskárně',
+    us: 'Připravujeme',
     dotykacka: true,
     storyous: true,
     fakturoid: false,
   },
   {
     label: 'Nativní mobilní aplikace',
-    us: 'Brzy',
+    us: 'Připravujeme',
     dotykacka: true,
     storyous: true,
     fakturoid: true,
@@ -105,7 +141,7 @@ const honestFeatures: Row[] = [
   },
   {
     label: 'Veřejné REST API',
-    us: 'Brzy',
+    us: 'Připravujeme',
     dotykacka: true,
     storyous: true,
     fakturoid: true,
@@ -113,7 +149,7 @@ const honestFeatures: Row[] = [
 ]
 
 const priceRow: Row = {
-  label: 'Cena od (měsíčně)',
+  label: 'Cena od (měsíčně, orientační)',
   us: '149 Kč',
   dotykacka: 'dle balíčku',
   storyous: 'dle balíčku',
@@ -123,7 +159,8 @@ const priceRow: Row = {
 const sections: { title: string; subtitle?: string; data: Row[] }[] = [
   {
     title: 'Co umíme navíc — vše v jednom, modulárně',
-    subtitle: 'Pokladna, restaurace, sklad, docházka, rezervace i fakturace pod jedním účtem.',
+    subtitle:
+      'Pokladna, restaurace, sklad, docházka, rezervace, zakázky i fakturace pod jedním účtem.',
     data: ourFeatures,
   },
   {
@@ -132,16 +169,17 @@ const sections: { title: string; subtitle?: string; data: Row[] }[] = [
   },
   {
     title: 'Buďme upřímní — tohle zatím neumíme',
-    subtitle: 'Pokud potřebujete vlastní pokladní hardware nebo API, řekněte nám to.',
+    subtitle:
+      'Vystaveno běží na vašem počítači, tabletu nebo telefonu — vlastní pokladní hardware neprodáváme. EET 2.0 přidáme, jakmile bude legislativně aktuální.',
     data: honestFeatures,
   },
 ]
 </script>
 
 <template>
-  <section id="srovnani" class="bg-surface-soft py-16 sm:py-20">
+  <section id="srovnani" class="bg-surface/40 py-16 sm:py-20">
     <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-      <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+      <div v-reveal class="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
         <div class="overflow-x-auto">
           <table class="w-full min-w-[680px]">
             <thead>
@@ -270,8 +308,9 @@ const sections: { title: string; subtitle?: string; data: Row[] }[] = [
         </div>
       </div>
       <p class="mt-4 text-center text-xs text-muted-foreground">
-        Orientační srovnání k 6/2026 podle veřejně dostupných informací. Ceny a rozsah balíčků
-        konkurence se liší podle sestavy a hardwaru.
+        Orientační srovnání k 7/2026 podle veřejně dostupných informací. Ceny a rozsah balíčků
+        konkurence se liší podle sestavy a hardwaru. Platí obdobně i pro další fakturační nástroje
+        (iDoklad) a samostatné skladové či rezervační systémy.
       </p>
     </div>
   </section>

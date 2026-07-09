@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { RouterLink } from 'vue-router'
 import { ArrowRight } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { DEMO_MAILTO } from '@/lib/landing-cta'
 
 withDefaults(defineProps<{ title: string; hint?: string }>(), {
-  hint: '14 dní zdarma · bez karty',
+  hint: 'Ukázka zdarma · bez závazku',
 })
 </script>
 
@@ -27,10 +27,10 @@ withDefaults(defineProps<{ title: string; hint?: string }>(), {
           </div>
         </div>
         <Button variant="coral" size="lg" class="group w-full shrink-0 sm:w-auto" as-child>
-          <RouterLink to="/registrace">
-            Začít zdarma
+          <a :href="DEMO_MAILTO">
+            Chci demo
             <ArrowRight class="transition-transform group-hover:translate-x-0.5" />
-          </RouterLink>
+          </a>
         </Button>
       </div>
     </div>

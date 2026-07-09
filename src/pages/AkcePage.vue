@@ -2,88 +2,60 @@
 import PageHeader from '@/components/landing/PageHeader.vue'
 import { Button } from '@/components/ui/button'
 import { RouterLink } from 'vue-router'
-import { Check, Clock, ShieldCheck, TrendingUp } from 'lucide-vue-next'
+import { Check, Mail, MonitorPlay, Settings2, Rocket, ShieldCheck } from 'lucide-vue-next'
+import { EARLY_ACCESS_MAILTO, DEMO_MAILTO } from '@/lib/landing-cta'
 
+// Early access nabídka nahrazuje dřívější časově omezenou akci (do 1. 6.),
+// která už proběhla a odkazovala na starý jednotarifní ceník.
 const benefits = [
-  'Cena 100 Kč/měs (1 200 Kč ročně) nebo 159 Kč při měsíčním placení',
-  'Garance ceny po dobu 12 měsíců od registrace',
-  'Plný přístup ke všem funkcím Vystaveno Pro',
-  '14 dní na vyzkoušení zdarma, bez platební karty',
-  'Zrušení jedním kliknutím v nastavení',
+  'Zvýhodněná zaváděcí cena pro první zákazníky — domluvíme individuálně',
+  'Osobní pomoc s nastavením modulů, katalogu a převodem dat',
+  'Přímá linka na zakladatele — vaše zpětná vazba řídí roadmapu',
+  'Drobná vylepšení na míru obvykle nasazujeme do pár dní',
+  'Žádný závazek — kdykoliv můžete skončit',
+]
+
+const steps = [
+  {
+    icon: Mail,
+    title: '1. Napíšete nám',
+    desc: 'Krátce popíšete svůj provoz — restaurace, kavárna, salon, řemeslo, obchod.',
+  },
+  {
+    icon: MonitorPlay,
+    title: '2. Ukážeme vám demo',
+    desc: 'Online nebo u vás. Projdeme váš provoz a ukážeme, jak by ve Vystavenu fungoval.',
+  },
+  {
+    icon: Settings2,
+    title: '3. Nastavíme systém',
+    desc: 'Zapneme moduly, které potřebujete, pomůžeme s katalogem, recepturami i sklady.',
+  },
+  {
+    icon: Rocket,
+    title: '4. Jedete naostro',
+    desc: 'Obsluha se učí minuty. Jsme na příjmu, kdyby cokoliv — odpovídáme do 24 hodin.',
+  },
 ]
 </script>
 
 <template>
   <PageHeader
-    eyebrow="Akční nabídka"
-    title="Současná cena platí jen do 1. 6."
-    subtitle="Po 1. 6. se ceník mění na 269 Kč/měs a 2 000 Kč/rok. Zaregistrujte se teď a cenu si zamknete na celých 12 měsíců."
+    eyebrow="Early access"
+    title="Buďte u toho"
+    title-accent="od začátku"
+    subtitle="Vystaveno teď spouštíme pro první provozy. Místo anonymní registrace dostanete osobní nasazení, pomoc s daty a podmínky, které s veřejným spuštěním zmizí."
   />
 
-  <section class="bg-background py-16 sm:py-20">
+  <section class="py-16 sm:py-20">
     <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-      <!-- Price comparison -->
-      <div class="grid gap-6 sm:grid-cols-2">
-        <div class="rounded-3xl border-2 border-coral bg-card p-8 shadow-glow">
-          <div
-            class="inline-flex items-center gap-2 rounded-full bg-coral/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-coral"
-          >
-            <Clock class="h-3 w-3" />
-            Do 1. 6.
-          </div>
-          <div class="mt-5 flex items-end gap-2">
-            <span class="text-5xl font-extrabold tracking-tight text-foreground"> 100 </span>
-            <div class="pb-2">
-              <p class="text-base font-semibold text-foreground">Kč/měs</p>
-              <p class="text-xs text-muted-foreground">při ročním placení</p>
-            </div>
-          </div>
-          <p class="mt-2 text-sm text-muted-foreground">
-            Účtováno ročně <strong class="text-foreground">1 200 Kč</strong>. Měsíční tarif 159 Kč.
-          </p>
-          <Button variant="coral" size="lg" class="mt-6 w-full" as-child>
-            <a href="/registrace">Využít akční cenu</a>
-          </Button>
-          <p class="mt-2 text-center text-xs text-muted-foreground">
-            Bez platební karty · Garance 12 měsíců
-          </p>
-        </div>
-
-        <div class="rounded-3xl border border-border bg-surface-soft p-8">
-          <div
-            class="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1 text-xs font-bold uppercase tracking-wider text-muted-foreground"
-          >
-            <TrendingUp class="h-3 w-3" />
-            Od 1. 6.
-          </div>
-          <div class="mt-5 flex items-end gap-2">
-            <span class="text-5xl font-extrabold tracking-tight text-muted-foreground"> 167 </span>
-            <div class="pb-2">
-              <p class="text-base font-semibold text-muted-foreground">Kč/měs</p>
-              <p class="text-xs text-muted-foreground">při ročním placení</p>
-            </div>
-          </div>
-          <p class="mt-2 text-sm text-muted-foreground">
-            Účtováno ročně <strong class="text-foreground">2 000 Kč</strong>. Měsíční tarif 269 Kč.
-          </p>
-          <div
-            class="mt-6 rounded-lg border border-border bg-background px-4 py-3 text-xs text-muted-foreground"
-          >
-            Tato cena se bude vztahovat na všechny nové registrace po 1. 6. Stávající zákazníci si
-            svou cenu drží dál podle pravidel garance.
-          </div>
-        </div>
-      </div>
-
-      <!-- Benefits -->
-      <div class="mt-12 rounded-3xl border border-border bg-card p-8">
+      <!-- Co early access znamená -->
+      <div class="rounded-3xl border-2 border-coral bg-card p-8 shadow-glow">
         <div class="flex items-center gap-3">
-          <div
-            class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-soft text-primary"
-          >
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-coral/10 text-coral">
             <ShieldCheck class="h-5 w-5" />
           </div>
-          <h2 class="text-lg font-bold text-foreground">Co získáte registrací do 1. 6.</h2>
+          <h2 class="text-lg font-bold text-foreground">Co jako první zákazník získáte</h2>
         </div>
         <ul class="mt-5 grid gap-3 sm:grid-cols-2">
           <li v-for="b in benefits" :key="b" class="flex items-start gap-2 text-sm text-foreground">
@@ -95,17 +67,45 @@ const benefits = [
             {{ b }}
           </li>
         </ul>
+        <div class="mt-7 flex flex-col gap-3 sm:flex-row">
+          <Button variant="coral" size="lg" class="w-full sm:w-auto" as-child>
+            <a :href="EARLY_ACCESS_MAILTO">Zapsat se do early access</a>
+          </Button>
+          <Button variant="outline" size="lg" class="w-full sm:w-auto" as-child>
+            <a :href="DEMO_MAILTO">Domluvit ukázku</a>
+          </Button>
+        </div>
+        <p class="mt-3 text-xs text-muted-foreground">
+          Bez závazku · odpovídáme do 24 hodin · patrik@vystaveno.cz
+        </p>
+      </div>
+
+      <!-- Jak to probíhá -->
+      <div class="mt-12">
+        <h2 class="text-center text-lg font-bold text-foreground">Jak to probíhá</h2>
+        <div class="mt-6 grid gap-5 sm:grid-cols-2">
+          <div
+            v-for="s in steps"
+            :key="s.title"
+            class="rounded-2xl border border-border bg-card p-6"
+          >
+            <div
+              class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-soft text-primary"
+            >
+              <component :is="s.icon" class="h-5 w-5" />
+            </div>
+            <h3 class="mt-4 text-base font-bold text-foreground">{{ s.title }}</h3>
+            <p class="mt-2 text-sm text-muted-foreground">{{ s.desc }}</p>
+          </div>
+        </div>
       </div>
 
       <div class="mt-10 flex flex-col items-center gap-3 text-center">
-        <Button variant="coral" size="lg" as-child>
-          <a href="/registrace">Zaregistrovat se za 100 Kč/měs</a>
-        </Button>
         <RouterLink
           to="/cenik"
           class="text-sm font-medium text-muted-foreground hover:text-foreground"
         >
-          Zobrazit kompletní ceník →
+          Prohlédnout moduly a orientační ceník →
         </RouterLink>
       </div>
     </div>

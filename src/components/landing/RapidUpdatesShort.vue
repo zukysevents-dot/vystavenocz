@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { Mail } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { vReveal } from '@/lib/reveal'
 </script>
 
 <template>
-  <section class="bg-background py-16 sm:py-20">
+  <section class="py-16 sm:py-20">
     <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
       <div
+        v-reveal
         class="flex flex-col items-start gap-6 rounded-3xl border border-border bg-surface-soft p-8 sm:p-10 md:flex-row md:items-center md:justify-between"
       >
         <div class="max-w-xl">
@@ -19,7 +21,7 @@ import { Button } from '@/components/ui/button'
           <h2
             class="mt-4 font-display text-2xl font-black leading-[1.05] tracking-[-0.02em] text-foreground sm:text-3xl"
           >
-            Co napíšete, to brzo uvidíte
+            Co napíšete, to <span class="text-gradient-heading">brzo uvidíte</span>
           </h2>
           <p class="mt-3 text-base leading-relaxed text-muted-foreground">
             Drobná vylepšení napříč moduly obvykle nasadíme do pár dní. Když vám něco v provozu

@@ -4,6 +4,7 @@ import { useRoute, RouterLink } from 'vue-router'
 import { getArticleBySlug, getRelatedArticles } from '@/lib/articles'
 import { Clock, ArrowLeft, ArrowRight, Lightbulb, AlertTriangle } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { DEMO_MAILTO } from '@/lib/landing-cta'
 import {
   Accordion,
   AccordionContent,
@@ -36,8 +37,8 @@ const formattedDate = computed(() =>
     </Button>
   </div>
 
-  <article v-else class="bg-background">
-    <header class="relative overflow-hidden border-b border-border bg-hero">
+  <article v-else>
+    <header class="relative overflow-hidden border-b border-border/60">
       <div class="absolute inset-0 bg-mesh opacity-50" aria-hidden />
       <div class="relative mx-auto max-w-3xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
         <RouterLink
@@ -135,13 +136,13 @@ const formattedDate = computed(() =>
 
       <!-- CTA — využít to, že čtenář dočetl -->
       <div class="mt-12 rounded-2xl border border-border bg-card p-8 text-center">
-        <h3 class="text-xl font-bold text-foreground">Vystav fakturu za 30 sekund</h3>
+        <h3 class="text-xl font-bold text-foreground">Faktury, pokladna i sklad v jednom</h3>
         <p class="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-          Vyzkoušej Vystaveno.cz zdarma na 14 dní. Bez karty, bez závazků.
+          Vystaveno spouštíme pro první provozy. Napište si o ukázku — zdarma a bez závazku.
         </p>
         <Button variant="coral" size="lg" class="group mt-5" as-child>
-          <a href="/registrace">
-            Začít zdarma
+          <a :href="DEMO_MAILTO">
+            Chci demo
             <ArrowRight class="transition-transform group-hover:translate-x-0.5" />
           </a>
         </Button>
@@ -149,7 +150,7 @@ const formattedDate = computed(() =>
     </div>
 
     <!-- Related -->
-    <section v-if="related.length > 0" class="border-t border-border bg-surface-soft py-14">
+    <section v-if="related.length > 0" class="border-t border-border bg-surface/40 py-14">
       <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <h2 class="mb-6 text-xl font-bold text-foreground">Mohlo by tě zajímat</h2>
         <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

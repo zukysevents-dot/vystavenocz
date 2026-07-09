@@ -29,7 +29,9 @@ services:
       Stripe__SecretKey: ${STRIPE_SECRET_KEY:?nastav STRIPE_SECRET_KEY}
       Integrations__SecretEncryptionKey: ${INTEGRATIONS_SECRET_ENCRYPTION_KEY:?nastav INTEGRATIONS_SECRET_ENCRYPTION_KEY (openssl rand -base64 32)}
       Payments__PortalBaseUrl: ${PAYMENTS_PORTAL_BASE_URL:-http://localhost:8080}
-      # Same-origin přes nginx → CORS netřeba (browser nevolá cross-origin). Cors__AllowedOrigins necháváme prázdné.
+      # Web je same-origin přes nginx; desktop (Tauri) volá cross-origin → povol jeho originy (ops).
+      Cors__AllowedOrigins__0: 'tauri://localhost'
+      Cors__AllowedOrigins__1: 'http://tauri.localhost'
     depends_on:
       db:
         condition: service_healthy

@@ -10,11 +10,12 @@ const articles = getArticlesSortedByDate()
 <template>
   <PageHeader
     eyebrow="Akademie"
-    title="Články a rady pro OSVČ"
+    title="Články a rady"
+    title-accent="pro OSVČ"
     subtitle="Praktické návody bez vaty — od založení živnosti přes fakturaci až po daně. Vše ověřeno podle aktuální české legislativy."
   />
 
-  <section class="bg-background pb-24">
+  <section class="pb-24">
     <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
       <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <RouterLink

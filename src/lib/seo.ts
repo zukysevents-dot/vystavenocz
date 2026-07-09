@@ -8,56 +8,58 @@ export type RouteSeo = {
 export const siteName = 'Vystaveno.cz'
 
 export const defaultSeo: RouteSeo = {
-  title: 'Vystaveno.cz — Pokladna, fakturace a rezervace. Jeden systém pro celý provoz',
+  title: 'Vystaveno.cz — Modulární provozní systém. Pokladna, sklad, rezervace i fakturace',
   description:
-    'Modulární provozní systém pro kavárny, restaurace, salony i řemeslo: pokladna (POS), restaurace a kuchyně, sklad, docházka, rezervace i fakturace. Zapneš jen moduly, které potřebuješ. 14 dní zdarma bez karty.',
+    'Jeden systém místo papírů, Excelů a pěti aplikací: pokladna (POS), restaurace a kuchyně, sklad s recepturami, docházka, rezervace i fakturace. Zapnete jen moduly, které potřebujete. Nyní v early accessu — napište si o demo.',
 }
 
 // SEO meta po jednotlivých routách (klíč = name routy v routeru).
 export const seoByRouteName: Record<string, RouteSeo> = {
   home: {
-    title: 'Vystaveno.cz — Prodej, faktura, rezervace na jeden ťuk',
+    title: 'Vystaveno.cz — Jeden systém místo pěti aplikací',
     description:
-      'Jeden systém pro celý provoz — pokladna, restaurace a kuchyně, sklad, docházka, rezervace i fakturace. Modulární: platíš jen za to, co používáš. 14 dní zdarma bez karty.',
+      'Modulární provozní systém pro gastro, služby, řemeslo i obchod — pokladna, restaurace a kuchyně, sklad s recepturami a zrcadlem, docházka, rezervace i fakturace. Platíte jen za to, co používáte. Napište si o demo.',
     ogTitle: 'Vystaveno.cz — Jeden systém pro celý provoz',
     ogDescription:
-      'Prodej, faktura, rezervace — na jeden ťuk. Modulární provozní systém pro kavárny, restaurace, salony i řemeslo.',
+      'Pokladna, kuchyně, sklad, rezervace i fakturace v jednom modulárním systému. Nyní v early accessu — domluvte si ukázku.',
   },
   funkce: {
     title: 'Moduly a funkce — Vystaveno.cz',
     description:
-      'Pokladna (POS), restaurace a kuchyně (mapa stolů, bony), sklad a zásoby, docházka, rezervace a fakturace. Vše propojené v jednom systému, zapneš jen co potřebuješ.',
+      'Pokladna (POS), restaurace a kuchyně (mapa stolů, bony), sklad s recepturami, food costem a zrcadlem, uzávěrky, docházka, rezervace a fakturace. Vše propojené v jednom systému, zapnete jen co potřebujete.',
     ogTitle: 'Moduly a funkce — Vystaveno.cz',
     ogDescription:
-      'Pokladna, restaurace, sklad, docházka, rezervace i fakturace — v jednom systému.',
+      'Pokladna, restaurace, sklad, receptury, uzávěrky, docházka, rezervace i fakturace — v jednom systému.',
   },
   cenik: {
     title: 'Ceník — Vystaveno.cz | Platíte jen za moduly, které využijete',
     description:
-      'Modulární ceník: zapnete jen moduly, které potřebujete, a platíte jen za ně. Roční platba = 2 měsíce zdarma. 14 dní na vyzkoušení bez platební karty.',
+      'Modulární ceník: zapnete jen moduly, které potřebujete, a platíte jen za ně. Roční platba = 2 měsíce zdarma. Ceny orientační do veřejného spuštění — první zákazníci dostanou zaváděcí podmínky.',
     ogTitle: 'Ceník Vystaveno.cz — modulární, platíte jen za své moduly',
-    ogDescription: 'Poskládejte si systém z modulů. Bez závazku, 14 dní zdarma bez karty.',
+    ogDescription:
+      'Poskládejte si systém z modulů. Bez závazku, zaváděcí podmínky v early accessu.',
   },
   faq: {
     title: 'Časté otázky — Vystaveno.cz',
     description:
-      'Co se nejčastěji ptáte — moduly a ceny, pokladna a EET, DPH, rezervace, sklad i zkušebka bez karty.',
+      'Co se nejčastěji ptáte — moduly a ceny, early access, pokladna a EET, receptury a sklad, DPH, rezervace i uzávěrky.',
     ogTitle: 'Časté otázky — Vystaveno.cz',
     ogDescription: 'Odpovědi na to, na co se provozy ptají nejčastěji.',
   },
   srovnani: {
     title: 'Srovnání: Vystaveno.cz vs Dotykačka, Storyous a Fakturoid',
     description:
-      'Proč platit zvlášť za pokladnu, fakturaci a rezervace? Vystaveno spojuje pokladnu, gastro, sklad, docházku, rezervace i fakturaci do jednoho modulárního systému.',
+      'Proč platit zvlášť za pokladnu, fakturaci, sklad a rezervace? Vystaveno spojuje pokladnu, gastro s recepturami, sklad, docházku, rezervace i fakturaci do jednoho modulárního systému.',
     ogTitle: 'Vystaveno vs Dotykačka, Storyous, Fakturoid',
-    ogDescription: 'Jeden systém místo tří nástrojů — modulárně a levněji. Podívejte se sami.',
+    ogDescription: 'Jeden systém místo pěti nástrojů — modulárně. Podívejte se sami.',
   },
   akce: {
-    title: 'Akce do 1. 6. — Vystaveno.cz za 100 Kč měsíčně',
+    title: 'Early access — Vystaveno.cz pro první zákazníky',
     description:
-      'Zaregistrujte se do 1. 6. a získejte cenu 100 Kč/měsíc (1 200 Kč ročně) zamčenou na 12 měsíců. Po 1. 6. nový ceník 269 Kč/měs, 2 000 Kč/rok.',
-    ogTitle: 'Akce do 1. 6. — Vystaveno.cz za 100 Kč měsíčně',
-    ogDescription: 'Zamkněte si současnou cenu na 12 měsíců. Po 1. 6. ceník stoupá na 269 Kč/měs.',
+      'Vystaveno spouštíme pro první provozy: osobní nasazení, pomoc s daty, zvýhodněné zaváděcí podmínky a přímý vliv na roadmapu. Napište si o přístup.',
+    ogTitle: 'Early access — Vystaveno.cz pro první zákazníky',
+    ogDescription:
+      'Osobní nasazení, zaváděcí podmínky a přímá linka na zakladatele. Přidejte se mezi první provozy.',
   },
   clanky: {
     title: 'Články a rady pro OSVČ — Vystaveno.cz',
@@ -69,9 +71,9 @@ export const seoByRouteName: Record<string, RouteSeo> = {
   'nase-sliby': {
     title: 'Naše sliby — Vystaveno.cz',
     description:
-      'Akční cena do 1. 6. Po registraci máte 12 měsíců garantovanou cenu. Žádné skryté poplatky, zrušení jedním kliknutím.',
+      'Co vám slibujeme: modulární ceny bez skrytých poplatků, poctivou roadmapu bez falešných slibů, data k exportu kdykoliv a zrušení jedním kliknutím.',
     ogTitle: 'Naše sliby — Vystaveno.cz',
-    ogDescription: 'Co vám slibujeme: férové ceny, garance 12 měsíců a žádná překvapení.',
+    ogDescription: 'Férové ceny, poctivá roadmapa a žádná překvapení.',
   },
   gdpr: {
     title: 'Ochrana osobních údajů (GDPR) — Vystaveno',
@@ -83,8 +85,8 @@ export const seoByRouteName: Record<string, RouteSeo> = {
   podminky: {
     title: 'Obchodní podmínky — Vystaveno',
     description:
-      'Obchodní podmínky služby Vystaveno.cz pro vystavování faktur online. Práva, povinnosti, předplatné a reklamace.',
+      'Obchodní podmínky služby Vystaveno.cz. Práva, povinnosti, předplatné a reklamace.',
     ogTitle: 'Obchodní podmínky — Vystaveno',
-    ogDescription: 'Obchodní podmínky služby Vystaveno.cz pro vystavování faktur online.',
+    ogDescription: 'Obchodní podmínky služby Vystaveno.cz.',
   },
 }

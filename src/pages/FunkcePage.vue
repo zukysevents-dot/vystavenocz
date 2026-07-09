@@ -7,7 +7,8 @@ import CtaSection from '@/components/landing/CtaSection.vue'
 <template>
   <PageHeader
     eyebrow="Funkce"
-    title="Jeden systém pro celý provoz."
+    title="Jeden systém pro"
+    title-accent="celý provoz."
     subtitle="Pokladna, restaurace a kuchyně, sklad, docházka, rezervace i fakturace. Zapneš jen moduly, které potřebuješ — a platíš jen za ně."
   />
   <FeaturesSection />
