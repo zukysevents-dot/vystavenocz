@@ -124,8 +124,10 @@ sudo sysctl -w net.ipv6.conf.all.disable_ipv6=0
 ```
 
 `Dockerfile` zapéká `ARG VITE_API_URL=/api/v1` do buildu → přebíjí `.env.production` (ten je pro VPS irelevantní, needituj ho kvůli produkci).
-Migrace databáze naskočí samy při startu API. Ověření živého stavu: `curl https://vystaveno.cz/health/ready` → 200 „Healthy".
+VPS `.env` musí obsahovat i `PAYMENTS_PORTAL_BASE_URL` (veřejná URL aplikace, typicky `https://$DOMAIN`), jinak online checkout faktury nemá kam vrátit zákazníka.
+Migrace databáze naskočí samy při startu API. Ověření živého stavu: `curl https://$DOMAIN/health/ready` → 200 „Healthy".
 Po deployi projdi `docs/deploy-smoke-checklist.md` (health/live, health/ready, `/api/v1/ping`, přihlášení, moduly, POS prodej, restaurace/stůl, kuchyně, uzávěrka, sklad/inventura/zrcadlo, Pohoda XML export, tiskový agent, platební provider settings + vault, podpisy provider settings + vault + odeslání, veřejné/QR menu a audit). Před deployem ověř zálohu DB; migrace jsou forward-only.
+Veřejná landing page na `/` musí při VPS deployi zůstat zachovaná; aplikace běží pod `/app` a API pod `/api`. Deploy smoke kontroluje `/` zvlášť, aby se homepage omylem nepřepsala.
 
 ## Konvence (dodržuj)
 
