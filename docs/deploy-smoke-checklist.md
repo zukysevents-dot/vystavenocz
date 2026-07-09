@@ -17,6 +17,7 @@ Tento checklist je rychlá brána pro ruční deploy na VPS. Produkce je pull-ba
    - `JWT_SECRET`
    - `STRIPE_SECRET_KEY`
    - `INTEGRATIONS_SECRET_ENCRYPTION_KEY` (`openssl rand -base64 32`)
+   - `PAYMENTS_PORTAL_BASE_URL` (veřejná URL aplikace, typicky `https://$DOMAIN`)
 6. Pokud se mají používat online platby faktur přes Stripe webhook, musí být v API prostředí doplněné i `Stripe__WebhookSecret`. Gastro POS deploy bez něj běží, ale webhook platby faktur nebude spolehlivě uzavírat.
 7. Credential vault pro platební providery bez `INTEGRATIONS_SECRET_ENCRYPTION_KEY` bezpečně vrací 503 při ukládání secretů; to je chyba konfigurace deploye, ne UI.
 8. Credential trezor pro **ověřené podpisy** (modul `verified_signing`) používá stejný serverový šifrovací klíč jako platební vault: `INTEGRATIONS_SECRET_ENCRYPTION_KEY` v `~/vystavenocz/.env` → `Integrations__SecretEncryptionKey` v API. Bez něj ukládání secretů podpisů bezpečně vrací 503 (opět chyba deploye, ne UI).
@@ -41,9 +42,9 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f api
 ## 3. Technická kontrola
 
 ```bash
-curl https://vystaveno.cz/health/live
-curl https://vystaveno.cz/health/ready
-curl https://vystaveno.cz/api/v1/ping
+curl https://$DOMAIN/health/live
+curl https://$DOMAIN/health/ready
+curl https://$DOMAIN/api/v1/ping
 ```
 
 Očekávání:
@@ -51,7 +52,8 @@ Očekávání:
 - `live` vrací HTTP 200.
 - `ready` vrací HTTP 200 a stav `Healthy`.
 - `ping` vrací JSON se stavem `ok`.
-- `https://vystaveno.cz/app` otevře aplikaci přes HTTPS.
+- `https://$DOMAIN/` otevře aktuální veřejnou landing page.
+- `https://$DOMAIN/app` otevře aplikaci přes HTTPS.
 - Browser nehlásí mixed content ani CORS chyby.
 
 ## 4. Smoke test v aplikaci (VPS staging readiness)
@@ -94,6 +96,6 @@ Proveď na testovací firmě / testovacím účtu. Pořadí odpovídá tomu, jak
 2. `docker compose ... logs -f api`
 3. `docker compose ... logs -f web`
 4. `docker compose ... logs -f caddy`
-5. Ověř `.env`, hlavně `DB_PASSWORD`, `JWT_SECRET`, `STRIPE_SECRET_KEY`, `INTEGRATIONS_SECRET_ENCRYPTION_KEY`, `DOMAIN`.
+5. Ověř `.env`, hlavně `DB_PASSWORD`, `JWT_SECRET`, `STRIPE_SECRET_KEY`, `INTEGRATIONS_SECRET_ENCRYPTION_KEY`, `PAYMENTS_PORTAL_BASE_URL`, `DOMAIN` a `ACME_EMAIL`.
 6. Ověř DNS domény na IP VPS a otevřené porty 80/443.
 7. Pokud selže migrace, nevracej DB ručně. Nejdřív zazálohuj databázi a řeš konkrétní chybu migrace.
