@@ -216,12 +216,15 @@ async function loadFromMock(): Promise<void> {
   await Promise.all([loadInvoices(), loadClients()])
 
   const todayISO = new Date().toISOString().slice(0, 10)
+  // Zálohové (proforma) jsou nedaňové doklady — nepatří do tržeb ani počtu. Dobropisy zůstávají
+  // (jejich záporný total správně sníží billed). V API režimu totéž řeší backend /dashboard/summary.
+  const taxDocs = invoices.value.filter((inv) => inv.documentType !== 'proforma')
   let billed = 0
   let paidAmount = 0
   let overdueAmount = 0
   let paidCount = 0
   let overdueCount = 0
-  for (const inv of invoices.value) {
+  for (const inv of taxDocs) {
     const amount = Number(inv.total) || 0
     if (inv.status !== 'draft' && inv.status !== 'cancelled') billed += amount
     if (inv.status === 'paid') {
@@ -233,7 +236,7 @@ async function loadFromMock(): Promise<void> {
     }
   }
   stats.value = {
-    count: invoices.value.length,
+    count: taxDocs.length,
     billed,
     paidAmount,
     paidCount,
@@ -252,7 +255,7 @@ async function loadFromMock(): Promise<void> {
     })
   }
   const idx = new Map(buckets.map((b, i) => [b.key, i]))
-  for (const inv of invoices.value) {
+  for (const inv of taxDocs) {
     if (inv.status === 'draft' || inv.status === 'cancelled') continue
     const d = new Date(inv.issueDate)
     const i = idx.get(`${d.getFullYear()}-${d.getMonth()}`)

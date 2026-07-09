@@ -6,7 +6,7 @@
 
 export type VatMode = 'payer' | 'identified' | 'non_payer'
 export type VatRate = 0 | 12 | 21
-export type DocumentType = 'invoice' | 'credit_note'
+export type DocumentType = 'invoice' | 'proforma' | 'credit_note'
 export type InvoiceStatus = 'draft' | 'issued' | 'paid' | 'overdue' | 'cancelled'
 
 export interface Client {
@@ -94,6 +94,8 @@ export interface SupplierSnapshot {
 export interface Invoice {
   id: string
   documentType: DocumentType
+  // Vazba na zdrojový doklad: dobropis → opravovaná faktura; faktura z konverze → zálohová (proforma).
+  parentInvoiceId?: string | null
   status: InvoiceStatus
   invoiceNumber: string | null // koncept nemá číslo — přidělí ho server při vystavení (issue)
   clientId: string | null

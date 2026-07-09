@@ -73,19 +73,35 @@ describe('vatSummary', () => {
     expect(s.count).toBe(3)
   })
 
-  it('nezahrne koncept, storno, dobropis ani cizí měnu', () => {
+  it('nezahrne koncept, storno, proformu ani cizí měnu', () => {
     const s = vatSummary(
       [
         inv({ items: [item({ lineSubtotal: 1000, lineVat: 210 })] }),
         inv({ status: 'draft' }),
         inv({ status: 'cancelled' }),
-        inv({ documentType: 'credit_note' }),
+        inv({ documentType: 'proforma' }),
         inv({ currency: 'EUR' }),
       ],
       'all',
     )
     expect(s.totalBase).toBe(1000)
     expect(s.count).toBe(1)
+  })
+
+  it('dobropis (credit_note) snižuje daň na výstupu (netto)', () => {
+    const s = vatSummary(
+      [
+        inv({ items: [item({ lineSubtotal: 1000, lineVat: 210 })] }),
+        inv({
+          documentType: 'credit_note',
+          items: [item({ lineSubtotal: -1000, lineVat: -210 })],
+        }),
+      ],
+      'all',
+    )
+    expect(s.totalBase).toBe(0)
+    expect(s.totalVat).toBe(0)
+    expect(s.count).toBe(2)
   })
 
   it('filtruje podle období (DUZP)', () => {

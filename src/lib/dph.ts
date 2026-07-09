@@ -24,16 +24,17 @@ export interface VatSummary {
 }
 
 /**
- * Doklad relevantní pro DPH: vystavená CZK faktura s DUZP (koncept/storno/dobropis/
- * cizí měna ne). Bez taxableDate by doklad tiše spadl jen do 'all', ale ne do žádného
- * konkrétního období → vyloučíme, ať 'all' == součet období.
+ * Doklad relevantní pro DPH: vystavená CZK faktura NEBO dobropis s DUZP. Dobropis je opravný daňový
+ * doklad — nese serverem spočítané ZÁPORNÉ lineVat a daň na výstupu tak nettuje (FE jen sčítá, nepočítá).
+ * Proforma (zálohová) je NEDAŇOVÁ, koncept/storno/cizí měna také ne. Bez taxableDate by doklad spadl
+ * jen do 'all', ne do konkrétního období → vyloučíme, ať 'all' == součet období.
  */
 function isVatRelevant(inv: Invoice): boolean {
   const czk = !inv.currency || inv.currency === 'CZK'
   return (
     czk &&
     !!inv.taxableDate &&
-    inv.documentType === 'invoice' &&
+    (inv.documentType === 'invoice' || inv.documentType === 'credit_note') &&
     (inv.status === 'issued' || inv.status === 'paid' || inv.status === 'overdue')
   )
 }

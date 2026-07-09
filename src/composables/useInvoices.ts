@@ -1,7 +1,7 @@
 import { storeToRefs } from 'pinia'
 import { useApi } from '@/composables/useApi'
 import { useInvoicesStore } from '@/stores/invoices'
-import { calcTotals, toImportRequest } from '@/lib/invoice'
+import { calcTotals, creditNoteItems, toImportRequest } from '@/lib/invoice'
 import { http, isApiMode } from '@/lib/http'
 import type { Invoice } from '@/lib/types'
 
@@ -141,6 +141,66 @@ export function useInvoices() {
     return localTransition(id, { status: 'cancelled' })
   }
 
+  /**
+   * Vystaví dobropis k faktuře (opravný doklad se záporným součtem).
+   * API: `POST /invoices/{id}/credit-note` — server přepočítá znaménko DPH a přidělí číslo z řady dobropisů.
+   * Mock: vytvoří koncept dobropisu ze zdrojové faktury (záporné položky), navázaný přes `parentInvoiceId`.
+   */
+  async function creditNote(id: string): Promise<Invoice> {
+    // Ostrý režim: dobropis (záporné částky i DPH) vytváří SERVER z původní faktury; tělo neposíláme
+    // (žádné záporné quantity — validator vyžaduje > 0), FE jen zobrazí serverovou zápornou odpověď.
+    if (isApiMode()) return upsert(await http.post<Invoice>(`/invoices/${id}/credit-note`))
+    // Mock stand-in za backend (dev/e2e): jen převrátí znaménko UŽ spočítaných serverových částek,
+    // množství zůstává kladné. Žádný výpočet DPH na frontendu.
+    const src = getById(id)
+    if (!src) throw new Error('Zdrojová faktura nenalezena.')
+    const now = new Date().toISOString()
+    // Dobropis vzniká rovnou jako VYSTAVENÝ opravný daňový doklad (číslo z vlastní řady — v ostrém
+    // režimu ho přiděluje backend; mock jen odvodí z původní faktury). Tak vstoupí do Účtárny i DPH.
+    const note: Invoice = {
+      ...src,
+      id: crypto.randomUUID(),
+      documentType: 'credit_note',
+      parentInvoiceId: src.id,
+      status: 'issued',
+      invoiceNumber: `${src.invoiceNumber ?? 'DOB'}-D`,
+      items: creditNoteItems(src.items),
+      subtotal: -Math.abs(src.subtotal),
+      vatTotal: -Math.abs(src.vatTotal),
+      total: -Math.abs(src.total),
+      paidAt: null,
+      createdAt: now,
+      updatedAt: now,
+    }
+    await api.create(note)
+    return upsert(note)
+  }
+
+  /**
+   * Převede zálohovou (proforma) fakturu na daňový doklad (fakturu).
+   * API: `POST /invoices/{id}/convert-to-invoice` — server přidělí číslo z řady faktur.
+   * Mock: vytvoří novou fakturu se stejnými položkami, navázanou přes `parentInvoiceId`.
+   */
+  async function convertToInvoice(id: string): Promise<Invoice> {
+    if (isApiMode()) return upsert(await http.post<Invoice>(`/invoices/${id}/convert-to-invoice`))
+    const src = getById(id)
+    if (!src) throw new Error('Zálohová faktura nenalezena.')
+    const now = new Date().toISOString()
+    const invoice: Invoice = {
+      ...src,
+      id: crypto.randomUUID(),
+      documentType: 'invoice',
+      parentInvoiceId: src.id,
+      status: 'draft',
+      invoiceNumber: null,
+      paidAt: null,
+      createdAt: now,
+      updatedAt: now,
+    }
+    await api.create(invoice)
+    return upsert(invoice)
+  }
+
   function getById(id: string): Invoice | null {
     return store.invoices.find((i) => i.id === id) ?? null
   }
@@ -167,6 +227,8 @@ export function useInvoices() {
     issue,
     pay,
     cancel,
+    creditNote,
+    convertToInvoice,
     getById,
     importInvoice,
   }

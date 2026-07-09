@@ -3,7 +3,7 @@
  * Přeneseno ze staré React appky (Prod:src/lib/invoice.ts), camelCase.
  * (IBAN/SPAYD QR utility přijdou s PDF taskem F6-48.)
  */
-import type { Invoice, InvoiceItem } from '@/lib/types'
+import type { DocumentType, Invoice, InvoiceItem } from '@/lib/types'
 
 type LineInput = Pick<InvoiceItem, 'quantity' | 'unitPrice' | 'vatRate'>
 
@@ -56,6 +56,29 @@ export function calcTotals(items: LineInput[], vatPayer: boolean): InvoiceTotals
   subtotal = round2(subtotal)
   vatTotal = round2(vatTotal)
   return { subtotal, vatTotal, total: round2(subtotal + vatTotal), vatBreakdown: breakdown }
+}
+
+/** Typ dokladu → český label pro UI. */
+export function documentTypeLabel(t: DocumentType): string {
+  if (t === 'proforma') return 'Zálohová faktura'
+  if (t === 'credit_note') return 'Dobropis'
+  return 'Faktura'
+}
+
+/**
+ * MOCK-only (dev/e2e): řádky dobropisu = zrcadlo řádků faktury s OPAČNÝM znaménkem už spočítaných
+ * částek. Množství zůstává KLADNÉ (backend validator vyžaduje `Quantity > 0`) — zápornost je jen
+ * v částkách. V ostrém režimu dobropis i DPH počítá backend; frontend tu nic nepočítá, jen převrací
+ * znaménko serverem dodaných čísel.
+ */
+export function creditNoteItems(items: InvoiceItem[]): InvoiceItem[] {
+  return items.map((it) => ({
+    ...it,
+    id: crypto.randomUUID(),
+    lineSubtotal: -Math.abs(it.lineSubtotal),
+    lineVat: -Math.abs(it.lineVat),
+    lineTotal: -Math.abs(it.lineTotal),
+  }))
 }
 
 /** Vygeneruje variabilní symbol z čísla faktury (jen číslice, max 10). */

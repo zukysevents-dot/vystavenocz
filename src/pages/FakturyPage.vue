@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, FileText, Search, Pencil, Trash2, Loader2, Upload } from 'lucide-vue-next'
+import {
+  Plus,
+  FileText,
+  FileMinus2,
+  ArrowRightLeft,
+  Search,
+  Pencil,
+  Trash2,
+  Loader2,
+  Upload,
+} from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -19,20 +29,29 @@ import PaywallDialog from '@/components/app/PaywallDialog.vue'
 import { ApiError } from '@/lib/http'
 import { useInvoices } from '@/composables/useInvoices'
 import { useSubscription } from '@/composables/useSubscription'
-import { formatCZK, formatDate } from '@/lib/invoice'
+import { documentTypeLabel, formatCZK, formatDate } from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
 import LoadError from '@/components/app/LoadError.vue'
-import type { InvoiceStatus } from '@/lib/types'
+import type { DocumentType, InvoiceStatus } from '@/lib/types'
 
 const router = useRouter()
-const { invoices, loadError, load, remove } = useInvoices()
+const { invoices, loadError, load, remove, creditNote, convertToInvoice } = useInvoices()
 const { hasAccess } = useSubscription()
 
 const loading = ref(true)
 const search = ref('')
+const typeFilter = ref<'all' | DocumentType>('all')
+const busyId = ref<string | null>(null)
 const deleteId = ref<string | null>(null)
 const deleteOpen = ref(false)
 const paywallOpen = ref(false)
+
+const typeFilters = [
+  { value: 'all', label: 'Vše' },
+  { value: 'invoice', label: 'Faktury' },
+  { value: 'proforma', label: 'Zálohové' },
+  { value: 'credit_note', label: 'Dobropisy' },
+] as const
 
 function askDelete(id: string) {
   deleteId.value = id
@@ -74,6 +93,7 @@ function statusMeta(status: string): StatusMeta {
 const filtered = computed(() => {
   const q = search.value.toLowerCase().trim()
   return invoices.value.filter((inv) => {
+    if (typeFilter.value !== 'all' && inv.documentType !== typeFilter.value) return false
     if (!q) return true
     return (
       (inv.invoiceNumber ?? '').toLowerCase().includes(q) ||
@@ -81,6 +101,49 @@ const filtered = computed(() => {
     )
   })
 })
+
+// Dobropis smí vzniknout jen z vystavené/uhrazené faktury (ne z konceptu, proformy ani jiného dobropisu).
+function canCreditNote(inv: { documentType: DocumentType; status: InvoiceStatus }): boolean {
+  return inv.documentType === 'invoice' && (inv.status === 'issued' || inv.status === 'paid')
+}
+
+/** Vystaví dobropis k faktuře — doklad vytvoří backend (záporné částky), FE ho jen zobrazí. */
+async function onCreditNote(id: string) {
+  if (busyId.value) return
+  busyId.value = id
+  try {
+    const note = await creditNote(id)
+    toast.success(`Dobropis vytvořen (${formatCZK(note.total)}).`)
+    typeFilter.value = 'all'
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 409) {
+      toast.error('Dobropis lze vystavit jen k vystavené nebo uhrazené faktuře.')
+    } else {
+      toast.error('Vystavení dobropisu se nezdařilo.')
+    }
+  } finally {
+    busyId.value = null
+  }
+}
+
+/** Převede zálohovou (proforma) fakturu na daňový doklad a otevře ho k dokončení. */
+async function onConvert(id: string) {
+  if (busyId.value) return
+  busyId.value = id
+  try {
+    const inv = await convertToInvoice(id)
+    toast.success('Zálohová faktura převedena na daňový doklad.')
+    router.push('/app/faktury/editor?id=' + inv.id)
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 409) {
+      toast.error('Převést lze jen zálohovou fakturu.')
+    } else {
+      toast.error('Převod se nezdařil.')
+    }
+  } finally {
+    busyId.value = null
+  }
+}
 
 async function onDelete() {
   const id = deleteId.value
@@ -116,10 +179,21 @@ async function onDelete() {
       </div>
     </div>
 
-    <div class="mt-6 flex items-center gap-3">
-      <div class="relative flex-1 max-w-md">
+    <div class="mt-6 flex flex-wrap items-center gap-3">
+      <div class="relative min-w-[12rem] flex-1 max-w-md">
         <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input v-model="search" placeholder="Hledat fakturu nebo klienta…" class="pl-9" />
+      </div>
+      <div class="flex flex-wrap gap-1">
+        <Button
+          v-for="t in typeFilters"
+          :key="t.value"
+          :variant="typeFilter === t.value ? 'default' : 'outline'"
+          size="sm"
+          @click="typeFilter = t.value"
+        >
+          {{ t.label }}
+        </Button>
       </div>
     </div>
 
@@ -159,7 +233,16 @@ async function onDelete() {
         >
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
-              <div class="font-semibold">{{ inv.invoiceNumber || 'Koncept' }}</div>
+              <div class="flex items-center gap-2">
+                <span class="font-semibold">{{ inv.invoiceNumber || 'Koncept' }}</span>
+                <Badge
+                  v-if="inv.documentType !== 'invoice'"
+                  variant="outline"
+                  class="shrink-0 text-[10px]"
+                >
+                  {{ documentTypeLabel(inv.documentType) }}
+                </Badge>
+              </div>
               <div class="truncate text-sm text-muted-foreground">
                 {{ inv.clientSnapshot?.name || '—' }}
               </div>
@@ -172,8 +255,27 @@ async function onDelete() {
             <span class="text-sm text-muted-foreground">{{ formatDate(inv.issueDate) }}</span>
             <span class="font-semibold">{{ formatCZK(inv.total) }}</span>
           </div>
-          <div class="mt-3 flex justify-end gap-1 border-t border-border pt-2">
+          <div class="mt-3 flex flex-wrap justify-end gap-1 border-t border-border pt-2">
             <Button
+              v-if="canCreditNote(inv)"
+              variant="ghost"
+              size="sm"
+              :disabled="busyId === inv.id"
+              @click="onCreditNote(inv.id)"
+            >
+              <FileMinus2 class="h-4 w-4" /> Dobropis
+            </Button>
+            <Button
+              v-if="inv.documentType === 'proforma'"
+              variant="ghost"
+              size="sm"
+              :disabled="busyId === inv.id"
+              @click="onConvert(inv.id)"
+            >
+              <ArrowRightLeft class="h-4 w-4" /> Na fakturu
+            </Button>
+            <Button
+              v-if="inv.documentType !== 'credit_note'"
               variant="ghost"
               size="sm"
               @click="router.push('/app/faktury/editor?id=' + inv.id)"
@@ -208,7 +310,18 @@ async function onDelete() {
               :key="inv.id"
               class="border-b border-border last:border-0 hover:bg-muted/30"
             >
-              <td class="px-4 py-3 font-medium">{{ inv.invoiceNumber || 'Koncept' }}</td>
+              <td class="px-4 py-3 font-medium">
+                <div class="flex items-center gap-2">
+                  <span>{{ inv.invoiceNumber || 'Koncept' }}</span>
+                  <Badge
+                    v-if="inv.documentType !== 'invoice'"
+                    variant="outline"
+                    class="text-[10px]"
+                  >
+                    {{ documentTypeLabel(inv.documentType) }}
+                  </Badge>
+                </div>
+              </td>
               <td class="px-4 py-3 text-muted-foreground">{{ inv.clientSnapshot?.name || '—' }}</td>
               <td class="px-4 py-3 text-muted-foreground">{{ formatDate(inv.issueDate) }}</td>
               <td class="px-4 py-3 text-right font-semibold">{{ formatCZK(inv.total) }}</td>
@@ -220,6 +333,27 @@ async function onDelete() {
               <td class="px-4 py-3 text-right">
                 <div class="flex items-center justify-end gap-1">
                   <Button
+                    v-if="canCreditNote(inv)"
+                    variant="ghost"
+                    size="icon"
+                    title="Vystavit dobropis"
+                    :disabled="busyId === inv.id"
+                    @click="onCreditNote(inv.id)"
+                  >
+                    <FileMinus2 class="h-4 w-4" />
+                  </Button>
+                  <Button
+                    v-if="inv.documentType === 'proforma'"
+                    variant="ghost"
+                    size="icon"
+                    title="Převést na fakturu"
+                    :disabled="busyId === inv.id"
+                    @click="onConvert(inv.id)"
+                  >
+                    <ArrowRightLeft class="h-4 w-4" />
+                  </Button>
+                  <Button
+                    v-if="inv.documentType !== 'credit_note'"
                     variant="ghost"
                     size="icon"
                     title="Upravit"

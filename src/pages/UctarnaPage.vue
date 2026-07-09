@@ -20,10 +20,13 @@ async function reload(): Promise<void> {
 }
 onMounted(reload)
 
-// Účetní doklady = vystavené faktury. Koncepty (ještě nevystavené) ani stornované
-// (neplatné) doklady do podkladů pro účetní nepatří.
+// Účetní doklady = vystavené faktury a dobropisy (daňové doklady). Koncepty a stornované doklady
+// do podkladů nepatří; zálohové (proforma) jsou NEDAŇOVÉ → do účetního exportu také ne (do obratu
+// vstupuje až daňový doklad vzniklý konverzí proformy).
 const documents = computed(() =>
-  invoices.value.filter((i) => i.status !== 'draft' && i.status !== 'cancelled'),
+  invoices.value.filter(
+    (i) => i.documentType !== 'proforma' && i.status !== 'draft' && i.status !== 'cancelled',
+  ),
 )
 
 // Dostupná období (YYYY-MM dle data vystavení), sestupně.
