@@ -69,6 +69,14 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 6. Uložte příjemku. Sklad se mění přes příjemku, ne přes anonymní ruční příjem.
 7. Blok `K doobjednání` doporučuje množství podle minim, skutečné spotřeby a receptur (pro vybranou pobočku).
 
+## Polotovary a výrobní dávky
+
+1. V `Sklad / katalog` otevřete produkt, který vyrábíte ze surovin, a jako typ nastavte `Polotovar vyráběný ze surovin`.
+2. Uložte mu recepturu stejným tlačítkem jako u jídel. Receptura určuje spotřebu jedné vyrobené jednotky včetně odpadu.
+3. V seznamu produktu klikněte na ikonu výroby, zadejte vyrobené množství a potvrďte dávku.
+4. Systém odečte suroviny a naskladní hotový polotovar jako propojené pohyby. Dávku neupravujte zpětně; případný omyl opravte běžnou skladovou korekcí.
+5. Ikona `Varianty` slouží pro velikosti porce a odlišné ceny. Nastavení se připravuje pro výběr při prodeji; dokud není výběr zapojený do pokladny, změna varianty sama nemění cenu již prodaných položek.
+
 ## Alergeny v menu
 
 1. Otevřete `Sklad` a upravte produkt.

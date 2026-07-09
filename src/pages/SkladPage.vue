@@ -12,6 +12,8 @@ import {
   Upload,
   ClipboardList,
   SlidersHorizontal,
+  Factory,
+  Scaling,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -19,6 +21,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import ProductRecipeDialog from '@/components/app/ProductRecipeDialog.vue'
 import ProductModifiersDialog from '@/components/app/ProductModifiersDialog.vue'
+import ProductVariantsDialog from '@/components/app/ProductVariantsDialog.vue'
+import ProductionBatchDialog from '@/components/app/ProductionBatchDialog.vue'
 import {
   Dialog,
   DialogContent,
@@ -61,6 +65,10 @@ const recipeProduct = ref<Product | null>(null)
 const recipeDialogOpen = ref(false)
 const modifiersProduct = ref<Product | null>(null)
 const modifiersDialogOpen = ref(false)
+const variantsProduct = ref<Product | null>(null)
+const variantsDialogOpen = ref(false)
+const productionProduct = ref<Product | null>(null)
+const productionDialogOpen = ref(false)
 
 function askDelete(id: string) {
   deleteId.value = id
@@ -79,6 +87,7 @@ type ProductForm = {
   ean: string
   categoryId: string
   allergens: number[]
+  productKind: 'Standard' | 'SemiProduct'
 }
 
 const emptyForm: ProductForm = {
@@ -91,6 +100,7 @@ const emptyForm: ProductForm = {
   ean: '',
   categoryId: '',
   allergens: [],
+  productKind: 'Standard',
 }
 const form = reactive<ProductForm>({ ...emptyForm })
 
@@ -135,6 +145,16 @@ function openModifiers(p: Product) {
   modifiersDialogOpen.value = true
 }
 
+function openVariants(p: Product) {
+  variantsProduct.value = p
+  variantsDialogOpen.value = true
+}
+
+function openProduction(p: Product) {
+  productionProduct.value = p
+  productionDialogOpen.value = true
+}
+
 function toggleAllergen(code: number, checked: boolean | 'indeterminate' | undefined): void {
   const selected = new Set(form.allergens)
   if (checked === true) selected.add(code)
@@ -161,6 +181,7 @@ watch(dialogOpen, (open) => {
         ean: p.ean ?? '',
         categoryId: p.categoryId ?? '',
         allergens: normalizeAllergens(p.allergens),
+        productKind: p.productKind ?? 'Standard',
       })
     } else {
       Object.assign(form, { ...emptyForm })
@@ -188,6 +209,7 @@ async function onSubmit() {
     minQuantity: Number(form.minQuantity) || 0,
     categoryId: form.categoryId || null,
     allergens: normalizeAllergens(form.allergens),
+    productKind: form.productKind,
   }
   try {
     if (editing.value) {
@@ -287,6 +309,7 @@ async function onDelete() {
                 <span v-if="p.allergens?.length">
                   • Alergeny {{ formatAllergenCodes(p.allergens) }}
                 </span>
+                <span v-if="p.productKind === 'SemiProduct'"> • Polotovar</span>
               </div>
             </div>
           </div>
@@ -298,6 +321,18 @@ async function onDelete() {
               </Button>
               <Button variant="ghost" size="icon" title="Modifikátory" @click="openModifiers(p)">
                 <SlidersHorizontal class="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" title="Varianty" @click="openVariants(p)">
+                <Scaling class="h-4 w-4" />
+              </Button>
+              <Button
+                v-if="p.productKind === 'SemiProduct'"
+                variant="ghost"
+                size="icon"
+                title="Vyrobit polotovar"
+                @click="openProduction(p)"
+              >
+                <Factory class="h-4 w-4" />
               </Button>
               <Button variant="ghost" size="icon" title="Upravit" @click="openEdit(p)">
                 <Pencil class="h-4 w-4" />
@@ -401,6 +436,21 @@ async function onDelete() {
             </select>
           </div>
 
+          <div class="space-y-2">
+            <Label for="p-kind">Typ produktu</Label>
+            <select
+              id="p-kind"
+              v-model="form.productKind"
+              class="flex h-10 w-full rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="Standard">Běžný produkt</option>
+              <option value="SemiProduct">Polotovar vyráběný ze surovin</option>
+            </select>
+            <p class="text-xs text-muted-foreground">
+              Polotovar má recepturu a před použitím ho vyrobíte do skladu jako dávku.
+            </p>
+          </div>
+
           <div class="space-y-3">
             <div>
               <Label>Alergeny</Label>
@@ -462,5 +512,7 @@ async function onDelete() {
       :products="products"
     />
     <ProductModifiersDialog v-model:open="modifiersDialogOpen" :product="modifiersProduct" />
+    <ProductVariantsDialog v-model:open="variantsDialogOpen" :product="variantsProduct" />
+    <ProductionBatchDialog v-model:open="productionDialogOpen" :product="productionProduct" />
   </div>
 </template>
