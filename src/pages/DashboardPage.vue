@@ -23,6 +23,7 @@ import { useClients } from '@/composables/useClients'
 import { useLocations } from '@/composables/useLocations'
 import { useApi } from '@/composables/useApi'
 import { useCompanyStore } from '@/stores/company'
+import { useAuthStore } from '@/stores/auth'
 import { http, isApiMode } from '@/lib/http'
 import { formatCZK, formatDate } from '@/lib/invoice'
 import { buildLocationRevenue, consolidationSummary } from '@/lib/consolidation'
@@ -32,6 +33,11 @@ const router = useRouter()
 const loading = ref(true)
 // Profil firmy pro pozdrav v hlavičce; načítá ho AppLayout (reaktivně), tady jen čteme.
 const companyStore = useCompanyStore()
+// Fakturační část dashboardu (metriky faktur, graf tržeb, poslední faktury/klienti + tlačítka) je za modulem
+// `invoicing`. Bez něj backend vrací 403 → dřív to shodilo celý Přehled jako „server nedostupný". Gastro/POS
+// tenant (jen pos/gastro) proto fakturační část vůbec nevolá ani nezobrazuje; POS provoz jede dál.
+const auth = useAuthStore()
+const hasInvoicing = computed(() => auth.hasModule('invoicing'))
 const salesApi = useApi<Sale>('sales')
 const { locations, load: loadLocations } = useLocations()
 
@@ -103,8 +109,12 @@ async function loadAll(): Promise<void> {
   loading.value = true
   loadError.value = false
   try {
-    // POS provoz běží nezávisle (vlastní try/catch); hlavní část (faktury) řídí chybový stav.
-    await Promise.all([isApiMode() ? loadFromApi() : loadFromMock(), loadPos()])
+    // POS provoz běží nezávisle (vlastní try/catch). Fakturační část se volá jen s modulem `invoicing`
+    // (jinak backend vrací 403); její chyba řídí loadError. Bez modulu se fakturační část přeskočí.
+    await Promise.all([
+      hasInvoicing.value ? (isApiMode() ? loadFromApi() : loadFromMock()) : Promise.resolve(),
+      loadPos(),
+    ])
   } catch (e) {
     console.warn('Načtení přehledu selhalo:', e)
     loadError.value = true
@@ -295,7 +305,7 @@ function statusMeta(s: string): { label: string; variant: BadgeVariant } {
           {{ companyStore.company?.companyName || 'Vítejte ve Vystaveno' }}
         </p>
       </div>
-      <div class="flex flex-wrap gap-2">
+      <div v-if="hasInvoicing" class="flex flex-wrap gap-2">
         <Button variant="outline" @click="router.push('/app/klienti')">
           <UserPlus class="h-4 w-4" /> Nový klient
         </Button>
@@ -309,8 +319,8 @@ function statusMeta(s: string): { label: string; variant: BadgeVariant } {
     <LoadError v-if="loadError && !loading" class="mt-6" :retrying="loading" @retry="loadAll" />
 
     <template v-else>
-      <!-- Metriky -->
-      <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <!-- Metriky faktur — jen s modulem invoicing -->
+      <div v-if="hasInvoicing" class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div class="rounded-xl border border-border bg-card p-4">
           <div class="flex items-center gap-2 text-sm text-muted-foreground">
             <FileText class="h-4 w-4" /> Faktury celkem
@@ -339,8 +349,8 @@ function statusMeta(s: string): { label: string; variant: BadgeVariant } {
         </div>
       </div>
 
-      <!-- Graf tržeb -->
-      <div class="mt-6 rounded-xl border border-border bg-card p-4 sm:p-6">
+      <!-- Graf tržeb (fakturace) — jen s modulem invoicing -->
+      <div v-if="hasInvoicing" class="mt-6 rounded-xl border border-border bg-card p-4 sm:p-6">
         <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Tržby (posledních 6 měsíců)
         </h2>
@@ -401,8 +411,8 @@ function statusMeta(s: string): { label: string; variant: BadgeVariant } {
         </div>
       </div>
 
-      <!-- Poslední faktury + klienti -->
-      <div class="mt-6 grid gap-4 lg:grid-cols-2">
+      <!-- Poslední faktury + klienti — jen s modulem invoicing -->
+      <div v-if="hasInvoicing" class="mt-6 grid gap-4 lg:grid-cols-2">
         <div class="min-w-0 rounded-xl border border-border bg-card p-4 sm:p-6">
           <div class="flex items-center justify-between">
             <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -472,6 +482,14 @@ function statusMeta(s: string): { label: string; variant: BadgeVariant } {
           </div>
           <p v-else class="mt-4 text-sm text-muted-foreground">Zatím žádní klienti.</p>
         </div>
+      </div>
+
+      <!-- Prázdný stav: tenant bez fakturace a zatím bez POS provozu (aby Přehled nebyl prázdný). -->
+      <div
+        v-if="!hasInvoicing && !hasPos && !loading"
+        class="mt-6 rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground"
+      >
+        Provozní přehled se naplní, jakmile začnete prodávat v Pokladně nebo Restauraci.
       </div>
     </template>
   </div>
