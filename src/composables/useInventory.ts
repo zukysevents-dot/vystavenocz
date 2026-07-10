@@ -10,6 +10,7 @@ import type {
   StockMovement,
   StockMovementType,
   Stocktake,
+  ProductionBatch,
 } from '@/lib/types'
 import type { PagedResult } from '@/composables/useApi'
 
@@ -34,6 +35,13 @@ export interface PurchaseSuggestionsQuery {
   to?: string
   daysAhead?: number
   locationId?: string | null
+}
+
+export interface CreateProductionBatchRequest {
+  semiProductId: string
+  producedQuantity: number
+  locationId?: string | null
+  note?: string | null
 }
 
 // Sklad / zásoby (gastro/retail). Jen API mód — nad existujícím inventory backendem.
@@ -145,6 +153,9 @@ export function useInventory() {
     const qs = params.toString()
     return http.get(`/inventory/purchase-suggestions${qs ? `?${qs}` : ''}`)
   }
+  function createProductionBatch(request: CreateProductionBatchRequest): Promise<ProductionBatch> {
+    return http.post('/production-batches', request)
+  }
   return {
     levels,
     movements,
@@ -158,5 +169,6 @@ export function useInventory() {
     stocktake,
     stockMirror,
     purchaseSuggestions,
+    createProductionBatch,
   }
 }

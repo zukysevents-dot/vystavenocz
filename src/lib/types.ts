@@ -147,6 +147,42 @@ export interface Product {
   minQuantity: number
   categoryId: string | null
   allergens?: number[]
+  productKind?: ProductKind
+}
+
+export type ProductKind = 'Standard' | 'SemiProduct'
+
+export interface ProductVariant {
+  id: string
+  name: string
+  salePriceOverride: number | null
+  recipeMultiplier: number
+  sortOrder: number
+}
+
+export interface ProductVariantInput {
+  name: string
+  salePriceOverride?: number | null
+  recipeMultiplier?: number
+  sortOrder?: number
+}
+
+export interface ProductionBatchItem {
+  productId: string
+  productName: string
+  quantity: number
+  wastePercent: number
+}
+
+export interface ProductionBatch {
+  id: string
+  semiProductId: string
+  semiProductName: string
+  locationId: string | null
+  producedQuantity: number
+  note: string | null
+  createdAt: string
+  ingredients: ProductionBatchItem[]
 }
 
 export interface ProductRecipeIngredient {
