@@ -39,6 +39,9 @@ import {
 import PaymentDialog from '@/components/PaymentDialog.vue'
 import ReceiptDialog from '@/components/ReceiptDialog.vue'
 import ModifierSelectDialog from '@/components/app/ModifierSelectDialog.vue'
+import ProductVariantSelectDialog, {
+  type SelectableProductVariant,
+} from '@/components/app/ProductVariantSelectDialog.vue'
 import { buildReceipt, type ReceiptInfo } from '@/lib/receipt'
 import { useCompanyStore } from '@/stores/company'
 import { useFloors } from '@/composables/useFloors'
@@ -47,6 +50,7 @@ import { useProducts } from '@/composables/useProducts'
 import { useCategories } from '@/composables/useCategories'
 import { useOrders } from '@/composables/useOrders'
 import { useModifierGroups } from '@/composables/useModifierGroups'
+import { useProductVariants } from '@/composables/useProductVariants'
 import { usePromotions } from '@/composables/usePromotions'
 import { useSales } from '@/composables/useSales'
 import { useCustomers, type LoyaltyCustomer } from '@/composables/useCustomers'
@@ -74,6 +78,7 @@ const tablesApi = useTables()
 const ordersApi = useOrders()
 const categoriesApi = useCategories()
 const modifiersApi = useModifierGroups()
+const variantsApi = useProductVariants()
 const promotions = usePromotions()
 const salesApi = useSales()
 const customersApi = useCustomers()
@@ -91,6 +96,21 @@ const modifierDialogOpen = ref(false)
 const modifierProduct = ref<Product | null>(null)
 const modifierGroups = ref<ProductModifierGroup[]>([])
 const productModifierCache = new Map<string, ProductModifierGroup[]>()
+const variantDialogOpen = ref(false)
+const variantProduct = ref<Product | null>(null)
+const variantsForProduct = ref<SelectableProductVariant[]>([])
+const pendingModifierGroups = ref<ProductModifierGroup[]>([])
+const selectedVariant = ref<SelectableProductVariant | null>(null)
+const productVariantCache = new Map<string, SelectableProductVariant[]>()
+const modifierDialogProduct = computed(() =>
+  modifierProduct.value
+    ? {
+        id: modifierProduct.value.id,
+        name: modifierProduct.value.name,
+        salePrice: selectedVariant.value?.priceWithVat ?? modifierProduct.value.salePrice,
+      }
+    : null,
+)
 
 const categories = ref<Category[]>([])
 const selectedCat = ref('')
@@ -319,7 +339,7 @@ function promotionLinesForItems(items: OrderItemLine[]): PromotionLineInput[] {
     return {
       productId: item.productId,
       categoryId: product?.categoryId ?? null,
-      name: item.name,
+      name: [item.name, item.variantName].filter(Boolean).join(' · '),
       quantity: item.quantity,
       unitPrice: item.unitPrice,
     }
@@ -508,18 +528,38 @@ async function productModifiers(productId: string): Promise<ProductModifierGroup
   return groups
 }
 
+async function productVariants(product: Product): Promise<SelectableProductVariant[]> {
+  const cached = productVariantCache.get(product.id)
+  if (cached) return cached
+  const variants = await variantsApi.get(product.id)
+  const mapped = (variants ?? []).map((variant) => ({
+    id: variant.id,
+    name: variant.name,
+    priceWithVat: variant.salePriceOverride ?? product.salePrice,
+    sortOrder: variant.sortOrder,
+  }))
+  productVariantCache.set(product.id, mapped)
+  return mapped
+}
+
 async function addProduct(product: Product) {
   if (!currentOrder.value || busy.value) return
   busy.value = true
   try {
-    const groups = await productModifiers(product.id)
-    if (groups.length) {
-      modifierProduct.value = product
-      modifierGroups.value = groups
-      modifierDialogOpen.value = true
+    const [groups, variants] = await Promise.all([
+      productModifiers(product.id),
+      productVariants(product),
+    ])
+    if (variants.length) {
+      variantProduct.value = product
+      variantsForProduct.value = variants
+      pendingModifierGroups.value = groups
+      selectedVariant.value = null
+      variantDialogOpen.value = true
       return
     }
-    currentOrder.value = await ordersApi.addItem(currentOrder.value.id, product.id, 1)
+    selectedVariant.value = null
+    await addSelectedProduct(product, groups, null)
   } catch (e) {
     if (await handleAccountClosedElsewhere(e)) return
     toast.error('Položku se nepodařilo přidat.')
@@ -527,6 +567,31 @@ async function addProduct(product: Product) {
   } finally {
     busy.value = false
   }
+}
+
+async function confirmVariant(variant: SelectableProductVariant) {
+  if (!variantProduct.value || busy.value) return
+  selectedVariant.value = variant
+  variantDialogOpen.value = false
+  await addSelectedProduct(variantProduct.value, pendingModifierGroups.value, variant)
+}
+
+async function addSelectedProduct(
+  product: Product,
+  groups: ProductModifierGroup[],
+  variant: SelectableProductVariant | null,
+) {
+  if (!currentOrder.value) return
+  if (groups.length) {
+    modifierProduct.value = product
+    modifierGroups.value = groups
+    selectedVariant.value = variant
+    modifierDialogOpen.value = true
+    return
+  }
+  currentOrder.value = await ordersApi.addItem(currentOrder.value.id, product.id, 1, {
+    productVariantId: variant?.id ?? null,
+  })
 }
 
 async function addProductWithModifiers(modifierOptionIds: string[]) {
@@ -539,6 +604,7 @@ async function addProductWithModifiers(modifierOptionIds: string[]) {
       1,
       {
         modifierOptionIds,
+        productVariantId: selectedVariant.value?.id ?? null,
       },
     )
     modifierDialogOpen.value = false
@@ -788,7 +854,7 @@ function orderReceiptItems(order: Order) {
   const preview = pricePreview.value
   const hasPreviewLines = preview?.lines.length === order.items.length
   return order.items.map((item, index) => ({
-    name: item.name,
+    name: [item.name, item.variantName].filter(Boolean).join(' · '),
     qty: item.quantity,
     total: hasPreviewLines ? preview.lines[index].finalTotal : item.lineTotal,
     modifiers: item.modifiers ?? [],
@@ -1061,7 +1127,7 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
       company: companyStore.company,
       items: sale
         ? sale.items.map((item) => ({
-            name: item.description ?? 'Položka',
+            name: [item.description ?? 'Položka', item.variantName].filter(Boolean).join(' · '),
             qty: item.quantity,
             total: item.lineTotal,
             modifiers: item.modifiers ?? [],
@@ -1328,7 +1394,9 @@ const currentItemCount = computed(() =>
           <div v-else class="max-h-[40vh] divide-y divide-border overflow-y-auto">
             <div v-for="it in currentOrder.items" :key="it.id" class="flex items-center gap-2 p-3">
               <div class="min-w-0 flex-1">
-                <div class="truncate text-sm font-medium">{{ it.name }}</div>
+                <div class="truncate text-sm font-medium">
+                  {{ it.name }}<span v-if="it.variantName"> · {{ it.variantName }}</span>
+                </div>
                 <div class="text-xs text-muted-foreground tabular-nums">
                   {{ formatCZK(it.unitPrice) }} × {{ it.quantity }}
                   <span
@@ -1900,10 +1968,19 @@ const currentItemCount = computed(() =>
 
     <ModifierSelectDialog
       v-model:open="modifierDialogOpen"
-      :product="modifierProduct"
+      :product="modifierDialogProduct"
       :groups="modifierGroups"
       :busy="busy"
       @confirm="addProductWithModifiers"
+    />
+
+    <ProductVariantSelectDialog
+      v-model:open="variantDialogOpen"
+      :product-name="variantProduct?.name ?? ''"
+      :variants="variantsForProduct"
+      :busy="busy"
+      confirm-label="Pokračovat"
+      @confirm="confirmVariant"
     />
 
     <ReceiptDialog v-model:open="receiptOpen" :receipt="receiptData" />

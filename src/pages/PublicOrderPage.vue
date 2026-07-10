@@ -14,6 +14,9 @@ import {
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import ModifierSelectDialog from '@/components/app/ModifierSelectDialog.vue'
+import ProductVariantSelectDialog, {
+  type SelectableProductVariant,
+} from '@/components/app/ProductVariantSelectDialog.vue'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -25,6 +28,7 @@ import type {
   OrderFulfillment,
   PublicMenuCategory,
   PublicMenuProduct,
+  PublicMenuVariant,
   PublicOrderConfirmation,
 } from '@/lib/types'
 
@@ -52,12 +56,16 @@ const checkoutPanel = ref<HTMLElement | null>(null)
 const cart = ref<PublicCartLine[]>([])
 const modifierDialogOpen = ref(false)
 const modifierProduct = ref<PublicMenuProduct | null>(null)
+const variantDialogOpen = ref(false)
+const variantProduct = ref<PublicMenuProduct | null>(null)
+const selectedVariant = ref<PublicMenuVariant | null>(null)
 
 interface PublicCartLine {
   id: string
   productId: string
   quantity: number
   modifierOptionIds: string[]
+  productVariantId: string | null
 }
 
 type PublicCartModifier = ModifierOption & { groupName: string }
@@ -66,6 +74,7 @@ interface PublicCartItem {
   line: PublicCartLine
   product: PublicMenuProduct
   modifiers: PublicCartModifier[]
+  variant: PublicMenuVariant | null
   unitPrice: number
   lineTotal: number
 }
@@ -113,11 +122,14 @@ const cartItems = computed(() =>
       const product = products.value.find((p) => p.id === line.productId)
       if (!product) return null
       const modifiers = selectedModifierOptions(product, line.modifierOptionIds)
-      const unitPrice = productUnitPrice(product, line.modifierOptionIds)
+      const variant =
+        product.variants.find((candidate) => candidate.id === line.productVariantId) ?? null
+      const unitPrice = productUnitPrice(product, line.modifierOptionIds, line.productVariantId)
       return {
         line,
         product,
         modifiers,
+        variant,
         unitPrice,
         lineTotal: unitPrice * line.quantity,
       }
@@ -168,6 +180,7 @@ onMounted(async () => {
     products.value = response.products.map((product) => ({
       ...product,
       modifierGroups: product.modifierGroups ?? [],
+      variants: product.variants ?? [],
     }))
   } catch {
     loadError.value = true
@@ -177,19 +190,43 @@ onMounted(async () => {
 })
 
 function add(product: PublicMenuProduct) {
+  if (product.variants.length > 0) {
+    variantProduct.value = product
+    selectedVariant.value = null
+    variantDialogOpen.value = true
+    return
+  }
+  selectedVariant.value = null
   if (product.modifierGroups.length > 0) {
     modifierProduct.value = product
     modifierDialogOpen.value = true
     return
   }
-  addCartLine(product, [])
+  addCartLine(product, [], null)
 }
 
-function addCartLine(product: PublicMenuProduct, modifierOptionIds: string[]) {
+function confirmVariant(variant: SelectableProductVariant) {
+  const product = variantProduct.value
+  if (!product) return
+  selectedVariant.value = product.variants.find((candidate) => candidate.id === variant.id) ?? null
+  variantDialogOpen.value = false
+  if (product.modifierGroups.length) {
+    modifierProduct.value = product
+    modifierDialogOpen.value = true
+    return
+  }
+  addCartLine(product, [], selectedVariant.value?.id ?? null)
+}
+
+function addCartLine(
+  product: PublicMenuProduct,
+  modifierOptionIds: string[],
+  productVariantId: string | null,
+) {
   const normalizedModifierOptionIds = normalizeModifierOptionIds(modifierOptionIds)
-  const key = cartKey(product.id, normalizedModifierOptionIds)
+  const key = cartKey(product.id, normalizedModifierOptionIds, productVariantId)
   const existing = cart.value.find(
-    (line) => cartKey(line.productId, line.modifierOptionIds) === key,
+    (line) => cartKey(line.productId, line.modifierOptionIds, line.productVariantId) === key,
   )
   if (existing) existing.quantity += 1
   else {
@@ -198,12 +235,14 @@ function addCartLine(product: PublicMenuProduct, modifierOptionIds: string[]) {
       productId: product.id,
       quantity: 1,
       modifierOptionIds: normalizedModifierOptionIds,
+      productVariantId,
     })
   }
 }
 
 function confirmModifiers(modifierOptionIds: string[]) {
-  if (modifierProduct.value) addCartLine(modifierProduct.value, modifierOptionIds)
+  if (modifierProduct.value)
+    addCartLine(modifierProduct.value, modifierOptionIds, selectedVariant.value?.id ?? null)
   modifierDialogOpen.value = false
 }
 
@@ -218,8 +257,8 @@ function remove(lineId: string) {
   cart.value = cart.value.filter((line) => line.id !== lineId)
 }
 
-function cartKey(productId: string, modifierOptionIds: string[]) {
-  return `${productId}:${normalizeModifierOptionIds(modifierOptionIds).join('|')}`
+function cartKey(productId: string, modifierOptionIds: string[], productVariantId: string | null) {
+  return `${productId}:${productVariantId ?? 'base'}:${normalizeModifierOptionIds(modifierOptionIds).join('|')}`
 }
 
 function normalizeModifierOptionIds(modifierOptionIds: string[]) {
@@ -233,9 +272,14 @@ function selectedModifierOptions(product: PublicMenuProduct, modifierOptionIds: 
     .filter((option) => selected.has(option.id))
 }
 
-function productUnitPrice(product: PublicMenuProduct, modifierOptionIds: string[]) {
+function productUnitPrice(
+  product: PublicMenuProduct,
+  modifierOptionIds: string[],
+  productVariantId: string | null,
+) {
   return (
-    product.priceWithVat +
+    (product.variants.find((variant) => variant.id === productVariantId)?.priceWithVat ??
+      product.priceWithVat) +
     selectedModifierOptions(product, modifierOptionIds).reduce(
       (sum, option) => sum + option.priceDelta,
       0,
@@ -256,6 +300,7 @@ async function submit() {
       items: cartItems.value.map((row) => ({
         productId: row.product.id,
         quantity: row.line.quantity,
+        ...(row.line.productVariantId ? { productVariantId: row.line.productVariantId } : {}),
         ...(row.line.modifierOptionIds.length
           ? { modifierOptionIds: row.line.modifierOptionIds }
           : {}),
@@ -360,7 +405,7 @@ async function submit() {
               </div>
               <Button type="button" variant="outline" class="mt-3 w-full" @click="add(product)">
                 <Plus class="h-4 w-4" />
-                {{ product.modifierGroups.length ? 'Vybrat' : 'Přidat' }}
+                {{ product.modifierGroups.length || product.variants.length ? 'Vybrat' : 'Přidat' }}
               </Button>
             </article>
           </div>
@@ -384,7 +429,9 @@ async function submit() {
           <div v-for="row in cartItems" :key="row.line.id" class="py-3">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
-                <div class="truncate text-sm font-medium">{{ row.product.name }}</div>
+                <div class="truncate text-sm font-medium">
+                  {{ row.product.name }}<span v-if="row.variant"> · {{ row.variant.name }}</span>
+                </div>
                 <div class="text-xs text-muted-foreground">
                   {{ row.line.quantity }} × {{ formatCZK(row.unitPrice) }}
                 </div>
@@ -421,7 +468,9 @@ async function submit() {
                 variant="outline"
                 size="icon"
                 class="h-8 w-8"
-                @click="addCartLine(row.product, row.line.modifierOptionIds)"
+                @click="
+                  addCartLine(row.product, row.line.modifierOptionIds, row.line.productVariantId)
+                "
               >
                 <Plus class="h-3.5 w-3.5" />
               </Button>
@@ -502,6 +551,14 @@ async function submit() {
       :groups="modifierDialogGroups"
       confirm-label="Přidat do košíku"
       @confirm="confirmModifiers"
+    />
+
+    <ProductVariantSelectDialog
+      v-model:open="variantDialogOpen"
+      :product-name="variantProduct?.name ?? ''"
+      :variants="variantProduct?.variants ?? []"
+      confirm-label="Pokračovat"
+      @confirm="confirmVariant"
     />
 
     <div

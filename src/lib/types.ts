@@ -335,6 +335,8 @@ export interface SaleItemLine {
   originalUnitPrice?: number | null
   priceLevelAdjustment?: number
   promotionDiscount?: number
+  variantName?: string | null
+  recipeMultiplier?: number
   modifiers?: ItemModifierLine[]
 }
 
@@ -521,6 +523,8 @@ export interface OrderItemLine {
   kitchenSection: CategoryKitchenSection
   kitchenStatus: KitchenStatus
   lineTotal: number
+  variantName?: string | null
+  recipeMultiplier?: number
   modifiers?: ItemModifierLine[]
 }
 
@@ -560,6 +564,7 @@ export interface KitchenQueueItem {
   customerName?: string | null
   fulfillment?: OrderFulfillment | null
   productName: string
+  variantName?: string | null
   quantity: number
   course: string | null
   note: string | null
@@ -585,6 +590,14 @@ export interface PublicMenuProduct {
   available: boolean
   allergens?: number[]
   modifierGroups: ModifierGroup[]
+  variants: PublicMenuVariant[]
+}
+
+export interface PublicMenuVariant {
+  id: string
+  name: string
+  priceWithVat: number
+  sortOrder: number
 }
 
 export interface PublicMenuResponse {
@@ -596,6 +609,7 @@ export interface PublicOrderItemInput {
   productId: string
   quantity: number
   modifierOptionIds?: string[]
+  productVariantId?: string | null
 }
 
 export interface PublicOrderRequest {

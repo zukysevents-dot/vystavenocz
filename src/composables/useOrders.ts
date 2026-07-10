@@ -10,6 +10,7 @@ export interface OrderItemMeta {
 
 export interface AddOrderItemInput extends OrderItemMeta {
   modifierOptionIds?: string[]
+  productVariantId?: string | null
 }
 
 // Sleva na účet + spropitné — ukládá se průběžně na otevřený účet (ne až v pay()).

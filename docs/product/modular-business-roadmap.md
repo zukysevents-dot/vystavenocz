@@ -98,7 +98,7 @@ Must support a real service day:
 Must make the restaurant paperless:
 
 - recipes linked to menu items (product recipe API in `vystaveno-api`, editor in `Sklad / katalog`, and backend PR #153 sale-time ingredient deduction for POS/restaurant payments)
-- advanced stock deduction by recipes, including portions, variants, semi-products, waste, and yield (Recipe V2 foundation: `Sklad / katalog` supports product kind `SemiProduct`, editable portion variants, and immutable production batches that consume the saved recipe into `ProductionConsumption` ledger rows and add the output via `ProductionOutput`; stock mirror includes both sides of a batch. Remaining: select and snapshot a variant during POS/table/public checkout.)
+- advanced stock deduction by recipes, including portions, variants, semi-products, waste, and yield (Recipe V2: `Sklad / katalog` supports product kind `SemiProduct`, editable portion variants, and immutable production batches that consume the saved recipe into `ProductionConsumption` ledger rows and add the output via `ProductionOutput`; stock mirror includes both sides of a batch. POS, table, and public checkout select a variant, while the backend snapshots its price and recipe consumption to keep historical stock/audit stable.)
 - suppliers, purchase receipts, purchase prices, average cost, and price history (foundation: backend PR #156 and `Naskladnění` UI create auditable purchase receipt documents)
 - stock movements: receive, issue, adjust, write-off, staff meal, breakage, expiration, and transfer between warehouses/locations (foundation: backend PR #160 and `Zásoby` issue dialog categorize operational issue reasons; `Zásoby` transfer dialog records paired backend `TransferOut`/`TransferIn` movements for stock mirror by location; backend location-stock foundation stores stock levels per `locationId`, transfer validates the source location balance, low-stock can be evaluated per branch, and `Zásoby` sends `locationId` for receipt/issue/correction/stocktake)
 - inventory count by warehouse/category/product, with expected vs counted amount (foundation: `Zásoby` inventory dialog shows `Stav má být`, `Realita`, and `Rozdíl` before saving; multi-branch tenants must choose a concrete branch before stocktake)
@@ -217,7 +217,7 @@ Vystaveno should win through:
 1. Stabilize module capability resolver, permissions, navigation rules, and module settings.
 2. Make Gastro MVP reliable: POS, tables, kitchen, receipts, shifts, day close.
 3. Add stock movements from sales and protect financial/POS audit integrity.
-4. Extend recipes with portions, variants, and semi-products on top of the existing ingredient stock deduction and waste/yield foundation (production-batch and catalog foundation complete; checkout variant snapshot remains).
+4. Extend recipes with portions, variants, and semi-products on top of the existing ingredient stock deduction and waste/yield foundation (complete: production batches, catalog, POS/table/public variant selection, and immutable sale-time stock snapshots).
 5. Build purchase receipts, enrich inventory counts, and extend stock mirror with warehouses/CZK variance.
 6. Add food cost, margin, variance, and manager reports.
 7. Add modular onboarding and templates per business type (foundation: profile-specific onboarding checklist and first-step routing).
