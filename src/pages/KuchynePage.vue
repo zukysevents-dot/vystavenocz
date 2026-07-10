@@ -187,6 +187,8 @@ function printTicket(t: Ticket) {
     .map(
       (i) =>
         `<div class="row"><b>${i.quantity}×</b> ${escapeHtml(i.productName)}${
+          i.variantName ? ` · ${escapeHtml(i.variantName)}` : ''
+        }${
           i.course ? ` <span class="course">[${escapeHtml(i.course)}]</span>` : ''
         }${modifierRows(i)}${i.note ? `<div class="note">↳ ${escapeHtml(i.note)}</div>` : ''}</div>`,
     )
@@ -373,7 +375,8 @@ onUnmounted(() => {
 
           <ul class="flex-1 space-y-1.5 py-2 text-sm">
             <li v-for="i in t.items" :key="i.itemId">
-              <span class="font-bold tabular-nums">{{ i.quantity }}×</span> {{ i.productName }}
+              <span class="font-bold tabular-nums">{{ i.quantity }}×</span> {{ i.productName
+              }}<span v-if="i.variantName"> · {{ i.variantName }}</span>
               <span
                 v-if="i.course"
                 class="ml-1 rounded bg-muted px-1 py-0.5 text-[10px] font-semibold text-foreground"

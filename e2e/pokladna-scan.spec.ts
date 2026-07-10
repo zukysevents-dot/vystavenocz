@@ -92,6 +92,8 @@ async function routeApi(page: Page): Promise<void> {
     if (method === 'GET') {
       if (path === '/company') return route.fulfill({ json: company })
       if (path === '/products') return route.fulfill({ json: paged([kofola, voda]) })
+      if (path === `/products/${kofola.id}/variants` || path === `/products/${voda.id}/variants`)
+        return route.fulfill({ json: [] })
       if (path === '/locations') return route.fulfill({ json: paged([location]) })
       if (path === '/categories') return route.fulfill({ json: paged([]) })
     }

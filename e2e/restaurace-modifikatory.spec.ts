@@ -165,6 +165,8 @@ test('obsluha vybere povinné modifikátory při přidání položky na účet',
 
     if (method === 'GET' && path === '/company') return route.fulfill({ json: company })
     if (method === 'GET' && path === '/products') return route.fulfill({ json: paged([product]) })
+    if (method === 'GET' && path === `/products/${product.id}/variants`)
+      return route.fulfill({ json: [] })
     if (method === 'GET' && path === '/categories')
       return route.fulfill({ json: paged([category]) })
     if (method === 'GET' && path === '/floors') return route.fulfill({ json: paged([floor]) })

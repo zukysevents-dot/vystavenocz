@@ -162,3 +162,59 @@ test('QR objednávka ke stolu vyžádá povinné modifikátory a odešle volby',
     tableId: 'table-1',
   })
 })
+
+test('QR objednávka vybere variantu, ukáže její cenu a pošle jen její ID', async ({ page }) => {
+  let postedOrder: unknown = null
+  const menuWithVariants = {
+    categories: [{ id: 'cat-drink', name: 'Nápoje', sortOrder: 0 }],
+    products: [
+      {
+        id: 'prod-lemonade',
+        name: 'Domácí limonáda',
+        categoryId: 'cat-drink',
+        priceWithVat: 79,
+        vatRate: 12,
+        available: true,
+        allergens: [],
+        modifierGroups: [],
+        variants: [
+          { id: 'variant-small', name: 'Malá', priceWithVat: 79, sortOrder: 0 },
+          { id: 'variant-large', name: 'Velká', priceWithVat: 109, sortOrder: 1 },
+        ],
+      },
+    ],
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await seedApiMode(page)
+  await page.route(API, async (route: Route) => {
+    const request = route.request()
+    const path = new URL(request.url()).pathname.replace('/api/v1', '')
+    if (request.method() === 'GET' && path === '/public/bistro/menu')
+      return route.fulfill({ json: menuWithVariants })
+    if (request.method() === 'POST' && path === '/public/bistro/orders') {
+      postedOrder = request.postDataJSON()
+      return route.fulfill({
+        status: 201,
+        json: { orderId: 'order-variant-1', total: 109, currency: 'CZK' },
+      })
+    }
+    return route.fulfill({ status: 404, json: { title: `Unhandled ${request.method()} ${path}` } })
+  })
+  await dismissCookies(page)
+  await page.goto('/objednavka/bistro?table=table-1')
+
+  await page.getByRole('button', { name: 'Vybrat' }).click()
+  await expect(page.getByRole('dialog', { name: 'Vybrat porci' })).toBeVisible()
+  await page.getByRole('button', { name: /Velká/ }).click()
+  await page.getByRole('button', { name: 'Pokračovat' }).click()
+  await expect(page.getByText('Domácí limonáda · Velká')).toBeVisible()
+  await expect(page.getByText('1 × 109,00 Kč')).toBeVisible()
+
+  await page.getByLabel('Jméno').fill('Host u stolu')
+  await page.getByRole('button', { name: 'Odeslat objednávku' }).click()
+  await expect(page.getByRole('heading', { name: 'Objednávka přijata' })).toBeVisible()
+  expect(postedOrder).toMatchObject({
+    items: [{ productId: 'prod-lemonade', quantity: 1, productVariantId: 'variant-large' }],
+  })
+})
