@@ -896,6 +896,7 @@ async function createInvoice(): Promise<void> {
             <Input
               v-model="matSearch"
               placeholder="Hledat produkt (název / SKU / EAN)"
+              aria-label="Hledat produkt"
               class="pl-9"
             />
             <div
