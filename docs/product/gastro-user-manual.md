@@ -75,7 +75,9 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 2. Uložte mu recepturu stejným tlačítkem jako u jídel. Receptura určuje spotřebu jedné vyrobené jednotky včetně odpadu.
 3. V seznamu produktu klikněte na ikonu výroby, zadejte vyrobené množství a potvrďte dávku.
 4. Systém odečte suroviny a naskladní hotový polotovar jako propojené pohyby. Dávku neupravujte zpětně; případný omyl opravte běžnou skladovou korekcí.
-5. Ikona `Varianty` slouží pro velikosti porce a odlišné ceny. Nastavení se připravuje pro výběr při prodeji; dokud není výběr zapojený do pokladny, změna varianty sama nemění cenu již prodaných položek.
+5. Ikona `Varianty` slouží pro velikosti porce a odlišné ceny. U každé varianty nastavte název, případnou cenu a násobek receptury.
+6. V `Pokladna`, `Restaurace` i ve veřejné/QR objednávce se před přidáním takového produktu vybere konkrétní varianta. Cena a spotřeba surovin se dopočítají na serveru.
+7. Název, cena i spotřeba se uloží k účtu a prodeji. Pozdější změna varianty nebo receptury proto nemění staré účtenky, bon ani storno skladu.
 
 ## Alergeny v menu
 

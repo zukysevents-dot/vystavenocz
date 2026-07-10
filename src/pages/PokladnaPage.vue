@@ -47,6 +47,9 @@ import {
 import PaymentDialog from '@/components/PaymentDialog.vue'
 import ReceiptDialog from '@/components/ReceiptDialog.vue'
 import CameraScanner from '@/components/app/CameraScanner.vue'
+import ProductVariantSelectDialog, {
+  type SelectableProductVariant,
+} from '@/components/app/ProductVariantSelectDialog.vue'
 import { useProducts } from '@/composables/useProducts'
 import { useCategories } from '@/composables/useCategories'
 import { useLocations } from '@/composables/useLocations'
@@ -54,6 +57,7 @@ import { useSales } from '@/composables/useSales'
 import { usePromotions } from '@/composables/usePromotions'
 import { useCustomers, type LoyaltyCustomer } from '@/composables/useCustomers'
 import { useLoyalty, type LoyaltySettings } from '@/composables/useLoyalty'
+import { useProductVariants } from '@/composables/useProductVariants'
 import { formatCZK, round2 } from '@/lib/invoice'
 import { findByEan } from '@/lib/reorder'
 import { buildReceipt, type ReceiptInfo } from '@/lib/receipt'
@@ -73,6 +77,7 @@ const sales = useSales()
 const promotions = usePromotions()
 const customersApi = useCustomers()
 const loyaltyApi = useLoyalty()
+const variantsApi = useProductVariants()
 const companyStore = useCompanyStore()
 const auth = useAuthStore()
 
@@ -112,10 +117,14 @@ const visibleProducts = computed(() => {
 
 interface CartLine {
   product: Product
+  variant: SelectableProductVariant | null
   quantity: number
   discountPercent: number
 }
 const cart = ref<CartLine[]>([])
+const variantDialogOpen = ref(false)
+const variantProduct = ref<Product | null>(null)
+const variantsForProduct = ref<SelectableProductVariant[]>([])
 
 /** Sleva na řádek jako platné procento 0–100. */
 function clampPct(v: unknown): number {
@@ -123,7 +132,10 @@ function clampPct(v: unknown): number {
   return Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 0
 }
 function lineTotal(l: CartLine): number {
-  return l.product.salePrice * l.quantity * (1 - clampPct(l.discountPercent) / 100)
+  return cartUnitPrice(l) * l.quantity * (1 - clampPct(l.discountPercent) / 100)
+}
+function cartUnitPrice(l: CartLine): number {
+  return l.variant?.priceWithVat ?? l.product.salePrice
 }
 
 const itemCount = computed(() => cart.value.reduce((sum, l) => sum + l.quantity, 0))
@@ -215,7 +227,7 @@ function previewLines(): PromotionLineInput[] {
     categoryId: l.product.categoryId,
     name: l.product.name,
     quantity: l.quantity,
-    unitPrice: round2(l.product.salePrice * (1 - clampPct(l.discountPercent) / 100)),
+    unitPrice: round2(cartUnitPrice(l) * (1 - clampPct(l.discountPercent) / 100)),
   }))
 }
 
@@ -296,7 +308,7 @@ const totals = computed(() =>
   calcPosTotals(
     cart.value.map((l) => ({
       quantity: l.quantity,
-      unitPrice: l.product.salePrice,
+      unitPrice: cartUnitPrice(l),
       vatRate: l.product.vatRate,
       discountPercent: l.discountPercent,
     })),
@@ -334,10 +346,39 @@ onMounted(async () => {
   focusScan()
 })
 
-function addToCart(p: Product) {
-  const line = cart.value.find((l) => l.product.id === p.id)
+function addToCart(p: Product, variant: SelectableProductVariant | null = null) {
+  const line = cart.value.find((l) => l.product.id === p.id && l.variant?.id === variant?.id)
   if (line) line.quantity++
-  else cart.value.push({ product: p, quantity: 1, discountPercent: 0 })
+  else cart.value.push({ product: p, variant, quantity: 1, discountPercent: 0 })
+
+  toast.success(`${[p.name, variant?.name].filter(Boolean).join(' · ')} přidáno na účtenku.`)
+}
+
+async function chooseProduct(p: Product) {
+  try {
+    const variants = await variantsApi.get(p.id)
+    if (variants?.length) {
+      variantProduct.value = p
+      variantsForProduct.value = variants.map((variant) => ({
+        id: variant.id,
+        name: variant.name,
+        priceWithVat: variant.salePriceOverride ?? p.salePrice,
+        sortOrder: variant.sortOrder,
+      }))
+      variantDialogOpen.value = true
+      return
+    }
+    addToCart(p)
+  } catch (e) {
+    toast.error('Varianty produktu se nepodařilo načíst.')
+    console.error(e)
+  }
+}
+
+function confirmVariant(variant: SelectableProductVariant) {
+  if (!variantProduct.value) return
+  addToCart(variantProduct.value, variant)
+  variantDialogOpen.value = false
 }
 
 function focusScan() {
@@ -356,8 +397,7 @@ function handleCode(raw: string) {
   } else if (products.value.filter((p) => p.ean === code).length > 1) {
     toast.error(`Víc produktů se stejným EAN „${code}“ — vyberte položku ručně.`)
   } else {
-    addToCart(product)
-    toast.success(`${product.name} přidáno na účtenku.`)
+    void chooseProduct(product)
   }
   scanEan.value = ''
   focusScan()
@@ -429,9 +469,10 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
       productId: l.product.id,
       description: l.product.name,
       quantity: l.quantity,
-      unitPrice: l.product.salePrice,
+      unitPrice: cartUnitPrice(l),
       vatRate: l.product.vatRate,
       discountPercent: clampPct(l.discountPercent),
+      productVariantId: l.variant?.id ?? null,
     }))
     // Kč hodnota slevy na účet nejde odvodit ze Sale response (ta nese jen totaly PO slevě),
     // proto se bere z FE snapshotu před odesláním — jen pro zobrazení na účtence.
@@ -447,7 +488,7 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
     })
     const receiptLines = sale.items?.length
       ? sale.items.map((item) => ({
-          name: item.description ?? 'Položka',
+          name: [item.description ?? 'Položka', item.variantName].filter(Boolean).join(' · '),
           qty: item.quantity,
           total: item.lineTotal,
           modifiers: item.modifiers ?? [],
@@ -710,7 +751,7 @@ function saleTime(iso: string): string {
               :key="p.id"
               type="button"
               class="flex min-h-24 flex-col justify-between rounded-xl border border-border bg-background p-3 text-left transition-colors hover:border-primary hover:bg-primary-soft active:scale-[0.98]"
-              @click="addToCart(p)"
+              @click="chooseProduct(p)"
             >
               <span class="font-semibold leading-tight">{{ p.name }}</span>
               <span class="mt-2 text-sm font-bold text-primary tabular-nums">{{
@@ -743,11 +784,17 @@ function saleTime(iso: string): string {
           Klepnutím na produkt ho přidáte na účtenku.
         </div>
         <div v-else class="divide-y divide-border">
-          <div v-for="line in cart" :key="line.product.id" class="flex items-center gap-2 p-3">
+          <div
+            v-for="line in cart"
+            :key="`${line.product.id}:${line.variant?.id ?? 'base'}`"
+            class="flex items-center gap-2 p-3"
+          >
             <div class="min-w-0 flex-1">
-              <div class="truncate font-medium">{{ line.product.name }}</div>
+              <div class="truncate font-medium">
+                {{ line.product.name }}<span v-if="line.variant"> · {{ line.variant.name }}</span>
+              </div>
               <div class="text-xs text-muted-foreground tabular-nums">
-                {{ formatCZK(line.product.salePrice) }} × {{ line.quantity }}
+                {{ formatCZK(cartUnitPrice(line)) }} × {{ line.quantity }}
                 <span v-if="clampPct(line.discountPercent) > 0" class="text-primary">
                   · −{{ clampPct(line.discountPercent) }}% = {{ formatCZK(lineTotal(line)) }}
                 </span>
@@ -1077,6 +1124,15 @@ function saleTime(iso: string): string {
     />
 
     <ReceiptDialog v-model:open="receiptOpen" :receipt="receiptData" />
+
+    <ProductVariantSelectDialog
+      v-model:open="variantDialogOpen"
+      :product-name="variantProduct?.name ?? ''"
+      :variants="variantsForProduct"
+      :busy="paying"
+      confirm-label="Přidat na účtenku"
+      @confirm="confirmVariant"
+    />
     <CameraScanner
       v-model:open="scannerOpen"
       description="Namiř čárový kód na kameru — položka se přidá na účtenku automaticky."

@@ -12,6 +12,7 @@ export interface SaleLineInput {
   unitPrice: number // cena VČETNĚ DPH
   vatRate: number
   discountPercent?: number
+  productVariantId?: string | null
 }
 
 export interface SaleOptions {
