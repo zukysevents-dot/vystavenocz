@@ -12,10 +12,13 @@ import {
 } from '@/lib/invoice'
 import type {
   Client,
+  Employee,
   Invoice,
   InvoiceItem,
   Location,
   Sale,
+  Shift,
+  ShiftStatus,
   SupplierSnapshot,
   VatRate,
 } from '@/lib/types'
@@ -133,12 +136,95 @@ async function seedLocationsAndSales(): Promise<void> {
   }
 }
 
+/**
+ * Demo zaměstnanci + směny (Workforce V2) — aby plánovač směn ukázal reálnou rotu i v mock
+ * režimu. Váže se na pevnou pobočku `loc-praha`. Idempotentní: seedne jen když jsou prázdné.
+ */
+async function seedEmployeesAndShifts(): Promise<void> {
+  const employeesApi = useApi<Employee>('employees')
+  const shiftsApi = useApi<Shift>('shifts')
+
+  const employees: Employee[] = [
+    {
+      id: 'emp-anna',
+      fullName: 'Anna Nováková',
+      userId: null,
+      locationId: 'loc-praha',
+      isActive: true,
+      position: 'Servírka',
+      hourlyRate: 170,
+    },
+    {
+      id: 'emp-petr',
+      fullName: 'Petr Dvořák',
+      userId: null,
+      locationId: 'loc-praha',
+      isActive: true,
+      position: 'Kuchař',
+      hourlyRate: 210,
+    },
+    {
+      id: 'emp-eva',
+      fullName: 'Eva Králová',
+      userId: null,
+      locationId: 'loc-praha',
+      isActive: true,
+      position: 'Barmanka',
+      hourlyRate: 180,
+    },
+  ]
+  if ((await employeesApi.list()).length === 0) {
+    for (const e of employees) await employeesApi.create(e)
+  }
+
+  if ((await shiftsApi.list()).length === 0) {
+    // Pondělí aktuálního týdne (lokálně), ať směny padnou do zobrazeného týdne plánovače.
+    const monday = new Date()
+    monday.setHours(0, 0, 0, 0)
+    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7))
+    const at = (dayOffset: number, hh: number): string => {
+      const d = new Date(monday)
+      d.setDate(d.getDate() + dayOffset)
+      d.setHours(hh, 0, 0, 0)
+      return d.toISOString()
+    }
+    const mk = (
+      employeeId: string,
+      dayOffset: number,
+      startH: number,
+      endH: number,
+      status: ShiftStatus,
+      position: string,
+    ): Shift => ({
+      id: crypto.randomUUID(),
+      employeeId,
+      locationId: 'loc-praha',
+      startsAt: at(dayOffset, startH),
+      endsAt: at(dayOffset, endH),
+      status,
+      position,
+      hourlyRateOverride: null,
+      note: null,
+    })
+    const demo: Shift[] = [
+      mk('emp-anna', 0, 8, 16, 'Published', 'Servírka'),
+      mk('emp-anna', 2, 8, 16, 'Published', 'Servírka'),
+      mk('emp-petr', 0, 10, 22, 'Published', 'Kuchař'),
+      mk('emp-petr', 3, 10, 22, 'Draft', 'Kuchař'),
+      mk('emp-eva', 4, 16, 23, 'Draft', 'Barmanka'),
+    ]
+    for (const s of demo) await shiftsApi.create(s)
+  }
+}
+
 export async function seedMockData(): Promise<void> {
   const clientsApi = useApi<Client>('clients')
   const invoicesApi = useApi<Invoice>('invoices')
 
   // Pobočky + prodeje seedujeme nezávisle (mají vlastní prázdnostní kontrolu).
   await seedLocationsAndSales()
+  // Zaměstnanci + směny pro plánovač (vlastní prázdnostní kontrola).
+  await seedEmployeesAndShifts()
 
   if ((await clientsApi.list()).length > 0) return
 

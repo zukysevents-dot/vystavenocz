@@ -238,17 +238,32 @@ export interface Quote {
   updatedAt: string
 }
 
-// Směna (modul Směny & provize) — plánovaná směna zaměstnance → mzdový podklad.
+// Stav plánované směny (Workforce V2). Draft = rozpracovaná (obsluha ji nevidí), Published = zveřejněná rota.
+export type ShiftStatus = 'Draft' | 'Published'
+
+// Směna (Workforce V2, modul `attendance`) — plánovaná směna konkrétního zaměstnance na pobočce.
+// Napojená na Employee (FK) → umožní rotu, publikování a budoucí plán vs. realitu proti docházce.
 export interface Shift {
   id: string
-  employeeName: string
-  date: string // YYYY-MM-DD
-  start: string // HH:mm
-  end: string // HH:mm
-  hourlyRate: number
+  employeeId: string
+  locationId: string | null
+  startsAt: string // ISO UTC — začátek směny
+  endsAt: string // ISO UTC — konec směny
+  status: ShiftStatus
+  position: string | null // volná pozice (Číšník/Kuchař…), default z Employee/šablony
+  hourlyRateOverride: number | null // per-směna přebití sazby; jinak Employee.hourlyRate
   note: string | null
-  createdAt: string
-  updatedAt: string
+}
+
+// Šablona směny (Workforce V2) — opakovatelný vzor (pobočka + den v týdnu + čas) pro rychlé plánování.
+export interface ShiftTemplate {
+  id: string
+  name: string
+  locationId: string | null
+  weekday: number // 0 = pondělí … 6 = neděle
+  startTime: string // "HH:mm"
+  endTime: string // "HH:mm"
+  position: string | null
 }
 
 // Pobočka / provozovna (modul Pobočky & vedení). Modely nesou locationId → tady dostane význam.
@@ -740,6 +755,8 @@ export interface Employee {
   userId: string | null
   locationId: string | null
   isActive: boolean
+  position: string | null // volná pozice (Číšník/Kuchař…) — default pro plánované směny
+  hourlyRate: number | null // mzdová sazba pro payroll; null = neuvedeno nebo skryto (bez attendance.manage)
 }
 
 export interface AttendanceBreak {
@@ -762,12 +779,29 @@ export interface AttendanceSummaryItem {
   employeeId: string
   employeeName: string
   workedMinutes: number
+  hourlyRate: number | null // efektivní sazba pro payroll; null bez attendance.manage nebo bez sazby
+  wageCost: number | null // odpracované hodiny × sazba; null když sazba není známá
 }
 
 export interface AttendanceSummary {
   year: number
   month: number
   items: AttendanceSummaryItem[]
+}
+
+// Docházkové výjimky (Workforce V2) — manažerský přehled odchylek za období.
+// MissingClockOut = otevřená docházka z minulého dne; Overtime = přesčas nad denní práh;
+// PlanVsActual = plánovaná směna vs. skutečně odpracováno (chybí nebo velká odchylka).
+export type AttendanceExceptionKind = 'MissingClockOut' | 'Overtime' | 'PlanVsActualVariance'
+
+export interface AttendanceException {
+  employeeId: string
+  employeeName: string
+  date: string // YYYY-MM-DD (Europe/Prague)
+  kind: AttendanceExceptionKind
+  plannedMinutes: number | null
+  actualMinutes: number | null
+  detail: string
 }
 
 // --- Rezervace (booking) ---

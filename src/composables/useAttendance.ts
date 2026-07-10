@@ -1,10 +1,43 @@
 import { http, getTokens } from '@/lib/http'
-import type { AttendanceRecord, AttendanceSummary, Employee } from '@/lib/types'
+import type {
+  AttendanceException,
+  AttendanceRecord,
+  AttendanceStatus,
+  AttendanceSummary,
+  Employee,
+} from '@/lib/types'
 import type { PagedResult } from '@/composables/useApi'
 
 const API = import.meta.env.VITE_API_URL as string | undefined
 
-export type EmployeeInput = { fullName: string; userId?: string | null; isActive?: boolean }
+export type EmployeeInput = {
+  fullName: string
+  userId?: string | null
+  isActive?: boolean
+  position?: string | null
+  hourlyRate?: number | null
+}
+
+export interface RecordsQuery {
+  page?: number
+  pageSize?: number
+  from?: string // ISO UTC (podle clockInAt)
+  to?: string
+  employeeId?: string
+  status?: AttendanceStatus
+  sort?: string // "start" | "-start"
+}
+
+export interface CorrectRecordInput {
+  clockInAt: string // ISO UTC
+  clockOutAt: string | null // null = nechat otevřenou
+}
+
+export interface ExceptionsQuery {
+  from: string // ISO UTC
+  to: string
+  locationId?: string | null
+}
 
 // Docházka — zaměstnanci, píchačka, přehled. Jen API mód.
 export function useAttendance() {
@@ -41,6 +74,32 @@ export function useAttendance() {
     return http.get<AttendanceSummary>(`/attendance/summary?year=${year}&month=${month}`)
   }
 
+  // Záznamy docházky (manažerský přehled + korekce). Self-scope: bez attendance.manage jen svoje.
+  function records(query: RecordsQuery = {}): Promise<PagedResult<AttendanceRecord>> {
+    const p = new URLSearchParams()
+    if (query.page) p.set('page', String(query.page))
+    if (query.pageSize) p.set('pageSize', String(query.pageSize))
+    if (query.from) p.set('from', query.from)
+    if (query.to) p.set('to', query.to)
+    if (query.employeeId) p.set('employeeId', query.employeeId)
+    if (query.status) p.set('status', query.status)
+    if (query.sort) p.set('sort', query.sort)
+    const qs = p.toString()
+    return http.get<PagedResult<AttendanceRecord>>(`/attendance/records${qs ? `?${qs}` : ''}`)
+  }
+
+  // Manažerská oprava časů (audit AttendanceCorrected na backendu). Vyžaduje attendance.manage.
+  function correctRecord(id: string, input: CorrectRecordInput): Promise<AttendanceRecord> {
+    return http.put<AttendanceRecord>(`/attendance/records/${id}`, input)
+  }
+
+  // Docházkové výjimky za období (chybějící odchod / přesčas / plán vs. realita). Manager-scoped.
+  function exceptions(query: ExceptionsQuery): Promise<AttendanceException[]> {
+    const p = new URLSearchParams({ from: query.from, to: query.to })
+    if (query.locationId) p.set('locationId', query.locationId)
+    return http.get<AttendanceException[]>(`/attendance/exceptions?${p.toString()}`)
+  }
+
   // CSV export — stáhne soubor (mimo http wrapper kvůli blobu).
   async function exportCsv(year: number, month: number): Promise<void> {
     const res = await fetch(`${API}/attendance/export?year=${year}&month=${month}`, {
@@ -68,5 +127,8 @@ export function useAttendance() {
     endBreak,
     summary,
     exportCsv,
+    records,
+    correctRecord,
+    exceptions,
   }
 }

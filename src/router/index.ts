@@ -335,10 +335,13 @@ const routes: RouteRecordRaw[] = [
     name: 'app-smeny',
     component: () => import('@/pages/SmenyPage.vue'),
     meta: {
-      title: 'Směny & provize',
+      title: 'Plán směn',
       layout: 'app',
       requiresAuth: true,
       requiresModule: 'attendance',
+      // Plánovač je manažerský nástroj (plán/publikace/mzdové podklady). Obsluha/účetní sem nesmí
+      // — jinak by přes plánovaný náklad a per-směna sazby unikly mzdově citlivé údaje.
+      requiresRole: ['Owner', 'Admin', 'Manager'],
     },
   },
   {

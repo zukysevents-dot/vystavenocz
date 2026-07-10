@@ -3,52 +3,71 @@ import { clampPercent } from './posCalc'
 import type { Sale, Shift, Employee } from './types'
 
 /**
- * Směny & mzdové podklady — čistá logika. Z naplánovaných směn počítá odpracované
- * hodiny a mzdový náklad (hodiny × sazba). Provize se počítá z tržeb napojených na
- * zaměstnance (Sale.employeeId) — viz calculateCommission.
+ * Směny & mzdové podklady — čistá logika (Workforce V2). Ze směn napojených na zaměstnance
+ * (Shift.employeeId, UTC startsAt/endsAt) počítá odpracované hodiny a plánovaný mzdový náklad.
+ * Efektivní sazba = shift.hourlyRateOverride ?? employee.hourlyRate ?? 0 (shodně s backendem).
+ * Provize se počítá z tržeb napojených na zaměstnance (Sale.employeeId) — viz calculateCommission.
  */
 
-function toMinutes(hhmm: string): number | null {
-  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm ?? '')
-  if (!m) return null
-  const h = Number(m[1])
-  const min = Number(m[2])
-  if (h > 23 || min > 59) return null
-  return h * 60 + min
+/** Délka směny v hodinách z UTC okamžiků. Neplatný nebo nekladný interval → 0. */
+export function shiftHours(shift: Pick<Shift, 'startsAt' | 'endsAt'>): number {
+  const a = Date.parse(shift.startsAt)
+  const b = Date.parse(shift.endsAt)
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b <= a) return 0
+  return round2((b - a) / 3_600_000)
 }
 
-/** Délka směny v hodinách. Neplatný nebo nekladný interval → 0. */
-export function shiftHours(s: Shift): number {
-  const a = toMinutes(s.start)
-  const b = toMinutes(s.end)
-  if (a === null || b === null || b <= a) return 0
-  return round2((b - a) / 60)
+/** Efektivní hodinová sazba: per-směna override, jinak sazba zaměstnance, jinak 0. */
+export function effectiveRate(
+  shift: Pick<Shift, 'hourlyRateOverride'>,
+  employee?: Pick<Employee, 'hourlyRate'> | null,
+): number {
+  return shift.hourlyRateOverride ?? employee?.hourlyRate ?? 0
 }
 
-/** Mzdový náklad směny (hodiny × sazba). */
-export function shiftWage(s: Shift): number {
-  return round2(shiftHours(s) * s.hourlyRate)
+/** Plánovaný mzdový náklad směny (hodiny × efektivní sazba). */
+export function shiftWage(
+  shift: Pick<Shift, 'startsAt' | 'endsAt' | 'hourlyRateOverride'>,
+  employee?: Pick<Employee, 'hourlyRate'> | null,
+): number {
+  return round2(shiftHours(shift) * effectiveRate(shift, employee))
 }
 
-export interface EmployeeSummary {
+export interface EmployeePayrollRow {
+  employeeId: string
   name: string
   shifts: number
   hours: number
   wage: number
 }
 
-/** Souhrn po zaměstnancích (hodiny + mzdový náklad), seřazeno podle mzdy sestupně. */
-export function summarizeByEmployee(shifts: Shift[]): EmployeeSummary[] {
-  const map = new Map<string, EmployeeSummary>()
+/**
+ * Payroll náhled per zaměstnanec (počet směn, hodiny, plánovaný náklad), seřazeno podle nákladu
+ * sestupně. `publishedOnly` omezí na zveřejněné směny (rota). Jméno/sazba se dohledá v `employees`.
+ */
+export function buildPayrollPreview(
+  shifts: Shift[],
+  employees: Pick<Employee, 'id' | 'fullName' | 'hourlyRate'>[],
+  opts: { publishedOnly?: boolean } = {},
+): EmployeePayrollRow[] {
+  const byId = new Map(employees.map((e) => [e.id, e]))
+  const rows = new Map<string, EmployeePayrollRow>()
   for (const s of shifts) {
-    const name = s.employeeName?.trim() || 'Bez jména'
-    const e = map.get(name) ?? { name, shifts: 0, hours: 0, wage: 0 }
-    e.shifts += 1
-    e.hours = round2(e.hours + shiftHours(s))
-    e.wage = round2(e.wage + shiftWage(s))
-    map.set(name, e)
+    if (opts.publishedOnly && s.status !== 'Published') continue
+    const emp = byId.get(s.employeeId)
+    const row = rows.get(s.employeeId) ?? {
+      employeeId: s.employeeId,
+      name: emp?.fullName ?? 'Neznámý zaměstnanec',
+      shifts: 0,
+      hours: 0,
+      wage: 0,
+    }
+    row.shifts += 1
+    row.hours = round2(row.hours + shiftHours(s))
+    row.wage = round2(row.wage + shiftWage(s, emp))
+    rows.set(s.employeeId, row)
   }
-  return [...map.values()].sort((a, b) => b.wage - a.wage)
+  return [...rows.values()].sort((a, b) => b.wage - a.wage)
 }
 
 export interface ShiftsTotals {
@@ -57,12 +76,23 @@ export interface ShiftsTotals {
   wage: number
 }
 
-export function totals(shifts: Shift[]): ShiftsTotals {
-  return {
-    count: shifts.length,
-    hours: round2(shifts.reduce((a, s) => a + shiftHours(s), 0)),
-    wage: round2(shifts.reduce((a, s) => a + shiftWage(s), 0)),
+/** Souhrn všech směn (počet, hodiny, plánovaný náklad). `publishedOnly` omezí na zveřejněné. */
+export function totals(
+  shifts: Shift[],
+  employees: Pick<Employee, 'id' | 'hourlyRate'>[],
+  opts: { publishedOnly?: boolean } = {},
+): ShiftsTotals {
+  const byId = new Map(employees.map((e) => [e.id, e]))
+  let count = 0
+  let hours = 0
+  let wage = 0
+  for (const s of shifts) {
+    if (opts.publishedOnly && s.status !== 'Published') continue
+    count += 1
+    hours = round2(hours + shiftHours(s))
+    wage = round2(wage + shiftWage(s, byId.get(s.employeeId)))
   }
+  return { count, hours, wage }
 }
 
 export interface EmployeeCommission {

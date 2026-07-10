@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   APP_MODULES,
+  APP_NAV_DEFINITIONS,
   BUSINESS_PROFILES,
   DEFAULT_ENABLED_MODULES,
   isModuleEnabled,
@@ -39,6 +40,13 @@ describe('module capabilities', () => {
     expect(gastro.modules).toContain('pos')
     expect(crafts.modules).toContain('jobs')
     expect(crafts.modules).not.toContain('gastro')
+  })
+
+  it('hides the shift planner nav from staff and accountant (wage privacy)', () => {
+    const smeny = APP_NAV_DEFINITIONS.find((item) => item.to === '/app/smeny')!
+
+    expect(smeny.module).toBe('attendance')
+    expect(smeny.hiddenForRoles).toEqual(['Employee', 'Accountant'])
   })
 
   it('business profiles define actionable onboarding setup steps', () => {
