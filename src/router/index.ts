@@ -335,7 +335,7 @@ const routes: RouteRecordRaw[] = [
     name: 'app-smeny',
     component: () => import('@/pages/SmenyPage.vue'),
     meta: {
-      title: 'Směny & provize',
+      title: 'Plán směn',
       layout: 'app',
       requiresAuth: true,
       requiresModule: 'attendance',

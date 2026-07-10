@@ -39,6 +39,9 @@ import { useAuthStore } from '@/stores/auth'
 import { isApiMode, ApiError } from '@/lib/http'
 import { toast } from '@/components/ui/sonner'
 import LoadError from '@/components/app/LoadError.vue'
+import AttendanceCorrectionsPanel from '@/components/app/AttendanceCorrectionsPanel.vue'
+import AttendanceExceptionsPanel from '@/components/app/AttendanceExceptionsPanel.vue'
+import { formatCZK } from '@/lib/invoice'
 import type { AttendanceRecord, AttendanceSummary, Employee } from '@/lib/types'
 
 const att = useAttendance()
@@ -48,12 +51,22 @@ const apiMode = isApiMode()
 const loading = ref(true)
 const loadError = ref(false)
 const busy = ref(false)
-const tab = ref<'clock' | 'employees' | 'summary'>('clock')
-const TABS = [
+
+// Opravy a Výjimky jsou manažerské (attendance.manage) — backend je stejně vynutí, tady jen UX gate.
+const canManage = computed(() => ['Owner', 'Admin', 'Manager'].includes(auth.role ?? ''))
+type TabId = 'clock' | 'employees' | 'summary' | 'corrections' | 'exceptions'
+const tab = ref<TabId>('clock')
+const tabs = computed<{ v: TabId; l: string }[]>(() => [
   { v: 'clock', l: 'Píchačka' },
   { v: 'employees', l: 'Zaměstnanci' },
   { v: 'summary', l: 'Přehled' },
-] as const
+  ...(canManage.value
+    ? ([
+        { v: 'corrections', l: 'Opravy' },
+        { v: 'exceptions', l: 'Výjimky' },
+      ] as { v: TabId; l: string }[])
+    : []),
+])
 const now = ref(Date.now())
 let timer: ReturnType<typeof setInterval> | null = null
 
@@ -151,7 +164,13 @@ function fmtMinutes(m: number): string {
 // --- Zaměstnanci ---
 const empDialogOpen = ref(false)
 const editingEmp = ref<Employee | null>(null)
-const empForm = reactive({ fullName: '', isActive: true, linkMe: false })
+const empForm = reactive({
+  fullName: '',
+  isActive: true,
+  linkMe: false,
+  position: '',
+  hourlyRate: '' as number | '',
+})
 const deleteEmpId = ref<string | null>(null)
 const deleteEmpOpen = ref(false)
 
@@ -165,6 +184,8 @@ function openAddEmp(linkMe = false) {
   empForm.fullName = ''
   empForm.isActive = true
   empForm.linkMe = linkMe
+  empForm.position = ''
+  empForm.hourlyRate = ''
   empDialogOpen.value = true
 }
 function openEditEmp(e: Employee) {
@@ -172,10 +193,15 @@ function openEditEmp(e: Employee) {
   empForm.fullName = e.fullName
   empForm.isActive = e.isActive
   empForm.linkMe = e.userId === auth.user?.id
+  empForm.position = e.position ?? ''
+  empForm.hourlyRate = e.hourlyRate ?? ''
   empDialogOpen.value = true
 }
 async function submitEmp() {
   if (!empForm.fullName.trim()) return toast.error('Zadejte jméno.')
+  const rate = empForm.hourlyRate === '' ? null : Number(empForm.hourlyRate)
+  if (rate !== null && (!Number.isFinite(rate) || rate < 0))
+    return toast.error('Sazba musí být kladné číslo.')
   // linkMe → navázat na můj účet; jinak zachovat existující (cizí) vazbu, nebo žádnou.
   const keptUserId =
     editingEmp.value?.userId && editingEmp.value.userId !== auth.user?.id
@@ -185,6 +211,8 @@ async function submitEmp() {
     fullName: empForm.fullName.trim(),
     isActive: empForm.isActive,
     userId: empForm.linkMe ? (auth.user?.id ?? null) : keptUserId,
+    position: empForm.position.trim() || null,
+    hourlyRate: rate,
   }
   busy.value = true
   try {
@@ -263,7 +291,7 @@ async function exportCsv() {
     <template v-else>
       <div class="mt-6 flex flex-wrap gap-2">
         <button
-          v-for="t in TABS"
+          v-for="t in tabs"
           :key="t.v"
           type="button"
           class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
@@ -388,6 +416,8 @@ async function exportCsv() {
                 </div>
                 <div class="text-xs text-muted-foreground">
                   {{ e.userId ? 'navázán na účet' : 'bez účtu (jen evidence)' }}
+                  <span v-if="e.position"> · {{ e.position }}</span>
+                  <span v-if="e.hourlyRate != null"> · {{ formatCZK(e.hourlyRate) }}/h</span>
                 </div>
               </div>
               <div class="flex items-center gap-1">
@@ -404,7 +434,7 @@ async function exportCsv() {
       </template>
 
       <!-- PŘEHLED -->
-      <template v-else>
+      <template v-else-if="tab === 'summary'">
         <div class="mt-4 flex flex-wrap items-end gap-3">
           <div class="space-y-1">
             <Label for="y">Rok</Label>
@@ -417,7 +447,7 @@ async function exportCsv() {
           <Button variant="outline" :disabled="busy" @click="loadSummary">Načíst</Button>
           <span class="flex-1" />
           <Button variant="outline" @click="exportCsv"
-            ><Download class="h-4 w-4" /> Export CSV</Button
+            ><Download class="h-4 w-4" /> Export mezd CSV</Button
           >
         </div>
 
@@ -434,12 +464,32 @@ async function exportCsv() {
               :key="i.employeeId"
               class="flex items-center justify-between gap-3 p-4"
             >
-              <div class="font-medium">{{ i.employeeName }}</div>
-              <div class="font-semibold tabular-nums">{{ fmtMinutes(i.workedMinutes) }}</div>
+              <div class="font-medium">
+                {{ i.employeeName }}
+                <span v-if="i.hourlyRate != null" class="ml-1 text-xs text-muted-foreground">
+                  {{ formatCZK(i.hourlyRate) }}/h
+                </span>
+              </div>
+              <div class="text-right">
+                <div class="font-semibold tabular-nums">{{ fmtMinutes(i.workedMinutes) }}</div>
+                <div v-if="i.wageCost != null" class="text-xs text-muted-foreground tabular-nums">
+                  {{ formatCZK(i.wageCost) }}
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </template>
+
+      <!-- OPRAVY (manažer) -->
+      <AttendanceCorrectionsPanel
+        v-else-if="tab === 'corrections'"
+        :employees="employees"
+        class="mt-6"
+      />
+
+      <!-- VÝJIMKY (manažer) -->
+      <AttendanceExceptionsPanel v-else-if="tab === 'exceptions'" class="mt-6" />
     </template>
 
     <!-- Dialog zaměstnance -->
@@ -453,6 +503,16 @@ async function exportCsv() {
           <div class="space-y-2">
             <Label for="emp-name">Jméno a příjmení *</Label>
             <Input id="emp-name" v-model="empForm.fullName" required placeholder="Jan Novák" />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="space-y-2">
+              <Label for="emp-pos">Pozice</Label>
+              <Input id="emp-pos" v-model="empForm.position" placeholder="Číšník…" />
+            </div>
+            <div class="space-y-2">
+              <Label for="emp-rate">Sazba / hod (Kč)</Label>
+              <Input id="emp-rate" v-model="empForm.hourlyRate" type="number" min="0" step="1" />
+            </div>
           </div>
           <label class="flex items-center gap-2 text-sm">
             <Checkbox v-model="empForm.linkMe" /> Navázat na můj účet (abych mohl/a píchat)

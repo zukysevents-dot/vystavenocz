@@ -109,6 +109,29 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 5. Ruční výdej vždy vyberte podle důvodu: běžný výdej, odpis, jídlo personálu, rozbití nebo expirace.
 6. Přesun mezi barem, kuchyní nebo skladem zapisujte přes přesun. Celkový sklad firmy se nemění, mění se jen místo.
 
+## Směny a docházka
+
+Plán směn (`Směny`):
+
+1. Otevřete `Směny`. Uvidíte týdenní plán: řádky jsou zaměstnanci, sloupce dny v týdnu.
+2. Máte-li víc poboček, nahoře vyberte pobočku. Šipkami přepínáte týdny, `Dnešní týden` skočí na tento týden.
+3. Zaměstnance a jejich hodinovou sazbu založíte v `Docházka` → `Zaměstnanci`. Sazba se použije pro mzdový podklad.
+4. Novou směnu přidáte tlačítkem `Nová směna` nebo kliknutím `+ přidat` v buňce dne u zaměstnance. Vyberte zaměstnance, datum, čas, případně pozici a jednorázovou sazbu.
+5. Nová směna je nejdřív `Rozpracovaná` (čárkovaná) — obsluha ji ještě nevidí.
+6. Až je plán hotový, klikněte `Publikovat týden`. Rozpracované směny se změní na `Zveřejněné` (plné) a obsluha je uvidí.
+7. `Šablony` slouží pro opakované směny (například „Ranní bar, pondělí 8–16"). Uloženou šablonu vložíte do týdne tlačítkem `Použít` — stačí doplnit zaměstnance.
+8. `Export plánu` stáhne plánované hodiny a mzdový náklad do CSV (Excel).
+9. Mzdové podklady pod plánem ukazují počet směn, hodiny a plánovaný náklad celkem i po jednotlivých zaměstnancích.
+
+Docházka a píchačka (`Docházka`):
+
+1. Zaměstnanec s vlastním účtem si v `Docházka` píchne příchod, pauzu a odchod.
+2. `Zaměstnanci` slouží k evidenci lidí, jejich pozice a hodinové sazby.
+3. `Přehled` ukazuje odpracované hodiny za měsíc a mzdový náklad; `Export mezd CSV` je stáhne pro účetní.
+4. Manažer má navíc tab `Opravy`: když někdo zapomene píchnout odchod nebo se splete, opraví časy. Každá oprava se zapíše do auditu.
+5. Tab `Výjimky` ukáže odchylky za období: chybějící odchod, přesčas nebo rozdíl plánu proti realitě.
+6. Manažer vidí a opravuje jen docházku své pobočky; hodinové sazby a mzdy vidí jen vedení.
+
 ## Schvalování
 
 1. Pokud storno, výdej/odpis nebo inventura překročí nastavený limit, systém akci neprovede hned a založí žádost o schválení.

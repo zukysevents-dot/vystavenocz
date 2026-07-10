@@ -72,32 +72,48 @@ Cíl: připravit podpisovou obálku a vyzkoušet nastavení poskytovatele + trez
 
 Co ověřit: obálka se založí a odešle (stav `Odesláno`), trezor vyčistí input, BankID poctivě hlásí, že ostrý adapter čeká na zapnutí. Pokud odeslání přes konfiguraci vrátí, že konfigurace není připravená / chybí credentialy, hláška vás nasměruje do tabu `Provider podpisů`.
 
-## 6. Veřejné / QR menu (pokud je dostupné)
+## 6. Směny a docházka
+
+Cíl: naplánovat a zveřejnit směny, projít docházku a mzdové podklady.
+
+1. Otevřete `Směny`. Máte-li víc poboček, nahoře vyberte pobočku. Šipkami přepínáte týdny.
+2. `Nová směna` nebo `+ přidat` v buňce dne: vyberte zaměstnance, čas, případně pozici a sazbu. Nová směna je `Rozpracovaná` (čárkovaná).
+3. `Šablony` → `Nová šablona` (den, čas, pozice). Uloženou šablonu vložte tlačítkem `Použít` a doplňte zaměstnance.
+4. `Publikovat týden` — rozpracované směny zesílí na `Zveřejněné`. Zkuste `Export plánu` (CSV plánovaného nákladu).
+5. Otevřete `Docházka` → tab `Zaměstnanci` a u zaměstnance nastavte pozici a hodinovou sazbu (potřeba pro mzdu).
+6. Zaměstnanec s vlastním účtem si píchne příchod/pauzu/odchod v tabu `Píchačka`.
+7. Manažer: tab `Opravy` opraví časy (zapíše se do auditu, jen svá pobočka); tab `Výjimky` ukáže chybějící odchod, přesčas nebo rozdíl plánu vs. reality.
+8. Tab `Přehled` → `Export mezd CSV` (odpracované hodiny × sazba).
+
+Co ověřit: publikace mění stav směn, obsluha bez manažerských práv vidí jen zveřejněné směny, oprava docházky se zapíše do auditu, mzda se počítá jen tam, kde je sazba.
+
+## 7. Veřejné / QR menu (pokud je dostupné)
 
 1. V `Nastavení firmy` ověřte veřejný slug (např. `moje-bistro`).
 2. Otevřete `/objednavka/<slug>` v anonymním okně (bez přihlášení). Menu se načte, u položek jsou alergeny, ceny počítá server.
 3. QR odkaz ke stolu (`/objednavka/<slug>?table=<id>&name=<název>`) skryje výdej/rozvoz a připíše objednávku do účtu stolu.
 
-## 7. Co je ostré a co je zatím připravené
+## 8. Co je ostré a co je zatím připravené
 
 Tohle je nejdůležitější tabulka pro interní test. **Netvrďte zákazníkovi, že „připravené" věci už ostře fungují.**
 
-| Oblast                                                        | Stav                      | Poznámka                                                                                                                   |
-| ------------------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Gastro POS prodej (hotovost/karta)                            | **Ostré**                 | Karta: výsledek potvrzuje obsluha ručně, terminál není propojený.                                                          |
-| Restaurace, stoly, kuchyně (KDS)                              | **Ostré**                 | Účty, sloučení, split, bony, historie.                                                                                     |
-| Sklad, naskladnění, inventura, zrcadlo                        | **Ostré**                 | Odečet surovin přes receptury, per-pobočka.                                                                                |
-| Uzávěrka + Z-report + exporty                                 | **Ostré**                 | Denní i měsíční účetní CSV, předávka.                                                                                      |
-| Akce/ceny, věrnost, audit                                     | **Ostré**                 | Serverový výpočet promo a bodů.                                                                                            |
-| Veřejné / QR objednávky                                       | **Ostré**                 | Bez přihlášení, ceny ze serveru.                                                                                           |
-| Účetní export Generic CSV / Pohoda XML                        | **Ostré**                 | Pohoda = soubor pro ruční import, ne živá synchronizace.                                                                   |
-| Tiskoví agenti (registrace/token/revoke)                      | **Ostré**                 | Vlastní lokální tiskový program u tiskárny.                                                                                |
-| Credential trezor (platby i podpisy)                          | **Ostré**                 | Uložit/rotovat/smazat/revokovat klíče; hodnoty se nikdy nevrací.                                                           |
-| Platební brány ČSOB/NFCTRON/Comgate/SumUp/GP                  | **Připraveno k napojení** | Katalog + konfigurace hotové; ostré stržení čeká na runtime adaptér a smlouvu. Žádné tlačítko „zaplatit online".           |
-| Ověřené podpisy — obálky, evidence, provider settings, trezor | **Ostré (příprava)**      | Zakládání obálek, evidence a nastavení fungují.                                                                            |
-| Ověřené podpisy — odeslání                                    | **Připraveno k napojení** | Základní/testovací odeslání = příprava a evidence, ne právní podpis.                                                       |
-| **BankID ostrý podpis**                                       | **Není ostré**            | Čeká na BankID credentials + runtime adaptér + potvrzený právní wording. Do té doby poctivé 422 „adapter čeká na zapnutí". |
-| Money / SuperFaktura přímý adaptér                            | **Není**                  | Používejte Generic CSV nebo Pohoda XML.                                                                                    |
+| Oblast                                                                                      | Stav                      | Poznámka                                                                                                                   |
+| ------------------------------------------------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Gastro POS prodej (hotovost/karta)                                                          | **Ostré**                 | Karta: výsledek potvrzuje obsluha ručně, terminál není propojený.                                                          |
+| Restaurace, stoly, kuchyně (KDS)                                                            | **Ostré**                 | Účty, sloučení, split, bony, historie.                                                                                     |
+| Sklad, naskladnění, inventura, zrcadlo                                                      | **Ostré**                 | Odečet surovin přes receptury, per-pobočka.                                                                                |
+| Uzávěrka + Z-report + exporty                                                               | **Ostré**                 | Denní i měsíční účetní CSV, předávka.                                                                                      |
+| Akce/ceny, věrnost, audit                                                                   | **Ostré**                 | Serverový výpočet promo a bodů.                                                                                            |
+| Veřejné / QR objednávky                                                                     | **Ostré**                 | Bez přihlášení, ceny ze serveru.                                                                                           |
+| Směny (plánovač, publikace, šablony) + docházka (píchačka, korekce, výjimky, mzdový export) | **Ostré**                 | Manažerská práva podle role a pobočky; hodinové sazby a mzdy vidí jen vedení.                                              |
+| Účetní export Generic CSV / Pohoda XML                                                      | **Ostré**                 | Pohoda = soubor pro ruční import, ne živá synchronizace.                                                                   |
+| Tiskoví agenti (registrace/token/revoke)                                                    | **Ostré**                 | Vlastní lokální tiskový program u tiskárny.                                                                                |
+| Credential trezor (platby i podpisy)                                                        | **Ostré**                 | Uložit/rotovat/smazat/revokovat klíče; hodnoty se nikdy nevrací.                                                           |
+| Platební brány ČSOB/NFCTRON/Comgate/SumUp/GP                                                | **Připraveno k napojení** | Katalog + konfigurace hotové; ostré stržení čeká na runtime adaptér a smlouvu. Žádné tlačítko „zaplatit online".           |
+| Ověřené podpisy — obálky, evidence, provider settings, trezor                               | **Ostré (příprava)**      | Zakládání obálek, evidence a nastavení fungují.                                                                            |
+| Ověřené podpisy — odeslání                                                                  | **Připraveno k napojení** | Základní/testovací odeslání = příprava a evidence, ne právní podpis.                                                       |
+| **BankID ostrý podpis**                                                                     | **Není ostré**            | Čeká na BankID credentials + runtime adaptér + potvrzený právní wording. Do té doby poctivé 422 „adapter čeká na zapnutí". |
+| Money / SuperFaktura přímý adaptér                                                          | **Není**                  | Používejte Generic CSV nebo Pohoda XML.                                                                                    |
 
 ## Když něco nefunguje
 

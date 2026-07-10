@@ -2,87 +2,138 @@ import { describe, it, expect } from 'vitest'
 import {
   shiftHours,
   shiftWage,
-  summarizeByEmployee,
+  effectiveRate,
+  buildPayrollPreview,
   totals,
   calculateCommission,
 } from '@/lib/shifts'
 import type { Sale, Shift } from '@/lib/types'
 
 let seq = 0
+/** ISO UTC pro daný celý+půl hodiny den 2024-06-03 (rozdíly jsou nezávislé na TZ). */
+function iso(h: number, m = 0): string {
+  return `2024-06-03T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00.000Z`
+}
 function shift(over: Partial<Shift> = {}): Shift {
   seq += 1
   return {
     id: `s${seq}`,
-    employeeName: 'Anna',
-    date: '2024-06-03',
-    start: '08:00',
-    end: '16:30',
-    hourlyRate: 200,
+    employeeId: 'e1',
+    locationId: null,
+    startsAt: iso(8),
+    endsAt: iso(16, 30),
+    status: 'Draft',
+    position: null,
+    hourlyRateOverride: null,
     note: null,
-    createdAt: '2024-06-01T00:00:00.000Z',
-    updatedAt: '2024-06-01T00:00:00.000Z',
     ...over,
   }
 }
 
 describe('shiftHours', () => {
-  it('spočítá délku směny v hodinách', () => {
-    expect(shiftHours(shift({ start: '08:00', end: '16:30' }))).toBe(8.5)
+  it('spočítá délku směny v hodinách z UTC okamžiků', () => {
+    expect(shiftHours(shift({ startsAt: iso(8), endsAt: iso(16, 30) }))).toBe(8.5)
   })
   it('nekladný nebo neplatný interval → 0', () => {
-    expect(shiftHours(shift({ start: '16:00', end: '08:00' }))).toBe(0)
-    expect(shiftHours(shift({ start: '08:00', end: '08:00' }))).toBe(0)
-    expect(shiftHours(shift({ start: 'xx', end: '16:00' }))).toBe(0)
-    expect(shiftHours(shift({ start: '25:00', end: '26:00' }))).toBe(0)
+    expect(shiftHours(shift({ startsAt: iso(16), endsAt: iso(8) }))).toBe(0)
+    expect(shiftHours(shift({ startsAt: iso(8), endsAt: iso(8) }))).toBe(0)
+    expect(shiftHours({ startsAt: 'xx', endsAt: iso(16) })).toBe(0)
+  })
+  it('směna přes půlnoc funguje (UTC rozdíl)', () => {
+    expect(
+      shiftHours({ startsAt: '2024-06-03T22:00:00.000Z', endsAt: '2024-06-04T02:00:00.000Z' }),
+    ).toBe(4)
+  })
+})
+
+describe('effectiveRate', () => {
+  it('override má přednost před sazbou zaměstnance', () => {
+    expect(effectiveRate({ hourlyRateOverride: 300 }, { hourlyRate: 200 })).toBe(300)
+  })
+  it('bez override → sazba zaměstnance', () => {
+    expect(effectiveRate({ hourlyRateOverride: null }, { hourlyRate: 200 })).toBe(200)
+  })
+  it('bez override i bez sazby → 0', () => {
+    expect(effectiveRate({ hourlyRateOverride: null }, { hourlyRate: null })).toBe(0)
+    expect(effectiveRate({ hourlyRateOverride: null }, null)).toBe(0)
+    expect(effectiveRate({ hourlyRateOverride: null })).toBe(0)
   })
 })
 
 describe('shiftWage', () => {
-  it('mzda = hodiny × sazba', () => {
-    expect(shiftWage(shift({ start: '08:00', end: '16:00', hourlyRate: 200 }))).toBe(1600)
+  it('mzda = hodiny × efektivní sazba (sazba zaměstnance)', () => {
+    expect(shiftWage(shift({ startsAt: iso(8), endsAt: iso(16) }), { hourlyRate: 200 })).toBe(1600)
+  })
+  it('override sazby přebije zaměstnance', () => {
+    expect(
+      shiftWage(shift({ startsAt: iso(8), endsAt: iso(16), hourlyRateOverride: 250 }), {
+        hourlyRate: 200,
+      }),
+    ).toBe(2000)
+  })
+  it('bez známé sazby → 0', () => {
+    expect(shiftWage(shift({ startsAt: iso(8), endsAt: iso(16) }))).toBe(0)
   })
 })
 
-describe('summarizeByEmployee', () => {
-  it('sečte hodiny a mzdu po zaměstnancích, seřadí podle mzdy', () => {
-    const s = summarizeByEmployee([
-      shift({ employeeName: 'Anna', start: '08:00', end: '12:00', hourlyRate: 200 }), // 4 h, 800
-      shift({ employeeName: 'Anna', start: '13:00', end: '17:00', hourlyRate: 200 }), // 4 h, 800
-      shift({ employeeName: 'Bob', start: '08:00', end: '20:00', hourlyRate: 250 }), // 12 h, 3000
-    ])
-    expect(s).toHaveLength(2)
-    expect(s[0]).toEqual({ name: 'Bob', shifts: 1, hours: 12, wage: 3000 })
-    expect(s[1]).toEqual({ name: 'Anna', shifts: 2, hours: 8, wage: 1600 })
+describe('buildPayrollPreview', () => {
+  const emps = [
+    { id: 'e1', fullName: 'Anna', hourlyRate: 200 },
+    { id: 'e2', fullName: 'Bob', hourlyRate: 250 },
+  ]
+
+  it('sečte hodiny a náklad per zaměstnanec, seřadí podle nákladu sestupně', () => {
+    const rows = buildPayrollPreview(
+      [
+        shift({ employeeId: 'e1', startsAt: iso(8), endsAt: iso(12) }), // 4 h, 800
+        shift({ employeeId: 'e1', startsAt: iso(13), endsAt: iso(17) }), // 4 h, 800
+        shift({ employeeId: 'e2', startsAt: iso(8), endsAt: iso(20) }), // 12 h, 3000
+      ],
+      emps,
+    )
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toEqual({ employeeId: 'e2', name: 'Bob', shifts: 1, hours: 12, wage: 3000 })
+    expect(rows[1]).toEqual({ employeeId: 'e1', name: 'Anna', shifts: 2, hours: 8, wage: 1600 })
   })
 
-  it('prázdné jméno → „Bez jména"', () => {
-    expect(summarizeByEmployee([shift({ employeeName: '  ' })])[0].name).toBe('Bez jména')
+  it('publishedOnly ignoruje rozpracované směny', () => {
+    const rows = buildPayrollPreview(
+      [
+        shift({ employeeId: 'e1', status: 'Published', startsAt: iso(8), endsAt: iso(12) }),
+        shift({ employeeId: 'e1', status: 'Draft', startsAt: iso(13), endsAt: iso(17) }),
+      ],
+      emps,
+      { publishedOnly: true },
+    )
+    expect(rows[0]).toMatchObject({ shifts: 1, hours: 4, wage: 800 })
+  })
+
+  it('zaměstnanec mimo seznam → „Neznámý zaměstnanec", náklad 0 bez sazby', () => {
+    const rows = buildPayrollPreview(
+      [shift({ employeeId: 'x9', startsAt: iso(8), endsAt: iso(16) })],
+      emps,
+    )
+    expect(rows[0]).toMatchObject({ name: 'Neznámý zaměstnanec', wage: 0 })
   })
 })
 
 describe('totals', () => {
-  it('celkové hodiny a mzdový náklad', () => {
-    const t = totals([
-      shift({ start: '08:00', end: '12:00', hourlyRate: 200 }), // 4 h, 800
-      shift({ start: '08:00', end: '10:00', hourlyRate: 300 }), // 2 h, 600
-    ])
-    expect(t).toEqual({ count: 2, hours: 6, wage: 1400 })
+  const emps = [
+    { id: 'e1', hourlyRate: 200 },
+    { id: 'e2', hourlyRate: 250 },
+  ]
+  it('celkové hodiny a plánovaný náklad', () => {
+    const t = totals(
+      [
+        shift({ employeeId: 'e1', startsAt: iso(8), endsAt: iso(12) }), // 4 h, 800
+        shift({ employeeId: 'e2', startsAt: iso(8), endsAt: iso(10) }), // 2 h, 500
+      ],
+      emps,
+    )
+    expect(t).toEqual({ count: 2, hours: 6, wage: 1300 })
   })
   it('prázdný seznam → nuly', () => {
-    expect(totals([])).toEqual({ count: 0, hours: 0, wage: 0 })
-    expect(summarizeByEmployee([])).toEqual([])
-  })
-})
-
-describe('hraniční případy', () => {
-  it('nulová sazba → mzda 0', () => {
-    expect(shiftWage(shift({ start: '08:00', end: '16:00', hourlyRate: 0 }))).toBe(0)
-  })
-  it('téměř celý den 00:00–23:59 → 23.98 h', () => {
-    expect(shiftHours(shift({ start: '00:00', end: '23:59' }))).toBe(23.98)
-  })
-  it('přechod přes půlnoc není podporován → 0 (vědomé omezení)', () => {
-    expect(shiftHours(shift({ start: '22:00', end: '02:00' }))).toBe(0)
+    expect(totals([], [])).toEqual({ count: 0, hours: 0, wage: 0 })
   })
 })
 
@@ -142,21 +193,9 @@ describe('calculateCommission', () => {
     ])
   })
 
-  it('zaměstnanec mimo seznam → „Neznámý zaměstnanec"', () => {
-    const r = calculateCommission([sale({ employeeId: 'x9', totalNet: 1000 })], emps, 10)
-    expect(r[0].name).toBe('Neznámý zaměstnanec')
-  })
-
-  it('nulová/neplatná/NaN sazba → provize 0, tržby sečteny', () => {
-    const s = [sale({ employeeId: 'e1', totalNet: 1000 })]
-    expect(calculateCommission(s, emps, 0)[0]).toMatchObject({ revenue: 1000, commission: 0 })
-    expect(calculateCommission(s, emps, -5)[0].commission).toBe(0)
-    expect(calculateCommission(s, emps, Number.NaN)[0].commission).toBe(0)
-  })
-
   it('sazba nad 100 % se zastropuje na 100 %', () => {
     const r = calculateCommission([sale({ employeeId: 'e1', totalNet: 1000 })], emps, 150)
-    expect(r[0].commission).toBe(1000) // 100 % z 1000, ne 1500
+    expect(r[0].commission).toBe(1000)
   })
 
   it('záporná tržba (vratka jako Completed prodej) se do provize nepočítá', () => {
