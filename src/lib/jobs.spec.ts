@@ -1,88 +1,103 @@
 import { describe, it, expect } from 'vitest'
-import {
-  jobRevenue,
-  jobCost,
-  jobProfit,
-  jobMargin,
-  summarizeJobs,
-  jobStatusLabel,
-  nonNegative,
-} from '@/lib/jobs'
-import type { Job } from '@/lib/types'
+import { jobStatusLabel, jobPriorityLabel, jobNextStatuses, computeJobTotals } from '@/lib/jobs'
+import type { JobMaterialItem, JobStatus, JobWorkItem } from '@/lib/types'
 
-function job(over: Partial<Job> = {}): Job {
+function work(over: Partial<JobWorkItem> = {}): JobWorkItem {
   return {
-    id: 'j1',
-    name: 'Oprava kotle',
-    clientName: 'Novák',
-    status: 'in_progress',
-    materialCost: 800,
-    materialPrice: 1000,
-    hours: 3,
-    hourlyRate: 500,
-    note: null,
-    createdAt: '2024-06-01T00:00:00.000Z',
-    updatedAt: '2024-06-01T00:00:00.000Z',
+    id: 'w1',
+    serviceItemId: null,
+    description: 'Montáž',
+    quantity: 2,
+    unitPrice: 500,
+    vatRate: 21,
+    sortOrder: 0,
+    ...over,
+  }
+}
+function material(over: Partial<JobMaterialItem> = {}): JobMaterialItem {
+  return {
+    id: 'm1',
+    productId: 'p1',
+    description: 'Kabel',
+    quantity: 1,
+    unitPrice: 300,
+    vatRate: 21,
+    sortOrder: 0,
     ...over,
   }
 }
 
-describe('ziskovost zakázky', () => {
-  it('výnos = materiál (prodej) + hodiny × sazba', () => {
-    expect(jobRevenue(job())).toBe(1000 + 3 * 500) // 2500
-  })
-  it('náklad = nákup materiálu', () => {
-    expect(jobCost(job())).toBe(800)
-  })
-  it('zisk = výnos − náklad', () => {
-    expect(jobProfit(job())).toBe(2500 - 800) // 1700
-  })
-  it('marže = zisk / výnos', () => {
-    expect(jobMargin(job())).toBeCloseTo(1700 / 2500, 5)
-  })
-  it('nulový výnos → marže 0 (žádné dělení nulou)', () => {
-    expect(jobMargin(job({ materialPrice: 0, hours: 0, hourlyRate: 0 }))).toBe(0)
-  })
-  it('ztrátová zakázka → záporný zisk', () => {
-    expect(
-      jobProfit(job({ materialCost: 3000, materialPrice: 1000, hours: 0, hourlyRate: 0 })),
-    ).toBe(-2000)
-  })
-})
-
-describe('summarizeJobs', () => {
-  it('sečte výnos, náklad, zisk a spočítá váženou marži', () => {
-    const s = summarizeJobs([
-      job({ materialCost: 800, materialPrice: 1000, hours: 3, hourlyRate: 500 }), // rev 2500, cost 800
-      job({ materialCost: 200, materialPrice: 0, hours: 1, hourlyRate: 800 }), // rev 800, cost 200
-    ])
-    expect(s.count).toBe(2)
-    expect(s.revenue).toBe(3300)
-    expect(s.cost).toBe(1000)
-    expect(s.profit).toBe(2300)
-    expect(s.margin).toBeCloseTo(2300 / 3300, 5)
-  })
-  it('prázdný seznam → nuly bez dělení nulou', () => {
-    expect(summarizeJobs([])).toEqual({ count: 0, revenue: 0, cost: 0, profit: 0, margin: 0 })
-  })
-})
-
-describe('nonNegative', () => {
-  it('kladné číslo projde', () => {
-    expect(nonNegative(1250)).toBe(1250)
-    expect(nonNegative(2.5)).toBe(2.5)
-  })
-  it('záporné, NaN i nevalidní vstup → 0', () => {
-    expect(nonNegative(-500)).toBe(0)
-    expect(nonNegative(NaN)).toBe(0)
-    expect(nonNegative('abc')).toBe(0)
-    expect(nonNegative(-Infinity)).toBe(0)
-  })
-})
-
 describe('jobStatusLabel', () => {
-  it('lokalizuje stavy', () => {
-    expect(jobStatusLabel('quote')).toBe('Nabídka')
-    expect(jobStatusLabel('invoiced')).toBe('Vyfakturováno')
+  it.each<[JobStatus, string]>([
+    ['scheduled', 'Naplánováno'],
+    ['in_progress', 'Probíhá'],
+    ['waiting', 'Čeká'],
+    ['done', 'Hotovo'],
+    ['cancelled', 'Zrušeno'],
+  ])('%s → %s', (s, label) => {
+    expect(jobStatusLabel(s)).toBe(label)
+  })
+})
+
+describe('jobPriorityLabel', () => {
+  it('lokalizuje priority', () => {
+    expect(jobPriorityLabel('low')).toBe('Nízká')
+    expect(jobPriorityLabel('normal')).toBe('Normální')
+    expect(jobPriorityLabel('high')).toBe('Vysoká')
+    expect(jobPriorityLabel('urgent')).toBe('Urgentní')
+  })
+})
+
+describe('jobNextStatuses (stavový automat)', () => {
+  it('scheduled → in_progress / cancelled', () => {
+    expect(jobNextStatuses('scheduled')).toEqual(['in_progress', 'cancelled'])
+  })
+  it('in_progress → waiting / done / cancelled', () => {
+    expect(jobNextStatuses('in_progress')).toEqual(['waiting', 'done', 'cancelled'])
+  })
+  it('waiting → in_progress / done / cancelled', () => {
+    expect(jobNextStatuses('waiting')).toEqual(['in_progress', 'done', 'cancelled'])
+  })
+  it('done a cancelled jsou koncové (žádný přechod)', () => {
+    expect(jobNextStatuses('done')).toEqual([])
+    expect(jobNextStatuses('cancelled')).toEqual([])
+  })
+})
+
+describe('computeJobTotals', () => {
+  it('plátce DPH: net práce/materiálu + 21 % DPH', () => {
+    // práce 2×500 = 1000, materiál 1×300 = 300 → net 1300, DPH 273, total 1573
+    const t = computeJobTotals([work()], [material()], true)
+    expect(t.workNet).toBe(1000)
+    expect(t.materialNet).toBe(300)
+    expect(t.net).toBe(1300)
+    expect(t.vat).toBe(273)
+    expect(t.total).toBe(1573)
+  })
+  it('neplátce: bez DPH', () => {
+    const t = computeJobTotals([work()], [material()], false)
+    expect(t.net).toBe(1300)
+    expect(t.vat).toBe(0)
+    expect(t.total).toBe(1300)
+  })
+  it('prázdný pracovní list → samé nuly', () => {
+    expect(computeJobTotals([], [], true)).toEqual({
+      workNet: 0,
+      materialNet: 0,
+      net: 0,
+      vat: 0,
+      total: 0,
+    })
+  })
+  it('smíšené sazby DPH se sečtou správně', () => {
+    // práce 1×1000 @21 % (210), materiál 1×1000 @12 % (120) → net 2000, DPH 330, total 2330
+    const t = computeJobTotals(
+      [work({ quantity: 1, unitPrice: 1000, vatRate: 21 })],
+      [material({ quantity: 1, unitPrice: 1000, vatRate: 12 })],
+      true,
+    )
+    expect(t.net).toBe(2000)
+    expect(t.vat).toBe(330)
+    expect(t.total).toBe(2330)
   })
 })

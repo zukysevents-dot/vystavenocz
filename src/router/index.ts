@@ -238,7 +238,26 @@ const routes: RouteRecordRaw[] = [
     path: '/app/zakazky',
     name: 'app-zakazky',
     component: () => import('@/pages/ZakazkyPage.vue'),
-    meta: { title: 'Zakázky & výjezdy', layout: 'app', requiresAuth: true, requiresModule: 'jobs' },
+    meta: { title: 'Zakázky', layout: 'app', requiresAuth: true, requiresModule: 'jobs' },
+  },
+  {
+    path: '/app/zakazky/:id',
+    name: 'app-zakazka-detail',
+    component: () => import('@/pages/ZakazkaDetailPage.vue'),
+    // Detail zakázky vidí i technik (Employee) — je to jeho pracovní list. Faktura je gate-ovaná uvnitř stránky.
+    meta: { title: 'Zakázka', layout: 'app', requiresAuth: true, requiresModule: 'jobs' },
+  },
+  {
+    path: '/app/cenik-sluzeb',
+    name: 'app-cenik-sluzeb',
+    component: () => import('@/pages/ServiceCatalogPage.vue'),
+    meta: {
+      title: 'Ceník služeb',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'jobs',
+      requiresRole: ['Owner', 'Admin', 'Manager'],
+    },
   },
   {
     path: '/app/podpisy',
