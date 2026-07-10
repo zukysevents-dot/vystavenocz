@@ -27,7 +27,7 @@
 | `POST`   | `/shifts/publish`                                                 | `attendance.manage` | `PublishShiftsRequest`. Draft → Published v rozsahu/pobočce. **Audit `ShiftsPublished`** v transakci.                                                  |
 
 - `CreateShiftRequest`/`UpdateShiftRequest`: `{ employeeId, startsAt, endsAt, locationId?, note?, status?, position?, hourlyRateOverride? }` (`status` default `Draft`).
-- `ShiftResponse`: `{ id, employeeId, locationId, startsAt, endsAt, note, status, position, hourlyRateOverride }` — **bez `employeeName`** (FE si zaměstnance načítá zvlášť).
+- `ShiftResponse`: `{ id, employeeId, locationId, startsAt, endsAt, note, status, position, hourlyRateOverride }` — **bez `employeeName`** (FE si zaměstnance načítá zvlášť). `hourlyRateOverride` je `null` pro volajícího bez `attendance.manage` (wage privacy — ne-manažer vidí publikovanou rotu, ale ne sazby na ní; viz §4/§7).
 - `PublishShiftsRequest`: `{ from, to, locationId? }` → `PublishShiftsResponse`: `{ published: number }`.
 - Aplikace šablony = **FE-side** (načte šablonu + zaměstnance + cílový týden → `POST /shifts` Draft). Žádný `apply` endpoint.
 
@@ -41,7 +41,7 @@ CRUD (POST/PUT/DELETE = `attendance.manage`, GET list/`{id}` = `attendance.read`
 
 - `CreateEmployeeRequest`/`UpdateEmployeeRequest` +`position?`, `hourlyRate?` (validace `hourlyRate >= 0`). POST/PUT = `attendance.manage`.
 - `EmployeeResponse`: `{ id, fullName, userId, locationId, isActive, position, hourlyRate }`.
-- **Wage privacy:** `hourlyRate` je v response `null` pro volajícího bez `attendance.manage`.
+- **Wage privacy:** mzdové sazby jsou v response `null` pro volajícího bez `attendance.manage` — jak `Employee.hourlyRate` v `EmployeeResponse`, tak `Shift.hourlyRateOverride` v `ShiftResponse` (aby se přes sdílenou publikovanou rotu neprozradily sazby kolegů).
 
 ## 5. Payroll — `/api/v1/attendance/summary` + `/export`
 
@@ -59,14 +59,14 @@ CRUD (POST/PUT/DELETE = `attendance.manage`, GET list/`{id}` = `attendance.read`
 
 ## 7. Oprávnění / role / location (matice)
 
-| Schopnost                                      | Owner/Admin | Manager          | Employee      | Accountant    |
-| ---------------------------------------------- | ----------- | ---------------- | ------------- | ------------- |
-| Plán/publikace směn, šablony, mzda zaměstnance | ✅          | ✅ (svá pobočka) | ❌            | ❌            |
-| Čtení směn (Draft+Published)                   | ✅          | ✅ (svá)         | jen Published | jen Published |
-| Píchačka (sebe)                                | ✅          | ✅               | ✅            | ❌            |
-| Oprava docházky (audit)                        | ✅          | ✅ (svá pobočka) | ❌            | ❌            |
-| Payroll (mzda v přehledu/CSV)                  | ✅          | ✅               | jen svou      | jen svou      |
-| `Employee.hourlyRate` v response               | ✅          | ✅               | ❌ (null)     | ❌ (null)     |
+| Schopnost                                                                   | Owner/Admin | Manager          | Employee      | Accountant    |
+| --------------------------------------------------------------------------- | ----------- | ---------------- | ------------- | ------------- |
+| Plán/publikace směn, šablony, mzda zaměstnance                              | ✅          | ✅ (svá pobočka) | ❌            | ❌            |
+| Čtení směn (Draft+Published)                                                | ✅          | ✅ (svá)         | jen Published | jen Published |
+| Píchačka (sebe)                                                             | ✅          | ✅               | ✅            | ❌            |
+| Oprava docházky (audit)                                                     | ✅          | ✅ (svá pobočka) | ❌            | ❌            |
+| Payroll (mzda v přehledu/CSV)                                               | ✅          | ✅               | jen svou      | jen svou      |
+| Mzdová sazba v response (`Employee.hourlyRate`, `Shift.hourlyRateOverride`) | ✅          | ✅               | ❌ (null)     | ❌ (null)     |
 
 Modul gate `attendance.*` → modul `attendance` beze změny. Tenant izolace přes global query filter (cross-tenant → 404).
 

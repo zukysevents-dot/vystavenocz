@@ -86,6 +86,15 @@ function isoLocalTime(iso: string): string {
   const d = new Date(iso)
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
+// Overnight směny (např. bar 18:00–02:00): když je čas konce ≤ času začátku, konec patří na
+// následující den — jinak by vyšla nulová délka a nešlo by je naplánovat ani editovat.
+function computeEndsAt(dateStr: string, start: string, end: string): string {
+  const [sh, sm] = start.split(':').map(Number)
+  const [eh, em] = end.split(':').map(Number)
+  const rollsOver = [sh, sm, eh, em].every((n) => Number.isFinite(n)) && eh * 60 + em < sh * 60 + sm
+  const endDateStr = rollsOver ? ymd(addDays(new Date(`${dateStr}T00:00:00`), 1)) : dateStr
+  return localToIso(endDateStr, end)
+}
 
 const { shifts, load, create, update, remove, publish } = useShifts()
 const employeesApi = useApi<Employee>('employees')
@@ -247,7 +256,7 @@ const preview = computed(() => {
   if (!form.date || !form.start || !form.end) return { hours: 0, wage: 0 }
   const draft = {
     startsAt: localToIso(form.date, form.start),
-    endsAt: localToIso(form.date, form.end),
+    endsAt: computeEndsAt(form.date, form.start, form.end),
     hourlyRateOverride: form.hourlyRateOverride === '' ? null : Number(form.hourlyRateOverride),
   }
   const emp = employeeById.value.get(form.employeeId)
@@ -266,7 +275,7 @@ async function save(): Promise<void> {
   if (!form.employeeId) return void toast.error('Vyberte zaměstnance.')
   if (!form.date) return void toast.error('Zadejte datum.')
   const startsAt = localToIso(form.date, form.start)
-  const endsAt = localToIso(form.date, form.end)
+  const endsAt = computeEndsAt(form.date, form.start, form.end)
   if (shiftHours({ startsAt, endsAt }) === 0)
     return void toast.error('Konec směny musí být po začátku.')
 

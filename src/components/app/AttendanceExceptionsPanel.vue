@@ -4,6 +4,7 @@ import { Loader2, AlertTriangle } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import LoadError from '@/components/app/LoadError.vue'
 import { toast } from '@/components/ui/sonner'
 import { useAttendance } from '@/composables/useAttendance'
 import { ApiError } from '@/lib/http'
@@ -24,20 +25,31 @@ const to = ref(ymd(new Date(today.getFullYear(), today.getMonth() + 1, 0)))
 const items = ref<AttendanceException[]>([])
 const loading = ref(false)
 const loaded = ref(false)
+const loadError = ref(false)
 
-const KIND: Record<AttendanceExceptionKind, { label: string; cls: string }> = {
-  MissingClockOut: {
-    label: 'Chybějící odchod',
-    cls: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300',
-  },
-  Overtime: {
-    label: 'Přesčas',
-    cls: 'bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300',
-  },
-  PlanVsActualVariance: {
-    label: 'Plán vs. realita',
-    cls: 'bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300',
-  },
+const KIND = new Map<AttendanceExceptionKind, { label: string; cls: string }>([
+  [
+    'MissingClockOut',
+    {
+      label: 'Chybějící odchod',
+      cls: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300',
+    },
+  ],
+  [
+    'Overtime',
+    { label: 'Přesčas', cls: 'bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300' },
+  ],
+  [
+    'PlanVsActualVariance',
+    {
+      label: 'Plán vs. realita',
+      cls: 'bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300',
+    },
+  ],
+])
+// Fallback pro neznámý druh výjimky (kdyby backend přidal nový kind) — ať tabulka nespadne.
+function kindMeta(kind: AttendanceExceptionKind): { label: string; cls: string } {
+  return KIND.get(kind) ?? { label: kind, cls: 'bg-muted text-muted-foreground' }
 }
 
 function minutes(m: number | null): string {
@@ -47,12 +59,14 @@ function minutes(m: number | null): string {
 
 async function reload(): Promise<void> {
   loading.value = true
+  loadError.value = false
   try {
     const fromIso = new Date(`${from.value}T00:00:00`).toISOString()
     const toIso = new Date(`${to.value}T23:59:59`).toISOString()
     items.value = await att.exceptions({ from: fromIso, to: toIso })
     loaded.value = true
   } catch (e) {
+    loadError.value = true
     if (e instanceof ApiError && e.status === 403)
       toast.error('Na přehled výjimek nemáte oprávnění.')
     else toast.error('Načtení výjimek selhalo.')
@@ -87,6 +101,8 @@ onMounted(reload)
       <Loader2 class="h-5 w-5 animate-spin text-primary" />
     </div>
 
+    <LoadError v-else-if="loadError" class="mt-4" @retry="reload" />
+
     <div
       v-else-if="loaded && !items.length"
       class="mt-4 rounded-2xl border border-border bg-card p-10 text-center text-muted-foreground"
@@ -119,8 +135,8 @@ onMounted(reload)
               <td class="px-4 py-3 font-medium">{{ x.employeeName }}</td>
               <td class="px-4 py-3 tabular-nums text-muted-foreground">{{ x.date }}</td>
               <td class="px-4 py-3">
-                <span class="rounded px-2 py-0.5 text-xs font-medium" :class="KIND[x.kind].cls">
-                  {{ KIND[x.kind].label }}
+                <span class="rounded px-2 py-0.5 text-xs font-medium" :class="kindMeta(x.kind).cls">
+                  {{ kindMeta(x.kind).label }}
                 </span>
               </td>
               <td class="px-4 py-3 text-right tabular-nums text-muted-foreground">

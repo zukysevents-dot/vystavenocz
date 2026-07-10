@@ -339,6 +339,9 @@ const routes: RouteRecordRaw[] = [
       layout: 'app',
       requiresAuth: true,
       requiresModule: 'attendance',
+      // Plánovač je manažerský nástroj (plán/publikace/mzdové podklady). Obsluha/účetní sem nesmí
+      // — jinak by přes plánovaný náklad a per-směna sazby unikly mzdově citlivé údaje.
+      requiresRole: ['Owner', 'Admin', 'Manager'],
     },
   },
   {

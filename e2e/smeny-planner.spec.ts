@@ -98,6 +98,17 @@ test.describe('Plán směn (Workforce V2)', () => {
     await page.getByRole('button', { name: 'Přidat' }).click()
     await expect(page.getByText('Směna přidána.')).toBeVisible()
 
+    // Overnight směna (bar 18:00–02:00) musí projít — konec patří na následující den, ne 0 h.
+    await page.getByRole('button', { name: 'Nová směna' }).click()
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await page.getByRole('combobox').first().click()
+    await page.getByRole('option', { name: 'Anna Nováková' }).click()
+    await page.locator('#sh-date').fill(monday)
+    await page.locator('#sh-start').fill('18:00')
+    await page.locator('#sh-end').fill('02:00')
+    await page.getByRole('button', { name: 'Přidat' }).click()
+    await expect(page.getByText(/18:00.02:00/).first()).toBeVisible()
+
     // Šablony: založení nové šablony.
     await page.getByRole('button', { name: 'Šablony' }).click()
     await expect(page.getByRole('heading', { name: 'Šablony směn' })).toBeVisible()

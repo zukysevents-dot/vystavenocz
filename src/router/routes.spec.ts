@@ -31,4 +31,13 @@ describe('app routes — role gates', () => {
     expect(route?.meta.requiresModule).toBe('verified_signing')
     expect(route?.meta.requiresAuth).toBe(true)
   })
+
+  it('gates the shift planner behind manager roles (wage privacy) within the attendance module', () => {
+    const route = router.getRoutes().find((r) => r.name === 'app-smeny')
+
+    // Obsluha/účetní nesmí do plánovače — jinak by přes plánovaný náklad a per-směna sazby
+    // unikly mzdově citlivé údaje. Docházka (píchačka) je pro ně dál dostupná zvlášť.
+    expect(route?.meta.requiresRole).toEqual(['Owner', 'Admin', 'Manager'])
+    expect(route?.meta.requiresModule).toBe('attendance')
+  })
 })
