@@ -117,3 +117,39 @@ Proveď na testovací firmě / testovacím účtu. Pořadí odpovídá tomu, jak
 5. Ověř `.env`, hlavně `DB_PASSWORD`, `JWT_SECRET`, `STRIPE_SECRET_KEY`, `INTEGRATIONS_SECRET_ENCRYPTION_KEY`, `PAYMENTS_PORTAL_BASE_URL`, `DOMAIN` a `ACME_EMAIL`.
 6. Ověř DNS domény na IP VPS a otevřené porty 80/443.
 7. Pokud selže migrace, nevracej DB ručně. Nejdřív zazálohuj databázi a řeš konkrétní chybu migrace.
+
+## 8. Recovery / návrat po špatném deployi
+
+Tenhle postup použij, když health check nebo klikací smoke po deployi neprojde a potřebuješ rychle vrátit službu do provozu.
+
+1. Nejdřív zachovej důkazy:
+   ```bash
+   cd ~/vystavenocz
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml logs --tail=250 api
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml logs --tail=120 web
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml logs --tail=120 caddy
+   ```
+2. Udělej nový DB dump aktuálního stavu před jakýmkoliv dalším zásahem:
+   ```bash
+   mkdir -p ~/backups/vystaveno
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db \
+     pg_dump -U vystaveno -d vystaveno --format=custom --no-owner --no-privileges \
+     > ~/backups/vystaveno/vystaveno-recovery-$(date +%Y%m%d-%H%M%S).dump
+   ```
+3. Pokud selhal jen frontend build/runtime a API je zdravé, vrať jen frontend commit a znovu postav stack:
+   ```bash
+   cd ~/vystavenocz
+   git checkout <posledni-funkcni-frontend-commit>
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build web caddy
+   ```
+4. Pokud selhalo API před migrací, vrať backend commit a znovu postav API:
+   ```bash
+   cd ~/vystaveno-api
+   git checkout <posledni-funkcni-backend-commit>
+   cd ~/vystavenocz
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build api
+   ```
+5. Pokud migrace už proběhly, rollback kódu nevrací schéma databáze zpět. Neobnovuj produkční DB bez jasného rozhodnutí a ověřeného dumpu; nejdřív oprav forward migrací nebo hotfixem.
+6. Nikdy neměň `INTEGRATIONS_SECRET_ENCRYPTION_KEY` jako “rychlou opravu”. Změna klíče zneplatní dříve uložené credentialy platebních providerů a ověřených podpisů; nový klíč použij jen u čerstvého prostředí nebo při plánované rotaci s přepsáním secretů.
+7. Po recovery znovu projdi minimálně technickou kontrolu z bodu 3 a relevantní smoke kroky z bodu 5.
