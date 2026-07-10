@@ -462,7 +462,12 @@ async function onCancel() {
         </div>
       </div>
       <div class="flex flex-wrap items-center justify-end gap-2">
-        <Button variant="outline" :disabled="loading" @click="showPreview = !showPreview">
+        <Button
+          variant="outline"
+          :disabled="loading"
+          :aria-label="showPreview ? 'Skrýt náhled' : 'Zobrazit náhled'"
+          @click="showPreview = !showPreview"
+        >
           <EyeOff v-if="showPreview" class="h-4 w-4" />
           <Eye v-else class="h-4 w-4" />
           <span class="hidden sm:inline">{{ showPreview ? 'Skrýt náhled' : 'Náhled' }}</span>
@@ -518,10 +523,10 @@ async function onCancel() {
           Odběratel
         </h2>
         <div class="mt-4 space-y-2">
-          <Label>Klient</Label>
+          <Label for="inv-client">Klient</Label>
           <div class="flex gap-2">
             <Select v-model="selectedClientId">
-              <SelectTrigger class="flex-1">
+              <SelectTrigger id="inv-client" class="flex-1">
                 <SelectValue placeholder="Vyberte klienta…" />
               </SelectTrigger>
               <SelectContent>
@@ -623,30 +628,54 @@ async function onCancel() {
                 <Trash2 class="h-4 w-4 text-destructive" />
               </Button>
             </div>
-            <Input v-model="it.description" placeholder="Popis položky" class="mt-2" />
+            <Label :for="`inv-item-${it.id}-description`" class="sr-only">Popis položky</Label>
+            <Input
+              :id="`inv-item-${it.id}-description`"
+              v-model="it.description"
+              placeholder="Popis položky"
+              class="mt-2"
+            />
             <div
               class="mt-2 grid grid-cols-2 gap-2"
               :class="vatPayer ? 'sm:grid-cols-4' : 'sm:grid-cols-3'"
             >
               <div class="space-y-1">
-                <Label class="text-xs text-muted-foreground">Množství</Label>
-                <Input v-model.number="it.quantity" type="number" step="0.01" />
+                <Label :for="`inv-item-${it.id}-quantity`" class="text-xs text-muted-foreground"
+                  >Množství</Label
+                >
+                <Input
+                  :id="`inv-item-${it.id}-quantity`"
+                  v-model.number="it.quantity"
+                  type="number"
+                  step="0.01"
+                />
               </div>
               <div class="space-y-1">
-                <Label class="text-xs text-muted-foreground">MJ</Label>
-                <Input v-model="it.unit" />
+                <Label :for="`inv-item-${it.id}-unit`" class="text-xs text-muted-foreground"
+                  >MJ</Label
+                >
+                <Input :id="`inv-item-${it.id}-unit`" v-model="it.unit" />
               </div>
               <div class="space-y-1">
-                <Label class="text-xs text-muted-foreground">Cena/MJ</Label>
-                <Input v-model.number="it.unitPrice" type="number" step="0.01" />
+                <Label :for="`inv-item-${it.id}-price`" class="text-xs text-muted-foreground"
+                  >Cena/MJ</Label
+                >
+                <Input
+                  :id="`inv-item-${it.id}-price`"
+                  v-model.number="it.unitPrice"
+                  type="number"
+                  step="0.01"
+                />
               </div>
               <div v-if="vatPayer" class="space-y-1">
-                <Label class="text-xs text-muted-foreground">DPH %</Label>
+                <Label :for="`inv-item-${it.id}-vat`" class="text-xs text-muted-foreground"
+                  >DPH %</Label
+                >
                 <Select
                   :model-value="String(it.vatRate)"
                   @update:model-value="(v) => (it.vatRate = Number(v) as VatRate)"
                 >
-                  <SelectTrigger>
+                  <SelectTrigger :id="`inv-item-${it.id}-vat`">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
