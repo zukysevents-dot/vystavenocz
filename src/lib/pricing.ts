@@ -260,7 +260,7 @@ export const PRICING_ADDONS: readonly PricingAddon[] = [
   {
     key: 'online-booking',
     name: 'Online rezervace',
-    desc: 'Zaplněný kalendář bez zpráv na Instagramu a bez zbytečných no-show.',
+    desc: 'Veřejný rezervační odkaz, kalendář služeb a kapacit bez kolizí a ručního přepisování.',
     segment: 'Salony, barber, kosmetika, fyzio, trenéři',
     category: 'services',
     monthly: 199,
@@ -271,7 +271,7 @@ export const PRICING_ADDONS: readonly PricingAddon[] = [
   {
     key: 'loyalty',
     name: 'Věrnost & návraty',
-    desc: 'Vracející se zákazníci místo jednorázových návštěv — automaticky.',
+    desc: 'Zákaznické účty, body, cenové hladiny a akce přímo v pokladně i restauraci.',
     segment: 'Služby a retail s opakovaným zákazníkem',
     category: 'services',
     monthly: 199,
@@ -281,7 +281,7 @@ export const PRICING_ADDONS: readonly PricingAddon[] = [
   {
     key: 'jobs',
     name: 'Zakázky & výjezdy',
-    desc: 'Od první nabídky přes výjezd techniků až po hotovou zakázku a fakturu.',
+    desc: 'Ceník služeb, nabídka, výjezd, pracovní list, předání a faktura v jednom toku.',
     segment: 'Řemeslo, servis, autoservisy',
     category: 'field',
     monthly: 299,
@@ -292,7 +292,7 @@ export const PRICING_ADDONS: readonly PricingAddon[] = [
   {
     key: 'delivery',
     name: 'Rozvoz & výdej',
-    desc: 'Vlastní rozvoz a výdej bez provizí doručovacích platforem.',
+    desc: 'Veřejné menu, QR objednávka ke stolu, výdej i rozvoz rovnou do kuchyňské fronty.',
     segment: 'Restaurace, bistra, pizzerie',
     category: 'gastro',
     monthly: 349,
@@ -303,7 +303,7 @@ export const PRICING_ADDONS: readonly PricingAddon[] = [
   {
     key: 'shifts',
     name: 'Směny & provize',
-    desc: 'Jasné směny, spravedlivé provize a spropitné a podklady pro mzdy bez tabulek.',
+    desc: 'Týdenní plán, publikace směn, docházka, opravy s auditem a export pro mzdy.',
     segment: 'Provozy se směnami',
     category: 'team',
     monthly: 149,
@@ -315,7 +315,7 @@ export const PRICING_ADDONS: readonly PricingAddon[] = [
   {
     key: 'cashflow',
     name: 'Cashflow & upomínky',
-    desc: 'Peníze pod kontrolou dřív, než začnou chybět.',
+    desc: 'Pohledávky, stáří dluhů, export dlužníků a připravená e-mailová upomínka.',
     segment: 'OSVČ, řemeslo, B2B na splatnost',
     category: 'field',
     monthly: 199,
@@ -326,7 +326,7 @@ export const PRICING_ADDONS: readonly PricingAddon[] = [
   {
     key: 'branches',
     name: 'Pobočky & vedení',
-    desc: 'Srovnání poboček a vedení celé firmy z jednoho přehledu.',
+    desc: 'Tržby, marže, food cost, ztráty skladu a srovnání poboček v jednom přehledu.',
     segment: 'Firmy s 2+ provozovnami',
     category: 'team',
     monthly: 349,
@@ -336,7 +336,7 @@ export const PRICING_ADDONS: readonly PricingAddon[] = [
   {
     key: 'client-portal',
     name: 'Klientská zóna',
-    desc: 'Klienti si sami stáhnou fakturu, zaplatí online a schválí nabídku.',
+    desc: 'Klient na jednom odkazu vidí faktury a nabídky, které může rovnou přijmout nebo odmítnout.',
     segment: 'Agentury, účetní, B2B dodavatelé',
     category: 'management',
     monthly: 199,
@@ -347,7 +347,7 @@ export const PRICING_ADDONS: readonly PricingAddon[] = [
   {
     key: 'accounting',
     name: 'Účtárna',
-    desc: 'Účetní má podklady připravené — vy už je nehoníte e-mailem.',
+    desc: 'Pohoda XML, účetní CSV a Z-reporty připravené ke stažení bez ručního přepisování.',
     segment: 'Firmy s účetní + účetní kanceláře',
     category: 'management',
     monthly: 199,
@@ -359,7 +359,7 @@ export const PRICING_ADDONS: readonly PricingAddon[] = [
   {
     key: 'stock-scan',
     name: 'Naskladnění & čárové kódy',
-    desc: 'Naskladnění a inventura mobilem za zlomek času.',
+    desc: 'Naskladnění, inventura a sken EAN přes čtečku i kameru mobilu.',
     segment: 'Obchody, e-shopy, retail',
     category: 'retail',
     monthly: 149,

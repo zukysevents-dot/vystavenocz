@@ -10,6 +10,8 @@ Při každé smysluplné změně projektu aktualizuj **oba soubory**, aby se př
 
 Za smysluplnou změnu se bere hlavně: architektura, doménový model, modulový systém, API kontrakty, deploy postup, bezpečnostní pravidla, workflow vývoje, testovací brány a důležitá produktová rozhodnutí.
 
+Veřejný ceník (`src/lib/pricing.ts` + `IndustryPackages.vue`) prodává jen ověřené workflow, která v aplikaci už běží, a označuje je štítkem „V aplikaci". Nezaměňuj připravený integrační cíl za ostrý provoz: klientská zóna umí faktury a přijetí nabídek, ne online platbu bez runtime provideru; cashflow připraví e-mailovou upomínku, neposílá automatickou sekvenci; BankID a platební provideri zůstávají „Připraveno k napojení", dokud nejsou aktivní adaptéry a credentials.
+
 ## Co to je
 
 Vystaveno.cz — fakturační + pokladní (POS) / gastro SaaS pro malé české firmy.

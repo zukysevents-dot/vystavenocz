@@ -46,7 +46,8 @@ const isHighlighted = (key: string) => props.highlight.includes(key)
         Až porostete, Vystaveno poroste s vámi.
       </h3>
       <p class="mt-3 text-sm text-muted-foreground sm:text-base">
-        Oborové nástavby pro konkrétní provozy. Zapnete je, až je budete reálně potřebovat.
+        Oborové nástavby pro konkrétní provozy. Níže jsou workflow, která už v aplikaci běží;
+        zapnete je, až je budete reálně potřebovat.
       </p>
     </div>
 
@@ -98,6 +99,12 @@ const isHighlighted = (key: string) => props.highlight.includes(key)
             class="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground"
           >
             Připravujeme
+          </span>
+          <span
+            v-else
+            class="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300"
+          >
+            V aplikaci
           </span>
         </div>
 
