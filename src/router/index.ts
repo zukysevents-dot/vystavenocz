@@ -505,9 +505,13 @@ router.beforeEach((to) => {
   if (to.meta.requiresModule && auth.isAuthenticated && !auth.hasModule(to.meta.requiresModule)) {
     return { name: 'app' }
   }
-  // Employee nemá invoices.read → přehled (dashboard) by vracel 403; přistane rovnou na pokladně.
+  // Employee nemá invoices.read → přehled (dashboard) by vracel 403; přistane na první provozní stránce.
+  // Landing musí respektovat zapnuté moduly, jinak vznikne smyčka: crafts tenant nemá `pos`, takže
+  // /app/pokladna by ho modulovým gate poslalo zpět na /app → /app/pokladna → … Vyber podle modulů.
   if (isApiMode() && to.name === 'app' && auth.role === 'Employee') {
-    return { path: '/app/pokladna' }
+    if (auth.hasModule('pos')) return { path: '/app/pokladna' }
+    if (auth.hasModule('jobs')) return { path: '/app/zakazky' }
+    return { path: '/app/nastaveni' }
   }
   return true
 })
