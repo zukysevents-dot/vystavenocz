@@ -87,7 +87,7 @@ function withChildren(job: Job): Job {
     materialItems: job.materialItems ?? [],
     checklist: job.checklist ?? [],
     events: job.events ?? [],
-    handover: job.handover ?? null,
+    handover: job.handover ? { ...job.handover, items: job.handover.items ?? [] } : null,
   }
 }
 function event(kind: string, detail: string | null): JobEvent {
@@ -147,7 +147,7 @@ export function useJobs() {
 
   // Detail vč. dětí a součtů (v API režimu je zdroj pravdy serverem vrácený totals).
   async function get(id: string): Promise<Job> {
-    if (isApiMode()) return http.get<Job>(`/jobs/${id}`)
+    if (isApiMode()) return withChildren(await http.get<Job>(`/jobs/${id}`))
     return findLocal(id)
   }
 
