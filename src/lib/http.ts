@@ -64,6 +64,10 @@ export interface DownloadResponse {
   contentType: string | null
 }
 
+export interface UploadOptions {
+  onProgress?: (percent: number) => void
+}
+
 // Souběžné requesty po expiraci tokenu sdílí jeden refresh — backend rotuje refresh token,
 // dva paralelní refreshe by se navzájem zneplatnily.
 let refreshing: Promise<Tokens | null> | null = null
@@ -183,6 +187,80 @@ async function download(path: string, retry = true): Promise<DownloadResponse> {
   }
 }
 
+async function uploadRequest<T>(
+  path: string,
+  formData: FormData,
+  reportProgress: (percent: number, complete?: boolean) => void,
+  retry = true,
+): Promise<T> {
+  const baseUrl = apiUrl()
+  if (!baseUrl) throw new ApiError(0, 'API URL není nastavené.')
+  const tokens = getTokens()
+
+  const response = await new Promise<{ status: number; body: string }>((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', `${baseUrl}${path}`)
+    xhr.setRequestHeader('Accept', 'application/json')
+    if (tokens?.accessToken) xhr.setRequestHeader('Authorization', `Bearer ${tokens.accessToken}`)
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        reportProgress(Math.round((event.loaded / event.total) * 100))
+      }
+    }
+    xhr.onload = () =>
+      resolve({
+        status: xhr.status,
+        body: xhr.responseText,
+      })
+    xhr.onerror = () => reject(new ApiError(0, 'Spojení se serverem selhalo.'))
+    xhr.onabort = () => reject(new ApiError(0, 'Nahrávání bylo přerušeno.'))
+    xhr.send(formData)
+  })
+
+  if (response.status === 401 && retry && getTokens()?.refreshToken) {
+    const refreshed = await refreshTokens()
+    if (refreshed) return uploadRequest<T>(path, formData, reportProgress, false)
+  }
+
+  if (response.status < 200 || response.status >= 300) {
+    let detail: unknown
+    if (response.body) {
+      try {
+        detail = JSON.parse(response.body)
+      } catch {
+        detail = response.body
+      }
+    }
+    const problem = detail as { detail?: string; title?: string } | undefined
+    throw new ApiError(
+      response.status,
+      problem?.detail ?? problem?.title ?? `HTTP ${response.status}`,
+      detail,
+    )
+  }
+
+  const result =
+    response.status === 204 || !response.body ? (undefined as T) : (JSON.parse(response.body) as T)
+  reportProgress(100, true)
+  return result
+}
+
+async function upload<T>(
+  path: string,
+  formData: FormData,
+  options: UploadOptions = {},
+): Promise<T> {
+  let lastProgress = -1
+  const reportProgress = (percent: number, complete = false) => {
+    // XHR může při retry začít znovu od nuly. UI nesmí couvnout a 100 % patří až úspěšné odpovědi.
+    const next = complete ? 100 : Math.min(99, Math.max(0, percent))
+    if (next <= lastProgress) return
+    lastProgress = next
+    options.onProgress?.(next)
+  }
+  return uploadRequest<T>(path, formData, reportProgress)
+}
+
 function parseContentDispositionFileName(value: string | null): string | null {
   if (!value) return null
   const encoded = value.match(/filename\*=UTF-8''([^;]+)/i)?.[1]
@@ -203,6 +281,7 @@ export const http = {
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
   del: <T = void>(path: string) => request<T>('DELETE', path),
   download,
+  upload,
   // Neautorizované volání (bez Authorization a bez refresh/retry) — veřejné endpointy.
   getPublic: <T>(path: string) => request<T>('GET', path, undefined, false, true),
   postPublic: <T>(path: string, body?: unknown) => request<T>('POST', path, body, false, true),

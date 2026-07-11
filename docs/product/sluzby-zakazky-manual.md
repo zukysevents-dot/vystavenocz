@@ -28,7 +28,8 @@ Otevřete zakázku (klik na řádek). V detailu je vše k jednomu výjezdu:
 1. **Práce** — přidejte provedené úkony z ceníku nebo napište volně (množství, cena, DPH). Náhled částky vidíte hned.
 2. **Materiál** — najděte produkt (podle názvu/kódu/EAN), zadejte množství a přidejte. **Systém rovnou odečte sklad.** Když materiál z listu smažete, sklad se zase vrátí. Vše je dohledatelné.
 3. **Checklist** — odškrtávací seznam úkonů (např. „Odzkoušen tlak", „Uklizeno").
-4. **Časová osa** — automatická historie událostí (změny stavu, přidaný materiál…).
+4. **Dokumenty a soubory** — přiložte jeden nebo více PDF dokumentů či fotografií ve formátu JPEG, PNG nebo WebP. Jeden soubor může mít nejvýše 10 MB. Když se některý z více souborů nepodaří nahrát, ostatní se nahrají dál a aplikace přesně vypíše výsledky. Každá příloha ukazuje název, velikost, datum a autora; uživatelé s přístupem k zakázce ji mohou stáhnout, vedení a technik také nahrát nebo po potvrzení smazat.
+5. **Časová osa** — automatická historie událostí (změny stavu, přidaný materiál…).
 
 ## 4. Předání
 
@@ -44,5 +45,5 @@ Otevřete zakázku (klik na řádek). V detailu je vše k jednomu výjezdu:
 
 ## Co je zatím mimo
 
-- **Fotky k zakázce/předání** zatím systém neukládá (chybí úložiště souborů) — je to samostatný krok napojení na externí úložiště.
+- Přílohy jsou dostupné v aplikaci připojené k API. Lokální ukázkový režim je záměrně nesimuluje, aby nevytvářel dojem trvalého uložení.
 - **Ostrý elektronický podpis (BankID)** je připravený jako napojení, ne hotová právní služba.

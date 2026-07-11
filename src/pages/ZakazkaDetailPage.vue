@@ -32,6 +32,7 @@ import {
 import { toast } from '@/components/ui/sonner'
 import LoadError from '@/components/app/LoadError.vue'
 import QuickClientDialog, { type QuickClient } from '@/components/app/QuickClientDialog.vue'
+import EntityAttachmentsPanel from '@/components/app/EntityAttachmentsPanel.vue'
 import { useJobs, type JobInput } from '@/composables/useJobs'
 import { useServiceItems } from '@/composables/useServiceItems'
 import { useProducts } from '@/composables/useProducts'
@@ -771,6 +772,8 @@ async function createInvoice(): Promise<void> {
               </li>
             </ul>
           </div>
+
+          <EntityAttachmentsPanel :entity-id="job.id" :can-manage="canManage" />
         </div>
 
         <div class="space-y-4">
