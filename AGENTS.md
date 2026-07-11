@@ -10,6 +10,8 @@ Při každé smysluplné změně projektu aktualizuj **oba soubory**, aby se př
 
 Za smysluplnou změnu se bere hlavně: architektura, doménový model, modulový systém, API kontrakty, deploy postup, bezpečnostní pravidla, workflow vývoje, testovací brány a důležitá produktová rozhodnutí.
 
+Předávací protokol zakázky je neměnný snapshot práce a materiálu. API detail vrací `handover.items` s `kind` `work`/`material`; `useJobs` musí detail defensivně normalizovat, aby neúplná starší odpověď nikdy neshodila stránku zakázky.
+
 ## Co to je
 
 Vystaveno.cz — fakturační + pokladní (POS) / gastro SaaS pro malé české firmy.

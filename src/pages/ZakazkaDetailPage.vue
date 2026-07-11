@@ -825,7 +825,7 @@ async function createInvoice(): Promise<void> {
                   {{ job.handover.state === 'signed' ? 'Odesláno k podpisu' : 'Koncept' }}
                 </Badge>
                 <span class="text-xs text-muted-foreground">
-                  {{ job.handover.items.length }} položek
+                  {{ job.handover.items?.length ?? 0 }} položek
                 </span>
               </div>
               <Button

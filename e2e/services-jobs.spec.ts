@@ -73,7 +73,12 @@ test('nabídka → zakázka → pracovní list → faktura', async ({ page }) =>
   await page.getByRole('button', { name: 'Dokončit' }).click()
   await expect(page.getByText('Stav: Hotovo.')).toBeVisible()
 
-  // --- 6) Vytvořit fakturu → nejdřív vyzve k přiřazení klienta (slepá ulička je průchozí) ---
+  // --- 6) Předávací protokol je neměnný snapshot dvou prací a jednoho materiálu ---
+  await page.getByRole('button', { name: 'Vytvořit protokol' }).click()
+  await expect(page.getByText('Předávací protokol vytvořen.')).toBeVisible()
+  await expect(page.getByText('3 položek')).toBeVisible()
+
+  // --- 7) Vytvořit fakturu → nejdřív vyzve k přiřazení klienta (slepá ulička je průchozí) ---
   await page.getByRole('button', { name: 'Vytvořit fakturu' }).first().click()
   await expect(page.getByRole('heading', { name: 'Nový odběratel' })).toBeVisible()
   await page.locator('#qc-name').fill('Novák a syn s.r.o.')
