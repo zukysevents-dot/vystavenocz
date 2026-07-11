@@ -173,7 +173,7 @@ Vystaveno should win through:
 
 ### Crafts and jobs
 
-- jobs, estimates, materials, work orders, site visits, photos, checklists, handover protocol, signature, invoice
+- jobs, estimates, materials, work orders, site visits, photos and PDF attachments (API-backed V1 with persistent file storage, jobs.read for list/download and jobs.manage for upload/delete), checklists, handover protocol, signature, invoice
 - examples: plumber, electrician, construction, service company
 
 ### Shop

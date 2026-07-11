@@ -29,6 +29,9 @@ services:
     restart: unless-stopped
     environment:
       Payments__PortalBaseUrl: ${PAYMENTS_PORTAL_BASE_URL:?nastav PAYMENTS_PORTAL_BASE_URL (např. https://vystaveno.cz)}
+      BlobStorage__LocalRootPath: /var/lib/vystaveno/files
+    volumes:
+      - api_files:/var/lib/vystaveno/files
 
   db:
     restart: unless-stopped
@@ -36,3 +39,4 @@ services:
 volumes:
   caddy_data:
   caddy_config:
+  api_files:

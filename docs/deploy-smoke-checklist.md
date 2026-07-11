@@ -21,6 +21,8 @@ Tento checklist je rychlá brána pro ruční deploy na VPS. Produkce je pull-ba
 6. Pokud se mají používat online platby faktur přes Stripe webhook, musí být v API prostředí doplněné i `Stripe__WebhookSecret`. Gastro POS deploy bez něj běží, ale webhook platby faktur nebude spolehlivě uzavírat.
 7. Credential vault pro platební providery bez `INTEGRATIONS_SECRET_ENCRYPTION_KEY` bezpečně vrací 503 při ukládání secretů; to je chyba konfigurace deploye, ne UI.
 8. Credential trezor pro **ověřené podpisy** (modul `verified_signing`) používá stejný serverový šifrovací klíč jako platební vault: `INTEGRATIONS_SECRET_ENCRYPTION_KEY` v `~/vystavenocz/.env` → `Integrations__SecretEncryptionKey` v API. Bez něj ukládání secretů podpisů bezpečně vrací 503 (opět chyba deploye, ne UI).
+9. Přílohy zakázek ukládá API do named volume `api_files` připojeného na `/var/lib/vystaveno/files` (`BlobStorage__LocalRootPath`). Před deployem ověř, že volume nemaže žádný úklidový skript a že je zahrnutý v provozní záloze spolu s PostgreSQL.
+10. Nginx musí mít pro `/api/` `client_max_body_size 12m`, aby povolený 10 MiB soubor prošel i s multipart obálkou. HTTP 413 už pod tímto limitem musí pocházet z aplikační validace, ne z proxy.
 
 ## 2. Deploy příkazy na VPS
 
@@ -96,11 +98,12 @@ Proveď na testovací firmě / testovacím účtu. Pořadí odpovídá tomu, jak
     - tab `Obálky`: založ novou obálku, otevři detail a dej `Odeslat k podpisu` (základní odeslání). Očekávání: stav přejde na `Odesláno`. Jde o **přípravné odeslání a evidenci, ne ostrý právní podpis**.
     - Pokud existuje `BankID` konfigurace ve stavu `Připraveno`, detail obálky nabídne výběr konfigurace poskytovatele; odeslání přes ni **poctivě** vrátí hlášku „BankID konfigurace je připravená, ale ostrý adapter ještě není zapnutý." — to je očekávané chování, ne chyba. Pokud konfigurace není připravená / chybí credentialy (422), hláška nasměruje do tabu `Provider podpisů`.
 12. **Veřejné / QR menu** (pokud je slug a menu dostupné) — v `Nastavení firmy` ověř veřejný slug, pak otevři `/objednavka/<slug>` (anonymně, bez přihlášení). Očekávání: menu se načte, u položek se ukážou alergeny, host přidá do košíku a projde k odeslání; ceny počítá server. QR ke stolu (`?table=<id>&name=<název>`) skryje výdej/rozvoz a připíše se do účtu stolu.
-13. **Audit** — v `Audit` ověř, že citlivé akce (storno, sleva, uzávěrka, změna ceny) vznikají v logu s časem, aktérem a entitou.
+13. **Zakázka — dokumenty a soubory** (modul `jobs`) — otevři detail testovací zakázky, nahraj malé PDF a JPEG/PNG/WebP, stáhni je a jeden po potvrzení smaž. Očekávání: metadata ukážou název, velikost, datum a autora; soubor nad 10 MB se odmítne ještě před odesláním; účet s `jobs.read` bez `jobs.manage` vidí seznam a stáhne soubor, ale nevidí upload ani smazání. Po restartu API zůstane nahraný soubor dostupný v named volume `api_files`.
+14. **Audit** — v `Audit` ověř, že citlivé akce (storno, sleva, uzávěrka, změna ceny) vznikají v logu s časem, aktérem a entitou.
 
 ## 6. Aktuální hranice funkcí (co je ostré vs. připravené)
 
-- **Ostré / hotové na VPS:** login a moduly, gastro POS prodej, restaurace/stoly/kuchyně, uzávěrka + Z-report, sklad/inventura/zrcadlo/naskladnění, akce a ceny, věrnost, audit, veřejné/QR objednávky, účetní export Generic CSV a Pohoda XML (soubor pro ruční import, ne živá synchronizace), tiskoví agenti (registrace/token/revoke), credential trezor plateb i podpisů (uložit/rotovat/smazat/revokovat klíče).
+- **Ostré / hotové na VPS:** login a moduly, gastro POS prodej, restaurace/stoly/kuchyně, uzávěrka + Z-report, sklad/inventura/zrcadlo/naskladnění, akce a ceny, věrnost, audit, veřejné/QR objednávky, dokumenty a fotografie u zakázek v persistentním `api_files`, účetní export Generic CSV a Pohoda XML (soubor pro ruční import, ne živá synchronizace), tiskoví agenti (registrace/token/revoke), credential trezor plateb i podpisů (uložit/rotovat/smazat/revokovat klíče).
 - **Interní staging helper:** backend CLI `seed-demo` naplní demo firmu pro smoke test a obchodní průchod produktem. Není to zákaznická funkce a nespouští se při běžném startu aplikace.
 - **Připraveno k napojení (čeká na runtime adaptér + vendor smlouvu/credentials):**
   - Platební brány ČSOB / NFCTRON / Comgate / SumUp / GP webpay — katalog a konfigurace hotové, ostré stržení přes ně čeká na runtime adaptér. Katalog žádnou platbu nespouští, obsluha dál potvrzuje výsledek karty ručně.
