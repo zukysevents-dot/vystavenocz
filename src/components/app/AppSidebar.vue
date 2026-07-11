@@ -35,6 +35,7 @@ import {
   History,
   ShieldCheck,
   FileSignature,
+  Repeat,
 } from 'lucide-vue-next'
 import SiteLogo from '@/components/SiteLogo.vue'
 import { Button } from '@/components/ui/button'
@@ -62,6 +63,7 @@ const navIcons = {
   '/app/kategorie': Tags,
   '/app/nabidky': FileCheck,
   '/app/faktury': FileText,
+  '/app/opakovane-faktury': Repeat,
   '/app/cashflow': Wallet,
   '/app/uctarna': Calculator,
   '/app/dph': Percent,

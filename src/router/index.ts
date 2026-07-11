@@ -154,6 +154,17 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/app/opakovane-faktury',
+    name: 'app-opakovane-faktury',
+    component: () => import('@/pages/RecurringInvoicesPage.vue'),
+    meta: {
+      title: 'Opakované faktury',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'invoicing',
+    },
+  },
+  {
     path: '/app/konsolidace',
     name: 'app-konsolidace',
     component: () => import('@/pages/KonsolidacePage.vue'),
