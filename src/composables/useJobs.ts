@@ -365,7 +365,9 @@ export function useJobs() {
       return inv.id
     }
     const job = findLocal(id)
-    if (!job.clientId && !job.clientName) throw new ApiError(422, 'Zakázka nemá zákazníka.')
+    // Parita s backendem: faktura ze zakázky vyžaduje reálného klienta (Job.ClientId), ne jen jméno
+    // ve volném textu — jinak by doklad neměl na koho vystavit. Bez klienta 422 (UI nabídne přiřazení).
+    if (!job.clientId) throw new ApiError(422, 'Zakázka nemá přiřazeného zákazníka.')
     if (job.invoiceId) throw new ApiError(409, 'Zakázka už je vyfakturovaná.')
 
     const companyStore = useCompanyStore()

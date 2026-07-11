@@ -14,6 +14,7 @@ import {
   ListChecks,
   Clock,
   FileSignature,
+  UserPlus,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,7 +31,8 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from '@/components/ui/sonner'
 import LoadError from '@/components/app/LoadError.vue'
-import { useJobs } from '@/composables/useJobs'
+import QuickClientDialog, { type QuickClient } from '@/components/app/QuickClientDialog.vue'
+import { useJobs, type JobInput } from '@/composables/useJobs'
 import { useServiceItems } from '@/composables/useServiceItems'
 import { useProducts } from '@/composables/useProducts'
 import { useLocations } from '@/composables/useLocations'
@@ -291,10 +293,14 @@ function openMatDialog(): void {
 function pickProduct(p: Product): void {
   matForm.productId = p.id
   matForm.description = p.name
-  // Product.salePrice je s DPH (retail) → odvoď NET prodejní jako výchozí (obsluha může upravit).
   const rate = ([21, 12, 0] as number[]).includes(p.vatRate) ? p.vatRate : 21
   matForm.vatRate = rate as VatRate
-  matForm.unitPrice = round2(p.salePrice / (1 + rate / 100))
+  // Neplátce DPH nemá v katalogové ceně DPH → salePrice použij přímo jako NET (nedělit).
+  // Plátce: salePrice je s DPH (retail) → odvoď NET jako výchozí. Pole zůstává editovatelné.
+  matForm.unitPrice =
+    companyStore.company?.vatMode === 'non_payer'
+      ? p.salePrice
+      : round2(p.salePrice / (1 + rate / 100))
   matSearch.value = p.name
 }
 async function addMaterial(): Promise<void> {
@@ -410,12 +416,71 @@ async function signHandover(): Promise<void> {
   }
 }
 
+// --- Zákazník zakázky (přiřazení / změna) ---
+// Faktura ze zakázky vyžaduje reálného klienta (Job.ClientId). Zakázku lze založit i s volným jménem,
+// proto tu jde klienta doplnit/změnit přes QuickClientDialog (vytvoří + uloží klienta → vrátí clientId).
+const clientDialogOpen = ref(false)
+const invoiceAfterAssign = ref(false)
+
+// Sestaví JobInput ze současné hlavičky (update posílá celou hlavičku), s možností přepsat pole.
+function jobInputFromCurrent(overrides: Partial<JobInput>): JobInput {
+  const j = job.value!
+  return {
+    name: j.name,
+    clientId: j.clientId,
+    clientName: j.clientName,
+    siteAddress: j.siteAddress,
+    priority: j.priority,
+    scheduledAt: j.scheduledAt,
+    assignedEmployeeId: j.assignedEmployeeId,
+    locationId: j.locationId,
+    note: j.note,
+    ...overrides,
+  }
+}
+
+function openClientDialog(forInvoice = false): void {
+  invoiceAfterAssign.value = forInvoice
+  clientDialogOpen.value = true
+}
+
+async function onClientAssigned(client: QuickClient, savedClientId: string | null): Promise<void> {
+  if (!job.value) return
+  const shouldInvoice = invoiceAfterAssign.value
+  invoiceAfterAssign.value = false
+  busy.value = true
+  try {
+    await jobsApi.update(
+      job.value.id,
+      jobInputFromCurrent({ clientId: savedClientId, clientName: client.name }),
+    )
+    // Re-fetch celý detail (PUT nemusí vrátit worksheet/checklist/events — get je vrací vždy).
+    job.value = await jobsApi.get(job.value.id)
+    toast.success('Zákazník přiřazen.')
+  } catch {
+    toast.error('Přiřazení zákazníka se nezdařilo.')
+    busy.value = false
+    return
+  }
+  busy.value = false
+  // Vyvoláno z „Vytvořit fakturu" → pokračuj rovnou, ať slepá ulička projde na jedno kliknutí.
+  if (shouldInvoice) {
+    if (job.value.clientId) await createInvoice()
+    else toast.error('Pro fakturaci uložte klienta do seznamu.')
+  }
+}
+
 // --- Faktura ze zakázky ---
 async function createInvoice(): Promise<void> {
   if (!job.value || busy.value) return
   // Už vyfakturováno → jen otevři existující koncept.
   if (job.value.invoiceId) {
     router.push(`/app/faktury/editor?id=${job.value.invoiceId}`)
+    return
+  }
+  // Bez reálného klienta by faktura neměla na koho vystavit → místo chyby nabídni přiřazení klienta.
+  if (!job.value.clientId) {
+    openClientDialog(true)
     return
   }
   busy.value = true
@@ -426,7 +491,7 @@ async function createInvoice(): Promise<void> {
   } catch (e) {
     const msg =
       e instanceof ApiError && e.status === 422
-        ? 'Zakázka nemá zákazníka — doplňte klienta před fakturací.'
+        ? 'Zakázka nemá přiřazeného zákazníka.'
         : e instanceof ApiError && e.status === 409
           ? 'Zakázka už je vyfakturovaná.'
           : 'Vytvoření faktury se nezdařilo.'
@@ -484,7 +549,26 @@ async function createInvoice(): Promise<void> {
         <dl class="mt-4 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
           <div class="flex gap-2">
             <dt class="w-28 shrink-0 text-muted-foreground">Zákazník</dt>
-            <dd class="font-medium">{{ job.clientName || '—' }}</dd>
+            <dd class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              <span class="font-medium">{{ job.clientName || '—' }}</span>
+              <Badge
+                v-if="job.clientName && !job.clientId"
+                variant="outline"
+                class="text-[10px] font-normal"
+              >
+                bez vazby na klienta
+              </Badge>
+              <Button
+                v-if="canManage"
+                variant="ghost"
+                size="sm"
+                class="h-6 px-2 text-xs"
+                @click="openClientDialog()"
+              >
+                <UserPlus class="h-3.5 w-3.5" />
+                {{ job.clientId ? 'Změnit' : 'Přiřadit zákazníka' }}
+              </Button>
+            </dd>
           </div>
           <div class="flex gap-2">
             <dt class="w-28 shrink-0 text-muted-foreground">Adresa</dt>
@@ -961,5 +1045,8 @@ async function createInvoice(): Promise<void> {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <!-- Přiřazení / změna klienta zakázky (nutné pro fakturaci) -->
+    <QuickClientDialog v-model:open="clientDialogOpen" @confirm="onClientAssigned" />
   </div>
 </template>

@@ -135,6 +135,9 @@ export function useQuotes() {
       sourceQuoteId: quote.id,
       note: quote.note,
     })
+    // Položky nabídky mapujeme na PRÁCI (ne materiál) — nabídkové řádky nemají productId (nevážou se
+    // na skladovou položku), takže je nelze naskladově odečíst. Parita s backend convert-to-job;
+    // materiál si obsluha doplní v detailu přes výběr produktu ze skladu.
     for (const it of quote.items) {
       await jobs.addWorkItem(job.id, {
         serviceItemId: null,

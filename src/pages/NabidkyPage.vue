@@ -323,7 +323,11 @@ function supplierFromCompany(): SupplierSnapshot {
   }
 }
 
-/** Převede nabídku na KONCEPT faktury a otevře editor faktury k dokončení. */
+/**
+ * Převede nabídku na KONCEPT faktury a otevře editor faktury k dokončení.
+ * Pozn.: bez idempotence (opakované kliknutí založí další koncept) — vzniká jen nevystavený draft,
+ * který obsluha smaže; skutečné číslo doklad dostane až vystavením. Pre-existující chování NabidkyPage.
+ */
 async function convertToInvoice(q: Quote) {
   if (busyId.value) return
   busyId.value = q.id

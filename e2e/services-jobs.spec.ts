@@ -28,11 +28,12 @@ test('nabídka → zakázka → pracovní list → faktura', async ({ page }) =>
     )
   })
 
-  // --- 1) Nová nabídka s klientem a položkou ---
+  // --- 1) Nová nabídka jen s volným jménem (bez vazby na klienta) a položkou ---
+  // Záměrně bez výběru klienta ze seznamu → zakázka vznikne bez clientId a fakturace musí vyzvat k doplnění.
   await page.goto('/app/nabidky')
   await page.getByRole('button', { name: 'Nová nabídka' }).first().click()
   await expect(page.getByRole('dialog')).toBeVisible()
-  await page.locator('#q-client').selectOption({ label: 'E2E Klient' })
+  await page.getByPlaceholder('Jméno / firma (volný text)').fill('Novák a syn')
   await page.getByPlaceholder('Popis položky').first().fill('Instalace vodovodu')
   await page.getByTitle('Cena/j. (bez DPH)').first().fill('1000')
   await page.getByRole('button', { name: 'Vytvořit' }).click()
@@ -72,8 +73,13 @@ test('nabídka → zakázka → pracovní list → faktura', async ({ page }) =>
   await page.getByRole('button', { name: 'Dokončit' }).click()
   await expect(page.getByText('Stav: Hotovo.')).toBeVisible()
 
-  // --- 6) Vytvořit fakturu → editor faktury ---
+  // --- 6) Vytvořit fakturu → nejdřív vyzve k přiřazení klienta (slepá ulička je průchozí) ---
   await page.getByRole('button', { name: 'Vytvořit fakturu' }).first().click()
+  await expect(page.getByRole('heading', { name: 'Nový odběratel' })).toBeVisible()
+  await page.locator('#qc-name').fill('Novák a syn s.r.o.')
+  await page.getByRole('button', { name: 'Použít odběratele' }).click()
+
+  // Po přiřazení klienta faktura pokračuje sama → koncept + editor faktury.
   await expect(page.getByText('Koncept faktury vytvořen.')).toBeVisible()
   await expect(page).toHaveURL(/\/app\/faktury\/editor\?id=/)
   await expect(page.getByRole('heading', { name: 'Faktura', exact: true })).toBeVisible()
