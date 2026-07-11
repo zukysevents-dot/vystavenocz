@@ -1,5 +1,14 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { setActivePinia, createPinia } from 'pinia'
 import router from '@/router'
+import { useAuthStore } from '@/stores/auth'
+import type { AppModuleId } from '@/lib/modules'
+
+// Guard-landing testy potřebují API režim — Employee redirect z /app je `isApiMode()`-only.
+vi.mock('@/lib/http', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/http')>()
+  return { ...actual, isApiMode: () => true }
+})
 
 describe('app routes — role gates', () => {
   it('registers public order route without auth', () => {
@@ -39,5 +48,35 @@ describe('app routes — role gates', () => {
     // unikly mzdově citlivé údaje. Docházka (píchačka) je pro ně dál dostupná zvlášť.
     expect(route?.meta.requiresRole).toEqual(['Owner', 'Admin', 'Manager'])
     expect(route?.meta.requiresModule).toBe('attendance')
+  })
+})
+
+describe('guard: Employee landing podle modulů (bez redirect smyčky)', () => {
+  function setupEmployee(modules: AppModuleId[]) {
+    setActivePinia(createPinia())
+    const auth = useAuthStore()
+    auth.user = { id: 'u1', email: 'tech@x.cz', fullName: 'Technik' }
+    auth.companyId = 'c1'
+    auth.role = 'Employee'
+    auth.modules = modules
+    auth.initialized = true // guard nezavolá init() → náš stav zůstane
+  }
+
+  it('crafts tenant (jobs bez pos) → /app/zakazky, ne smyčka na /app/pokladna', async () => {
+    setupEmployee(['core', 'jobs'])
+    await router.push('/app')
+    expect(router.currentRoute.value.path).toBe('/app/zakazky')
+  })
+
+  it('pos tenant → /app/pokladna (zachované chování)', async () => {
+    setupEmployee(['core', 'pos'])
+    await router.push('/app')
+    expect(router.currentRoute.value.path).toBe('/app/pokladna')
+  })
+
+  it('bez pos i jobs → /app/nastaveni (žádný modulový gate ho neodmítne)', async () => {
+    setupEmployee(['core'])
+    await router.push('/app')
+    expect(router.currentRoute.value.path).toBe('/app/nastaveni')
   })
 })

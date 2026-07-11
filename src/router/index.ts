@@ -238,7 +238,26 @@ const routes: RouteRecordRaw[] = [
     path: '/app/zakazky',
     name: 'app-zakazky',
     component: () => import('@/pages/ZakazkyPage.vue'),
-    meta: { title: 'Zakázky & výjezdy', layout: 'app', requiresAuth: true, requiresModule: 'jobs' },
+    meta: { title: 'Zakázky', layout: 'app', requiresAuth: true, requiresModule: 'jobs' },
+  },
+  {
+    path: '/app/zakazky/:id',
+    name: 'app-zakazka-detail',
+    component: () => import('@/pages/ZakazkaDetailPage.vue'),
+    // Detail zakázky vidí i technik (Employee) — je to jeho pracovní list. Faktura je gate-ovaná uvnitř stránky.
+    meta: { title: 'Zakázka', layout: 'app', requiresAuth: true, requiresModule: 'jobs' },
+  },
+  {
+    path: '/app/cenik-sluzeb',
+    name: 'app-cenik-sluzeb',
+    component: () => import('@/pages/ServiceCatalogPage.vue'),
+    meta: {
+      title: 'Ceník služeb',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'jobs',
+      requiresRole: ['Owner', 'Admin', 'Manager'],
+    },
   },
   {
     path: '/app/podpisy',
@@ -486,9 +505,13 @@ router.beforeEach((to) => {
   if (to.meta.requiresModule && auth.isAuthenticated && !auth.hasModule(to.meta.requiresModule)) {
     return { name: 'app' }
   }
-  // Employee nemá invoices.read → přehled (dashboard) by vracel 403; přistane rovnou na pokladně.
+  // Employee nemá invoices.read → přehled (dashboard) by vracel 403; přistane na první provozní stránce.
+  // Landing musí respektovat zapnuté moduly, jinak vznikne smyčka: crafts tenant nemá `pos`, takže
+  // /app/pokladna by ho modulovým gate poslalo zpět na /app → /app/pokladna → … Vyber podle modulů.
   if (isApiMode() && to.name === 'app' && auth.role === 'Employee') {
-    return { path: '/app/pokladna' }
+    if (auth.hasModule('pos')) return { path: '/app/pokladna' }
+    if (auth.hasModule('jobs')) return { path: '/app/zakazky' }
+    return { path: '/app/nastaveni' }
   }
   return true
 })

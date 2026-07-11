@@ -1,7 +1,20 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, FileText, Pencil, Trash2, Loader2, ArrowRightCircle, X } from 'lucide-vue-next'
+import {
+  Plus,
+  FileText,
+  Pencil,
+  Trash2,
+  Loader2,
+  ArrowRightCircle,
+  Wrench,
+  Send,
+  Check,
+  X,
+  Clock,
+  UserPlus,
+} from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -27,14 +40,17 @@ import {
 } from '@/components/ui/alert-dialog'
 import { toast } from '@/components/ui/sonner'
 import LoadError from '@/components/app/LoadError.vue'
+import QuickClientDialog, { type QuickClient } from '@/components/app/QuickClientDialog.vue'
 import { useQuotes, type QuoteInput } from '@/composables/useQuotes'
 import { useInvoices, type InvoiceInput } from '@/composables/useInvoices'
+import { useClients } from '@/composables/useClients'
 import { useCompanyStore } from '@/stores/company'
 import { calcLine, calcTotals, formatCZK, formatDate } from '@/lib/invoice'
 import { quoteTotal, summarizeQuotes, quoteStatusLabel } from '@/lib/quotes'
 import type {
   Quote,
   QuoteItem,
+  QuoteItemKind,
   QuoteStatus,
   VatRate,
   InvoiceItem,
@@ -42,24 +58,33 @@ import type {
 } from '@/lib/types'
 
 const router = useRouter()
-const { quotes, loadError, load, create, update, remove } = useQuotes()
+const quotesApi = useQuotes()
 const invoicesApi = useInvoices()
+const { clients, load: loadClients } = useClients()
 const companyStore = useCompanyStore()
 
+const quotes = ref<Quote[]>([])
 const loading = ref(true)
+const loadError = ref(false)
 const dialogOpen = ref(false)
 const editing = ref<Quote | null>(null)
 const deleteId = ref<string | null>(null)
 const submitting = ref(false)
-const convertingId = ref<string | null>(null)
+const busyId = ref<string | null>(null)
+const quickClientOpen = ref(false)
 
 const vatRates: VatRate[] = [21, 12, 0]
-const statuses: QuoteStatus[] = ['draft', 'sent', 'accepted', 'rejected']
+const statuses: QuoteStatus[] = ['draft', 'sent', 'accepted', 'rejected', 'expired']
+const kinds: { value: QuoteItemKind; label: string }[] = [
+  { value: 'work', label: 'Práce' },
+  { value: 'material', label: 'Materiál' },
+]
 const statusVariant: Record<QuoteStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   draft: 'secondary',
   sent: 'default',
   accepted: 'outline',
   rejected: 'destructive',
+  expired: 'outline',
 }
 
 const vatPayer = computed(() => companyStore.company?.vatMode === 'payer')
@@ -69,10 +94,18 @@ interface FormItem {
   quantity: number
   unitPrice: number
   vatRate: VatRate
+  kind: QuoteItemKind
 }
-const emptyItem = (): FormItem => ({ description: '', quantity: 1, unitPrice: 0, vatRate: 21 })
+const emptyItem = (): FormItem => ({
+  description: '',
+  quantity: 1,
+  unitPrice: 0,
+  vatRate: 21,
+  kind: 'work',
+})
 const form = reactive({
   number: '',
+  clientId: '' as string,
   clientName: '',
   status: 'draft' as QuoteStatus,
   validUntil: '',
@@ -80,10 +113,28 @@ const form = reactive({
   items: [emptyItem()] as FormItem[],
 })
 
+watch(
+  () => form.clientId,
+  (id) => {
+    if (id) {
+      const c = clients.value.find((x) => x.id === id)
+      if (c) form.clientName = c.name
+    }
+  },
+)
+
 async function reload(): Promise<void> {
   loading.value = true
-  await load()
-  loading.value = false
+  loadError.value = false
+  try {
+    quotes.value = await quotesApi.list()
+    await loadClients()
+  } catch (e) {
+    console.warn('Načtení nabídek selhalo:', e)
+    loadError.value = true
+  } finally {
+    loading.value = false
+  }
 }
 onMounted(async () => {
   companyStore.init()
@@ -92,13 +143,11 @@ onMounted(async () => {
 
 const summary = computed(() => summarizeQuotes(quotes.value, vatPayer.value))
 
-/** Nezáporné konečné číslo (prázdný/NaN vstup z number inputu → 0). */
 function num(v: unknown): number {
   const n = Number(v)
   return Number.isFinite(n) && n > 0 ? n : 0
 }
 
-// Živý součet — vstupy sanitizované, ať se během editace nezobrazí NaN.
 const formTotal = computed(
   () =>
     calcTotals(
@@ -121,6 +170,7 @@ function openNew() {
   editing.value = null
   Object.assign(form, {
     number: suggestNumber(),
+    clientId: '',
     clientName: '',
     status: 'draft' as QuoteStatus,
     validUntil: '',
@@ -134,6 +184,7 @@ function openEdit(q: Quote) {
   editing.value = q
   Object.assign(form, {
     number: q.number,
+    clientId: q.clientId ?? '',
     clientName: q.clientName ?? '',
     status: q.status,
     validUntil: q.validUntil ?? '',
@@ -141,6 +192,12 @@ function openEdit(q: Quote) {
     items: q.items.length ? q.items.map((i) => ({ ...i })) : [emptyItem()],
   })
   dialogOpen.value = true
+}
+
+function onQuickClient(client: QuickClient, savedClientId: string | null) {
+  form.clientName = client.name
+  form.clientId = savedClientId ?? ''
+  if (savedClientId) void loadClients()
 }
 
 function addItem() {
@@ -159,9 +216,11 @@ function buildInput(): QuoteInput {
       quantity: num(i.quantity),
       unitPrice: num(i.unitPrice),
       vatRate: i.vatRate,
+      kind: i.kind,
     }))
   return {
     number: form.number.trim(),
+    clientId: form.clientId || null,
     clientName: form.clientName.trim() || null,
     status: form.status,
     items,
@@ -184,13 +243,14 @@ async function save() {
   submitting.value = true
   try {
     if (editing.value) {
-      await update(editing.value.id, input)
+      await quotesApi.update(editing.value.id, input)
       toast.success('Nabídka upravena.')
     } else {
-      await create(input)
+      await quotesApi.create(input)
       toast.success('Nabídka vytvořena.')
     }
     dialogOpen.value = false
+    await reload()
   } catch {
     toast.error('Uložení se nezdařilo. Zkuste to prosím znovu.')
   } finally {
@@ -201,11 +261,44 @@ async function save() {
 async function onDelete() {
   if (!deleteId.value) return
   try {
-    await remove(deleteId.value)
+    await quotesApi.remove(deleteId.value)
     toast.success('Nabídka smazána.')
     deleteId.value = null
+    await reload()
   } catch {
     toast.error('Smazání se nezdařilo.')
+  }
+}
+
+// --- stavové přechody ---
+const canConvert = (q: Quote) => q.status !== 'rejected' && q.status !== 'expired'
+
+async function changeStatus(q: Quote, status: QuoteStatus) {
+  if (busyId.value) return
+  busyId.value = q.id
+  try {
+    await quotesApi.setStatus(q.id, status)
+    toast.success(`Stav změněn na „${quoteStatusLabel(status)}".`)
+    await reload()
+  } catch {
+    toast.error('Změna stavu se nezdařila.')
+  } finally {
+    busyId.value = null
+  }
+}
+
+// --- převod na zakázku ---
+async function toJob(q: Quote) {
+  if (busyId.value) return
+  busyId.value = q.id
+  try {
+    const job = await quotesApi.convertToJob(q.id)
+    toast.success('Nabídka převedena na zakázku.')
+    router.push(`/app/zakazky/${job.id}`)
+  } catch {
+    toast.error('Převod na zakázku se nezdařil.')
+  } finally {
+    busyId.value = null
   }
 }
 
@@ -230,13 +323,16 @@ function supplierFromCompany(): SupplierSnapshot {
   }
 }
 
-/** Převede nabídku na KONCEPT faktury a otevře editor faktury k dokončení. */
+/**
+ * Převede nabídku na KONCEPT faktury a otevře editor faktury k dokončení.
+ * Pozn.: bez idempotence (opakované kliknutí založí další koncept) — vzniká jen nevystavený draft,
+ * který obsluha smaže; skutečné číslo doklad dostane až vystavením. Pre-existující chování NabidkyPage.
+ */
 async function convertToInvoice(q: Quote) {
-  if (convertingId.value) return
-  convertingId.value = q.id
+  if (busyId.value) return
+  busyId.value = q.id
   try {
     const payer = vatPayer.value
-    // Stejný filtr/klamp jako při ukládání — na fakturu nesmí projít prázdná/záporná položka.
     const items: InvoiceItem[] = q.items
       .filter((qi) => qi.description.trim())
       .map((qi) => {
@@ -250,7 +346,7 @@ async function convertToInvoice(q: Quote) {
           id: crypto.randomUUID(),
           description: qi.description.trim(),
           quantity: clean.quantity,
-          unit: 'ks',
+          unit: qi.kind === 'work' ? 'h' : 'ks',
           unitPrice: clean.unitPrice,
           vatRate: qi.vatRate,
           lineSubtotal: line.lineSubtotal,
@@ -268,8 +364,8 @@ async function convertToInvoice(q: Quote) {
     const input: InvoiceInput = {
       documentType: 'invoice',
       status: 'draft',
-      invoiceNumber: '', // koncept — číslo přidělí až vystavení
-      clientId: null,
+      invoiceNumber: '',
+      clientId: q.clientId,
       clientSnapshot: { name: q.clientName || '' },
       supplierSnapshot: supplierFromCompany(),
       items,
@@ -285,29 +381,19 @@ async function convertToInvoice(q: Quote) {
       notes: q.note,
     }
     const created = await invoicesApi.create(input, payer)
-    // Faktura vznikla — označení nabídky za přijatou je best-effort; jeho selhání
-    // nesmí tvrdit, že převod nevyšel (jinak by retry vytvořil druhý koncept).
     if (q.status !== 'accepted') {
       try {
-        await update(q.id, {
-          number: q.number,
-          clientName: q.clientName,
-          status: 'accepted',
-          items: q.items,
-          validUntil: q.validUntil,
-          note: q.note,
-        })
+        await quotesApi.setStatus(q.id, 'accepted')
       } catch {
-        // ignorujeme — faktura už existuje, stav nabídky lze doopravit ručně
+        /* faktura už existuje, stav nabídky lze doopravit ručně */
       }
     }
     toast.success('Nabídka převedena na koncept faktury.')
     router.push(`/app/faktury/editor?id=${created.id}`)
   } catch {
-    // Sem se dostaneme jen když selhalo vytvoření faktury.
     toast.error('Převod na fakturu se nezdařil.')
   } finally {
-    convertingId.value = null
+    busyId.value = null
   }
 }
 </script>
@@ -317,7 +403,9 @@ async function convertToInvoice(q: Quote) {
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
         <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Nabídky</h1>
-        <p class="mt-1 text-muted-foreground">Cenové nabídky a jejich převod na fakturu.</p>
+        <p class="mt-1 text-muted-foreground">
+          Cenové nabídky s položkami práce i materiálu, převod na zakázku nebo fakturu.
+        </p>
       </div>
       <Button variant="coral" @click="openNew"> <Plus class="h-4 w-4" /> Nová nabídka </Button>
     </div>
@@ -335,7 +423,7 @@ async function convertToInvoice(q: Quote) {
       <FileText class="mx-auto h-12 w-12 text-muted-foreground" />
       <h2 class="mt-4 text-lg font-semibold">Zatím žádné nabídky</h2>
       <p class="mt-1 text-sm text-muted-foreground">
-        Vytvoř nabídku a případně ji převeď na fakturu.
+        Vytvoř nabídku a případně ji převeď na zakázku nebo fakturu.
       </p>
       <Button variant="coral" class="mt-4" @click="openNew">
         <Plus class="h-4 w-4" /> Nová nabídka
@@ -360,7 +448,7 @@ async function convertToInvoice(q: Quote) {
       </div>
 
       <div class="mt-6 overflow-x-auto rounded-xl border border-border bg-card">
-        <table class="w-full min-w-[720px] text-sm">
+        <table class="w-full min-w-[860px] text-sm">
           <thead
             class="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground"
           >
@@ -388,12 +476,63 @@ async function convertToInvoice(q: Quote) {
               <td class="px-4 py-3 text-right font-semibold">
                 {{ formatCZK(quoteTotal(q, vatPayer)) }}
               </td>
-              <td class="px-4 py-3 text-right">
-                <div class="flex items-center justify-end gap-1">
+              <td class="px-4 py-3">
+                <div class="flex flex-wrap items-center justify-end gap-1">
                   <Button
+                    v-if="q.status === 'draft'"
                     variant="ghost"
                     size="sm"
-                    :disabled="convertingId === q.id"
+                    :disabled="busyId === q.id"
+                    title="Odeslat nabídku"
+                    @click="changeStatus(q, 'sent')"
+                  >
+                    <Send class="h-4 w-4" /> Odeslat
+                  </Button>
+                  <Button
+                    v-if="q.status === 'sent'"
+                    variant="ghost"
+                    size="sm"
+                    :disabled="busyId === q.id"
+                    title="Označit jako přijatou"
+                    @click="changeStatus(q, 'accepted')"
+                  >
+                    <Check class="h-4 w-4" /> Přijmout
+                  </Button>
+                  <Button
+                    v-if="q.status === 'sent'"
+                    variant="ghost"
+                    size="sm"
+                    :disabled="busyId === q.id"
+                    title="Zamítnout"
+                    @click="changeStatus(q, 'rejected')"
+                  >
+                    <X class="h-4 w-4" /> Zamítnout
+                  </Button>
+                  <Button
+                    v-if="q.status === 'sent'"
+                    variant="ghost"
+                    size="sm"
+                    :disabled="busyId === q.id"
+                    title="Expirovat"
+                    @click="changeStatus(q, 'expired')"
+                  >
+                    <Clock class="h-4 w-4" /> Expirovat
+                  </Button>
+                  <Button
+                    v-if="canConvert(q)"
+                    variant="ghost"
+                    size="sm"
+                    :disabled="busyId === q.id"
+                    title="Převést na zakázku"
+                    @click="toJob(q)"
+                  >
+                    <Wrench class="h-4 w-4" /> Na zakázku
+                  </Button>
+                  <Button
+                    v-if="canConvert(q)"
+                    variant="ghost"
+                    size="sm"
+                    :disabled="busyId === q.id"
                     title="Převést na fakturu"
                     @click="convertToInvoice(q)"
                   >
@@ -418,7 +557,9 @@ async function convertToInvoice(q: Quote) {
       <DialogContent class="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{{ editing ? 'Upravit nabídku' : 'Nová nabídka' }}</DialogTitle>
-          <DialogDescription>Položky a ceny určí celkovou částku nabídky.</DialogDescription>
+          <DialogDescription
+            >Rozliš práci a materiál — usnadní to pozdější zakázku.</DialogDescription
+          >
         </DialogHeader>
 
         <div class="grid gap-3">
@@ -437,9 +578,26 @@ async function convertToInvoice(q: Quote) {
                 <option v-for="s in statuses" :key="s" :value="s">{{ quoteStatusLabel(s) }}</option>
               </select>
             </div>
-            <div class="grid gap-1.5">
+            <div class="col-span-2 grid gap-1.5">
               <Label for="q-client">Klient</Label>
-              <Input id="q-client" v-model="form.clientName" placeholder="Jméno / firma" />
+              <div class="flex gap-2">
+                <select
+                  id="q-client"
+                  v-model="form.clientId"
+                  class="h-9 flex-1 rounded-lg border border-border bg-card px-3 text-sm"
+                >
+                  <option value="">— zadat ručně / bez klienta —</option>
+                  <option v-for="c in clients" :key="c.id" :value="c.id">{{ c.name }}</option>
+                </select>
+                <Button variant="outline" size="sm" @click="quickClientOpen = true">
+                  <UserPlus class="h-4 w-4" /> Nový
+                </Button>
+              </div>
+              <Input
+                v-if="!form.clientId"
+                v-model="form.clientName"
+                placeholder="Jméno / firma (volný text)"
+              />
             </div>
             <div class="grid gap-1.5">
               <Label for="q-valid">Platí do</Label>
@@ -450,8 +608,17 @@ async function convertToInvoice(q: Quote) {
           <!-- Položky -->
           <div class="grid gap-2">
             <Label>Položky</Label>
-            <div v-for="(it, i) in form.items" :key="i" class="flex items-end gap-2">
-              <div class="flex-1">
+            <div v-for="(it, i) in form.items" :key="i" class="flex flex-wrap items-end gap-2">
+              <div class="w-24">
+                <select
+                  v-model="it.kind"
+                  class="h-9 w-full rounded-lg border border-border bg-card px-2 text-sm"
+                  :aria-label="`Typ položky ${i + 1}`"
+                >
+                  <option v-for="k in kinds" :key="k.value" :value="k.value">{{ k.label }}</option>
+                </select>
+              </div>
+              <div class="min-w-[8rem] flex-1">
                 <Input v-model="it.description" placeholder="Popis položky" />
               </div>
               <div class="w-16">
@@ -464,7 +631,12 @@ async function convertToInvoice(q: Quote) {
                 />
               </div>
               <div class="w-24">
-                <Input v-model.number="it.unitPrice" type="number" min="0" title="Cena/ks" />
+                <Input
+                  v-model.number="it.unitPrice"
+                  type="number"
+                  min="0"
+                  title="Cena/j. (bez DPH)"
+                />
               </div>
               <div class="w-20">
                 <select
@@ -505,6 +677,8 @@ async function convertToInvoice(q: Quote) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <QuickClientDialog v-model:open="quickClientOpen" @confirm="onQuickClient" />
 
     <!-- Potvrzení smazání -->
     <AlertDialog :open="!!deleteId" @update:open="(o: boolean) => !o && (deleteId = null)">

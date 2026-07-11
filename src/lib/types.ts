@@ -235,41 +235,133 @@ export interface ProductModifierGroup extends ModifierGroup {
   productId?: string
 }
 
-export type JobStatus = 'quote' | 'in_progress' | 'done' | 'invoiced'
+// --- Services & Jobs V2 (modul jobs) — vertikála pro řemeslníky/servis ---
 
-// Zakázka / výjezd (modul Zakázky) — materiál + hodiny → ziskovost.
-export interface Job {
+// Katalog služeb/práce (labor). UnitPrice je NET (bez DPH), stejně jako u faktury/nabídky.
+export interface ServiceItem {
   id: string
   name: string
-  clientName: string | null
-  status: JobStatus
-  materialCost: number // nákupní cena materiálu (náklad)
-  materialPrice: number // prodejní cena materiálu zákazníkovi (výnos)
-  hours: number
-  hourlyRate: number // sazba za hodinu práce (výnos)
-  note: string | null
-  createdAt: string
-  updatedAt: string
+  unit: string // "h", "ks", "m"…
+  unitPrice: number // NET
+  vatRate: VatRate
+  isActive: boolean
 }
+export type ServiceItemInput = Omit<ServiceItem, 'id'>
 
-export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'rejected'
+export type JobStatus = 'scheduled' | 'in_progress' | 'waiting' | 'done' | 'cancelled'
+export type JobPriority = 'low' | 'normal' | 'high' | 'urgent'
 
-export interface QuoteItem {
+// Řádek práce/služby na pracovním listu (snapshot; i z katalogu).
+export interface JobWorkItem {
+  id: string
+  serviceItemId: string | null
+  description: string
+  quantity: number
+  unitPrice: number // NET
+  vatRate: VatRate
+  sortOrder: number
+}
+// Řádek materiálu — odečítá se ze skladu (backend), storno vrací.
+export interface JobMaterialItem {
+  id: string
+  productId: string
+  description: string
+  quantity: number
+  unitPrice: number // NET prodejní
+  vatRate: VatRate
+  sortOrder: number
+}
+export interface JobChecklistItem {
+  id: string
+  label: string
+  isDone: boolean
+  sortOrder: number
+}
+// Časová osa událostí zakázky (append-only).
+export interface JobEvent {
+  id: string
+  kind: string
+  detail: string | null
+  userId: string | null
+  createdAt: string
+}
+export type HandoverState = 'draft' | 'signed'
+export interface JobHandoverItem {
   description: string
   quantity: number
   unitPrice: number
   vatRate: VatRate
+  kind: 'work' | 'material'
+}
+// Předávací protokol — datový záznam (položky snapshot, stav, historie) + volitelná vazba na podpis.
+export interface JobHandover {
+  id: string
+  jobId: string
+  state: HandoverState
+  note: string | null
+  signingEnvelopeId: string | null
+  items: JobHandoverItem[]
+  createdAt: string
+}
+export interface JobTotals {
+  workNet: number
+  materialNet: number
+  net: number
+  vat: number
+  total: number
 }
 
-// Cenová nabídka (modul Nabídky) — může se převést na fakturu.
+// Zakázka V2 (modul jobs). Detail (GET {id}) nese i work/material/checklist/events/handover/totals.
+export interface Job {
+  id: string
+  number: string
+  name: string
+  clientId: string | null
+  clientName: string | null // snapshot/fallback jména zákazníka
+  siteAddress: string | null
+  status: JobStatus
+  priority: JobPriority
+  scheduledAt: string | null // ISO UTC
+  assignedEmployeeId: string | null
+  locationId: string | null
+  sourceQuoteId: string | null
+  invoiceId: string | null // idempotence faktury ze zakázky
+  note: string | null
+  createdAt: string
+  updatedAt: string
+  workItems?: JobWorkItem[]
+  materialItems?: JobMaterialItem[]
+  checklist?: JobChecklistItem[]
+  events?: JobEvent[]
+  handover?: JobHandover | null
+  totals?: JobTotals
+}
+
+export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired'
+export type QuoteItemKind = 'work' | 'material'
+
+export interface QuoteItem {
+  description: string
+  quantity: number
+  unitPrice: number // NET
+  vatRate: VatRate
+  kind: QuoteItemKind
+}
+
+// Cenová nabídka V2 (modul Nabídky) — položky práce/materiál, součty počítá SERVER, převod na zakázku i fakturu.
 export interface Quote {
   id: string
   number: string
+  clientId: string | null
   clientName: string | null
   status: QuoteStatus
   items: QuoteItem[]
   validUntil: string | null
   note: string | null
+  // součty počítá server (u nabídek V2); mock si je dopočítá sám
+  subtotal?: number
+  vatTotal?: number
+  total?: number
   createdAt: string
   updatedAt: string
 }

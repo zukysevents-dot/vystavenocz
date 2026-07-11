@@ -1,63 +1,74 @@
-import type { Job, JobStatus } from './types'
+import { calcLine, round2 } from './invoice'
+import type { JobMaterialItem, JobPriority, JobStatus, JobTotals, JobWorkItem } from './types'
 
 /**
- * Zakázky & výjezdy — čistá logika ziskovosti. Výnos = prodej materiálu + odpracované
- * hodiny × sazba; náklad = nákup materiálu; zisk = výnos − náklad. Práce se bere jako
- * čistý výnos (mzdové náklady se zde nesledují — MVP).
+ * Zakázky V2 (modul jobs) — čistá logika. Součty pracovního listu se počítají stejnou
+ * matematikou jako faktura (calcLine nad položkami), aby po vyfakturování částky seděly.
+ * Stavový automat určuje povolené přechody (zbytek vynucuje backend).
  */
 
 const STATUS_LABELS: Record<JobStatus, string> = {
-  quote: 'Nabídka',
+  scheduled: 'Naplánováno',
   in_progress: 'Probíhá',
+  waiting: 'Čeká',
   done: 'Hotovo',
-  invoiced: 'Vyfakturováno',
+  cancelled: 'Zrušeno',
 }
 
 export function jobStatusLabel(s: JobStatus): string {
   return STATUS_LABELS[s]
 }
 
-/** Ošetří vstup do finančního výpočtu: nezáporné konečné číslo (NaN/−∞ → 0). */
-export function nonNegative(v: unknown): number {
-  const n = Number(v)
-  return Number.isFinite(n) && n > 0 ? n : 0
+const PRIORITY_LABELS: Record<JobPriority, string> = {
+  low: 'Nízká',
+  normal: 'Normální',
+  high: 'Vysoká',
+  urgent: 'Urgentní',
 }
 
-export function jobRevenue(job: Job): number {
-  return job.materialPrice + job.hours * job.hourlyRate
+export function jobPriorityLabel(p: JobPriority): string {
+  return PRIORITY_LABELS[p]
 }
 
-export function jobCost(job: Job): number {
-  return job.materialCost
+// Stavový automat zakázky: hotová/zrušená jsou koncové. Backend je zdroj pravdy; tohle je UX vrstva.
+const NEXT_STATUSES: Record<JobStatus, JobStatus[]> = {
+  scheduled: ['in_progress', 'cancelled'],
+  in_progress: ['waiting', 'done', 'cancelled'],
+  waiting: ['in_progress', 'done', 'cancelled'],
+  done: [],
+  cancelled: [],
 }
 
-export function jobProfit(job: Job): number {
-  return jobRevenue(job) - jobCost(job)
+/** Povolené následující stavy zakázky (pro tlačítka přechodu). */
+export function jobNextStatuses(status: JobStatus): JobStatus[] {
+  return NEXT_STATUSES[status]
 }
 
-/** Marže jako podíl (0–1). Při nulovém výnosu vrací 0. */
-export function jobMargin(job: Job): number {
-  const rev = jobRevenue(job)
-  return rev === 0 ? 0 : jobProfit(job) / rev
-}
-
-export interface JobsSummary {
-  count: number
-  revenue: number
-  cost: number
-  profit: number
-  margin: number // vážená marže = zisk / výnos
-}
-
-export function summarizeJobs(jobs: Job[]): JobsSummary {
-  const revenue = jobs.reduce((a, j) => a + jobRevenue(j), 0)
-  const cost = jobs.reduce((a, j) => a + jobCost(j), 0)
-  const profit = revenue - cost
-  return {
-    count: jobs.length,
-    revenue,
-    cost,
-    profit,
-    margin: revenue === 0 ? 0 : profit / revenue,
+/**
+ * Součty pracovního listu — práce i materiál jsou NET (bez DPH); DPH se přičítá jen u plátce.
+ * V API režimu je zdroj pravdy serverem vrácený `Job.totals`; tohle je fallback/živý náhled.
+ */
+export function computeJobTotals(
+  workItems: JobWorkItem[],
+  materialItems: JobMaterialItem[],
+  vatPayer: boolean,
+): JobTotals {
+  let workNet = 0
+  let materialNet = 0
+  let vat = 0
+  for (const it of workItems) {
+    const line = calcLine(it, vatPayer)
+    workNet += line.lineSubtotal
+    vat += line.lineVat
   }
+  for (const it of materialItems) {
+    const line = calcLine(it, vatPayer)
+    materialNet += line.lineSubtotal
+    vat += line.lineVat
+  }
+  workNet = round2(workNet)
+  materialNet = round2(materialNet)
+  vat = round2(vat)
+  const net = round2(workNet + materialNet)
+  return { workNet, materialNet, net, vat, total: round2(net + vat) }
 }

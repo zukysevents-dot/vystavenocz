@@ -216,6 +216,12 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
   { to: '/app/vernost', label: 'Věrnost', module: 'loyalty' },
   { to: '/app/akce-ceny', label: 'Akce a ceny', module: 'loyalty', hiddenForRoles: ['Employee'] },
   { to: '/app/zakazky', label: 'Zakázky', module: 'jobs' },
+  {
+    to: '/app/cenik-sluzeb',
+    label: 'Ceník služeb',
+    module: 'jobs',
+    hiddenForRoles: ['Employee', 'Accountant'],
+  },
   { to: '/app/podpisy', label: 'Podpisy', module: 'verified_signing' },
   { to: '/app/predplatne', label: 'Předplatné', module: 'core' },
   { to: '/app/nastaveni', label: 'Nastavení', module: 'core' },

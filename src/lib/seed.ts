@@ -15,8 +15,11 @@ import type {
   Employee,
   Invoice,
   InvoiceItem,
+  Job,
+  JobEvent,
   Location,
   Sale,
+  ServiceItem,
   Shift,
   ShiftStatus,
   SupplierSnapshot,
@@ -217,6 +220,114 @@ async function seedEmployeesAndShifts(): Promise<void> {
   }
 }
 
+/**
+ * Demo ceník služeb + jedna zakázka s pracovním listem (Services & Jobs V2) — aby modul `jobs`
+ * ukázal reálná data i v mock režimu. Pevná id, ať zakázka může odkázat na demo pobočku/technika.
+ * Idempotentní: seedne jen když jsou dané kolekce prázdné.
+ */
+async function seedServicesAndJobs(): Promise<void> {
+  const serviceItemsApi = useApi<ServiceItem>('service-items')
+  const jobsApi = useApi<Job>('jobs')
+
+  if ((await serviceItemsApi.list()).length === 0) {
+    const services: ServiceItem[] = [
+      {
+        id: 'svc-montaz',
+        name: 'Montážní práce',
+        unit: 'h',
+        unitPrice: 550,
+        vatRate: 21,
+        isActive: true,
+      },
+      {
+        id: 'svc-servis',
+        name: 'Servisní výjezd',
+        unit: 'ks',
+        unitPrice: 800,
+        vatRate: 21,
+        isActive: true,
+      },
+      {
+        id: 'svc-revize',
+        name: 'Revize a kontrola',
+        unit: 'h',
+        unitPrice: 650,
+        vatRate: 21,
+        isActive: true,
+      },
+    ]
+    for (const s of services) await serviceItemsApi.create(s)
+  }
+
+  if ((await jobsApi.list()).length === 0) {
+    const now = new Date()
+    const iso = now.toISOString()
+    const ev = (kind: string, detail: string, minutesAgo: number): JobEvent => ({
+      id: crypto.randomUUID(),
+      kind,
+      detail,
+      userId: null,
+      createdAt: new Date(now.getTime() - minutesAgo * 60_000).toISOString(),
+    })
+    const job: Job = {
+      id: 'job-demo',
+      number: `ZAK-${now.getFullYear()}-0001`,
+      name: 'Oprava kotle — Novákovi',
+      clientId: null,
+      clientName: 'Jana Svobodová',
+      siteAddress: 'Zahradní 12, Plzeň',
+      status: 'in_progress',
+      priority: 'high',
+      scheduledAt: new Date(now.getTime() + 2 * 86_400_000).toISOString(),
+      assignedEmployeeId: 'emp-petr',
+      locationId: 'loc-praha',
+      sourceQuoteId: null,
+      invoiceId: null,
+      note: 'Zákazník hlásí únik vody u ventilu.',
+      createdAt: iso,
+      updatedAt: iso,
+      workItems: [
+        {
+          id: crypto.randomUUID(),
+          serviceItemId: 'svc-servis',
+          description: 'Servisní výjezd',
+          quantity: 1,
+          unitPrice: 800,
+          vatRate: 21,
+          sortOrder: 0,
+        },
+        {
+          id: crypto.randomUUID(),
+          serviceItemId: 'svc-montaz',
+          description: 'Výměna ventilu',
+          quantity: 1.5,
+          unitPrice: 550,
+          vatRate: 21,
+          sortOrder: 1,
+        },
+      ],
+      materialItems: [
+        {
+          id: crypto.randomUUID(),
+          productId: 'prod-ventil',
+          description: 'Kulový ventil 1/2"',
+          quantity: 1,
+          unitPrice: 240,
+          vatRate: 21,
+          sortOrder: 0,
+        },
+      ],
+      checklist: [
+        { id: crypto.randomUUID(), label: 'Uzavřít přívod vody', isDone: true, sortOrder: 0 },
+        { id: crypto.randomUUID(), label: 'Otestovat těsnost spoje', isDone: false, sortOrder: 1 },
+      ],
+      events: [ev('created', 'Zakázka vytvořena', 180), ev('status', 'in_progress', 90)],
+      handover: null,
+    }
+    await jobsApi.create(job)
+  }
+}
+
 export async function seedMockData(): Promise<void> {
   const clientsApi = useApi<Client>('clients')
   const invoicesApi = useApi<Invoice>('invoices')
@@ -225,6 +336,8 @@ export async function seedMockData(): Promise<void> {
   await seedLocationsAndSales()
   // Zaměstnanci + směny pro plánovač (vlastní prázdnostní kontrola).
   await seedEmployeesAndShifts()
+  // Ceník služeb + demo zakázka (vlastní prázdnostní kontrola).
+  await seedServicesAndJobs()
 
   if ((await clientsApi.list()).length > 0) return
 

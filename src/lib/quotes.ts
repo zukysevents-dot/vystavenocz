@@ -2,8 +2,8 @@ import { calcTotals } from './invoice'
 import type { Quote, QuoteStatus } from './types'
 
 /**
- * Cenové nabídky — čistá logika. Součty se počítají stejnou matematikou jako faktura
- * (calcTotals nad položkami), aby po převodu nabídky na fakturu částky seděly.
+ * Cenové nabídky V2 — čistá logika. Součty počítá SERVER (Quote V2 nese subtotal/vatTotal/total);
+ * `quoteTotal` je preferuje a jinak dopočítá stejnou matematikou jako faktura (fallback pro mock).
  */
 
 const STATUS_LABELS: Record<QuoteStatus, string> = {
@@ -11,14 +11,16 @@ const STATUS_LABELS: Record<QuoteStatus, string> = {
   sent: 'Odesláno',
   accepted: 'Přijato',
   rejected: 'Odmítnuto',
+  expired: 'Expirováno',
 }
 
 export function quoteStatusLabel(s: QuoteStatus): string {
   return STATUS_LABELS[s]
 }
 
-/** Součet nabídky včetně DPH (u neplátce bez DPH). */
+/** Součet nabídky vč. DPH: preferuje serverem spočítaný `total`, jinak dopočítá z položek. */
 export function quoteTotal(quote: Quote, vatPayer: boolean): number {
+  if (typeof quote.total === 'number') return quote.total
   return calcTotals(quote.items, vatPayer).total
 }
 
