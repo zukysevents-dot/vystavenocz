@@ -10,6 +10,7 @@ import {
   round2,
   variableSymbolFromInvoiceNumber,
 } from '@/lib/invoice'
+import { computeNextRunDate } from '@/lib/recurring'
 import type {
   Client,
   Employee,
@@ -18,6 +19,7 @@ import type {
   Job,
   JobEvent,
   Location,
+  RecurringInvoiceTemplate,
   Sale,
   ServiceItem,
   Shift,
@@ -430,4 +432,74 @@ export async function seedMockData(): Promise<void> {
     buildInvoice(2, clients[1], [makeItem('Grafický návrh loga', 1, 'ks', 8000, 21, vatPayer)]),
   ]
   for (const inv of invoices) await invoicesApi.create(inv)
+
+  await seedRecurringTemplates(clients, now)
+}
+
+// Demo šablony opakovaných faktur (Opakované faktury V2) — 1 aktivní měsíční paušál (koncept ke kontrole)
+// + 1 pozastavená s auto-vystavením. Navázané na demo klienty. Jen mock režim; součty/další běh dopočítá v ostrém API server.
+async function seedRecurringTemplates(clients: Client[], now: string): Promise<void> {
+  const recurringApi = useApi<RecurringInvoiceTemplate>('recurring-invoice-templates')
+  if ((await recurringApi.list()).length > 0) return
+  const todayISO = new Date().toISOString().slice(0, 10)
+
+  const templates: RecurringInvoiceTemplate[] = [
+    {
+      id: crypto.randomUUID(),
+      clientId: clients[0].id,
+      clientName: clients[0].name,
+      name: 'Měsíční paušál — správa webu',
+      intervalMonths: 1,
+      dayOfMonth: 1,
+      dueDays: 14,
+      autoIssue: false,
+      status: 'active',
+      note: 'Pravidelná měsíční fakturace správy a údržby webu.',
+      nextRunDate: computeNextRunDate(todayISO, 1),
+      lastRunAt: null,
+      createdAt: now,
+      updatedAt: now,
+      items: [
+        {
+          id: crypto.randomUUID(),
+          description: 'Správa a údržba webu',
+          quantity: 1,
+          unitPrice: 5000,
+          vatRate: 21,
+          unit: 'měsíc',
+          sortOrder: 0,
+        },
+      ],
+      runs: [],
+    },
+    {
+      id: crypto.randomUUID(),
+      clientId: clients[1].id,
+      clientName: clients[1].name,
+      name: 'Hosting a doména',
+      intervalMonths: 1,
+      dayOfMonth: 15,
+      dueDays: 7,
+      autoIssue: true,
+      status: 'paused',
+      note: null,
+      nextRunDate: computeNextRunDate(todayISO, 15),
+      lastRunAt: null,
+      createdAt: now,
+      updatedAt: now,
+      items: [
+        {
+          id: crypto.randomUUID(),
+          description: 'Webhosting',
+          quantity: 1,
+          unitPrice: 250,
+          vatRate: 21,
+          unit: 'měsíc',
+          sortOrder: 0,
+        },
+      ],
+      runs: [],
+    },
+  ]
+  for (const t of templates) await recurringApi.create(t)
 }

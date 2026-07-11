@@ -38,6 +38,13 @@ test.describe('a11y (axe) — bez serious/critical porušení', () => {
     expect(await blockingViolations(page)).toEqual([])
   })
 
+  test('opakované faktury (seznam + dialog)', async ({ page }) => {
+    await seedApp(page, { subscription: 'pro' })
+    await page.goto('/app/opakovane-faktury')
+    await page.getByRole('button', { name: 'Nová šablona' }).first().click() // otevřít formulář s položkami
+    expect(await blockingViolations(page)).toEqual([])
+  })
+
   test('nastavení', async ({ page }) => {
     await seedApp(page, { subscription: 'pro' })
     await page.goto('/app/nastaveni')

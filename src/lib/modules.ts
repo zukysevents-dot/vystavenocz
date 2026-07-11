@@ -208,6 +208,12 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
   { to: '/app/kategorie', label: 'Kategorie', module: 'core' },
   { to: '/app/nabidky', label: 'Nabídky', module: 'invoicing' },
   { to: '/app/faktury', label: 'Faktury', module: 'invoicing', hiddenForRoles: ['Employee'] },
+  {
+    to: '/app/opakovane-faktury',
+    label: 'Opakované faktury',
+    module: 'invoicing',
+    hiddenForRoles: ['Employee'],
+  },
   { to: '/app/cashflow', label: 'Cashflow', module: 'invoicing' },
   { to: '/app/uctarna', label: 'Účtárna', module: 'invoicing' },
   { to: '/app/dph', label: 'Přehled DPH', module: 'invoicing' },
