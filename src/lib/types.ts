@@ -119,6 +119,52 @@ export interface Invoice {
   updatedAt: string
 }
 
+export type RecurringInvoiceStatus = 'active' | 'paused'
+
+// Řádek šablony opakované faktury — snapshot (NET; DPH a součty dopočítá server při generování).
+export interface RecurringInvoiceTemplateItem {
+  id: string
+  description: string
+  quantity: number
+  unitPrice: number // NET (bez DPH)
+  vatRate: VatRate
+  unit: string | null
+  sortOrder: number
+}
+
+// Záznam vygenerování ze šablony — odkaz na vytvořený doklad (idempotence per období "yyyy-MM").
+export interface RecurringInvoiceRun {
+  id: string
+  periodKey: string // "yyyy-MM"
+  invoiceId: string
+  invoiceNumber: string | null
+  invoiceStatus: InvoiceStatus | null
+  autoIssued: boolean
+  generatedAt: string
+}
+
+// Šablona opakované (pravidelné) faktury — modul invoicing. Systém z ní ve „správný den" bezpečně
+// vytvoří fakturu (default KONCEPT; auto-vystavení je opt-in). Detail nese položky + historii běhů.
+export interface RecurringInvoiceTemplate {
+  id: string
+  clientId: string
+  clientName: string | null // snapshot/čitelný název odběratele pro seznam
+  name: string
+  intervalMonths: number // MVP: 1 (měsíčně)
+  dayOfMonth: number // 1–31; u kratších měsíců clamp na poslední den
+  dueDays: number
+  autoIssue: boolean // false = generovat koncept ke kontrole; true = rovnou vystavit
+  status: RecurringInvoiceStatus
+  note: string | null
+  nextRunDate: string // yyyy-MM-dd — stav dalšího běhu (počítá server)
+  lastRunAt: string | null
+  createdAt: string
+  updatedAt: string
+  itemCount?: number // seznam (summary) nese počet položek místo pole
+  items?: RecurringInvoiceTemplateItem[] // detail (GET {id})
+  runs?: RecurringInvoiceRun[] // detail — historie vytvořených dokladů
+}
+
 export type SubscriptionPlan = 'free' | 'trial' | 'pro'
 
 export interface Subscription {
