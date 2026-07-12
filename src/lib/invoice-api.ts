@@ -249,7 +249,8 @@ export function invoiceFromApi(dto: InvoiceApiResponse): Invoice {
     constantSymbol: null,
     specificSymbol: null,
     paymentMethod: 'bank_transfer',
-    // Součty jsou serverová pravda; summary je nenese → 0 (list stejně zobrazuje jen `total`).
+    // Součty jsou serverová pravda; list-summary teď nese subtotal/vatTotal (Účtárna CSV je čte),
+    // starší/neúplná odpověď je nemusí mít → fallback 0.
     subtotal: dto.subtotal ?? 0,
     vatTotal: dto.vatTotal ?? 0,
     total: dto.total ?? 0,
@@ -287,9 +288,8 @@ export function invoiceToCreateRequest(input: InvoiceInput): CreateInvoiceReques
 }
 
 /**
- * Frontend vstup → `PUT /invoices/{id}`. Backend mění JEN hlavičku dokladu (ne řádky), takže
- * request nese pouze clientId/splatnost/DUZP/poznámku/typ. Re-sync položek existujícího konceptu
- * je mimo scope (vyžadoval by samostatné /items endpointy na backendu).
+ * Frontend vstup → `PUT /invoices/{id}`. Backend PUT mění JEN hlavičku dokladu; řádky konceptu se
+ * synchronizují zvlášť přes `/items` endpointy (viz `diffInvoiceLines` + `useInvoices.update`).
  */
 export function invoiceToUpdateRequest(input: InvoiceInput): UpdateInvoiceRequest {
   return {
@@ -299,4 +299,76 @@ export function invoiceToUpdateRequest(input: InvoiceInput): UpdateInvoiceReques
     note: input.notes,
     documentType: outgoingDocumentType(input.documentType),
   }
+}
+
+// --- Synchronizace řádků rozpracovaného konceptu přes /items (GAP 1, jen API režim) ---
+
+/** Podmnožina `InvoiceItem` potřebná k sestavení `/items` payloadu a diffu (usnadní unit test). */
+export type InvoiceLineInput = Pick<
+  InvoiceItem,
+  'id' | 'description' | 'quantity' | 'unit' | 'unitPrice' | 'vatRate'
+>
+
+/** Tělo `POST /invoices/{id}/items` i `PUT /invoices/{id}/items/{itemId}` (backend `InvoiceLineDto`). */
+export type InvoiceLinePayload = CreateInvoiceLineRequest
+
+/** Nový řádek (klientské uuid → server id doplní orchestrátor z POST odpovědi). */
+export interface InvoiceLineCreate {
+  clientId: string
+  line: InvoiceLinePayload
+}
+
+/** Úprava existujícího serverového řádku (id je server id). */
+export interface InvoiceLineUpdate {
+  id: string
+  line: InvoiceLinePayload
+}
+
+/**
+ * Plán synchronizace řádků: co přidat (POST), upravit (PUT), smazat (DELETE) a v jakém pořadí
+ * (`order` = id řádků v pořadí editoru — server id existujících NEBO klientské uuid nových).
+ */
+export interface InvoiceLineSyncPlan {
+  creates: InvoiceLineCreate[]
+  updates: InvoiceLineUpdate[]
+  deletes: string[]
+  order: string[]
+}
+
+function itemToLinePayload(item: InvoiceLineInput): InvoiceLinePayload {
+  return {
+    description: item.description,
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
+    vatRate: item.vatRate,
+    unit: item.unit || null,
+  }
+}
+
+/**
+ * Čistá diff logika (GAP 1) — bez side-effektů, přímo unit-testovatelná. Vstup:
+ *  - `serverItemIds`: id řádků, které backend aktuálně eviduje na konceptu,
+ *  - `editorItems`: řádky z editoru; `id` je buď server id (existující řádek), nebo klientské uuid
+ *    (nový řádek přidaný v editoru).
+ * Výstup je seznam operací + cílové pořadí. Orchestrátor (`useInvoices.update`) je provede v
+ * bezpečném pořadí (nové PŘED mazáním, ať draft nikdy nespadne na 0 řádků) a doplní mapování
+ * klientské uuid → přidělené server id, aby finální reorder nesl správná id.
+ */
+export function diffInvoiceLines(
+  serverItemIds: string[],
+  editorItems: InvoiceLineInput[],
+): InvoiceLineSyncPlan {
+  const serverSet = new Set(serverItemIds)
+  const editorIdSet = new Set(editorItems.map((it) => it.id))
+  const creates: InvoiceLineCreate[] = []
+  const updates: InvoiceLineUpdate[] = []
+  for (const it of editorItems) {
+    const line = itemToLinePayload(it)
+    if (serverSet.has(it.id)) updates.push({ id: it.id, line })
+    else creates.push({ clientId: it.id, line })
+  }
+  // Serverové řádky, které v editoru už nejsou → smazat.
+  const deletes = serverItemIds.filter((sid) => !editorIdSet.has(sid))
+  const order = editorItems.map((it) => it.id)
+  return { creates, updates, deletes, order }
 }

@@ -1,24 +1,79 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Percent, Loader2 } from 'lucide-vue-next'
 import { useInvoices } from '@/composables/useInvoices'
 import LoadError from '@/components/app/LoadError.vue'
+import { isApiMode } from '@/lib/http'
 import { formatCZK } from '@/lib/invoice'
-import { vatSummary, availablePeriods } from '@/lib/dph'
+import { vatSummary as clientVatSummary, availablePeriods } from '@/lib/dph'
+import type { VatSummary } from '@/lib/dph'
 
-const { invoices, loadError, load } = useInvoices()
+// Peníze/DPH nikdy nepočítá FE v API režimu: server dodá přehled přes /invoices/vat-summary.
+// Mock režim počítá client-side z položek (dph.ts) — beze změny.
+const isApi = isApiMode()
+const { invoices, loadError, load, vatSummary } = useInvoices()
 const loading = ref(true)
 const period = ref('all')
+const EMPTY_SUMMARY: VatSummary = { rows: [], totalBase: 0, totalVat: 0, count: 0 }
+const apiSummary = ref<VatSummary>(EMPTY_SUMMARY)
+
+/** Období 'YYYY-MM' → rozsah [1. den, poslední den měsíce]; 'all' → bez omezení. */
+function periodRange(p: string): { from?: string; to?: string } {
+  if (p === 'all') return {}
+  const [y, m] = p.split('-').map(Number)
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate()
+  return { from: `${p}-01`, to: `${p}-${String(lastDay).padStart(2, '0')}` }
+}
+
+// API režim: serverový přehled za vybrané období. Chybu převede na LoadError (jako load()),
+// ať obsluha nevidí stará čísla ani zavádějící „žádné doklady".
+async function refreshSummary(): Promise<void> {
+  const { from, to } = periodRange(period.value)
+  try {
+    apiSummary.value = await vatSummary(from, to)
+  } catch (e) {
+    console.warn('Načtení DPH přehledu selhalo:', e)
+    apiSummary.value = EMPTY_SUMMARY
+    loadError.value = true
+  }
+}
 
 async function reload(): Promise<void> {
   loading.value = true
-  await load()
+  await load() // load() si chytá vlastní chyby → loadError
+  if (isApi && !loadError.value) await refreshSummary()
   loading.value = false
 }
 onMounted(reload)
 
-const periods = computed(() => availablePeriods(invoices.value))
-const summary = computed(() => vatSummary(invoices.value, period.value))
+// Změna období v API režimu = nový serverový dotaz (jen přehled, ne celý seznam).
+// Mock režim jen přepočítá client-side computed z už načtených položek.
+watch(period, async () => {
+  if (!isApi) return
+  loading.value = true
+  loadError.value = false
+  await refreshSummary()
+  loading.value = false
+})
+
+// API režim: summary list nemá DUZP (jen issueDate) → období nabídni podle data vystavení
+// relevantních daňových dokladů. Mock režim počítá období z DUZP přes dph.ts (beze změny).
+const periods = computed(() => {
+  if (!isApi) return availablePeriods(invoices.value)
+  const set = new Set<string>()
+  for (const i of invoices.value) {
+    const relevant =
+      (!i.currency || i.currency === 'CZK') &&
+      (i.documentType === 'invoice' || i.documentType === 'credit_note') &&
+      (i.status === 'issued' || i.status === 'paid' || i.status === 'overdue')
+    if (relevant && i.issueDate) set.add(i.issueDate.slice(0, 7))
+  }
+  return [...set].sort().reverse()
+})
+
+const summary = computed<VatSummary>(() =>
+  isApi ? apiSummary.value : clientVatSummary(invoices.value, period.value),
+)
 
 function periodLabel(p: string): string {
   const [y, m] = p.split('-')

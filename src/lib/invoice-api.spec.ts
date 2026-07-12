@@ -3,9 +3,11 @@ import {
   invoiceFromApi,
   invoiceToCreateRequest,
   invoiceToUpdateRequest,
+  diffInvoiceLines,
   mapInvoiceStatus,
   mapDocumentType,
   type InvoiceApiResponse,
+  type InvoiceLineInput,
 } from '@/lib/invoice-api'
 import type { InvoiceInput } from '@/composables/useInvoices'
 
@@ -351,5 +353,81 @@ describe('invoiceToUpdateRequest', () => {
       documentType: 'invoice',
     })
     expect(req).not.toHaveProperty('lines')
+  })
+})
+
+describe('diffInvoiceLines (GAP 1 — synchronizace řádků konceptu)', () => {
+  let seq = 0
+  function line(over: Partial<InvoiceLineInput> = {}): InvoiceLineInput {
+    return {
+      id: `l${++seq}`,
+      description: 'Práce',
+      quantity: 1,
+      unit: 'ks',
+      unitPrice: 1000,
+      vatRate: 21,
+      ...over,
+    }
+  }
+
+  it('řádek se serverovým id → update; řádek s klientským uuid → create', () => {
+    const plan = diffInvoiceLines(['srv-1'], [line({ id: 'srv-1' }), line({ id: 'client-uuid-2' })])
+    expect(plan.updates).toEqual([{ id: 'srv-1', line: expect.any(Object) }])
+    expect(plan.creates).toEqual([{ clientId: 'client-uuid-2', line: expect.any(Object) }])
+    expect(plan.deletes).toEqual([])
+  })
+
+  it('serverový řádek, který v editoru chybí → delete', () => {
+    const plan = diffInvoiceLines(['srv-1', 'srv-2'], [line({ id: 'srv-1' })])
+    expect(plan.updates.map((u) => u.id)).toEqual(['srv-1'])
+    expect(plan.deletes).toEqual(['srv-2'])
+    expect(plan.creates).toEqual([])
+  })
+
+  it('order zachovává pořadí editoru (server id i nová uuid)', () => {
+    const plan = diffInvoiceLines(
+      ['srv-1', 'srv-2'],
+      [line({ id: 'new-a' }), line({ id: 'srv-2' }), line({ id: 'srv-1' })],
+    )
+    expect(plan.order).toEqual(['new-a', 'srv-2', 'srv-1'])
+  })
+
+  it('mix: update + create + delete zároveň', () => {
+    const plan = diffInvoiceLines(
+      ['srv-1', 'srv-2', 'srv-3'],
+      [line({ id: 'srv-1' }), line({ id: 'new-x' })],
+    )
+    expect(plan.updates.map((u) => u.id)).toEqual(['srv-1'])
+    expect(plan.creates.map((c) => c.clientId)).toEqual(['new-x'])
+    expect(plan.deletes.sort()).toEqual(['srv-2', 'srv-3'])
+    expect(plan.order).toEqual(['srv-1', 'new-x'])
+  })
+
+  it('všechny řádky beze změny → samé update, nic k mazání, pořadí drží', () => {
+    const plan = diffInvoiceLines(
+      ['srv-1', 'srv-2'],
+      [line({ id: 'srv-1' }), line({ id: 'srv-2' })],
+    )
+    expect(plan.creates).toEqual([])
+    expect(plan.deletes).toEqual([])
+    expect(plan.updates.map((u) => u.id)).toEqual(['srv-1', 'srv-2'])
+    expect(plan.order).toEqual(['srv-1', 'srv-2'])
+  })
+
+  it('line payload nese jen backendová pole; prázdná MJ → null', () => {
+    const plan = diffInvoiceLines(
+      [],
+      [line({ id: 'a', description: 'X', quantity: 3, unitPrice: 50, vatRate: 12, unit: '' })],
+    )
+    expect(plan.creates[0].line).toEqual({
+      description: 'X',
+      quantity: 3,
+      unitPrice: 50,
+      vatRate: 12,
+      unit: null,
+    })
+    // Žádné spočítané částky (DPH/součty počítá server).
+    expect(plan.creates[0].line).not.toHaveProperty('lineSubtotal')
+    expect(plan.creates[0].line).not.toHaveProperty('lineTotal')
   })
 })

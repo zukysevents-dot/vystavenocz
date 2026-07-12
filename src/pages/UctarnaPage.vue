@@ -5,13 +5,18 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useInvoices } from '@/composables/useInvoices'
 import LoadError from '@/components/app/LoadError.vue'
+import { isApiMode } from '@/lib/http'
+import { toast } from '@/components/ui/sonner'
 import { formatCZK, formatDate } from '@/lib/invoice'
 import { downloadIsdoc, downloadInvoicesCsv, canExportIsdoc } from '@/lib/accounting-export'
 import type { Invoice, InvoiceStatus } from '@/lib/types'
 
-const { invoices, loadError, load } = useInvoices()
+const isApi = isApiMode()
+const { invoices, loadError, load, get } = useInvoices()
 const loading = ref(true)
 const period = ref<string>('all')
+// ISDOC se generuje z konkrétní faktury; v API režimu k ní nejdřív dotáhneme řádky.
+const exportingId = ref<string | null>(null)
 
 async function reload(): Promise<void> {
   loading.value = true
@@ -61,12 +66,43 @@ const statusMeta: Record<
 }
 
 function exportCsv() {
+  // CSV je hlavičkový přehled (číslo/datumy/odběratel/součty/stav) — list-summary nese
+  // subtotal/vatTotal, takže dotahovat řádky netřeba.
   const name = period.value === 'all' ? 'faktury-vse' : `faktury-${period.value}`
   downloadInvoicesCsv(filtered.value, `${name}.csv`)
 }
 
-function exportIsdoc(inv: Invoice) {
-  downloadIsdoc(inv)
+/**
+ * ISDOC nabídni podle typu dokladu a měny. V mock režimu má `inv` řádky, tak platí i podmínka
+ * `items.length > 0` (`canExportIsdoc`). V API režimu má list-summary `items: []` — řádky dotáhneme
+ * až při exportu z detailu, takže o nabídce rozhoduje jen typ a měna.
+ */
+function canOfferIsdoc(inv: Invoice): boolean {
+  if (!isApi) return canExportIsdoc(inv)
+  return inv.documentType !== 'proforma' && (!inv.currency || inv.currency === 'CZK')
+}
+
+async function exportIsdoc(inv: Invoice) {
+  if (!canOfferIsdoc(inv)) return
+  // Mock režim: `inv` už řádky nese → generuj rovnou.
+  if (!isApi) {
+    downloadIsdoc(inv)
+    return
+  }
+  // API režim: list-summary nemá řádky → dotáhni plný detail, teprve pak generuj.
+  exportingId.value = inv.id
+  try {
+    const detail = await get(inv.id)
+    if (!detail || !canExportIsdoc(detail)) {
+      toast.error('Doklad se nepodařilo připravit pro ISDOC export.')
+      return
+    }
+    downloadIsdoc(detail)
+  } catch {
+    toast.error('Export ISDOC se nepodařil.')
+  } finally {
+    exportingId.value = null
+  }
 }
 </script>
 
@@ -139,11 +175,12 @@ function exportIsdoc(inv: Invoice) {
             <Button
               variant="ghost"
               size="sm"
-              :disabled="!canExportIsdoc(inv)"
-              :title="canExportIsdoc(inv) ? 'Stáhnout ISDOC' : 'ISDOC jen pro faktury v Kč'"
+              :disabled="!canOfferIsdoc(inv) || exportingId === inv.id"
+              :title="canOfferIsdoc(inv) ? 'Stáhnout ISDOC' : 'ISDOC jen pro faktury v Kč'"
               @click="exportIsdoc(inv)"
             >
-              <FileCode2 class="h-4 w-4" /> ISDOC
+              <Loader2 v-if="exportingId === inv.id" class="h-4 w-4 animate-spin" />
+              <FileCode2 v-else class="h-4 w-4" /> ISDOC
             </Button>
           </div>
         </div>
@@ -183,15 +220,16 @@ function exportIsdoc(inv: Invoice) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  :disabled="!canExportIsdoc(inv)"
+                  :disabled="!canOfferIsdoc(inv) || exportingId === inv.id"
                   :title="
-                    canExportIsdoc(inv)
+                    canOfferIsdoc(inv)
                       ? 'Stáhnout ISDOC (XML pro účetní program)'
                       : 'ISDOC umíme jen pro faktury v Kč'
                   "
                   @click="exportIsdoc(inv)"
                 >
-                  <FileCode2 class="h-4 w-4" /> ISDOC
+                  <Loader2 v-if="exportingId === inv.id" class="h-4 w-4 animate-spin" />
+                  <FileCode2 v-else class="h-4 w-4" /> ISDOC
                 </Button>
               </td>
             </tr>
