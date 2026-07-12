@@ -492,10 +492,13 @@ const router = createRouter({
   },
 })
 
-// Route guard (mock auth): chrání /app routy a odklání přihlášené pryč z auth stránek.
-router.beforeEach((to) => {
+// Chráněné routy: ověří cache session po reloadu, chrání /app a odklání přihlášené z auth stránek.
+router.beforeEach(async (to) => {
   const auth = useAuthStore()
   auth.init()
+  if (to.meta.requiresAuth || to.name === 'prihlaseni' || to.name === 'registrace') {
+    await auth.validateSession()
+  }
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'prihlaseni', query: { redirect: to.fullPath } }
   }

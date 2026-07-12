@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
+import { getTokens, setTokens } from '@/lib/http'
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -37,5 +38,36 @@ describe('auth store — module and feature gating', () => {
   it('features jsou fail-open, dokud je backend ve starém kontraktu nevrací', () => {
     const s = useAuthStore()
     expect(s.hasFeature('pos.operate')).toBe(true)
+  })
+})
+
+describe('auth store — neplatná API session', () => {
+  it('zahodí cache identity a tokeny, když už účet na API neexistuje', async () => {
+    window.__VYSTAVENO_API_URL__ = '/api/v1'
+    setTokens({ accessToken: 'old-access', refreshToken: 'old-refresh' })
+    localStorage.setItem(
+      'vystaveno.auth.session.v1',
+      JSON.stringify({
+        user: { id: 'old-user', email: 'demo@vystaveno.cz', fullName: null },
+        companyId: 'old-company',
+        role: 'Owner',
+        modules: ['core', 'gastro'],
+        features: [],
+      }),
+    )
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: false, status: 401, json: async () => ({}) })),
+    )
+
+    const s = useAuthStore()
+    await s.validateSession()
+
+    expect(s.isAuthenticated).toBe(false)
+    expect(getTokens()).toBeNull()
+    expect(localStorage.getItem('vystaveno.auth.session.v1')).toBeNull()
+
+    vi.unstubAllGlobals()
+    delete window.__VYSTAVENO_API_URL__
   })
 })
