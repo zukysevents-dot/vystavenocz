@@ -73,20 +73,22 @@ Podrobný smoke checklist pro aktuální modulovou aplikaci je v [`docs/deploy-s
 ## 6. Aktualizace (nový deploy)
 
 ```bash
-cd vystavenocz && git pull
-cd ../vystaveno-api && git pull
-cd ../vystavenocz
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+cd ~/vystavenocz
+./ops/vps-deploy.sh
 ```
 
-Migrace se dorovnají při startu. Rollback: `git checkout <předchozí commit>` v obou repech + znovu `up -d --build`
-(migrace jsou forward-only — viz `vystaveno-api/docs/deployment.md`).
+Wrapper drží společný lock se zálohou, před změnou vytvoří konzistentní DB + `api_files` snapshot, stáhne pouze fast-forward
+`main`, sestaví stack a čeká na health. Migrace jsou forward-only: rollback kódu nevrací DB schéma zpět. Recovery postup je v
+[`docs/vps-reliability.md`](vps-reliability.md).
 
 ## 7. Provoz
 
 - **Logy:** `docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f api` (nebo `web`/`caddy`/`db`).
 - **Restart po rebootu:** služby mají `restart: unless-stopped` → naběhnou samy.
-- **Zálohy DB** (volume `pgdata`) — nastav cron `pg_dump`, postup viz `vystaveno-api/docs/deployment.md` (sekce Zálohy a obnova). **Záloha bez ověřené obnovy není záloha.**
+- **Zálohy DB + příloh** — `ops/vps-backup.sh` zálohuje PostgreSQL i `api_files` v jedné konzistenční hranici;
+  `ops/vps-verify-backup.sh` obnovuje DB v izolovaném kontejneru. Instalace a retence viz
+  [`docs/vps-reliability.md`](vps-reliability.md). **Záloha bez ověřené obnovy a off-site kopie není plná disaster recovery.**
+- **Monitoring** — `ops/vps-health-check.sh` hlídá služby, endpointy, stáří backupu a disk; externí ping URL patří do `.ops.env`.
 - **TLS certy** přežijí restart ve volume `caddy_data`.
 
 ## Časté problémy
@@ -100,3 +102,4 @@ Migrace se dorovnají při startu. Rollback: `git checkout <předchozí commit>`
 | Online checkout faktury vrací 500               | chybí `PAYMENTS_PORTAL_BASE_URL`                                       | Nastav veřejnou URL aplikace, např. `https://vystaveno.cz`, redeploy API |
 | `!reset` v compose hlásí chybu                  | stará Compose verze                                                    | Upgrade Docker Compose na ≥ 2.24.4                                       |
 | `web` build bere špatnou API URL                | cache                                                                  | `up -d --build --force-recreate` (build arg `VITE_API_URL=/api/v1`)      |
+| Health hlásí starou zálohu                      | backup neproběhl déle než 30 hodin                                     | zkontroluj `logs/backup.log`, spusť backup ručně a ověř restore          |

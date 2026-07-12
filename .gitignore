@@ -32,6 +32,7 @@ test-results
 .env
 .env.*
 !.env.example
+.ops.env
 
 # Local dev tooling / Claude Code (not part of the app)
 .claude/
