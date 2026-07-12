@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import {
+  ChevronRight,
   Copy,
   CreditCard,
   Download,
@@ -997,6 +999,23 @@ async function onSubmit(): Promise<void> {
             Obnovit
           </Button>
         </div>
+
+        <!-- Veřejné API + webhooky — vlastní stránka (tokeny, subscriptions, historie doručení). -->
+        <RouterLink
+          to="/app/nastaveni/api-webhooky"
+          class="mt-4 flex items-center justify-between gap-3 rounded-lg border border-border p-4 transition-colors hover:bg-muted/40"
+          data-testid="api-webhooky-link"
+        >
+          <span>
+            <span class="block text-sm font-semibold">API a webhooky</span>
+            <span class="mt-1 block text-xs text-muted-foreground">
+              Propojení s e-shopem, CRM nebo automatizací: API tokeny pro čtení dat a webhooky s
+              podepsanými notifikacemi o změnách.
+            </span>
+          </span>
+          <ChevronRight class="h-4 w-4 shrink-0 text-muted-foreground" />
+        </RouterLink>
+
         <div class="mt-4 grid gap-3 sm:grid-cols-3">
           <div class="rounded-lg border border-border bg-muted/30 p-3">
             <div class="text-xs text-muted-foreground">Použitelné v provozu</div>
