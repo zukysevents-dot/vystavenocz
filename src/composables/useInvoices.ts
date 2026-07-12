@@ -6,12 +6,77 @@ import {
   invoiceFromApi,
   invoiceToCreateRequest,
   invoiceToUpdateRequest,
+  diffInvoiceLines,
   type InvoiceApiResponse,
+  type InvoiceApiLine,
 } from '@/lib/invoice-api'
 import { http, isApiMode } from '@/lib/http'
+import type { VatSummary } from '@/lib/dph'
 import type { Invoice } from '@/lib/types'
 
 const api = useApi<Invoice>('invoices')
+
+/**
+ * GAP 1 (jen API režim): synchronizuje řádky rozpracovaného konceptu proti backendu přes `/items`.
+ * Backend PUT `/invoices/{id}` mění jen hlavičku — řádky se řeší tady. Bezpečné pořadí (draft nikdy
+ * nespadne na 0 řádků a zachová se pořadí editoru):
+ *   1) PUT existujících řádků (server id),
+ *   2) POST nových PŘED mazáním (klientské uuid → přidělené server id z odpovědi),
+ *   3) DELETE serverových řádků, které v editoru chybí,
+ *   4) PUT reorder finální množinou server-id v pořadí editoru.
+ * Vrací poslední plnou serverovou odpověď (nebo dotáhne `GET /invoices/{id}`).
+ */
+async function syncDraftLines(
+  id: string,
+  serverLines: InvoiceApiLine[],
+  editorItems: Invoice['items'],
+): Promise<InvoiceApiResponse> {
+  const serverIds = serverLines.map((l) => l.id).filter((x): x is string => typeof x === 'string')
+  const plan = diffInvoiceLines(serverIds, editorItems)
+
+  // Mapování editor id → server id: existující řádky mapují na sebe, nové doplní POST odpovědi.
+  const idMap = new Map<string, string>()
+  for (const u of plan.updates) idMap.set(u.id, u.id)
+  const knownIds = new Set(serverIds)
+
+  let last: InvoiceApiResponse | null = null
+
+  // 1) Úpravy existujících řádků.
+  for (const u of plan.updates) {
+    last = await http.put<InvoiceApiResponse>(`/invoices/${id}/items/${u.id}`, u.line)
+  }
+  // 2) Nové řádky PŘED mazáním — nový řádek nemá server id předem, vezmeme ho z POST odpovědi
+  //    (řádek, jehož id ještě neznáme).
+  for (const c of plan.creates) {
+    const res = await http.post<InvoiceApiResponse>(`/invoices/${id}/items`, c.line)
+    last = res
+    const newId = (res.lines ?? [])
+      .map((l) => l.id)
+      .find((lid): lid is string => typeof lid === 'string' && !knownIds.has(lid))
+    if (newId) {
+      idMap.set(c.clientId, newId)
+      knownIds.add(newId)
+    }
+  }
+  // 3) Smazání řádků, které už v editoru nejsou (DELETE může vrátit 204 → neber ho jako čerstvý stav).
+  for (const d of plan.deletes) {
+    const res = await http.del<InvoiceApiResponse | undefined>(`/invoices/${id}/items/${d}`)
+    if (res?.lines) last = res
+  }
+
+  // 4) Reorder pošli JEN když umíme složit celou cílovou množinu server-id (backend chce přesnou
+  //    množinu). Kdyby se nepovedlo dohledat id nového řádku, radši nechat serverové pořadí.
+  const orderedIds = plan.order
+    .map((eid) => idMap.get(eid))
+    .filter((x): x is string => typeof x === 'string')
+  if (orderedIds.length > 0 && orderedIds.length === editorItems.length) {
+    last = await http.put<InvoiceApiResponse>(`/invoices/${id}/items/reorder`, {
+      itemIds: orderedIds,
+    })
+  }
+
+  return last ?? (await http.get<InvoiceApiResponse>(`/invoices/${id}`))
+}
 
 export type InvoiceInput = Omit<
   Invoice,
@@ -104,15 +169,18 @@ export function useInvoices() {
 
   async function update(id: string, input: InvoiceInput, vatPayer = true): Promise<Invoice> {
     if (isApiMode()) {
-      // Server přepočítá součty; PUT je povolen jen na konceptu (jinak 409). Backend PUT mění
-      // JEN hlavičku dokladu — položky rozeditovaného konceptu se přes tento endpoint nesynchronizují
-      // (re-sync řádků by vyžadoval samostatné /items endpointy; vědomě mimo scope). Create-with-lines
-      // (POST) tím zůstává nedotčený.
-      return upsert(
-        invoiceFromApi(
-          await http.put<InvoiceApiResponse>(`/invoices/${id}`, invoiceToUpdateRequest(input)),
-        ),
+      // PUT je povolen jen na konceptu (jinak 409). Backend PUT mění JEN hlavičku dokladu →
+      // řádky rozeditovaného konceptu se synchronizují zvlášť přes /items (GAP 1). Server dopočítá
+      // součty a vrátí je v poslední odpovědi.
+      const afterHeader = await http.put<InvoiceApiResponse>(
+        `/invoices/${id}`,
+        invoiceToUpdateRequest(input),
       )
+      // Serverové řádky ber z PUT odpovědi; kdyby PUT vrátil jen hlavičku (bez `lines`), dotáhni je
+      // z GET — jinak bychom existující řádky omylem zduplikovali jako „nové" (POST).
+      const serverLines =
+        afterHeader.lines ?? (await http.get<InvoiceApiResponse>(`/invoices/${id}`)).lines ?? []
+      return upsert(invoiceFromApi(await syncDraftLines(id, serverLines, input.items)))
     }
 
     const totals = calcTotals(input.items, vatPayer)
@@ -242,6 +310,20 @@ export function useInvoices() {
     return upsert(invoice)
   }
 
+  /**
+   * GAP 2: DPH přehled ze serveru (jen API režim). Server sčítá po sazbách za období (proforma
+   * vyloučena, dobropis nettuje záporně) a vrací tvar shodný s `VatSummary` z dph.ts — FE peníze/DPH
+   * nepočítá. Období: `from`/`to` (YYYY-MM-DD); bez nich = celá historie. Mock režim DphPage počítá
+   * DPH client-side přes dph.ts a tuto metodu nevolá.
+   */
+  async function vatSummary(from?: string, to?: string): Promise<VatSummary> {
+    const qs = new URLSearchParams()
+    if (from) qs.set('from', from)
+    if (to) qs.set('to', to)
+    const query = qs.toString()
+    return http.get<VatSummary>(`/invoices/vat-summary${query ? `?${query}` : ''}`)
+  }
+
   function getById(id: string): Invoice | null {
     return store.invoices.find((i) => i.id === id) ?? null
   }
@@ -287,6 +369,7 @@ export function useInvoices() {
     convertToInvoice,
     get,
     getById,
+    vatSummary,
     importInvoice,
   }
 }

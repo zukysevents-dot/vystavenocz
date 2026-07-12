@@ -62,3 +62,27 @@ Frontendové report-liby už rozlišují typ; backend má stejnou logiku:
 
 - Unit: znaménko DPH u dobropisu; oddělené číslování řad; konverze proformy.
 - Integrační: proforma → `convert-to-invoice` → faktura (nová řada, `parentInvoiceId`); issued faktura → `credit-note` (záporné součty, `parentInvoiceId`); guardy (`credit-note` na draftu → 409; `convert` na ne-proformě → 409; tenant isolation; modul/permission gate).
+
+## 8. Dokončení fakturace v API režimu (FE spotřebovává — GAP 1 + 2)
+
+Frontend byl doveden do plného API režimu (dřív jen mock-first). Backend seam, proti kterému FE staví:
+
+### 8.1 Editace řádků rozpracovaného konceptu — `/items` (GAP 1)
+
+`PUT /invoices/{id}` mění **jen hlavičku** dokladu (nadále). Řádky konceptu se synchronizují zvlášť (FE `useInvoices.update()` v API režimu, čistý diff `diffInvoiceLines`):
+
+- `POST /invoices/{id}/items` — tělo `InvoiceLineDto` = `{ description, quantity, unitPrice, vatRate, unit? }`, vrací `InvoiceResponse` (plný, se všemi řádky vč. nově vzniklého se server id).
+- `PUT /invoices/{id}/items/{itemId}` — tělo `InvoiceLineDto`, vrací `InvoiceResponse`.
+- `DELETE /invoices/{id}/items/{itemId}` — smaže řádek (204 nebo `InvoiceResponse`).
+- `PUT /invoices/{id}/items/reorder` — tělo `{ itemIds: [guid,…] }` = **přesná** množina server-id v cílovém pořadí.
+
+FE pořadí operací (drží invariant „draft nikdy 0 řádků" a zachovává pořadí editoru): update existujících → **create nové PŘED delete** → delete chybějících → reorder. Vše jen na konceptu (jinak 409). DPH/součty počítá server.
+
+### 8.2 DPH přehled — `GET /invoices/vat-summary` (GAP 2)
+
+- Query `from`, `to` (`YYYY-MM-DD`, obojí volitelné; bez nich = celá historie).
+- Response: `{ rows: [{ rate, base, vat }], totalBase, totalVat, count }` — sečteno **po sazbách** za období dle DUZP. **Proforma vyloučena, dobropis nettuje záporně** (shodně s `dph.ts`). Server počítá; FE jen zobrazí.
+
+### 8.3 List-summary součty (GAP 2)
+
+`GET /invoices` (summary) nese navíc `subtotal` a `vatTotal` (vedle `total`) — Účtárna z nich skládá CSV bez dotahování řádků. ISDOC (řádky) si FE dotáhne přes `GET /invoices/{id}`.
