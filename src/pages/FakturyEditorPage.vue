@@ -61,7 +61,7 @@ import type {
 const route = useRoute()
 const router = useRouter()
 const { clients, load: loadClients, getById: getClientById } = useClients()
-const { create, update, issue, pay, cancel, getById, load: loadInvoices } = useInvoices()
+const { create, update, issue, pay, cancel, get, load: loadInvoices } = useInvoices()
 const { hasAccess } = useSubscription()
 const companyStore = useCompanyStore()
 
@@ -168,7 +168,8 @@ onMounted(async () => {
 
   const id = typeof route.query.id === 'string' ? route.query.id : null
   if (id) {
-    const inv = getById(id)
+    // Plný detail (položky/snapshoty/součty) — v API režimu list vrací jen summary bez řádků.
+    const inv = await get(id)
     if (inv) {
       // Dobropis je odvozený daňový doklad se zápornými částkami — editor přepočítává KLADNÉ součty,
       // takže by ho zkorumpoval. Tvrdý guard (i proti přímé URL): dobropis se needituje.

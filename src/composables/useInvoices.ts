@@ -2,6 +2,12 @@ import { storeToRefs } from 'pinia'
 import { useApi } from '@/composables/useApi'
 import { useInvoicesStore } from '@/stores/invoices'
 import { calcTotals, creditNoteItems, toImportRequest } from '@/lib/invoice'
+import {
+  invoiceFromApi,
+  invoiceToCreateRequest,
+  invoiceToUpdateRequest,
+  type InvoiceApiResponse,
+} from '@/lib/invoice-api'
 import { http, isApiMode } from '@/lib/http'
 import type { Invoice } from '@/lib/types'
 
@@ -41,7 +47,12 @@ export function useInvoices() {
   async function load(): Promise<void> {
     store.loadError = false
     try {
-      store.invoices = await api.list()
+      // API režim: list vrací backend DTO (summary) → přemapuj na FE Invoice.
+      // Mock režim: localStorage už drží FE tvar, jde rovnou do storu.
+      const raw = await api.list()
+      store.invoices = isApiMode()
+        ? (raw as unknown as InvoiceApiResponse[]).map(invoiceFromApi)
+        : raw
     } catch (e) {
       // Výpadek serveru → prázdný seznam místo pádu appky, ale příznak chyby ať UI ukáže
       // „server nedostupný" (ne zavádějící „žádné faktury").
@@ -54,8 +65,13 @@ export function useInvoices() {
   async function create(input: InvoiceInput, vatPayer = true): Promise<Invoice> {
     if (isApiMode()) {
       // Server-driven: POST vytvoří KONCEPT (bez čísla); id i součty přidělí/spočítá server.
-      // Číslo se přidělí až při `issue()`. Ukládáme serverovou odpověď (ne klientský objekt).
-      return upsert(await http.post<Invoice>('/invoices', input))
+      // Číslo se přidělí až při `issue()`. Request i odpověď procházejí mapovacím adapterem
+      // (FE `Invoice` ↔ backend DTO), ukládáme serverovou pravdu (ne klientský objekt).
+      return upsert(
+        invoiceFromApi(
+          await http.post<InvoiceApiResponse>('/invoices', invoiceToCreateRequest(input)),
+        ),
+      )
     }
 
     // --- Mock localStorage (vývoj / e2e): klientské id, číslo i součty ---
@@ -88,8 +104,15 @@ export function useInvoices() {
 
   async function update(id: string, input: InvoiceInput, vatPayer = true): Promise<Invoice> {
     if (isApiMode()) {
-      // Server přepočítá součty; PUT je povolen jen na konceptu (jinak 409).
-      return upsert(await http.put<Invoice>(`/invoices/${id}`, input))
+      // Server přepočítá součty; PUT je povolen jen na konceptu (jinak 409). Backend PUT mění
+      // JEN hlavičku dokladu — položky rozeditovaného konceptu se přes tento endpoint nesynchronizují
+      // (re-sync řádků by vyžadoval samostatné /items endpointy; vědomě mimo scope). Create-with-lines
+      // (POST) tím zůstává nedotčený.
+      return upsert(
+        invoiceFromApi(
+          await http.put<InvoiceApiResponse>(`/invoices/${id}`, invoiceToUpdateRequest(input)),
+        ),
+      )
     }
 
     const totals = calcTotals(input.items, vatPayer)
@@ -122,13 +145,23 @@ export function useInvoices() {
 
   /** Vystaví fakturu — server přidělí číslo (Draft→Issued). */
   async function issue(id: string): Promise<Invoice> {
-    if (isApiMode()) return upsert(await http.post<Invoice>(`/invoices/${id}/issue`))
+    if (isApiMode())
+      return upsert(invoiceFromApi(await http.post<InvoiceApiResponse>(`/invoices/${id}/issue`)))
     return localTransition(id, { status: 'issued' })
   }
 
   /** Označí fakturu jako uhrazenou (Issued→Paid). */
   async function pay(id: string): Promise<Invoice> {
-    if (isApiMode()) return upsert(await http.post<Invoice>(`/invoices/${id}/pay`))
+    // Backend nemá `/pay` — správný endpoint je `/mark-paid` a vyžaduje `idempotencyKey`
+    // (ochrana proti dvojímu zaúčtování platby při retry/dvojkliku).
+    if (isApiMode())
+      return upsert(
+        invoiceFromApi(
+          await http.post<InvoiceApiResponse>(`/invoices/${id}/mark-paid`, {
+            idempotencyKey: crypto.randomUUID(),
+          }),
+        ),
+      )
     return localTransition(id, {
       status: 'paid',
       paidAt: getById(id)?.paidAt ?? new Date().toISOString(),
@@ -137,7 +170,8 @@ export function useInvoices() {
 
   /** Stornuje fakturu (Draft/Issued→Cancelled) — číslo zůstává. */
   async function cancel(id: string): Promise<Invoice> {
-    if (isApiMode()) return upsert(await http.post<Invoice>(`/invoices/${id}/cancel`))
+    if (isApiMode())
+      return upsert(invoiceFromApi(await http.post<InvoiceApiResponse>(`/invoices/${id}/cancel`)))
     return localTransition(id, { status: 'cancelled' })
   }
 
@@ -148,8 +182,12 @@ export function useInvoices() {
    */
   async function creditNote(id: string): Promise<Invoice> {
     // Ostrý režim: dobropis (záporné částky i DPH) vytváří SERVER z původní faktury; tělo neposíláme
-    // (žádné záporné quantity — validator vyžaduje > 0), FE jen zobrazí serverovou zápornou odpověď.
-    if (isApiMode()) return upsert(await http.post<Invoice>(`/invoices/${id}/credit-note`))
+    // (žádné záporné quantity — validator vyžaduje > 0), FE jen přemapuje serverovou zápornou odpověď
+    // (znaménka zachová adapter).
+    if (isApiMode())
+      return upsert(
+        invoiceFromApi(await http.post<InvoiceApiResponse>(`/invoices/${id}/credit-note`)),
+      )
     // Mock stand-in za backend (dev/e2e): jen převrátí znaménko UŽ spočítaných serverových částek,
     // množství zůstává kladné. Žádný výpočet DPH na frontendu.
     const src = getById(id)
@@ -182,7 +220,10 @@ export function useInvoices() {
    * Mock: vytvoří novou fakturu se stejnými položkami, navázanou přes `parentInvoiceId`.
    */
   async function convertToInvoice(id: string): Promise<Invoice> {
-    if (isApiMode()) return upsert(await http.post<Invoice>(`/invoices/${id}/convert-to-invoice`))
+    if (isApiMode())
+      return upsert(
+        invoiceFromApi(await http.post<InvoiceApiResponse>(`/invoices/${id}/convert-to-invoice`)),
+      )
     const src = getById(id)
     if (!src) throw new Error('Zálohová faktura nenalezena.')
     const now = new Date().toISOString()
@@ -206,13 +247,28 @@ export function useInvoices() {
   }
 
   /**
+   * Načte JEDEN doklad se všemi detaily (položky, snapshoty, součty) a uloží ho do storu.
+   * List (`load`) v API režimu vrací jen summary bez řádků — pro editaci/detail je potřeba
+   * plný `GET /invoices/{id}`. API odpověď prochází adapterem; mock čte plný objekt z localStorage.
+   */
+  async function get(id: string): Promise<Invoice | null> {
+    const raw = await api.get(id)
+    if (!raw) return null
+    return upsert(isApiMode() ? invoiceFromApi(raw as unknown as InvoiceApiResponse) : raw)
+  }
+
+  /**
    * Import historické faktury (migrace F9) — uloží doklad JAK JE přes `POST /invoices/import`.
    * Server nepřečísluje/nepřepočítá a je idempotentní dle čísla (existující → vrátí beze změny).
    * Mock režim (bez backendu) jen uloží fakturu do lokálního úložiště.
    */
   async function importInvoice(inv: Invoice): Promise<Invoice> {
     if (isApiMode())
-      return upsert(await http.post<Invoice>('/invoices/import', toImportRequest(inv)))
+      return upsert(
+        invoiceFromApi(
+          await http.post<InvoiceApiResponse>('/invoices/import', toImportRequest(inv)),
+        ),
+      )
     await api.create(inv)
     return upsert(inv)
   }
@@ -229,6 +285,7 @@ export function useInvoices() {
     cancel,
     creditNote,
     convertToInvoice,
+    get,
     getById,
     importInvoice,
   }
