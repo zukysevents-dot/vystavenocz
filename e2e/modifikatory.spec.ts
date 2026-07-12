@@ -103,8 +103,7 @@ test('správce založí skupinu modifikátorů', async ({ page }) => {
     const method = request.method()
 
     if (method === 'GET' && path === '/company') return route.fulfill({ json: company })
-    if (method === 'GET' && path === '/modifier-groups')
-      return route.fulfill({ json: paged(groups) })
+    if (method === 'GET' && path === '/modifier-groups') return route.fulfill({ json: groups })
     if (method === 'POST' && path === '/modifier-groups') {
       createdPayload = request.postDataJSON()
       return route.fulfill({
@@ -154,8 +153,7 @@ test('správce přiřadí skupiny modifikátorů k produktu ve skladu', async ({
     if (method === 'GET' && path === '/company') return route.fulfill({ json: company })
     if (method === 'GET' && path === '/products') return route.fulfill({ json: paged([product]) })
     if (method === 'GET' && path === '/categories') return route.fulfill({ json: paged([]) })
-    if (method === 'GET' && path === '/modifier-groups')
-      return route.fulfill({ json: paged(groups) })
+    if (method === 'GET' && path === '/modifier-groups') return route.fulfill({ json: groups })
     if (method === 'GET' && path === `/products/${product.id}/modifier-groups`)
       return route.fulfill({ json: [groups[0]] })
     if (method === 'PUT' && path === `/products/${product.id}/modifier-groups`) {

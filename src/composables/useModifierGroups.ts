@@ -1,5 +1,4 @@
 import { http } from '@/lib/http'
-import type { PagedResult } from '@/composables/useApi'
 import type { ModifierGroup, ModifierSelectionType, ProductModifierGroup } from '@/lib/types'
 
 export type ModifierOptionInput = {
@@ -27,7 +26,8 @@ export type AssignProductModifierGroupsInput = {
 
 export function useModifierGroups() {
   async function list(): Promise<ModifierGroup[]> {
-    return (await http.get<PagedResult<ModifierGroup>>('/modifier-groups?pageSize=100')).items
+    // Backendový katalog je malý číselník a vrací přímo pole, ne stránkovanou odpověď.
+    return http.get<ModifierGroup[]>('/modifier-groups')
   }
 
   function create(input: ModifierGroupInput): Promise<ModifierGroup> {
