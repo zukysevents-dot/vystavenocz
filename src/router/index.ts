@@ -441,6 +441,19 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Nastavení', layout: 'app', requiresAuth: true, requiresModule: 'core' },
   },
   {
+    path: '/app/nastaveni/api-webhooky',
+    name: 'app-nastaveni-api-webhooky',
+    component: () => import('@/pages/ApiWebhookyPage.vue'),
+    // Správa API tokenů a webhooků — backend gate je integrations.api (jen Owner/Admin) + modul integrations;
+    // stránka se sám gatuje i v UI a mimo API režim ukazuje poznámku (vzor Integrace a exporty).
+    meta: {
+      title: 'API a webhooky',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'integrations',
+    },
+  },
+  {
     path: '/app/onboarding',
     name: 'app-onboarding',
     component: () => import('@/pages/OnboardingPage.vue'),

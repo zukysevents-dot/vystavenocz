@@ -10,6 +10,7 @@ Last updated: 2026-07-08
 - Frontend auth store persists capabilities and the app shell filters navigation/routes through a typed module manifest.
 - Onboarding lets the company choose a business profile: Gastro, Services, Crafts/Jobs, or Shop. The selected profile saves the first enabled module bundle, shows a profile-specific setup checklist, and routes the company to the first recommended setup step after save.
 - Company settings lets owners adjust enabled modules after onboarding through `/company/modules`; the mandatory `core` module is always kept enabled by normalization.
+- Public API + Webhooks V1 shipped (module `integrations`): per-company API tokens (Owner/Admin only, shown once, SHA-256 stored, revocable, scoped) unlock the read-only public API `api/public/v1/{customers,products,invoices,sales,stock-levels}` with the same tenant/module gating as the app; webhook subscriptions deliver HMAC-signed events (invoices, sales, customers, products, stock levels) through a transactional outbox with retry/backoff and a delivery history. Frontend: `Nastavení firmy → API a webhooky`. Integrator docs: backend `docs/verejne-api.md`. Write scopes are a V2 follow-up.
 
 ## Product goal
 
@@ -201,6 +202,7 @@ Vystaveno should win through:
 ### Integrations
 
 - accounting, payments, terminals, bank imports, e-shops, calendars, food delivery, public API, webhooks
+- public API + webhooks V1 shipped: read-only company data over per-company tokens plus signed webhook delivery (see Implementation status); write API is the V2 follow-up
 
 ### Verified Signing
 
