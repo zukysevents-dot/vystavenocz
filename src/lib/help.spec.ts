@@ -6,6 +6,7 @@ describe('visibleHelpGuides', () => {
     expect(visibleHelpGuides(['core', 'gastro'], 'Owner').map((guide) => guide.id)).toEqual([
       'first-steps',
       'restaurant',
+      'modifiers',
     ])
   })
 

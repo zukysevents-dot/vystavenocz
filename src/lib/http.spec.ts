@@ -36,6 +36,17 @@ describe('http — veřejná varianta bez auth', () => {
     await http.get('/invoices')
     expect(headersOf(0).Authorization).toBe('Bearer ACCESS')
   })
+
+  it('po definitivním 401 oznámí aplikaci neplatnou relaci', async () => {
+    const unauthorized = vi.fn()
+    window.addEventListener('vystaveno:unauthorized', unauthorized)
+    fetchMock.mockResolvedValue({ ok: false, status: 401, json: async () => ({}) })
+
+    await expect(http.get('/invoices')).rejects.toMatchObject({ status: 401 })
+
+    expect(unauthorized).toHaveBeenCalledTimes(1)
+    window.removeEventListener('vystaveno:unauthorized', unauthorized)
+  })
 })
 
 describe('http.upload', () => {

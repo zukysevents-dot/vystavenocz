@@ -59,6 +59,16 @@ export const useAuthStore = defineStore('auth', () => {
   const initialized = ref(false)
   const isAuthenticated = computed(() => user.value !== null)
 
+  function clearApiSession(): void {
+    setTokens(null)
+    user.value = null
+    companyId.value = null
+    role.value = null
+    modules.value = DEFAULT_ENABLED_MODULES
+    features.value = []
+    persistSession()
+  }
+
   function persistMock(): void {
     if (user.value) localStorage.setItem(USER_KEY, JSON.stringify(user.value))
     else localStorage.removeItem(USER_KEY)
@@ -143,7 +153,7 @@ export const useAuthStore = defineStore('auth', () => {
         await loadMe(email, null)
         return { ok: true }
       } catch (e) {
-        setTokens(null)
+        clearApiSession()
         const msg =
           e instanceof ApiError && e.status === 401
             ? 'Špatný e-mail nebo heslo.'
@@ -207,13 +217,7 @@ export const useAuthStore = defineStore('auth', () => {
           /* best-effort — odhlásit i při výpadku sítě */
         }
       }
-      setTokens(null)
-      user.value = null
-      companyId.value = null
-      role.value = null
-      modules.value = DEFAULT_ENABLED_MODULES
-      features.value = []
-      persistSession()
+      clearApiSession()
       return
     }
 
@@ -248,6 +252,7 @@ export const useAuthStore = defineStore('auth', () => {
     initialized,
     isAuthenticated,
     init,
+    clearInvalidSession: clearApiSession,
     login,
     register,
     logout,

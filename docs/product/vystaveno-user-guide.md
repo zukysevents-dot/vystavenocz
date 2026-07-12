@@ -6,7 +6,7 @@ Tento návod je pro běžnou práci v aplikaci. Než začnete, zkontrolujte v **
 
 1. Doplňte údaje firmy a pobočky.
 2. Pozvěte kolegy a přidělte jim jen potřebná oprávnění.
-3. Otevřete **Průvodce** v dolní části levého menu. Nabídne postupy podle vašich modulů.
+3. Otevřete **Průvodce** v dolní části levého menu. Nabídne postupy podle vašich modulů; u každého vysvětlí pojmy, kdy ho použít, jednotlivé kroky i praktický tip a jedním tlačítkem otevře správnou obrazovku.
 
 ## Fakturace
 

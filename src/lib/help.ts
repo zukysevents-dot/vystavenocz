@@ -1,145 +1,312 @@
 import type { AppModuleId } from './modules'
 
+export interface HelpStep {
+  title: string
+  description: string
+}
+
 export interface HelpGuide {
   id: string
   title: string
   description: string
   module: AppModuleId
   audience: 'everyone' | 'manager'
-  steps: readonly string[]
+  whatItMeans: string
+  whenToUse: string
+  steps: readonly HelpStep[]
+  tip: string
   to: string
   action: string
 }
 
+const step = (title: string, description: string): HelpStep => ({ title, description })
+
 export const HELP_GUIDES: readonly HelpGuide[] = [
   {
     id: 'first-steps',
-    title: 'Začněte nastavením firmy',
-    description: 'Doplňte údaje, pobočky a pozvěte kolegy jen do potřebných rolí.',
+    title: '1. Nastavte firmu a tým',
     module: 'core',
     audience: 'manager',
+    description: 'Nejdřív připravte údaje firmy, pobočky a přístupy kolegů.',
+    whatItMeans: 'Pobočka je konkrétní provozovna. Role určuje, co člověk smí vidět a měnit.',
+    whenToUse: 'Při prvním spuštění aplikace nebo když otevíráte další provozovnu.',
     steps: [
-      'Zkontrolujte údaje firmy.',
-      'Založte provozovny.',
-      'Pozvěte kolegy a nastavte jejich role.',
+      step('Doplňte údaje firmy', 'Zkontrolujte název, IČO, kontakty a fakturační údaje.'),
+      step('Založte pobočky', 'Přidejte místo, kde prodáváte nebo poskytujete služby.'),
+      step('Pozvěte kolegy', 'Každému přidělte jen roli, kterou pro práci opravdu potřebuje.'),
     ],
+    tip: 'Začněte vlastníkem a jednou pobočkou. Další nastavení lze doplnit později.',
     to: '/app/nastaveni',
     action: 'Otevřít nastavení',
   },
   {
+    id: 'catalog',
+    title: '2. Připravte nabídku produktů',
+    module: 'pos',
+    audience: 'manager',
+    description: 'Produkty a kategorie jsou základ pro pokladnu, restauraci i sklad.',
+    whatItMeans:
+      'Kategorie třídí nabídku. Produkt je položka, kterou zákazník kupuje; může mít cenu, DPH, EAN i skladovou zásobu.',
+    whenToUse: 'Než začnete prodávat nebo když přidáváte nové zboží či jídlo.',
+    steps: [
+      step('Založte kategorie', 'Například Nápoje, Jídla nebo Služby.'),
+      step('Přidejte produkty', 'Vyplňte název, cenu a správnou sazbu DPH.'),
+      step('Zkontrolujte zobrazení', 'Otevřete Pokladnu a ověřte, že se nabídka dá rychle najít.'),
+    ],
+    tip: 'U skladového zboží doplňte nákupní cenu a jednotku — reporty pak umí spočítat marži.',
+    to: '/app/kategorie',
+    action: 'Otevřít kategorie',
+  },
+  {
     id: 'invoices',
-    title: 'Vystavte první fakturu',
-    description: 'Faktura, záloha, dobropis i opakovaná fakturace zůstávají na jednom místě.',
+    title: 'Vystavte fakturu',
     module: 'invoicing',
     audience: 'manager',
+    description: 'Fakturace pro jednorázové i firemní odběratele.',
+    whatItMeans:
+      'Faktura je běžný daňový doklad. Zálohová faktura (proforma) je výzva k platbě; dobropis opravuje již vystavenou fakturu.',
+    whenToUse: 'Když prodáváte na fakturu nebo potřebujete vyúčtovat službu klientovi.',
     steps: [
-      'Založte klienta.',
-      'Vytvořte a odešlete fakturu.',
-      'Pro pravidelné platby použijte opakovanou fakturu.',
+      step('Založte klienta', 'Uložte jméno nebo firmu a kontaktní údaje.'),
+      step('Vytvořte doklad', 'Přidejte položky; součty a DPH spočítá systém.'),
+      step('Vystavte nebo odešlete', 'Před odesláním zkontrolujte splatnost a údaje odběratele.'),
     ],
+    tip: 'Dobropis nevytvářejte ručně: otevřete původní fakturu a použijte její akci Dobropis.',
     to: '/app/faktury',
     action: 'Otevřít faktury',
   },
   {
+    id: 'recurring',
+    title: 'Nastavte opakovanou fakturu',
+    module: 'invoicing',
+    audience: 'manager',
+    description: 'Šablona pro pravidelné měsíční vyúčtování bez přepisování položek.',
+    whatItMeans:
+      'Šablona vytvoří fakturu ve zvolený den. Bezpečný výchozí stav je koncept — před odesláním ho můžete zkontrolovat.',
+    whenToUse: 'Pro nájem, paušál, servis nebo pravidelnou správu.',
+    steps: [
+      step('Vyberte klienta', 'Šablona vždy patří jednomu odběrateli.'),
+      step('Zadejte položky a den', 'Například každý měsíc 1. den.'),
+      step(
+        'Sledujte další běh',
+        'Kdykoli můžete šablonu pozastavit nebo vygenerovat doklad ručně.',
+      ),
+    ],
+    tip: 'Zapněte automatické vystavení až poté, co si jeden běh ověříte jako koncept.',
+    to: '/app/opakovane-faktury',
+    action: 'Otevřít opakované faktury',
+  },
+  {
     id: 'cash-register',
-    title: 'Prodejte na pokladně',
-    description: 'Prodej se po zaplacení propíše do tržeb i skladu.',
+    title: 'Prodávejte na pokladně',
     module: 'pos',
     audience: 'everyone',
-    steps: ['Vyberte produkt.', 'Zkontrolujte účtenku.', 'Potvrďte hotovost nebo kartu.'],
+    description: 'Rychlý prodej s účtenkou, hotovostí nebo kartou.',
+    whatItMeans:
+      'Pokladna vytváří dokončený prodej. Ten se propíše do tržeb a u skladových položek i do zásob.',
+    whenToUse: 'Při běžném prodeji u pultu nebo při rychlém prodeji zboží.',
+    steps: [
+      step('Vyberte nebo naskenujte produkt', 'Můžete hledat názvem, SKU nebo EAN kódem.'),
+      step('Zkontrolujte košík', 'Upravte množství dřív, než začnete platbu.'),
+      step(
+        'Dokončete platbu',
+        'U hotovosti zadejte přijatou částku, u karty potvrďte platbu z terminálu.',
+      ),
+    ],
+    tip: 'Když zákazník chce účtenku opravit, řešte ji podle pravidel firmy — ne novým duplicitním prodejem.',
     to: '/app/pokladna',
     action: 'Otevřít pokladnu',
   },
   {
     id: 'restaurant',
-    title: 'Proveďte směnu v restauraci',
-    description: 'Stůl, objednávka, kuchyň, platba a uzávěrka drží jeden společný stav.',
+    title: 'Obsloužte stůl v restauraci',
     module: 'gastro',
     audience: 'everyone',
+    description: 'Účet stolu, kuchyňský bon, platba a uzávěrka jsou propojené.',
+    whatItMeans:
+      'Účet je otevřená útrata jednoho stolu. Bon je požadavek, který vidí kuchyně nebo bar.',
+    whenToUse: 'Při obsluze hostů u stolu, výdeji nebo rozvozu.',
     steps: [
-      'Otevřete stůl a přidejte položky.',
-      'Sledujte bon v kuchyni.',
-      'Zaplaťte účet a proveďte uzávěrku.',
+      step('Otevřete stůl', 'Vyberte stůl a založte účet.'),
+      step('Přidejte položky', 'Doplňte případné modifikátory, například přílohu.'),
+      step('Odešlete do kuchyně a zaplaťte', 'Kuchyň uvidí bon; po platbě se účet uzavře.'),
     ],
+    tip: 'Před platbou účet obnovte, aby obsahoval i případnou QR doobjednávku hosta.',
     to: '/app/restaurace',
     action: 'Otevřít restauraci',
   },
   {
+    id: 'modifiers',
+    title: 'Nastavte volby k jídlům',
+    module: 'gastro',
+    audience: 'manager',
+    description: 'Přílohy, velikosti, propečení a extra suroviny bez ručního psaní do poznámky.',
+    whatItMeans:
+      'Modifikátor je volba u produktu. Skupina může být povinná (například propečení) nebo volitelná (extra sýr).',
+    whenToUse: 'Když má zákazník při objednávce vybírat mezi variantami.',
+    steps: [
+      step('Vytvořte skupinu', 'Například Příloha nebo Propečení.'),
+      step('Přidejte volby', 'Každé dejte srozumitelný název a případný příplatek.'),
+      step('Přiřaďte skupinu produktu', 'Pak se obsluze nabídne přímo při přidání položky.'),
+    ],
+    tip: 'Povinnou skupinu použijte jen tehdy, když bez volby nelze objednávku připravit.',
+    to: '/app/modifikatory',
+    action: 'Otevřít modifikátory',
+  },
+  {
     id: 'stock',
     title: 'Udržujte sklad přesný',
-    description: 'Příjemky, inventura a zrcadlo ukáží skutečný stav i rozdíly bez tabulek.',
     module: 'stock',
     audience: 'manager',
-    steps: ['Naskladněte dodávku.', 'Zapište inventuru.', 'Vyřešte rozdíly ve zrcadle skladu.'],
+    description: 'Příjem, inventura a rozdíly mezi evidencí a skutečností.',
+    whatItMeans:
+      'Naskladnění zvýší zásobu. Inventura porovná skutečné množství s tím, co očekává systém.',
+    whenToUse: 'Při dodávce zboží, pravidelné kontrole skladu nebo po zjištění rozdílu.',
+    steps: [
+      step('Naskladněte dodávku', 'Zapište skutečné množství a nákupní cenu.'),
+      step('Proveďte inventuru', 'Zadejte fyzicky spočítané množství.'),
+      step('Vyřešte rozdíly', 'Ve skladu uvidíte, zda jde o manko nebo přebytek.'),
+    ],
+    tip: 'Nesrovnalost nemažte — popište ji. Pohyby zásob jsou důležitá provozní historie.',
     to: '/app/naskladneni',
     action: 'Otevřít naskladnění',
   },
   {
     id: 'workforce',
     title: 'Naplánujte směny a docházku',
-    description: 'Týdenní plán, píchačka a podklady pro mzdy jsou na jednom místě.',
     module: 'attendance',
     audience: 'manager',
-    steps: ['Vytvořte směny.', 'Publikujte týden pro tým.', 'Zkontrolujte docházku a výjimky.'],
+    description: 'Plán pro tým, skutečně odpracovaný čas a podklady pro mzdy.',
+    whatItMeans: 'Směna je plán. Docházka je skutečný příchod, odchod a přestávka.',
+    whenToUse: 'Před novým týdnem a při kontrole odpracovaných hodin.',
+    steps: [
+      step('Přidejte zaměstnance', 'Doplňte pozici a u vedení i hodinovou sazbu.'),
+      step('Vytvořte a publikujte směny', 'Dokud nejsou publikované, tým je nevidí.'),
+      step('Zkontrolujte docházku', 'Vyřešte chybějící odchod, přesčas nebo odchylku od plánu.'),
+    ],
+    tip: 'Návrh směny není oznámení týmu — vždy použijte Publikovat.',
     to: '/app/smeny',
     action: 'Otevřít plán směn',
   },
   {
     id: 'reservations',
-    title: 'Přijímejte rezervace',
-    description: 'Rezervace z webu i od obsluhy najdete v jednom kalendáři.',
+    title: 'Spravujte rezervace',
     module: 'booking',
     audience: 'everyone',
+    description: 'Kalendář termínů pro stoly, služby nebo zdroje.',
+    whatItMeans:
+      'Zdroj je to, co rezervujete (stůl, místnost, pracovník). Služba určuje, co zákazník objednává.',
+    whenToUse: 'Při objednání termínu po telefonu, přes web nebo při jeho změně.',
     steps: [
-      'Nastavte zdroje a dostupnost.',
-      'Vytvořte rezervaci.',
-      'Potvrďte nebo upravte termín.',
+      step(
+        'Nastavte zdroje a služby',
+        'Založte například stůl pro čtyři nebo hodinovou konzultaci.',
+      ),
+      step('Vytvořte rezervaci', 'Vyberte termín, zákazníka a potřebný zdroj.'),
+      step('Aktualizujte stav', 'Potvrďte, zrušte nebo označte dokončenou rezervaci.'),
     ],
+    tip: 'Před potvrzením vždy zkontrolujte čas začátku i konce — stejný zdroj nelze používat dvakrát.',
     to: '/app/rezervace',
     action: 'Otevřít rezervace',
   },
   {
     id: 'jobs',
     title: 'Dokončete zakázku od nabídky po fakturu',
-    description:
-      'Ceník služeb, nabídka, pracovní list, materiál, předání i faktura jsou propojené.',
     module: 'jobs',
     audience: 'everyone',
+    description: 'Jedno místo pro nabídku, práci, materiál, předání a vyúčtování.',
+    whatItMeans:
+      'Nabídka je návrh pro klienta. Zakázka je potvrzená práce; pracovní list zachycuje skutečně provedené úkony.',
+    whenToUse: 'Při servisu, řemeslné práci nebo delším projektu pro klienta.',
     steps: [
-      'Připravte nabídku.',
-      'Převeďte ji na zakázku.',
-      'Zapište práci a materiál, pak vytvořte fakturu.',
+      step('Připravte nabídku', 'Vyberte klienta a položky práce či materiálu.'),
+      step('Převeďte ji na zakázku', 'Získáte pracovní list a stav postupu.'),
+      step(
+        'Zapište práci a materiál',
+        'Materiál se odečte ze skladu; po dokončení vytvořte fakturu.',
+      ),
     ],
+    tip: 'Fakturu vytvořte až ve chvíli, kdy je u zakázky správně vybraný klient.',
     to: '/app/zakazky',
     action: 'Otevřít zakázky',
   },
   {
     id: 'loyalty',
     title: 'Nastavte akce a věrnost',
-    description: 'Cenové hladiny, automatické akce a body pomohou přivádět zákazníky zpět.',
     module: 'loyalty',
     audience: 'manager',
+    description: 'Ceny pro skupiny zákazníků, slevová pravidla a věrnostní body.',
+    whatItMeans:
+      'Cenová hladina je jiný ceník, například VIP. Akce je pravidlo slevy. Věrnost vrací zákazníkovi body.',
+    whenToUse: 'Když chcete odměnit stálé zákazníky nebo nabídnout časově omezenou cenu.',
     steps: [
-      'Vytvořte akci nebo cenovou hladinu.',
-      'Nastavte věrnostní program.',
-      'Při prodeji vyberte zákazníka.',
+      step('Vytvořte pravidlo', 'Nastavte jednoduchou akci nebo cenovou hladinu.'),
+      step('Zapněte věrnost', 'Rozhodněte, jak zákazník body získává a utrácí.'),
+      step('Vyberte zákazníka při prodeji', 'Systém pak může slevu a body správně připsat.'),
     ],
+    tip: 'Nejdřív vyzkoušejte pravidlo na jedné položce, aby nevznikla nečekaná sleva na celý sortiment.',
     to: '/app/akce-ceny',
     action: 'Otevřít akce a ceny',
   },
   {
+    id: 'reports',
+    title: 'Uzavřete den a čtěte přehledy',
+    module: 'reporting',
+    audience: 'manager',
+    description: 'Tržby, Z-reporty a provozní pohled na to, co funguje.',
+    whatItMeans:
+      'Uzávěrka uzavře hotový den do Z-reportu. Provozní přehled porovnává tržby, náklady, ztráty a výkon týmu.',
+    whenToUse: 'Na konci směny, při účetním exportu nebo když chcete rozhodovat podle čísel.',
+    steps: [
+      step(
+        'Zkontrolujte otevřené účty',
+        'Před uzávěrkou dokončete nebo vyřešte rozpracované prodeje.',
+      ),
+      step('Proveďte uzávěrku', 'Zkontrolujte hotovost, kartu a vytvořte Z-report.'),
+      step('Vyberte období v přehledu', 'Sledujte tržby, nejprodávanější položky a ztráty skladu.'),
+    ],
+    tip: 'Z-report je uzavřený historický doklad — proto si před potvrzením ověřte částky.',
+    to: '/app/uzaverka',
+    action: 'Otevřít uzávěrku',
+  },
+  {
     id: 'integrations',
-    title: 'Připravte exporty a integrace',
-    description: 'Pohoda XML, tiskový agent a provideri jsou rozlišené podle skutečného stavu.',
+    title: 'Exporty, tisk a integrace',
     module: 'integrations',
     audience: 'manager',
+    description: 'Účetní soubory, lokální tiskový agent a připravená napojení.',
+    whatItMeans:
+      'Export vytvoří soubor pro účetní. Tiskový agent propojí aplikaci s místní tiskárnou. Stav Připraveno k napojení ještě neznamená aktivní službu.',
+    whenToUse: 'Při předání dat účetní, nastavování tisku nebo přípravě budoucího napojení.',
     steps: [
-      'Doplňte údaje firmy.',
-      'Stáhněte účetní export.',
-      'Připojte jen aktivní službu se smlouvou.',
+      step('Vyexportujte účetnictví', 'Vyberte období a stáhněte CSV nebo Pohoda XML.'),
+      step('Připojte tiskový agent', 'Token zobrazený při registraci bezpečně uložte.'),
+      step(
+        'Nastavujte providera opatrně',
+        'Bez smlouvy, přístupů a aktivního adaptéru se platby nespouští.',
+      ),
     ],
+    tip: 'API klíče patří jen do zabezpečeného trezoru, nikdy do poznámky konfigurace.',
     to: '/app/nastaveni',
     action: 'Otevřít integrace',
+  },
+  {
+    id: 'signing',
+    title: 'Připravte podpisy dokumentů',
+    module: 'verified_signing',
+    audience: 'manager',
+    description: 'Obálky, evidence a nastavení poskytovatele podpisu.',
+    whatItMeans:
+      'Podpisová obálka drží údaje o dokumentu a průběhu podpisu. BankID označené jako Připraveno k napojení zatím není ostrý podpis.',
+    whenToUse: 'Když potřebujete evidovat schválení či připravit podpisový proces pro dokument.',
+    steps: [
+      step('Vytvořte obálku', 'Vyplňte název dokumentu a kontakt podepisujícího.'),
+      step('Zkontrolujte poskytovatele', 'Použijte jen konfiguraci, která je připravená.'),
+      step('Sledujte stav a evidenci', 'Uvidíte, kdy byla obálka odeslaná a jak skončila.'),
+    ],
+    tip: 'Neukládejte tajné klíče do poznámek; patří pouze do zabezpečeného trezoru.',
+    to: '/app/podpisy',
+    action: 'Otevřít podpisy',
   },
 ]
 
