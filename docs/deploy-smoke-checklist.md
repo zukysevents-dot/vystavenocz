@@ -6,7 +6,8 @@ Tento checklist je rychlá brána pro ruční deploy na VPS. Produkce je pull-ba
 
 1. Zkontroluj, že frontend `main` a backend `main` obsahují poslední mergnuté PR.
 2. Ověř, že GitHub CI posledních PR je zelené.
-3. Před deployem udělej nebo ověř aktuální zálohu PostgreSQL. Migrace jsou forward-only.
+3. Před deployem spusť `ops/vps-backup.sh` nebo použij `ops/vps-deploy.sh`, který zálohu udělá automaticky. Balík musí obsahovat
+   PostgreSQL i `api_files` a musí projít `ops/vps-verify-backup.sh`. Migrace jsou forward-only.
 4. Na VPS musí být repozitáře vedle sebe:
    - `~/vystavenocz`
    - `~/vystaveno-api`
@@ -27,14 +28,12 @@ Tento checklist je rychlá brána pro ruční deploy na VPS. Produkce je pull-ba
 ## 2. Deploy příkazy na VPS
 
 ```bash
-cd ~/vystavenocz && git pull
-cd ~/vystaveno-api && git pull
-sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
-cd ~/vystavenocz && docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-sudo sysctl -w net.ipv6.conf.all.disable_ipv6=0
+cd ~/vystavenocz
+./ops/vps-deploy.sh
 ```
 
-Migrace databáze běží automaticky při startu API. Pokud API nenaběhne, jako první čti log:
+Wrapper před pullem vytvoří a v izolaci plně obnoví DB + `api_files` zálohu. Migrace databáze běží automaticky při startu API.
+Pokud API nenaběhne, jako první čti log:
 
 ```bash
 cd ~/vystavenocz
@@ -120,3 +119,4 @@ Proveď na testovací firmě / testovacím účtu. Pořadí odpovídá tomu, jak
 5. Ověř `.env`, hlavně `DB_PASSWORD`, `JWT_SECRET`, `STRIPE_SECRET_KEY`, `INTEGRATIONS_SECRET_ENCRYPTION_KEY`, `PAYMENTS_PORTAL_BASE_URL`, `DOMAIN` a `ACME_EMAIL`.
 6. Ověř DNS domény na IP VPS a otevřené porty 80/443.
 7. Pokud selže migrace, nevracej DB ručně. Nejdřív zazálohuj databázi a řeš konkrétní chybu migrace.
+8. Recovery, atomické zálohy a izolované ověření obnovy jsou závazně popsané v `docs/vps-reliability.md`.

@@ -40,3 +40,5 @@ volumes:
   caddy_data:
   caddy_config:
   api_files:
+    # Default odpovídá dnešnímu VPS volume; override je jen pro řízený DR cutover.
+    name: ${API_FILES_VOLUME_NAME:-vystavenocz_api_files}
