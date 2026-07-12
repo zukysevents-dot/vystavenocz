@@ -70,8 +70,9 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml exec \
 Očekávání:
 
 - Vznikne nebo se přeskočí demo firma `Vystaveno Demo Gastro`.
-- Demo obsahuje 3 pobočky, gastro katalog, stoly, účty, kuchyň, sklad, inventuru, věrnost, akce/ceny, integrace a podpisy v mock/draft stavu.
+- Demo simuluje **cca rok provozu** napříč všemi moduly, aby reporty/přehledy nebyly prázdné: 3 pobočky, gastro katalog + receptury + modifikátory, otevřené i zaplacené účty, roční historie prodejů (stovky účtenek přes 3 pobočky), uzavřené dny / Z-reporty za celý rok (denní uzávěrka + měsíční exporty mají co ukázat), fakturace za rok (zaplacené + po splatnosti + vystavené), publikované směny a odpracovaná docházka, rezervace ve víc stavech, šablona opakovaných faktur s historií běhů, sklad + inventura, věrnost, akce/ceny, integrace a podpisy v mock/draft stavu.
 - Přihlášení pro interní smoke test: `demo@vystaveno.cz` / `DemoGastro.2026`.
+- **Roční data vzniknou jen při PRVNÍM seedu firmy.** Seeder je idempotentní přeskočením: když už demo firma existuje (starší seed), opakovaný `seed-demo` jen dorovná chybějící moduly, ale roční historii NEDOPLNÍ. Chceš-li bohatší demo na existující firmě, nejdřív smaž demo firmu (je to izolovaná ne-produkční data) a spusť `seed-demo` znovu na čisto.
 - Nespouštěj to na reálné produkční databázi se zákaznickými daty; je to staging/demo helper, ne produktová funkce pro zákazníky.
 
 ## 5. Smoke test v aplikaci (VPS staging readiness)
