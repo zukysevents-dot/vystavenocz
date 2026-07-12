@@ -36,6 +36,7 @@ import {
   ShieldCheck,
   FileSignature,
   Repeat,
+  CircleHelp,
 } from 'lucide-vue-next'
 import SiteLogo from '@/components/SiteLogo.vue'
 import { Button } from '@/components/ui/button'
@@ -149,6 +150,13 @@ watch(
     </nav>
 
     <div class="border-t border-border p-3">
+      <Button
+        variant="ghost"
+        class="mb-2 w-full justify-start gap-2"
+        @click="router.push('/app/pruvodce')"
+      >
+        <CircleHelp class="h-4 w-4" /> Průvodce
+      </Button>
       <button
         v-if="canInvoice"
         type="button"
@@ -217,6 +225,13 @@ watch(
     </nav>
 
     <div class="border-t border-border p-3">
+      <Button
+        variant="ghost"
+        class="mb-2 w-full justify-start gap-2"
+        @click="router.push('/app/pruvodce')"
+      >
+        <CircleHelp class="h-4 w-4" /> Průvodce
+      </Button>
       <button
         v-if="canInvoice"
         type="button"

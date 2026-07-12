@@ -447,6 +447,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Onboarding', layout: 'app', requiresAuth: true, requiresModule: 'core' },
   },
   {
+    path: '/app/pruvodce',
+    name: 'app-pruvodce',
+    component: () => import('@/pages/PruvodcePage.vue'),
+    meta: { title: 'Průvodce', layout: 'app', requiresAuth: true, requiresModule: 'core' },
+  },
+  {
     path: '/app/predplatne',
     name: 'app-predplatne',
     component: () => import('@/pages/PredplatnePage.vue'),
