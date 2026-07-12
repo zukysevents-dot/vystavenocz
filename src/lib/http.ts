@@ -72,6 +72,10 @@ export interface UploadOptions {
 // dva paralelní refreshe by se navzájem zneplatnily.
 let refreshing: Promise<Tokens | null> | null = null
 
+function notifyUnauthorized(): void {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('vystaveno:unauthorized'))
+}
+
 function refreshTokens(): Promise<Tokens | null> {
   const current = getTokens()
   if (!current?.refreshToken) return Promise.resolve(null)
@@ -112,6 +116,7 @@ async function request<T>(
   // Veřejná volání (klientský portál, rezervace) MUSÍ jít bez Authorization —
   // jinak by se na public endpoint přiložil JWT náhodně přihlášeného operátora.
   const tokens = isPublic ? null : getTokens()
+  const shouldNotifyUnauthorized = !isPublic && Boolean(tokens?.accessToken || tokens?.refreshToken)
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   if (tokens?.accessToken) headers.Authorization = `Bearer ${tokens.accessToken}`
@@ -129,6 +134,7 @@ async function request<T>(
   }
 
   if (!res.ok) {
+    if (res.status === 401 && shouldNotifyUnauthorized) notifyUnauthorized()
     let detail: unknown
     try {
       detail = await res.json()
@@ -151,6 +157,7 @@ async function download(path: string, retry = true): Promise<DownloadResponse> {
   const baseUrl = apiUrl()
   if (!baseUrl) throw new ApiError(0, 'API URL není nastavené.')
   const tokens = getTokens()
+  const shouldNotifyUnauthorized = Boolean(tokens?.accessToken || tokens?.refreshToken)
   const headers: Record<string, string> = { Accept: '*/*' }
   if (tokens?.accessToken) headers.Authorization = `Bearer ${tokens.accessToken}`
 
@@ -162,6 +169,7 @@ async function download(path: string, retry = true): Promise<DownloadResponse> {
   }
 
   if (!res.ok) {
+    if (res.status === 401 && shouldNotifyUnauthorized) notifyUnauthorized()
     let detail: unknown
     try {
       detail = await res.json()
@@ -196,6 +204,7 @@ async function uploadRequest<T>(
   const baseUrl = apiUrl()
   if (!baseUrl) throw new ApiError(0, 'API URL není nastavené.')
   const tokens = getTokens()
+  const shouldNotifyUnauthorized = Boolean(tokens?.accessToken || tokens?.refreshToken)
 
   const response = await new Promise<{ status: number; body: string }>((resolve, reject) => {
     const xhr = new XMLHttpRequest()
@@ -223,6 +232,7 @@ async function uploadRequest<T>(
   }
 
   if (response.status < 200 || response.status >= 300) {
+    if (response.status === 401 && shouldNotifyUnauthorized) notifyUnauthorized()
     let detail: unknown
     if (response.body) {
       try {

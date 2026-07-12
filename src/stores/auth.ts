@@ -57,7 +57,6 @@ export const useAuthStore = defineStore('auth', () => {
   const modules = ref<AppModuleId[]>(DEFAULT_ENABLED_MODULES)
   const features = ref<string[]>([])
   const initialized = ref(false)
-  const sessionChecked = ref(false)
   const isAuthenticated = computed(() => user.value !== null)
 
   function clearApiSession(): void {
@@ -140,23 +139,6 @@ export const useAuthStore = defineStore('auth', () => {
     persistSession()
   }
 
-  /**
-   * Ověří jednou po načtení aplikace, že uložený token ještě patří existujícímu uživateli.
-   * Bez toho by například po smazání a znovuvytvoření demo účtu zůstala v prohlížeči
-   * stará cache identity a stránky závislé na API by mohly zůstat prázdné.
-   */
-  async function validateSession(): Promise<void> {
-    init()
-    if (!isApiMode() || sessionChecked.value || !user.value || !getTokens()) return
-
-    sessionChecked.value = true
-    try {
-      await loadMe(user.value.email, user.value.fullName)
-    } catch {
-      clearApiSession()
-    }
-  }
-
   // Po změně tenant kontextu (založení firmy vydá nové tokeny s companyId) přenačti identitu.
   async function reloadMe(): Promise<void> {
     if (!isApiMode() || !user.value) return
@@ -169,7 +151,6 @@ export const useAuthStore = defineStore('auth', () => {
         const tokens = await http.post<Tokens>('/auth/login', { email, password })
         setTokens(tokens)
         await loadMe(email, null)
-        sessionChecked.value = true
         return { ok: true }
       } catch (e) {
         clearApiSession()
@@ -271,7 +252,7 @@ export const useAuthStore = defineStore('auth', () => {
     initialized,
     isAuthenticated,
     init,
-    validateSession,
+    clearInvalidSession: clearApiSession,
     login,
     register,
     logout,
