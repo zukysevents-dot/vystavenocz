@@ -126,6 +126,13 @@ function openNewToken() {
   tokenDialogOpen.value = true
 }
 
+// Nejdřívější platná expirace je zítra: backend validuje `> now`, takže „dnes" (půlnoc UTC) by spadlo na 422.
+const minExpiry = computed(() => {
+  const d = new Date()
+  d.setDate(d.getDate() + 1)
+  return d.toISOString().slice(0, 10)
+})
+
 function toggleTokenScope(scope: string, checked: boolean | 'indeterminate' | undefined) {
   tokenForm.scopes =
     checked === true
@@ -301,6 +308,16 @@ async function loadHistory() {
 
 const historyPages = computed(() => Math.max(1, Math.ceil(historyTotal.value / 20)))
 
+function goHistoryPage(delta: number) {
+  historyPage.value += delta
+  loadHistory()
+}
+
+function closeReveal() {
+  reveal.open = false
+  reveal.secret = '' // secret nedržet v reactive state po zavření
+}
+
 function deliveryBadgeVariant(status: WebhookDelivery['status']) {
   return status === 'Succeeded' ? 'default' : status === 'Failed' ? 'destructive' : 'secondary'
 }
@@ -449,7 +466,8 @@ function deliveryStatusLabel(status: WebhookDelivery['status']): string {
                   type="button"
                   variant="outline"
                   size="sm"
-                  :disabled="testingId === subscription.id"
+                  :disabled="testingId === subscription.id || !subscription.isEnabled"
+                  :title="!subscription.isEnabled ? 'Nejdřív webhook zapněte' : undefined"
                   :data-testid="`test-webhook-${subscription.id}`"
                   @click="sendTest(subscription)"
                 >
@@ -527,7 +545,7 @@ function deliveryStatusLabel(status: WebhookDelivery['status']): string {
           </div>
           <div class="space-y-1.5">
             <Label for="token-expiry">Expirace (nepovinné)</Label>
-            <Input id="token-expiry" v-model="tokenForm.expiresAt" type="date" />
+            <Input id="token-expiry" v-model="tokenForm.expiresAt" type="date" :min="minExpiry" />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" @click="tokenDialogOpen = false">Zrušit</Button>
@@ -665,10 +683,7 @@ function deliveryStatusLabel(status: WebhookDelivery['status']): string {
               variant="outline"
               size="sm"
               :disabled="historyPage <= 1 || historyLoading"
-              @click="
-                historyPage--
-                loadHistory()
-              "
+              @click="goHistoryPage(-1)"
             >
               Předchozí
             </Button>
@@ -677,10 +692,7 @@ function deliveryStatusLabel(status: WebhookDelivery['status']): string {
               variant="outline"
               size="sm"
               :disabled="historyPage >= historyPages || historyLoading"
-              @click="
-                historyPage++
-                loadHistory()
-              "
+              @click="goHistoryPage(1)"
             >
               Další
             </Button>
@@ -743,10 +755,7 @@ function deliveryStatusLabel(status: WebhookDelivery['status']): string {
       :title="reveal.title"
       :description="reveal.description"
       :secret="reveal.secret"
-      @close="
-        reveal.open = false
-        reveal.secret = ''
-      "
+      @close="closeReveal"
     />
   </div>
 </template>
