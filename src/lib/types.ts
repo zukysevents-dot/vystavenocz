@@ -306,6 +306,10 @@ export interface JobWorkItem {
   unitPrice: number // NET
   vatRate: VatRate
   sortOrder: number
+  // Serverem spočítané částky (Services & Jobs V2) — FE je jen zobrazuje. V mocku chybí → dopočítá se.
+  lineNet?: number
+  lineVat?: number
+  lineTotal?: number
 }
 // Řádek materiálu — odečítá se ze skladu (backend), storno vrací.
 export interface JobMaterialItem {
@@ -316,6 +320,10 @@ export interface JobMaterialItem {
   unitPrice: number // NET prodejní
   vatRate: VatRate
   sortOrder: number
+  // Serverem spočítané částky (Services & Jobs V2) — FE je jen zobrazuje. V mocku chybí → dopočítá se.
+  lineNet?: number
+  lineVat?: number
+  lineTotal?: number
 }
 export interface JobChecklistItem {
   id: string
@@ -357,7 +365,7 @@ export interface JobTotals {
   total: number
 }
 
-// Zakázka V2 (modul jobs). Detail (GET {id}) nese i work/material/checklist/events/handover/totals.
+// Zakázka V2 (modul jobs). Detail (GET {id}) nese i work/material/checklist/events/handover a ploché součty.
 export interface Job {
   id: string
   number: string
@@ -380,7 +388,10 @@ export interface Job {
   checklist?: JobChecklistItem[]
   events?: JobEvent[]
   handover?: JobHandover | null
-  totals?: JobTotals
+  // Serverem spočítané součty dokladu (ploché — jako faktura/nabídka). FE je jen zobrazuje; v mocku chybí.
+  subtotal?: number
+  vatTotal?: number
+  total?: number
 }
 
 export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired'

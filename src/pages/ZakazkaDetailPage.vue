@@ -43,7 +43,14 @@ import { useCompanyStore } from '@/stores/company'
 import { useAuthStore } from '@/stores/auth'
 import { isApiMode, ApiError } from '@/lib/http'
 import { calcLine, round2, formatCZK, formatDate } from '@/lib/invoice'
-import { jobStatusLabel, jobPriorityLabel, jobNextStatuses, computeJobTotals } from '@/lib/jobs'
+import {
+  jobStatusLabel,
+  jobPriorityLabel,
+  jobNextStatuses,
+  jobIsTaxed,
+  jobLineTotal,
+  resolveJobTotals,
+} from '@/lib/jobs'
 import type {
   Employee,
   Job,
@@ -129,13 +136,14 @@ const employeeName = (id: string | null): string =>
 const locationName = (id: string | null): string | null =>
   id ? (locations.value.find((l) => l.id === id)?.name ?? null) : null
 
-// Součty pracovního listu: v API režimu preferuj serverem vrácené `totals`, jinak spočítej živě z položek.
+// Součty pracovního listu: v API režimu preferuj serverem spočítaná čísla, jinak spočítej živě z položek.
 const totals = computed(() => {
   const j = job.value
   if (!j) return null
-  if (j.totals) return j.totals
-  return computeJobTotals(j.workItems ?? [], j.materialItems ?? [], vatPayer.value)
+  return resolveJobTotals(j, vatPayer.value)
 })
+// Zdaněnost bere ze serverových částek (backend `/company` vatMode nevrací → `vatPayer` je v API režimu nespolehlivý).
+const taxed = computed(() => (job.value ? jobIsTaxed(job.value, vatPayer.value) : false))
 const nextStatuses = computed(() => (job.value ? jobNextStatuses(job.value.status) : []))
 const isInvoiced = computed(() => Boolean(job.value?.invoiceId))
 
@@ -627,11 +635,11 @@ async function createInvoice(): Promise<void> {
                         <div class="font-medium">{{ w.description }}</div>
                         <div class="text-xs text-muted-foreground">
                           {{ w.quantity }} × {{ formatCZK(w.unitPrice) }}
-                          <span v-if="vatPayer"> · {{ w.vatRate }} %</span>
+                          <span v-if="taxed"> · {{ w.vatRate }} %</span>
                         </div>
                       </td>
                       <td class="py-2 text-right font-medium">
-                        {{ formatCZK(calcLine(w, vatPayer).lineTotal) }}
+                        {{ formatCZK(jobLineTotal(w, vatPayer)) }}
                       </td>
                       <td class="py-2 pl-2 text-right">
                         <Button
@@ -676,11 +684,11 @@ async function createInvoice(): Promise<void> {
                         <div class="font-medium">{{ m.description }}</div>
                         <div class="text-xs text-muted-foreground">
                           {{ m.quantity }} × {{ formatCZK(m.unitPrice) }}
-                          <span v-if="vatPayer"> · {{ m.vatRate }} %</span>
+                          <span v-if="taxed"> · {{ m.vatRate }} %</span>
                         </div>
                       </td>
                       <td class="py-2 text-right font-medium">
-                        {{ formatCZK(calcLine(m, vatPayer).lineTotal) }}
+                        {{ formatCZK(jobLineTotal(m, vatPayer)) }}
                       </td>
                       <td class="py-2 pl-2 text-right">
                         <Button
@@ -708,12 +716,12 @@ async function createInvoice(): Promise<void> {
               <div class="flex justify-between text-muted-foreground">
                 <span>Materiál</span><span>{{ formatCZK(totals.materialNet) }}</span>
               </div>
-              <div v-if="vatPayer" class="flex justify-between text-muted-foreground">
+              <div v-if="taxed" class="flex justify-between text-muted-foreground">
                 <span>Základ / DPH</span>
                 <span>{{ formatCZK(totals.net) }} / {{ formatCZK(totals.vat) }}</span>
               </div>
               <div class="flex justify-between pt-1 text-base font-semibold">
-                <span>Celkem {{ vatPayer ? 'vč. DPH' : '' }}</span>
+                <span>Celkem {{ taxed ? 'vč. DPH' : '' }}</span>
                 <span class="text-primary">{{ formatCZK(totals.total) }}</span>
               </div>
             </div>
