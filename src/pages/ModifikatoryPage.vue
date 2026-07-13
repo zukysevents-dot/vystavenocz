@@ -31,6 +31,7 @@ import {
 import { isApiMode } from '@/lib/http'
 import { formatCZK } from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
+import LoadError from '@/components/app/LoadError.vue'
 import type { ModifierGroup, ModifierSelectionType } from '@/lib/types'
 
 type OptionForm = { id: string; name: string; priceDelta: number | ''; sortOrder: number }
@@ -45,6 +46,7 @@ type Form = {
 const api = useModifierGroups()
 const apiMode = isApiMode()
 const loading = ref(true)
+const loadError = ref(false)
 const groups = ref<ModifierGroup[]>([])
 const editing = ref<ModifierGroup | null>(null)
 const dialogOpen = ref(false)
@@ -76,7 +78,9 @@ async function load() {
   loading.value = true
   try {
     groups.value = await api.list()
+    loadError.value = false
   } catch (e) {
+    loadError.value = true
     toast.error('Volby k produktům se nepodařilo načíst.')
     console.error(e)
   } finally {
@@ -228,7 +232,7 @@ async function onDelete() {
           Nastavte velikosti, přílohy, propečení nebo extra suroviny, které si host vybere.
         </p>
       </div>
-      <Button variant="coral" @click="openCreate">
+      <Button variant="coral" :disabled="!apiMode || loading || loadError" @click="openCreate">
         <Plus class="h-4 w-4" /> Nová skupina voleb
       </Button>
     </div>
@@ -239,6 +243,14 @@ async function onDelete() {
         Přihlaste se do online aplikace a zkuste to znovu.
       </p>
     </div>
+
+    <LoadError
+      v-else-if="loadError"
+      class="mt-6"
+      message="Volby k produktům se nepodařilo načíst. Bez aktuálních dat není bezpečné vytvářet ani upravovat skupiny."
+      :retrying="loading"
+      @retry="load"
+    />
 
     <div v-else class="mt-6 rounded-2xl border border-border bg-card">
       <div v-if="loading" class="flex justify-center p-12">

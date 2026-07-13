@@ -7,7 +7,6 @@ import {
   Users,
   Settings,
   LogOut,
-  Sparkles,
   CreditCard,
   ShoppingCart,
   Package,
@@ -37,6 +36,7 @@ import {
   FileSignature,
   Repeat,
   CircleHelp,
+  SlidersHorizontal,
 } from 'lucide-vue-next'
 import SiteLogo from '@/components/SiteLogo.vue'
 import { Button } from '@/components/ui/button'
@@ -53,12 +53,14 @@ const navIcons = {
   '/app/sklad': Package,
   '/app/zasoby': Boxes,
   '/app/naskladneni': ScanBarcode,
+  '/app/modifikatory': SlidersHorizontal,
   '/app/dochazka': Clock,
   '/app/smeny': CalendarClock,
   '/app/pobocky': Building2,
   '/app/audit': History,
   '/app/schvalovani': ShieldCheck,
   '/app/konsolidace': BarChart3,
+  '/app/provozni-prehled': BarChart3,
   '/app/uzaverka': Receipt,
   '/app/rezervace': CalendarDays,
   '/app/kategorie': Tags,
@@ -71,7 +73,9 @@ const navIcons = {
   '/app/klienti': Users,
   '/app/import': Upload,
   '/app/vernost': Heart,
+  '/app/akce-ceny': Percent,
   '/app/zakazky': Wrench,
+  '/app/cenik-sluzeb': Wrench,
   '/app/podpisy': FileSignature,
   '/app/predplatne': CreditCard,
   '/app/nastaveni': Settings,
@@ -145,7 +149,6 @@ const groupedNav = computed(() =>
     }))
     .filter((section) => section.items.length > 0),
 )
-const canInvoice = computed(() => auth.role !== 'Employee')
 const route = useRoute()
 const router = useRouter()
 const mobileOpen = ref(false)
@@ -219,19 +222,7 @@ watch(
       >
         <CircleHelp class="h-4 w-4" /> Průvodce
       </Button>
-      <button
-        v-if="canInvoice"
-        type="button"
-        class="w-full rounded-lg bg-gradient-to-br from-primary-soft to-accent p-3 text-left text-xs transition-all hover:shadow-md"
-        @click="router.push('/app/faktury/editor')"
-      >
-        <div class="flex items-center gap-2 font-semibold text-primary">
-          <Sparkles class="h-3.5 w-3.5" /> AI asistent
-        </div>
-        <p class="mt-1 text-muted-foreground">Vytvoř novou fakturu pomocí AI</p>
-      </button>
-
-      <div class="mt-3 flex items-center gap-2 rounded-lg p-2 text-sm">
+      <div class="flex items-center gap-2 rounded-lg p-2 text-sm">
         <div
           class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground"
         >
@@ -299,19 +290,7 @@ watch(
       >
         <CircleHelp class="h-4 w-4" /> Průvodce
       </Button>
-      <button
-        v-if="canInvoice"
-        type="button"
-        class="w-full rounded-lg bg-gradient-to-br from-primary-soft to-accent p-3 text-left text-xs transition-all hover:shadow-md"
-        @click="router.push('/app/faktury/editor')"
-      >
-        <div class="flex items-center gap-2 font-semibold text-primary">
-          <Sparkles class="h-3.5 w-3.5" /> AI asistent
-        </div>
-        <p class="mt-1 text-muted-foreground">Vytvoř novou fakturu pomocí AI</p>
-      </button>
-
-      <div class="mt-3 flex items-center gap-2 rounded-lg p-2 text-sm">
+      <div class="flex items-center gap-2 rounded-lg p-2 text-sm">
         <div
           class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground"
         >

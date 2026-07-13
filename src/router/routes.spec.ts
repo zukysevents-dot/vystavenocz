@@ -26,6 +26,20 @@ describe('app routes — role gates', () => {
     expect(route?.meta.requiresModule).toBe('reporting')
   })
 
+  it('allows Owner, Admin and Manager to open Denní uzávěrka', () => {
+    const route = router.getRoutes().find((r) => r.name === 'app-uzaverka')
+
+    expect(route?.meta.requiresRole).toEqual(['Owner', 'Admin', 'Manager'])
+    expect(route?.meta.requiresModule).toBe('pos')
+  })
+
+  it('allows only Owner and Admin to manage branches', () => {
+    const route = router.getRoutes().find((r) => r.name === 'app-pobocky')
+
+    expect(route?.meta.requiresRole).toEqual(['Owner', 'Admin'])
+    expect(route?.meta.requiresModule).toBe('core')
+  })
+
   it('keeps Audit route aligned with backend company.manage permission', () => {
     const route = router.getRoutes().find((r) => r.name === 'app-audit')
 

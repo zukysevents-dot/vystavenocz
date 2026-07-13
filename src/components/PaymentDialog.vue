@@ -70,7 +70,7 @@ function confirmCard() {
 
 <template>
   <Dialog :open="open" @update:open="(v) => emit('update:open', v)">
-    <DialogContent class="max-w-md">
+    <DialogContent class="max-h-[calc(100dvh-2rem)] max-w-md overflow-y-auto">
       <DialogHeader>
         <DialogTitle>Platba{{ label ? ` — ${label}` : '' }}</DialogTitle>
         <DialogDescription>Vyberte způsob platby a dokončete účet.</DialogDescription>
@@ -147,7 +147,7 @@ function confirmCard() {
         </div>
         <div class="grid grid-cols-[auto_1fr] gap-2">
           <Button variant="ghost" class="h-12" :disabled="busy" @click="step = 'method'">
-            <ArrowLeft class="h-4 w-4" /> Zpět
+            <ArrowLeft class="h-4 w-4" /> Jiný způsob
           </Button>
           <Button variant="coral" class="h-12" :disabled="busy || !cashReady" @click="confirmCash">
             <Loader2 v-if="busy" class="h-4 w-4 animate-spin" />
@@ -166,7 +166,7 @@ function confirmCard() {
         </div>
         <div class="grid grid-cols-[auto_1fr] gap-2">
           <Button variant="ghost" class="h-12" :disabled="busy" @click="step = 'method'">
-            <ArrowLeft class="h-4 w-4" /> Zpět
+            <ArrowLeft class="h-4 w-4" /> Jiný způsob
           </Button>
           <Button variant="coral" class="h-12" :disabled="busy" @click="confirmCard">
             <Loader2 v-if="busy" class="h-4 w-4 animate-spin" />

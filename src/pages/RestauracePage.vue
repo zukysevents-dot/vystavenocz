@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { RouterLink } from 'vue-router'
+import { onBeforeRouteLeave, RouterLink } from 'vue-router'
 import {
   Loader2,
   Minus,
@@ -53,6 +53,7 @@ import {
 } from '@/components/ui/select'
 import PaymentDialog from '@/components/PaymentDialog.vue'
 import ReceiptDialog from '@/components/ReceiptDialog.vue'
+import LoadError from '@/components/app/LoadError.vue'
 import ModifierSelectDialog from '@/components/app/ModifierSelectDialog.vue'
 import ProductVariantSelectDialog, {
   type SelectableProductVariant,
@@ -103,6 +104,9 @@ const { products, load: loadProducts } = useProducts()
 const companyStore = useCompanyStore()
 const auth = useAuthStore()
 const apiMode = isApiMode()
+const canCancelOrder = computed(
+  () => auth.role !== null && ['Owner', 'Admin', 'Manager'].includes(auth.role),
+)
 
 // Účtenka po zaplacení (náhled + tisk/PDF).
 const receiptOpen = ref(false)
@@ -143,6 +147,7 @@ const visibleProducts = computed(() => {
 })
 
 const loading = ref(true)
+const initialLoadError = ref(false)
 const busy = ref(false)
 const connectionState = ref<'online' | 'syncing' | 'offline'>('syncing')
 const mode = ref<'map' | 'order'>('map')
@@ -196,18 +201,18 @@ function tableOperationalMeta(order: Order | undefined) {
       badge: 'bg-destructive/15 text-foreground',
     }
   }
-  if (order.items.some((item) => item.kitchenStatus === 'Ready')) {
-    return {
-      label: 'Připraveno',
-      surface: 'border-success bg-success/10 text-foreground',
-      badge: 'bg-success/15 text-foreground',
-    }
-  }
   if (order.items.some((item) => item.kitchenStatus === 'New')) {
     return {
       label: 'Neodesláno',
       surface: 'border-sun bg-sun/10 text-foreground',
       badge: 'bg-sun/20 text-foreground',
+    }
+  }
+  if (order.items.some((item) => item.kitchenStatus === 'Ready')) {
+    return {
+      label: 'Připraveno',
+      surface: 'border-success bg-success/10 text-foreground',
+      badge: 'bg-success/15 text-foreground',
     }
   }
   return {
@@ -234,6 +239,28 @@ watch(busy, (isBusy) => {
   currentOrderRefreshSequence++
 })
 
+async function loadInitialData() {
+  loading.value = true
+  try {
+    await Promise.all([loadProducts(), refreshOpen(), loadPriceLevels(), loadLoyaltyCheckoutData()])
+    categories.value = await categoriesApi.list()
+    floors.value = await floorsApi.list()
+    if (floors.value.length) currentFloorId.value = floors.value[0].id
+    if (currentFloorId.value) await loadTables()
+    connectionState.value = 'online'
+    initialLoadError.value = false
+  } catch (e) {
+    connectionState.value = 'offline'
+    initialLoadError.value = true
+    console.error(e)
+  } finally {
+    if (!accountRefreshTimer) {
+      accountRefreshTimer = setInterval(() => void refreshOperationalState(), 5000)
+    }
+    loading.value = false
+  }
+}
+
 onMounted(async () => {
   auth.init()
   companyStore.init() // profil firmy (název/adresa) pro hlavičku účtenky
@@ -242,22 +269,7 @@ onMounted(async () => {
     return
   }
   // Mapa průběžně obnovuje obsazenost; otevřený účet položky/total kvůli QR doobjednávkám.
-  try {
-    await Promise.all([loadProducts(), refreshOpen(), loadPriceLevels(), loadLoyaltyCheckoutData()])
-    categories.value = await categoriesApi.list()
-    floors.value = await floorsApi.list()
-    if (floors.value.length) currentFloorId.value = floors.value[0].id
-    if (currentFloorId.value) await loadTables()
-    connectionState.value = 'online'
-  } catch (e) {
-    connectionState.value = 'offline'
-    console.error(e)
-  } finally {
-    if (!accountRefreshTimer) {
-      accountRefreshTimer = setInterval(() => void refreshOperationalState(), 5000)
-    }
-    loading.value = false
-  }
+  await loadInitialData()
 })
 
 async function loadTables() {
@@ -381,6 +393,29 @@ function backToMap() {
   moreActionsOpen.value = false
   productQuery.value = ''
 }
+
+async function discardEmptyOrder(): Promise<void> {
+  const order = currentOrder.value
+  if (!apiMode || !order || order.status !== 'Open' || order.items.length > 0) return
+  try {
+    await ordersApi.cancel(order.id)
+    await refreshOpen()
+  } catch (e) {
+    // Účet mohl mezitím zrušit jiný terminál. Při odchodu uživatele neblokujeme navigaci,
+    // ale po návratu se obsazenost znovu načte ze serveru.
+    console.warn('Prázdný účet se při odchodu nepodařilo automaticky zrušit:', e)
+  }
+}
+
+async function leaveOrderToMap() {
+  await discardEmptyOrder()
+  backToMap()
+}
+
+onBeforeRouteLeave(async () => {
+  await discardEmptyOrder()
+  return true
+})
 
 function resetProductFilters() {
   productQuery.value = ''
@@ -842,6 +877,7 @@ async function saveItemMeta() {
 const splitDialogOpen = ref(false)
 const splitGroups = ref<OrderSplitGroup[]>([])
 const savingSplit = ref(false)
+const splitPaymentAttempt = ref<{ orderId: string; groupId: string; key: string } | null>(null)
 
 function openSplitDialog() {
   if (!currentOrder.value) return
@@ -1039,36 +1075,50 @@ async function paySplitGroup(
     if (!currentOrder.value) return false
     const orderId = currentOrder.value.id
     const receipt = splitPaymentReceipt(group)
-    const updated = await ordersApi.payItems(
+    if (
+      splitPaymentAttempt.value?.orderId !== orderId ||
+      splitPaymentAttempt.value.groupId !== group.id
+    ) {
+      splitPaymentAttempt.value = { orderId, groupId: group.id, key: crypto.randomUUID() }
+    }
+    const payment = await ordersApi.payItems(
       orderId,
       method,
       items,
+      splitPaymentAttempt.value.key,
       cashReceived,
       activePriceLevelId.value,
     )
+    const sale = await salesApi.get(payment.saleId)
+    const updated = payment.order
     currentOrder.value = updated
     syncDiscountFromOrder(updated)
     splitGroups.value = []
     splitDialogOpen.value = false
+    splitPaymentAttempt.value = null
     if (receipt) {
-      const change = cashReceived != null ? round2(cashReceived - receipt.total) : null
       paymentOpen.value = false // zavřít PŘED otevřením účtenky — dva otevřené dialogy zamykaly stránku
       receiptData.value = buildReceipt({
         company: companyStore.company,
-        items: receipt.items,
-        discountPercent: accountDiscountPercent.value,
+        items: sale.items.map((item) => ({
+          name: [item.description ?? 'Položka', item.variantName].filter(Boolean).join(' · '),
+          qty: item.quantity,
+          total: item.lineTotal,
+          modifiers: item.modifiers ?? [],
+        })),
+        discountPercent: sale.discountPercent,
         discountAmount: receipt.discountAmount,
-        tipAmount: receipt.tipAmount,
-        total: receipt.total,
-        method,
-        id: orderId,
+        tipAmount: sale.tipAmount,
+        total: sale.total,
+        method: sale.paymentMethod,
+        id: sale.id,
         table: tableName,
-        cashReceived,
-        cashChange: change,
+        cashReceived: sale.cashReceived,
+        cashChange: sale.cashChange,
       })
       receiptOpen.value = true
     }
-    toast.success(`Zaplaceno ${formatCZK(receipt?.total ?? 0)} za ${group.label}.`)
+    toast.success(`Zaplaceno ${formatCZK(sale.total)} za ${group.label}.`)
     await refreshOpen()
     if (updated.status === 'Closed') backToMap()
     return true
@@ -1093,6 +1143,7 @@ async function paySplitGroup(
 
 // --- Jednotný platební dialog (hotově s výpočtem vrácení / karta přes terminálový krok) ---
 const paymentOpen = ref(false)
+const unsentPaymentConfirmOpen = ref(false)
 // null = platba celého účtu; jinak platba části za osobu z rozdělení účtu.
 const paymentSplitGroup = ref<OrderSplitGroup | null>(null)
 const paymentTotal = computed(() =>
@@ -1102,7 +1153,10 @@ const paymentLabel = computed(() =>
   paymentSplitGroup.value ? paymentSplitGroup.value.label : selectedTable.value?.name,
 )
 
-async function openPayment(group: OrderSplitGroup | null = null) {
+async function openPayment(
+  group: OrderSplitGroup | null = null,
+  options: { allowUnsent?: boolean } = {},
+) {
   // Platba celého účtu: napřed natáhni aktuální stav — host mohl QR doobjednat, obsluha musí platit podle reality.
   // (Split platba se neobnovuje: rozdělení účtu vychází ze známých položek a refresh by ho rozhodil.)
   if (group === null) {
@@ -1115,6 +1169,14 @@ async function openPayment(group: OrderSplitGroup | null = null) {
     }
   }
   if (!currentOrder.value) return // účet se mezitím zavřel a refresh nás vrátil na mapu
+  if (
+    !options.allowUnsent &&
+    currentOrder.value.items.some((item) => item.kitchenStatus === 'New')
+  ) {
+    paymentSplitGroup.value = group
+    unsentPaymentConfirmOpen.value = true
+    return
+  }
   paymentSplitGroup.value = group
   await refreshSplitPricePreview(group)
   if (
@@ -1281,8 +1343,8 @@ async function mergeOrder(sourceTableId: string) {
   }
 }
 
-async function sendToKitchen() {
-  if (!currentOrder.value || busy.value) return
+async function sendToKitchen(): Promise<boolean> {
+  if (!currentOrder.value || busy.value) return false
   // Rozpad nových položek na stanice (kuchyně/bar) — co kam „vyjede" jako bon.
   const fresh = currentOrder.value.items.filter((i) => i.kitchenStatus === 'New')
   const k = fresh.filter((i) => i.kitchenSection === 'Kitchen').reduce((s, i) => s + i.quantity, 0)
@@ -1296,13 +1358,26 @@ async function sendToKitchen() {
     toast.success(
       parts.length ? `Objednávka odeslána (${parts.join(', ')}).` : 'Objednávka odeslána.',
     )
+    return true
   } catch (e) {
-    if (await handleAccountClosedElsewhere(e)) return
+    if (await handleAccountClosedElsewhere(e)) return false
     toast.error('Odeslání objednávky selhalo.')
     console.error(e)
+    return false
   } finally {
     busy.value = false
   }
+}
+
+async function sendAndContinueToPayment() {
+  unsentPaymentConfirmOpen.value = false
+  const group = paymentSplitGroup.value
+  if (await sendToKitchen()) await openPayment(group, { allowUnsent: true })
+}
+
+async function continuePaymentWithoutSending() {
+  unsentPaymentConfirmOpen.value = false
+  await openPayment(paymentSplitGroup.value, { allowUnsent: true })
 }
 
 async function pay(method: PaymentMethod, cashReceived: number | null = null): Promise<boolean> {
@@ -1405,9 +1480,20 @@ async function cancelOrder() {
 const hasNewItems = computed(() =>
   (currentOrder.value?.items ?? []).some((i) => i.kitchenStatus === 'New'),
 )
+const newItemCount = computed(() =>
+  (currentOrder.value?.items ?? [])
+    .filter((item) => item.kitchenStatus === 'New')
+    .reduce((sum, item) => sum + item.quantity, 0),
+)
 const currentItemCount = computed(() =>
   (currentOrder.value?.items ?? []).reduce((sum, item) => sum + item.quantity, 0),
 )
+
+function itemCountLabel(count: number): string {
+  if (count === 1) return 'položka'
+  if (count >= 2 && count <= 4) return 'položky'
+  return 'položek'
+}
 const currentOrderElapsed = computed(() =>
   currentOrder.value ? elapsedMinutes(currentOrder.value.openedAt) : 0,
 )
@@ -1435,6 +1521,14 @@ const currentOrderElapsed = computed(() =>
       </div>
     </div>
 
+    <div v-else-if="initialLoadError" class="h-full overflow-y-auto p-4 sm:p-6">
+      <LoadError
+        message="Provoz restaurace se nepodařilo načíst. Zkontrolujte připojení a zkuste to znovu."
+        :retrying="loading"
+        @retry="loadInitialData"
+      />
+    </div>
+
     <template v-else>
       <header
         class="flex h-[var(--pos-header)] shrink-0 items-center gap-2 border-b border-border bg-card px-2 sm:gap-3 sm:px-4"
@@ -1456,7 +1550,7 @@ const currentOrderElapsed = computed(() =>
           class="h-12 min-w-12 px-3"
           aria-label="Zpět na mapu stolů"
           data-pos-target="secondary"
-          @click="backToMap"
+          @click="leaveOrderToMap"
         >
           <ArrowLeft class="h-5 w-5" />
           <span class="hidden md:inline">Stoly</span>
@@ -1464,14 +1558,14 @@ const currentOrderElapsed = computed(() =>
 
         <div class="min-w-0 flex-1">
           <div class="truncate text-base font-bold sm:text-lg">
-            {{ mode === 'map' ? 'Restaurace' : selectedTable?.name }}
+            {{ mode === 'map' ? 'Stoly a objednávky' : selectedTable?.name }}
           </div>
           <div class="truncate text-xs text-muted-foreground">
             <template v-if="mode === 'map'">
               {{ occupiedTableCount }} obsazených · {{ freeTableCount }} volných
             </template>
             <template v-else>
-              {{ currentItemCount }} {{ currentItemCount === 1 ? 'položka' : 'položek' }} · otevřeno
+              {{ currentItemCount }} {{ itemCountLabel(currentItemCount) }} · otevřeno
               {{ currentOrderElapsed }} min
             </template>
           </div>
@@ -1893,8 +1987,12 @@ const currentOrderElapsed = computed(() =>
                         }}{{ formatCZK(modifier.priceDelta) }})</span
                       >
                     </div>
-                    <div v-if="item.note" class="text-xs text-muted-foreground">
-                      ↳ {{ item.note }}
+                    <div
+                      v-if="item.note"
+                      class="flex items-start gap-1.5 rounded-lg border border-sun bg-sun/10 px-2 py-1.5 text-xs font-semibold text-foreground"
+                    >
+                      <StickyNote class="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <span>{{ item.note }}</span>
                     </div>
                   </div>
 
@@ -1905,14 +2003,14 @@ const currentOrderElapsed = computed(() =>
                     <Button
                       type="button"
                       variant="ghost"
-                      size="icon"
-                      class="h-12 w-12"
+                      class="h-12 px-3"
                       :disabled="busy"
-                      :aria-label="'Upravit poznámku a pořadí výdeje položky ' + item.name"
+                      :aria-label="'Upravit poznámku a chod položky ' + item.name"
                       data-pos-target="secondary"
                       @click="openItemMeta(item)"
                     >
                       <StickyNote class="h-4 w-4" />
+                      <span class="text-xs font-bold">Poznámka · chod</span>
                     </Button>
                     <Button
                       type="button"
@@ -1999,7 +2097,7 @@ const currentOrderElapsed = computed(() =>
                   data-pos-target="primary"
                   @click="sendToKitchen"
                 >
-                  <ChefHat class="h-5 w-5" /> Odeslat
+                  <ChefHat class="h-5 w-5" /> Odeslat na stanice
                 </Button>
                 <Button
                   type="button"
@@ -2007,6 +2105,7 @@ const currentOrderElapsed = computed(() =>
                   class="h-14"
                   :disabled="busy || pricePreviewLoading || !currentOrder.items.length"
                   data-pos-target="primary"
+                  data-testid="restaurant-pay-desktop"
                   @click="openPayment()"
                 >
                   <Banknote class="h-5 w-5" /> Zaplatit
@@ -2044,11 +2143,11 @@ const currentOrderElapsed = computed(() =>
                 variant="outline"
                 class="h-14 shrink-0"
                 :disabled="busy"
-                aria-label="Odeslat"
+                aria-label="Odeslat na stanice"
                 data-pos-target="primary"
                 @click="sendToKitchen"
               >
-                <ChefHat class="h-5 w-5" /><span class="hidden min-[430px]:inline">Odeslat</span>
+                <ChefHat class="h-5 w-5" /><span class="hidden min-[390px]:inline">Odeslat</span>
               </Button>
               <Button
                 type="button"
@@ -2056,6 +2155,7 @@ const currentOrderElapsed = computed(() =>
                 class="h-14 shrink-0 px-5"
                 :disabled="busy || pricePreviewLoading || !currentOrder.items.length"
                 data-pos-target="primary"
+                data-testid="restaurant-pay-mobile"
                 @click="openPayment()"
               >
                 <Banknote class="h-5 w-5" /> Zaplatit
@@ -2277,8 +2377,9 @@ const currentOrderElapsed = computed(() =>
             >
               <Combine class="h-5 w-5" /> Sloučit s jiným účtem
             </Button>
-            <div class="my-2 border-t border-border" />
+            <div v-if="canCancelOrder" class="my-2 border-t border-border" />
             <Button
+              v-if="canCancelOrder"
               type="button"
               variant="ghost"
               class="h-14 justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
@@ -2292,11 +2393,11 @@ const currentOrderElapsed = computed(() =>
       </Sheet>
     </template>
 
-    <!-- Poznámka a pořadí výdeje (jen dokud není položka odeslaná do kuchyně) -->
+    <!-- Poznámka a chod (jen dokud není položka odeslaná do kuchyně) -->
     <Dialog v-model:open="itemDialogOpen">
       <DialogContent class="max-w-md">
         <DialogHeader>
-          <DialogTitle>Poznámka a pořadí výdeje</DialogTitle>
+          <DialogTitle>Poznámka a chod</DialogTitle>
           <DialogDescription>{{ editingItem?.name }}</DialogDescription>
         </DialogHeader>
         <form class="space-y-4" @submit.prevent="saveItemMeta">
@@ -2305,9 +2406,9 @@ const currentOrderElapsed = computed(() =>
             <Input id="item-note" v-model="itemNote" placeholder="bez cibule, dobře propečené…" />
           </div>
           <div class="space-y-2">
-            <Label>Zařazení na bonu</Label>
+            <Label>Chod</Label>
             <p class="text-xs text-muted-foreground">
-              Kuchyně uvidí předkrmy, hlavní chody a dezerty odděleně.
+              Vybraný chod vytvoří na účtu i v kuchyni jednoduchý oddělovač.
             </p>
             <div class="flex flex-wrap gap-2">
               <Button
@@ -2609,6 +2710,57 @@ const currentOrderElapsed = computed(() =>
           >
             <Loader2 v-if="savingSplit" class="h-4 w-4 animate-spin" />
             Uložit rozdělení
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog v-model:open="unsentPaymentConfirmOpen">
+      <DialogContent class="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Nejdřív odeslat do kuchyně?</DialogTitle>
+          <DialogDescription>
+            Na účtu {{ selectedTable?.name }}
+            {{
+              newItemCount === 1
+                ? 'je 1 neodeslaná položka'
+                : `jsou ${newItemCount} neodeslané položky`
+            }}. Při platbě bez odeslání je kuchyně ani bar neuvidí.
+          </DialogDescription>
+        </DialogHeader>
+        <div class="rounded-xl border border-sun bg-sun/10 p-3 text-sm">
+          Doporučeno: odešlete nové položky a potom pokračujte k platbě.
+        </div>
+        <DialogFooter class="gap-2 sm:flex-col sm:space-x-0">
+          <Button
+            type="button"
+            variant="coral"
+            class="h-12 w-full"
+            :disabled="busy"
+            data-testid="restaurant-send-and-pay"
+            @click="sendAndContinueToPayment"
+          >
+            <Loader2 v-if="busy" class="h-4 w-4 animate-spin" />
+            <ChefHat v-else class="h-4 w-4" /> Odeslat a pokračovat k platbě
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            class="h-12 w-full"
+            :disabled="busy"
+            data-testid="restaurant-pay-without-sending"
+            @click="continuePaymentWithoutSending"
+          >
+            Zaplatit bez odeslání
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            class="h-12 w-full"
+            :disabled="busy"
+            @click="unsentPaymentConfirmOpen = false"
+          >
+            Vrátit se k účtu
           </Button>
         </DialogFooter>
       </DialogContent>

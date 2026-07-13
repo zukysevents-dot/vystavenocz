@@ -10,6 +10,7 @@ const MODULES = ['core', 'invoicing', 'pos', 'stock', 'loyalty', 'integrations']
 
 const TOKEN_LIST: Array<Record<string, unknown>> = []
 const WEBHOOK_LIST: Array<Record<string, unknown>> = []
+const vueWarnings = new WeakMap<Page, string[]>()
 
 async function seedApiSession(page: Page): Promise<void> {
   await page.addInitScript((mods) => {
@@ -147,9 +148,20 @@ async function routeApp(page: Page): Promise<void> {
 
 test.describe('API a webhooky', () => {
   test.beforeEach(async ({ page }) => {
+    const warnings: string[] = []
+    vueWarnings.set(page, warnings)
+    page.on('console', (message) => {
+      if (message.type() === 'warning' && message.text().includes('[Vue warn]')) {
+        warnings.push(message.text())
+      }
+    })
     await seedApiSession(page)
     await routeApp(page)
     await page.goto('/app/nastaveni/api-webhooky')
+  })
+
+  test.afterEach(async ({ page }) => {
+    expect(vueWarnings.get(page) ?? []).toEqual([])
   })
 
   test('token se zobrazí jen jednou, výpis nese jen prefix', async ({ page }) => {

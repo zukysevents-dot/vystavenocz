@@ -111,18 +111,33 @@ async function refresh() {
   }
 }
 
-async function setAll(t: Ticket, status: 'Preparing' | 'Ready' | 'Served') {
+function courseIsReady(courseItems: KitchenQueueItem[]): boolean {
+  return courseItems.every((item) => item.kitchenStatus === 'Ready')
+}
+
+function courseIsPreparing(courseItems: KitchenQueueItem[]): boolean {
+  return courseItems.some((item) => item.kitchenStatus === 'Preparing')
+}
+
+async function setCourseStatus(
+  t: Ticket,
+  courseItems: KitchenQueueItem[],
+  courseLabel: string | null,
+  status: 'Preparing' | 'Ready' | 'Served',
+) {
   if (busy.value || mode.value === 'history') return
   busy.value = true
   try {
     const targets =
       status === 'Preparing'
-        ? t.items.filter((i) => i.kitchenStatus === 'Sent')
+        ? courseItems.filter((i) => i.kitchenStatus === 'Sent')
         : status === 'Ready'
-          ? t.items.filter((i) => i.kitchenStatus !== 'Ready')
-          : t.items
+          ? courseItems.filter((i) => i.kitchenStatus !== 'Ready')
+          : courseItems
     await Promise.all(targets.map((i) => kitchen.setStatus(i.itemId, status)))
-    if (status === 'Served') toast.success(`Vydáno: ${ticketTitle(t)}`)
+    if (status === 'Served') {
+      toast.success(`Vydáno: ${ticketTitle(t)}${courseLabel ? ` · ${courseLabel}` : ''}`)
+    }
     await refresh()
   } catch (e) {
     // Bon mezitím posunul/vydal jiný terminál — backend odmítne neplatný přechod (409). Ukaž jasnou hlášku
@@ -281,7 +296,7 @@ onUnmounted(() => {
           <div class="flex gap-1 rounded-lg bg-muted p-1">
             <button
               type="button"
-              class="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+              class="inline-flex h-12 items-center gap-1 rounded-md px-4 text-sm font-medium transition-colors"
               :class="
                 mode === 'live'
                   ? 'bg-background text-foreground shadow-sm'
@@ -293,7 +308,7 @@ onUnmounted(() => {
             </button>
             <button
               type="button"
-              class="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+              class="inline-flex h-12 items-center gap-1 rounded-md px-4 text-sm font-medium transition-colors"
               :class="
                 mode === 'history'
                   ? 'bg-background text-foreground shadow-sm'
@@ -308,7 +323,7 @@ onUnmounted(() => {
             v-for="s in STATIONS"
             :key="s.value"
             type="button"
-            class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+            class="h-12 rounded-lg px-4 text-sm font-medium transition-colors"
             :class="
               station === s.value
                 ? 'bg-primary text-primary-foreground'
@@ -394,7 +409,12 @@ onUnmounted(() => {
                 <li v-for="i in group.items" :key="i.itemId">
                   <span class="font-bold tabular-nums">{{ i.quantity }}×</span> {{ i.productName
                   }}<span v-if="i.variantName"> · {{ i.variantName }}</span>
-                  <div v-if="i.note" class="pl-4 text-xs text-muted-foreground">↳ {{ i.note }}</div>
+                  <div
+                    v-if="i.note"
+                    class="mt-1 rounded-lg border border-sun bg-sun/10 px-2 py-1.5 text-xs font-bold text-foreground"
+                  >
+                    Poznámka: {{ i.note }}
+                  </div>
                   <div v-if="i.modifiers?.length" class="pl-4 text-xs text-muted-foreground">
                     <div
                       v-for="(modifier, index) in i.modifiers"
@@ -405,6 +425,38 @@ onUnmounted(() => {
                   </div>
                 </li>
               </ul>
+              <div v-if="mode === 'live'" class="mt-3">
+                <Button
+                  v-if="!courseIsPreparing(group.items) && !courseIsReady(group.items)"
+                  variant="outline"
+                  class="h-12 w-full"
+                  :aria-label="`Začít přípravu${group.label ? ` — ${group.label}` : ''}`"
+                  :disabled="busy"
+                  @click="setCourseStatus(t, group.items, group.label, 'Preparing')"
+                >
+                  <Flame class="h-4 w-4" /> Začít přípravu
+                </Button>
+                <Button
+                  v-else-if="courseIsPreparing(group.items) && !courseIsReady(group.items)"
+                  variant="outline"
+                  class="h-12 w-full"
+                  :aria-label="`Označit jako hotové${group.label ? ` — ${group.label}` : ''}`"
+                  :disabled="busy"
+                  @click="setCourseStatus(t, group.items, group.label, 'Ready')"
+                >
+                  <Check class="h-4 w-4" /> Označit jako hotové
+                </Button>
+                <Button
+                  v-else
+                  variant="coral"
+                  class="h-12 w-full"
+                  :aria-label="`Vydáno hostovi${group.label ? ` — ${group.label}` : ''}`"
+                  :disabled="busy"
+                  @click="setCourseStatus(t, group.items, group.label, 'Served')"
+                >
+                  <Check class="h-4 w-4" /> Vydáno hostovi
+                </Button>
+              </div>
             </section>
           </div>
 
@@ -422,41 +474,12 @@ onUnmounted(() => {
           </div>
 
           <div class="flex gap-2">
-            <Button variant="ghost" size="icon" title="Tisk bonu" @click="printTicket(t)">
+            <Button variant="ghost" class="h-12 w-12" title="Tisk bonu" @click="printTicket(t)">
               <Printer class="h-4 w-4" />
             </Button>
             <Button v-if="mode === 'history'" variant="outline" class="flex-1" disabled>
               <Check class="h-4 w-4" /> Vydáno
             </Button>
-            <template v-else>
-              <Button
-                v-if="!t.preparing && !t.ready"
-                variant="outline"
-                class="flex-1"
-                :disabled="busy"
-                @click="setAll(t, 'Preparing')"
-              >
-                <Flame class="h-4 w-4" /> Začít přípravu
-              </Button>
-              <Button
-                v-else-if="t.preparing && !t.ready"
-                variant="outline"
-                class="flex-1"
-                :disabled="busy"
-                @click="setAll(t, 'Ready')"
-              >
-                <Check class="h-4 w-4" /> Označit jako hotové
-              </Button>
-              <Button
-                v-else
-                variant="coral"
-                class="flex-1"
-                :disabled="busy"
-                @click="setAll(t, 'Served')"
-              >
-                <Check class="h-4 w-4" /> Vydáno hostovi
-              </Button>
-            </template>
           </div>
         </div>
       </div>

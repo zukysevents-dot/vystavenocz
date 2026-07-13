@@ -205,7 +205,7 @@ test('QR objednávka vybere variantu, ukáže její cenu a pošle jen její ID',
   await page.goto('/objednavka/bistro?table=table-1')
 
   await page.getByRole('button', { name: 'Vybrat' }).click()
-  await expect(page.getByRole('dialog', { name: 'Vybrat porci' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Vyberte velikost' })).toBeVisible()
   await page.getByRole('button', { name: /Velká/ }).click()
   await page.getByRole('button', { name: 'Pokračovat' }).click()
   await expect(page.getByText('Domácí limonáda · Velká')).toBeVisible()

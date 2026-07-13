@@ -19,9 +19,9 @@ Cíl: prodat na pokladně a obsloužit stůl.
 
 1. Otevřete `Pokladna`. Přidejte pár položek (klik na dlaždici, hledání podle názvu/SKU/EAN, nebo `Sken / EAN` čtečkou).
 2. Klikněte `Zaplatit`, zvolte `Hotově` nebo `Kartou`. U hotovosti zadejte přijatou částku — systém ukáže, kolik vrátit. U karty potvrďte `Platba prošla` (terminál zatím potvrzuje obsluha ručně).
-3. Otevřete `Restaurace` na tabletu 1024 × 768. Ověřte plnoobrazovkový režim bez levého menu, vyberte stůl, najděte produkt názvem/SKU/EAN a přidejte ho. U tří položek nastavte `Předkrm`, `Hlavní chod` a `Dezert`; na účtu i po `Odeslat` v kuchyni musí být v tomto pořadí pod samostatnými oddělovači. Nakonec účet zaplaťte.
+3. Otevřete `Stoly a objednávky` na tabletu 1024 × 768. Ověřte plnoobrazovkový režim bez levého menu, vyberte stůl, najděte produkt názvem/SKU/EAN a přidejte ho. Přes viditelné tlačítko `Poznámka · chod` nastavte u tří položek `Předkrm`, `Hlavní chod` a `Dezert`; na účtu i po `Odeslat na stanice` v kuchyni musí být v tomto pořadí pod samostatnými oddělovači. Před zaplacením přidejte ještě jednu položku a ověřte, že systém upozorní na neodeslanou položku. Nakonec ji odešlete a účet zaplaťte.
 4. V `Další` vyzkoušejte, že výběr zdrojového stolu účet ještě nesloučí a až `Sloučit účty` provede akci. U `Zrušit účet` ověřte, že bez závěrečného potvrzení účet zůstane otevřený.
-5. V `Kuchyně` posuňte bon přes stavy `Odesláno → Připravuje se → Hotovo → Vydáno`.
+5. V `Kuchyně` posuňte předkrm přes stavy `Odesláno → Připravuje se → Hotovo → Vydáno` a ověřte, že hlavní chod a dezert zůstaly ve svém původním stavu.
 
 Co ověřit: prodej se objeví v tržbách, bon projde kuchyní, po zaplacení účtu zůstane jen nezaplacený zbytek (nebo se stůl uvolní).
 

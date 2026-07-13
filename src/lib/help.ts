@@ -133,16 +133,16 @@ export const HELP_GUIDES: readonly HelpGuide[] = [
       step('Otevřete stůl', 'Vyberte ho v seznamu, na mapě nebo ve frontě otevřených účtů.'),
       step(
         'Přidejte položky',
-        'Použijte kategorii nebo hledání názvu či kódu, doplňte přílohy a další volby a zařaďte jídlo jako předkrm, hlavní chod nebo dezert.',
+        'Použijte kategorii nebo hledání názvu či kódu, doplňte volby a přes Poznámka · chod zařaďte jídlo jako předkrm, hlavní chod nebo dezert.',
       ),
       step(
-        'Odešlete do kuchyně a zaplaťte',
-        'Kuchyň uvidí jednotlivé chody pod oddělovači; po platbě se účet uzavře.',
+        'Odešlete na stanice a zaplaťte',
+        'Kuchyň a bar uvidí jednotlivé chody pod oddělovači. Před platbou vás systém upozorní na neodeslané položky.',
       ),
     ],
     tip: 'Účet se obnovuje automaticky a před platbou se zkontroluje jeho aktuální stav; zrušení i sloučení vyžaduje potvrzení.',
     to: '/app/restaurace',
-    action: 'Otevřít restauraci',
+    action: 'Otevřít stoly a objednávky',
   },
   {
     id: 'modifiers',
