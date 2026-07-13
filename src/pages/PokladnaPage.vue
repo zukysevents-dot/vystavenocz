@@ -393,9 +393,9 @@ function handleCode(raw: string) {
   if (!code) return
   const product = findByEan(products.value, code)
   if (!product) {
-    toast.error(`EAN „${code}“ nenalezen v katalogu.`)
+    toast.error(`Čárový kód „${code}“ nebyl v katalogu nalezen.`)
   } else if (products.value.filter((p) => p.ean === code).length > 1) {
-    toast.error(`Víc produktů se stejným EAN „${code}“ — vyberte položku ručně.`)
+    toast.error(`Více produktů má čárový kód „${code}“. Vyberte položku ručně.`)
   } else {
     void chooseProduct(product)
   }
@@ -445,7 +445,7 @@ async function openPaymentDialog() {
   if (!cart.value.length || paying.value) return
   await refreshPricePreview()
   if (!pricingReady.value) {
-    toast.error('Cenu se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+    toast.error('Výslednou cenu se nepodařilo ověřit. Zkuste platbu znovu.')
     return
   }
   paymentOpen.value = true
@@ -454,7 +454,7 @@ async function openPaymentDialog() {
 async function confirmPayment(payment: { method: PaymentMethod; cashReceived: number | null }) {
   await refreshPricePreview()
   if (!pricingReady.value) {
-    toast.error('Cenu se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+    toast.error('Výslednou cenu se nepodařilo ověřit. Zkuste platbu znovu.')
     return
   }
   const ok = await pay(payment.method, payment.cashReceived)
@@ -527,7 +527,7 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
     if (e instanceof ApiError && e.status === 422 && cashReceived != null) {
       toast.error('Přijatá hotovost nepokrývá částku k úhradě. Zadejte vyšší částku.')
     } else {
-      toast.error('Prodej se nepodařilo dokončit. Zkontrolujte připojení k serveru.')
+      toast.error('Prodej se nepodařilo dokončit. Zkontrolujte připojení a zkuste to znovu.')
     }
     console.error(e)
     return false
@@ -648,10 +648,8 @@ function saleTime(iso: string): string {
       class="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground"
     >
       <ShoppingCart class="mx-auto h-10 w-10" />
-      <p class="mt-3 font-semibold text-foreground">Pokladna potřebuje připojení k serveru</p>
-      <p class="mt-1 text-sm">
-        Nastavte <code>VITE_API_URL</code> a spusťte backend (vystaveno-api).
-      </p>
+      <p class="mt-3 font-semibold text-foreground">Pokladna teď není dostupná</p>
+      <p class="mt-1 text-sm">Zkontrolujte připojení nebo se obraťte na správce.</p>
     </div>
 
     <div v-else class="grid gap-4 lg:grid-cols-[1fr_360px]">
@@ -674,7 +672,7 @@ function saleTime(iso: string): string {
         <template v-else>
           <div class="mb-3 rounded-xl border border-border bg-muted/30 p-3">
             <label class="mb-1.5 flex items-center gap-1.5 text-sm font-medium" for="pos-scan">
-              <ScanBarcode class="h-4 w-4 text-primary" /> Sken / EAN
+              <ScanBarcode class="h-4 w-4 text-primary" /> Načíst čárový kód
             </label>
             <div class="flex gap-2">
               <Input
@@ -683,7 +681,7 @@ function saleTime(iso: string): string {
                 v-model="scanEan"
                 inputmode="numeric"
                 autocomplete="off"
-                placeholder="Naskenujte kód nebo zadejte EAN a Enter"
+                placeholder="Naskenujte nebo zadejte čárový kód"
                 class="flex-1"
                 @keyup.enter="onScan"
               />
@@ -707,7 +705,7 @@ function saleTime(iso: string): string {
               id="pos-search"
               v-model="productSearch"
               autocomplete="off"
-              placeholder="Název, SKU nebo EAN"
+              placeholder="Název, skladový nebo čárový kód"
             />
           </div>
 
@@ -977,7 +975,7 @@ function saleTime(iso: string): string {
             class="mb-3 space-y-1 rounded-lg border border-border bg-muted/30 p-2 text-xs"
           >
             <div v-if="pricePreviewLoading" class="text-muted-foreground">
-              Počítám cenu na serveru…
+              Ověřuji výslednou cenu…
             </div>
             <div v-if="selectedPriceLevel" class="flex items-center justify-between gap-2">
               <span class="text-muted-foreground">{{ selectedPriceLevel.name }}</span>
@@ -1001,7 +999,7 @@ function saleTime(iso: string): string {
               <span class="tabular-nums">+{{ earnedPointsPreview }}</span>
             </div>
             <div v-if="pricePreviewError" class="text-muted-foreground">
-              Náhled ceny není dostupný, finální cenu dopočítá server při platbě.
+              Náhled ceny není dostupný. Výsledná cena se ověří při platbě.
             </div>
           </div>
           <div v-if="totals.discountAmount" class="mb-1 flex items-center justify-between text-sm">

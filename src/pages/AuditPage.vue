@@ -95,13 +95,13 @@ onMounted(() => load())
       class="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground"
     >
       <ShieldCheck class="mx-auto h-10 w-10" />
-      <p class="mt-3 font-semibold text-foreground">Audit potřebuje připojení k serveru</p>
+      <p class="mt-3 font-semibold text-foreground">Historie změn teď není dostupná</p>
     </div>
 
     <template v-else>
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Audit</h1>
+          <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Historie změn</h1>
           <p class="mt-1 text-muted-foreground">
             Kritické změny ve firmě, pokladně, gastro provozu a cenách.
           </p>

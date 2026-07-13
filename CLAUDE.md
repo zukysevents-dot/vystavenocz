@@ -157,3 +157,11 @@ Pravidla:
 ---
 
 Tato pravidla fungují, když: v diffech je méně zbytečných změn, méně přepisování kvůli překomplikování, a doptávání přichází před implementací, ne až po chybách.
+
+## 6. Texty pro uživatele a dokumentace
+
+- Piš zdvořilou, běžnou češtinou: `Vyberte`, `Přidejte`, `Zkuste znovu`.
+- V uživatelském rozhraní nezobrazuj backend, API režim, runtime, adapter, credential, scope, mock, HTTP stav ani názvy konfiguračních klíčů. Výjimkou je stránka `Propojení pro vývojáře`, kde musí být pojem vysvětlený.
+- Chyba má říct, co uživatel může udělat. Technický detail patří do logu.
+- Nikdy nezobrazuj falešný úspěch pro neaktivní e-mail, platbu, podpis nebo integraci.
+- Při změně hlavního workflow aktualizuj `docs/product/kompletni-uzivatelsky-manual.md`; výsledné PDF se generuje přes `scripts/generate-user-manual-pdf.py` a musí projít vizuální kontrolou po renderu na obrázky.

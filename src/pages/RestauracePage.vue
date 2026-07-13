@@ -1110,7 +1110,7 @@ async function openPayment(group: OrderSplitGroup | null = null) {
     if (!refreshed) return
     await refreshPricePreview()
     if (!pricingReady.value) {
-      toast.error('Cenu se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+      toast.error('Výslednou cenu se nepodařilo ověřit. Zkuste platbu znovu.')
       return
     }
   }
@@ -1123,7 +1123,7 @@ async function openPayment(group: OrderSplitGroup | null = null) {
     loyaltyEnabled.value &&
     (splitPricePreviewGroupId.value !== group.id || !splitPricePreview.value)
   ) {
-    toast.error('Cenu vybrané části se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+    toast.error('Cenu vybrané části se nepodařilo ověřit. Zkuste platbu znovu.')
     return
   }
   mobileAccountOpen.value = false
@@ -1140,7 +1140,7 @@ async function confirmPayment(payment: { method: PaymentMethod; cashReceived: nu
       loyaltyEnabled.value &&
       (splitPricePreviewGroupId.value !== paymentSplitGroup.value.id || !splitPricePreview.value)
     ) {
-      toast.error('Cenu vybrané části se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+      toast.error('Cenu vybrané části se nepodařilo ověřit. Zkuste platbu znovu.')
       return
     }
   } else {
@@ -1149,7 +1149,7 @@ async function confirmPayment(payment: { method: PaymentMethod; cashReceived: nu
     if (!refreshed) return
     await refreshPricePreview()
     if (!pricingReady.value) {
-      toast.error('Cenu se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+      toast.error('Výslednou cenu se nepodařilo ověřit. Zkuste platbu znovu.')
       return
     }
     if (Math.abs(previousTotal - checkoutTotal.value) >= 0.01) {
@@ -1423,7 +1423,7 @@ const currentOrderElapsed = computed(() =>
       class="m-4 rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground"
     >
       <Package class="mx-auto h-10 w-10" />
-      <p class="mt-3 font-semibold text-foreground">Restaurace potřebuje připojení k serveru</p>
+      <p class="mt-3 font-semibold text-foreground">Stoly a objednávky teď nejsou dostupné</p>
     </div>
 
     <div v-else-if="loading" class="grid h-full place-items-center">
@@ -1722,7 +1722,7 @@ const currentOrderElapsed = computed(() =>
                 v-model="productQuery"
                 type="search"
                 class="h-12 rounded-xl bg-card pl-12 pr-12 text-base"
-                placeholder="Hledat název, SKU nebo EAN…"
+                placeholder="Hledat podle názvu, skladového nebo čárového kódu…"
                 aria-label="Hledat produkt"
                 data-testid="restaurant-product-search"
               />
@@ -1946,7 +1946,7 @@ const currentOrderElapsed = computed(() =>
 
             <div class="shrink-0 border-t border-border bg-card p-3">
               <div v-if="pricePreviewLoading" class="mb-2 text-xs text-muted-foreground">
-                Ověřuji cenu na serveru…
+                Ověřuji výslednou cenu…
               </div>
               <div v-if="totals?.discountAmount" class="mb-1 flex justify-between text-sm">
                 <span class="text-muted-foreground">Sleva</span>
@@ -2229,7 +2229,7 @@ const currentOrderElapsed = computed(() =>
                 >
               </div>
               <p v-if="pricePreviewError" class="text-xs text-muted-foreground">
-                Náhled není dostupný; finální cenu ověří server před platbou.
+                Náhled není dostupný; výsledná cena se ověří před platbou.
               </p>
             </div>
 

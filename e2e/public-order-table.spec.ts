@@ -138,7 +138,7 @@ test('QR objednávka ke stolu vyžádá povinné modifikátory a odešle volby',
 
   await page.goto('/objednavka/bistro?table=table-1&name=St%C5%AFl%201')
   await page.getByRole('button', { name: 'Vybrat' }).click()
-  await expect(page.getByRole('dialog', { name: 'Vybrat modifikátory' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Vybrat možnosti' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Přidat do košíku' })).toBeDisabled()
 
   await page.getByRole('button', { name: /Velký/ }).click()

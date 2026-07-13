@@ -325,7 +325,7 @@ watch([selectedDate, selectedLocationId], () => {
 <template>
   <div class="mx-auto max-w-6xl p-4 sm:p-6 md:p-8">
     <div>
-      <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Uzávěrka</h1>
+      <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Denní uzávěrka</h1>
       <p class="mt-1 text-muted-foreground">Přehled tržeb a zavření obchodního dne.</p>
     </div>
 
@@ -336,7 +336,7 @@ watch([selectedDate, selectedLocationId], () => {
     >
       <Info class="mt-0.5 h-4 w-4 shrink-0" />
       <span>
-        Zavření dne a Z-report jsou dostupné jen proti serveru. Níže je
+        Zavření dne a denní uzávěrka jsou dostupné po přihlášení do online aplikace. Níže je
         <strong class="font-medium text-foreground">orientační</strong> přehled dneška.
       </span>
     </div>
@@ -410,7 +410,7 @@ watch([selectedDate, selectedLocationId], () => {
           <div>
             <div class="text-lg font-semibold">Z-report č. {{ zReport.zReportNumber }}</div>
             <div class="text-sm text-muted-foreground">
-              Den {{ zReport.date }} je uzavřený (read-only).
+              Den {{ zReport.date }} je uzavřený a nelze ho upravovat.
               <template v-if="zReport.closedAt">
                 Zavřeno {{ new Date(zReport.closedAt).toLocaleString('cs-CZ') }}.
               </template>

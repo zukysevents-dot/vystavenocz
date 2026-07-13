@@ -124,7 +124,7 @@ const moduleOptions: { id: AppModuleId; label: string; description: string; lock
   {
     id: 'integrations',
     label: 'Integrace',
-    description: 'Importy, exporty, účetnictví, API a napojení služeb.',
+    description: 'Nahrání a stažení dat, účetní výstupy a propojení dalších služeb.',
   },
 ]
 
@@ -677,7 +677,7 @@ async function registerPrintAgent(): Promise<void> {
     registeredPrintAgent.value = agent
     printAgentForm.name = ''
     await refreshIntegrationsRuntime()
-    toast.success('Tiskový agent vytvořen. Token si uložte, znovu se nezobrazí.')
+    toast.success('Pomocná aplikace pro tisk byla připojena. Přístupový kód si bezpečně uložte.')
   } catch (e) {
     toast.error(integrationErrorMessage(e))
   } finally {
@@ -692,7 +692,7 @@ async function revokePrintAgent(agent: PrintAgent): Promise<void> {
     await integrationsApi.revokePrintAgent(agent.id)
     if (registeredPrintAgent.value?.id === agent.id) registeredPrintAgent.value = null
     await refreshIntegrationsRuntime()
-    toast.success('Tiskový agent zrušen.')
+    toast.success('Připojení k tiskárně bylo zrušeno.')
   } catch (e) {
     toast.error(integrationErrorMessage(e))
   } finally {
@@ -705,9 +705,9 @@ async function copyPrintAgentToken(): Promise<void> {
   if (!token) return
   try {
     await navigator.clipboard.writeText(token)
-    toast.success('Token zkopírován.')
+    toast.success('Přístupový kód byl zkopírován.')
   } catch {
-    toast.error('Token se nepodařilo zkopírovat.')
+    toast.error('Přístupový kód se nepodařilo zkopírovat.')
   }
 }
 
@@ -747,9 +747,9 @@ function integrationErrorMessage(e: unknown): string {
   if (e instanceof ApiError && e.status === 403)
     return 'Modul Integrace není povolený nebo nemáte oprávnění.'
   if (e instanceof ApiError && e.status === 503)
-    return 'Zabezpečený trezor credentialů není na serveru nakonfigurovaný (chybí šifrovací klíč na VPS). Kontaktujte správce.'
+    return 'Zabezpečené ukládání tajných klíčů není nastavené. Obraťte se na správce.'
   if (e instanceof ApiError && e.status === 422) return e.message
-  if (e instanceof ApiError && e.status === 0) return 'API není dostupné.'
+  if (e instanceof ApiError && e.status === 0) return 'Připojení se nezdařilo. Zkuste to znovu.'
   return 'Integrace se nepodařilo načíst.'
 }
 
@@ -1007,10 +1007,9 @@ async function onSubmit(): Promise<void> {
           data-testid="api-webhooky-link"
         >
           <span>
-            <span class="block text-sm font-semibold">API a webhooky</span>
+            <span class="block text-sm font-semibold">Propojení pro vývojáře</span>
             <span class="mt-1 block text-xs text-muted-foreground">
-              Propojení s e-shopem, CRM nebo automatizací: API tokeny pro čtení dat a webhooky s
-              podepsanými notifikacemi o změnách.
+              Pokročilé propojení s e-shopem, zákaznickým systémem nebo automatizací.
             </span>
           </span>
           <ChevronRight class="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -1199,7 +1198,7 @@ async function onSubmit(): Promise<void> {
                     v-if="!printJobs.length && !integrationsLoading"
                     class="rounded-md border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground"
                   >
-                    Bez tiskových jobů.
+                    Bez tiskových úloh.
                   </div>
                 </div>
               </div>
@@ -1211,11 +1210,11 @@ async function onSubmit(): Promise<void> {
               <div>
                 <div class="flex items-center gap-2 font-medium">
                   <KeyRound class="h-4 w-4 text-primary" />
-                  Tiskoví agenti
+                  Pomocné aplikace pro tisk
                 </div>
                 <p class="mt-1 text-xs text-muted-foreground">
-                  Lokální program u tiskárny čte frontu přes vlastní token. Token se zobrazí jen při
-                  vytvoření.
+                  Program u místní tiskárny přebírá připravené tiskové úlohy. Přístupový kód se
+                  zobrazí jen při vytvoření.
                 </p>
               </div>
               <Badge variant="secondary">{{ printAgents.length }} aktivních</Badge>
@@ -1226,7 +1225,7 @@ async function onSubmit(): Promise<void> {
               class="mt-4 grid gap-3 border-b border-border pb-4 md:grid-cols-[1fr_220px_auto]"
             >
               <div class="space-y-1.5">
-                <Label for="print-agent-name">Název agenta</Label>
+                <Label for="print-agent-name">Název připojení</Label>
                 <Input
                   id="print-agent-name"
                   v-model="printAgentForm.name"
@@ -1271,9 +1270,11 @@ async function onSubmit(): Promise<void> {
             >
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <div class="text-sm font-medium">Token pro {{ registeredPrintAgent.name }}</div>
+                  <div class="text-sm font-medium">
+                    Přístupový kód pro {{ registeredPrintAgent.name }}
+                  </div>
                   <div class="text-xs text-muted-foreground">
-                    Uložte ho do lokálního tiskového agenta. Znovu se nezobrazí.
+                    Uložte ho do pomocné aplikace u tiskárny. Znovu se nezobrazí.
                   </div>
                 </div>
                 <Button type="button" variant="outline" size="sm" @click="copyPrintAgentToken">
@@ -1304,14 +1305,14 @@ async function onSubmit(): Promise<void> {
                 </div>
                 <div class="flex items-center gap-2">
                   <Badge :variant="printAgentIsOnline(agent) ? 'default' : 'outline'">
-                    {{ printAgentIsOnline(agent) ? 'Online' : 'Offline' }}
+                    {{ printAgentIsOnline(agent) ? 'Připojeno' : 'Bez připojení' }}
                   </Badge>
                   <Button
                     v-if="canManageIntegrations"
                     type="button"
                     variant="ghost"
                     size="icon"
-                    title="Zrušit agenta"
+                    title="Zrušit připojení"
                     :disabled="printAgentLoading"
                     @click="revokePrintAgent(agent)"
                   >
@@ -1323,7 +1324,7 @@ async function onSubmit(): Promise<void> {
                 v-if="!printAgents.length && !integrationsLoading"
                 class="rounded-md border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground"
               >
-                Zatím není registrovaný žádný tiskový agent.
+                Zatím není připojená žádná pomocná aplikace pro tisk.
               </div>
             </div>
           </div>
@@ -1333,7 +1334,7 @@ async function onSubmit(): Promise<void> {
           v-else
           class="mt-4 rounded-lg border border-dashed border-border bg-muted/20 p-3 text-sm text-muted-foreground"
         >
-          Live stav integrací se zobrazí v API režimu se zapnutým modulem Integrace.
+          Aktuální stav propojení zde není dostupný.
         </div>
 
         <!-- Platební provideri (provider-neutral katalog / marketplace) -->
@@ -1341,23 +1342,22 @@ async function onSubmit(): Promise<void> {
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-2 font-medium">
               <CreditCard class="h-4 w-4 text-primary" />
-              Platební provideri
+              Poskytovatelé plateb
             </div>
             <Badge v-if="integrationRuntimeAvailable" variant="secondary">
               {{ operationalProviderCount }} aktivních
             </Badge>
           </div>
           <p class="mt-1 text-xs text-muted-foreground">
-            Otevřený katalog platebních bran a terminálů. ČSOB, NFCTRON, Comgate, SumUp i GP webpay
-            jsou podporované integrační cíle — ostré platby ale běží jen přes implementovaný adapter
-            a vyžadují smlouvu a přístupové údaje poskytovatele.
+            Přehled platebních bran a terminálů. Platby začnou fungovat až po dokončení propojení,
+            uzavření smlouvy a doplnění přístupových údajů poskytovatele.
           </p>
 
           <div
             v-if="!integrationRuntimeAvailable"
             class="mt-3 rounded-lg border border-dashed border-border bg-muted/20 p-3 text-sm text-muted-foreground"
           >
-            Katalog platebních providerů se zobrazí v API režimu se zapnutým modulem Integrace.
+            Nastavení poskytovatelů plateb zde není dostupné.
           </div>
           <div
             v-else-if="paymentProvidersLoading"
@@ -1398,9 +1398,7 @@ async function onSubmit(): Promise<void> {
                 <li v-if="provider.requiresPartnerContract">
                   • Vyžaduje smlouvu s poskytovatelem.
                 </li>
-                <li v-if="provider.requiresCredentials">
-                  • Vyžaduje přístupové údaje (credentials).
-                </li>
+                <li v-if="provider.requiresCredentials">• Vyžaduje přístupové údaje.</li>
                 <li v-if="provider.setupFields.length">
                   • Nastavení: {{ provider.setupFields.join(', ') }}
                 </li>
@@ -1426,7 +1424,7 @@ async function onSubmit(): Promise<void> {
             v-else
             class="mt-3 rounded-md border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground"
           >
-            Katalog platebních providerů je zatím prázdný.
+            Seznam poskytovatelů plateb je zatím prázdný.
           </div>
         </div>
 
@@ -1581,9 +1579,8 @@ async function onSubmit(): Promise<void> {
         <DialogHeader>
           <DialogTitle>Nastavit {{ dialogProvider?.name }}</DialogTitle>
           <DialogDescription>
-            Tajné klíče se do aplikace neukládají jako plaintext. Zde jen evidujete konfiguraci a
-            označíte, které údaje máte bezpečně připravené; ostré spuštění vyžaduje bezpečné
-            napojení credentialů mimo aplikaci.
+            Tajné klíče se ukládají pouze zabezpečeně. Platby začnou fungovat až po dokončení
+            propojení s poskytovatelem.
           </DialogDescription>
         </DialogHeader>
 
@@ -1734,12 +1731,11 @@ async function onSubmit(): Promise<void> {
             >
               <div class="flex items-center gap-2">
                 <KeyRound class="h-4 w-4 text-muted-foreground" />
-                <Label class="text-sm font-semibold">Zabezpečený trezor credentialů</Label>
+                <Label class="text-sm font-semibold">Zabezpečené uložení klíčů</Label>
               </div>
               <p class="text-xs text-muted-foreground">
-                Klíče se ukládají zašifrovaně na serveru a už se nikdy nezobrazí. Uložení klíče
-                nespouští platby — ostré strhávání zapne až samostatný provider adaptér (další
-                milestone).
+                Klíče se ukládají zašifrovaně a už se nikdy nezobrazí. Uložení klíče samo platby
+                nezapne; nejdřív je potřeba dokončit propojení s poskytovatelem.
               </p>
 
               <p v-if="!connectionForm.id" class="text-xs text-muted-foreground">

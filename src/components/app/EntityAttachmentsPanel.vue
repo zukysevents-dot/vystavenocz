@@ -201,7 +201,7 @@ onMounted(load)
     </div>
 
     <div v-if="!apiMode" class="p-4 text-sm text-muted-foreground">
-      Přílohy jsou dostupné po připojení k serveru.
+      Přílohy jsou dostupné po přihlášení do online aplikace.
     </div>
 
     <template v-else>

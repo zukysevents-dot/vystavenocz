@@ -171,10 +171,10 @@ function handleCode(raw: string, announce = false) {
   if (!code) return
   const p = findByEan(products.value, code)
   if (!p) {
-    toast.error(`EAN „${code}" nenalezen v katalogu.`)
+    toast.error(`Čárový kód „${code}" nebyl v katalogu nalezen.`)
   } else if (products.value.filter((x) => x.ean === code).length > 1) {
     // Neunikátní EAN → radši nenaskladnit špatný produkt, vyber ho ručně.
-    toast.error(`Víc produktů se stejným EAN „${code}" — vyber ho ručně níže.`)
+    toast.error(`Více produktů má čárový kód „${code}". Vyberte produkt ručně.`)
   } else {
     addProduct(p, 1)
     if (announce) toast.success(`${p.name} přidán na příjemku.`)
@@ -345,7 +345,7 @@ function fmtQuantity(value: number | null): string {
 <template>
   <div class="mx-auto max-w-5xl p-4 sm:p-6 md:p-8">
     <div>
-      <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Naskladnění</h1>
+      <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Příjem zboží</h1>
       <p class="mt-1 text-muted-foreground">
         Vytvoř příjemku, naskenuj zboží a ulož dohledatelný skladový doklad.
       </p>
@@ -356,8 +356,8 @@ function fmtQuantity(value: number | null): string {
       class="mt-6 rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground"
     >
       <PackagePlus class="mx-auto h-10 w-10" />
-      <p class="mt-3 font-semibold text-foreground">Naskladnění potřebuje připojení k serveru</p>
-      <p class="mt-1 text-sm">Sklad běží proti backendu (vystaveno-api).</p>
+      <p class="mt-3 font-semibold text-foreground">Příjem zboží teď není dostupný</p>
+      <p class="mt-1 text-sm">Zkontrolujte připojení nebo se obraťte na správce.</p>
     </div>
 
     <div v-else-if="loading" class="mt-12 flex justify-center">
@@ -425,14 +425,14 @@ function fmtQuantity(value: number | null): string {
           <!-- Sken -->
           <div class="rounded-2xl border border-border bg-card p-4">
             <label class="mb-1.5 flex items-center gap-1.5 text-sm font-medium" for="scan">
-              <ScanBarcode class="h-4 w-4 text-primary" /> Sken / EAN
+              <ScanBarcode class="h-4 w-4 text-primary" /> Načíst čárový kód
             </label>
             <div class="flex gap-2">
               <Input
                 id="scan"
                 ref="scanInput"
                 v-model="scanEan"
-                placeholder="Naskenuj kód nebo zadej EAN a stiskni Enter"
+                placeholder="Naskenujte nebo zadejte čárový kód"
                 class="flex-1"
                 @keyup.enter="onScan"
               />
@@ -452,7 +452,11 @@ function fmtQuantity(value: number | null): string {
               <Search
                 class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
               />
-              <Input v-model="search" placeholder="…nebo hledej podle názvu / SKU" class="pl-9" />
+              <Input
+                v-model="search"
+                placeholder="…nebo hledejte podle názvu či skladového kódu"
+                class="pl-9"
+              />
               <div
                 v-if="searchResults.length"
                 class="mt-1 overflow-hidden rounded-lg border border-border"

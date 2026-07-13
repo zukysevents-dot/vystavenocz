@@ -266,13 +266,13 @@ onUnmounted(() => {
       class="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground"
     >
       <ChefHat class="mx-auto h-10 w-10" />
-      <p class="mt-3 font-semibold text-foreground">Stanice potřebuje připojení k serveru</p>
+      <p class="mt-3 font-semibold text-foreground">Kuchyňské objednávky teď nejsou dostupné</p>
     </div>
 
     <template v-else>
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 class="text-2xl font-bold tracking-tight">Bony — kuchyně & bar</h1>
+          <h1 class="text-2xl font-bold tracking-tight">Kuchyňské objednávky</h1>
           <p class="text-sm text-muted-foreground">
             Objednávky z účtů. Po odeslání číšníkem sem „vyjede" lísteček.
           </p>
@@ -323,7 +323,7 @@ onUnmounted(() => {
 
       <LoadError
         v-if="loadError && !tickets.length"
-        message="Bony se nepodařilo načíst — zkontrolujte připojení k serveru."
+        message="Kuchyňské objednávky se nepodařilo načíst. Zkontrolujte připojení."
         @retry="refresh"
       />
 
@@ -436,7 +436,7 @@ onUnmounted(() => {
                 :disabled="busy"
                 @click="setAll(t, 'Preparing')"
               >
-                <Flame class="h-4 w-4" /> Připravit
+                <Flame class="h-4 w-4" /> Začít přípravu
               </Button>
               <Button
                 v-else-if="t.preparing && !t.ready"
@@ -445,7 +445,7 @@ onUnmounted(() => {
                 :disabled="busy"
                 @click="setAll(t, 'Ready')"
               >
-                <Check class="h-4 w-4" /> Hotovo
+                <Check class="h-4 w-4" /> Označit jako hotové
               </Button>
               <Button
                 v-else
@@ -454,7 +454,7 @@ onUnmounted(() => {
                 :disabled="busy"
                 @click="setAll(t, 'Served')"
               >
-                <Check class="h-4 w-4" /> Vydat
+                <Check class="h-4 w-4" /> Vydáno hostovi
               </Button>
             </template>
           </div>

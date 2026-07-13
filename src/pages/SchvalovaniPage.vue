@@ -166,7 +166,7 @@ onMounted(() => load())
       class="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground"
     >
       <ShieldCheck class="mx-auto h-10 w-10" />
-      <p class="mt-3 font-semibold text-foreground">Schvalování potřebuje připojení k serveru</p>
+      <p class="mt-3 font-semibold text-foreground">Schvalování teď není dostupné</p>
     </div>
 
     <template v-else>

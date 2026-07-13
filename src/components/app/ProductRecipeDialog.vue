@@ -239,7 +239,7 @@ watch(
         v-if="!apiMode"
         class="rounded-lg border border-border p-4 text-sm text-muted-foreground"
       >
-        Receptury jsou dostupné po připojení k API.
+        Receptury jsou dostupné po přihlášení do online aplikace.
       </div>
 
       <div v-else-if="loading" class="flex justify-center py-10">
@@ -358,7 +358,7 @@ watch(
               </div>
             </div>
             <div>
-              <div class="text-sm text-muted-foreground">Food cost</div>
+              <div class="text-sm text-muted-foreground">Nákladovost jídla</div>
               <div class="text-lg font-semibold tabular-nums">
                 {{ formatPercent(foodCostPercent) }}
               </div>

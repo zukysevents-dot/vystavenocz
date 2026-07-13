@@ -61,7 +61,7 @@ test('nabídka → zakázka → pracovní list → faktura', async ({ page }) =>
   await page.getByRole('button', { name: 'Přidat materiál' }).click()
   const matDialog = page.getByRole('dialog')
   await expect(matDialog).toBeVisible()
-  await matDialog.getByPlaceholder('Hledat produkt (název / SKU / EAN)').fill('Těsnící')
+  await matDialog.getByPlaceholder('Hledat podle názvu, kódu nebo čárového kódu').fill('Těsnící')
   await matDialog.getByRole('button', { name: /Těsnící páska/ }).click()
   await matDialog.locator('#mt-qty').fill('3')
   await matDialog.getByRole('button', { name: 'Přidat' }).click()

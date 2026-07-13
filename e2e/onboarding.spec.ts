@@ -18,7 +18,7 @@ test('gastro onboarding ukáže doporučený start a pokračuje na pobočky', as
   await expect(page.getByText('Založit provozovny')).toBeVisible()
   await expect(page.getByText('Připravit stoly a QR')).toBeVisible()
   await expect(page.getByText('Nahrát menu a sklad')).toBeVisible()
-  await expect(page.getByText('Nastavit modifikátory')).toBeVisible()
+  await expect(page.getByText('Nastavit volby k produktům')).toBeVisible()
   await expect(page.getByText('Ověřit denní provoz')).toBeVisible()
 
   await page.locator('#company_name').fill('E2E Bistro')

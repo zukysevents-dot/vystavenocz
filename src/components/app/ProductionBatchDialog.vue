@@ -64,7 +64,7 @@ async function createBatch() {
         ></DialogHeader
       >
       <div v-if="!apiMode" class="rounded-md border p-3 text-sm text-muted-foreground">
-        Výroba je dostupná po připojení k API.
+        Výroba je dostupná po přihlášení do online aplikace.
       </div>
       <div v-else class="space-y-4">
         <div class="space-y-2">

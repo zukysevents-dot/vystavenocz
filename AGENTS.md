@@ -159,3 +159,11 @@ Staging demo data: backend `vystaveno-api` má explicitní CLI helper `dotnet Vy
 ## Ověřování backendu bez lokálního .NET
 
 .NET není potřeba instalovat — backend (`../vystaveno-api`) se dá buildit, migrovat i testovat v Docker SDK kontejneru. Postup je v `AGENTS.md` uvnitř repa `vystaveno-api`.
+
+## Uživatelský jazyk a manuál
+
+- Koncové rozhraní používá běžnou češtinu. Interní pojmy jako backend, runtime, adapter, credential, scope, mock nebo název proměnné prostředí do UI nepatří.
+- Preferované názvy v navigaci jsou `Stoly a objednávky`, `Kuchyňské objednávky`, `Produkty a menu`, `Stav skladu`, `Příjem zboží`, `Volby k produktům`, `Denní uzávěrka` a `Propojení pro vývojáře`.
+- Technické termíny ponechávej jen v pokročilé části pro vývojáře a hned je vysvětli běžnými slovy.
+- Falešné úspěchy jsou zakázané: ukázková akce nesmí tvrdit, že odeslala e-mail, strhla platbu nebo provedla právní podpis.
+- Zdroj kompletní příručky je `docs/product/kompletni-uzivatelsky-manual.md`. PDF generuje `scripts/generate-user-manual-pdf.py`; po změně zásadního workflow aktualizuj zdroj i PDF.

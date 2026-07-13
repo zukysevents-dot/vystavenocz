@@ -67,17 +67,17 @@ export const BUSINESS_PROFILES: BusinessProfile[] = [
       },
       {
         label: 'Nahrát menu a sklad',
-        description: 'Produkty, kategorie, receptury a příjemky jsou základ paperless provozu.',
+        description: 'Produkty, kategorie, receptury a příjem zboží připraví každodenní provoz.',
         to: '/app/sklad',
       },
       {
-        label: 'Nastavit modifikátory',
+        label: 'Nastavit volby k produktům',
         description: 'Volby jako přílohy, propečení nebo mléko se pak nabídnou obsluze i hostům.',
         to: '/app/modifikatory',
       },
       {
         label: 'Ověřit denní provoz',
-        description: 'Pokladna, restaurace, kuchyně, zásoby a uzávěrka drží jeden zdroj pravdy.',
+        description: 'Pokladna, restaurace, kuchyně, zásoby a uzávěrka pracují se stejnými údaji.',
         to: '/app/uzaverka',
       },
     ],
@@ -131,17 +131,17 @@ export const BUSINESS_PROFILES: BusinessProfile[] = [
   {
     id: 'shop',
     label: 'Obchod',
-    description: 'Produkty, pokladna, EAN, sklad, vratky, věrnost a reporty.',
+    description: 'Produkty, pokladna, čárové kódy, sklad, vratky, věrnost a přehledy.',
     modules: ['core', 'invoicing', 'pos', 'stock', 'reporting', 'loyalty', 'ai', 'integrations'],
     setupSteps: [
       {
         label: 'Nahrát produkty',
-        description: 'Katalog, EAN a ceny připraví prodej na pokladně i sklad.',
+        description: 'Katalog, čárové kódy a ceny připraví prodej na pokladně i sklad.',
         to: '/app/sklad',
       },
       {
         label: 'Naskladnit zboží',
-        description: 'Příjemky vytvoří auditní stopu a skutečný stav skladu.',
+        description: 'Příjem zboží zaznamená historii pohybu a skutečný stav skladu.',
         to: '/app/naskladneni',
       },
       {
@@ -162,15 +162,40 @@ export interface AppNavDefinition {
 }
 
 export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
-  { to: '/app', label: 'Přehled', module: 'core', exact: true, hiddenForRoles: ['Employee'] },
+  { to: '/app', label: 'Dnes ve firmě', module: 'core', exact: true, hiddenForRoles: ['Employee'] },
   { to: '/app/pokladna', label: 'Pokladna', module: 'pos' },
-  { to: '/app/restaurace', label: 'Restaurace', module: 'gastro' },
-  { to: '/app/kuchyne', label: 'Kuchyně', module: 'gastro' },
-  { to: '/app/mapa-stolu', label: 'Mapa stolů', module: 'gastro' },
-  { to: '/app/sklad', label: 'Sklad', module: 'stock' },
-  { to: '/app/zasoby', label: 'Zásoby', module: 'stock' },
-  { to: '/app/naskladneni', label: 'Naskladnění', module: 'stock' },
-  { to: '/app/modifikatory', label: 'Modifikátory', module: 'stock' },
+  { to: '/app/restaurace', label: 'Stoly a objednávky', module: 'gastro' },
+  { to: '/app/kuchyne', label: 'Kuchyňské objednávky', module: 'gastro' },
+  {
+    to: '/app/mapa-stolu',
+    label: 'Nastavení stolů',
+    module: 'gastro',
+    hiddenForRoles: ['Employee', 'Accountant'],
+  },
+  {
+    to: '/app/sklad',
+    label: 'Produkty a menu',
+    module: 'stock',
+    hiddenForRoles: ['Employee', 'Accountant'],
+  },
+  {
+    to: '/app/zasoby',
+    label: 'Stav skladu',
+    module: 'stock',
+    hiddenForRoles: ['Employee', 'Accountant'],
+  },
+  {
+    to: '/app/naskladneni',
+    label: 'Příjem zboží',
+    module: 'stock',
+    hiddenForRoles: ['Employee', 'Accountant'],
+  },
+  {
+    to: '/app/modifikatory',
+    label: 'Volby k produktům',
+    module: 'stock',
+    hiddenForRoles: ['Employee', 'Accountant'],
+  },
   { to: '/app/dochazka', label: 'Docházka', module: 'attendance' },
   {
     to: '/app/smeny',
@@ -178,10 +203,15 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
     module: 'attendance',
     hiddenForRoles: ['Employee', 'Accountant'],
   },
-  { to: '/app/pobocky', label: 'Pobočky', module: 'core', hiddenForRoles: ['Employee'] },
+  {
+    to: '/app/pobocky',
+    label: 'Pobočky',
+    module: 'core',
+    hiddenForRoles: ['Employee', 'Accountant'],
+  },
   {
     to: '/app/audit',
-    label: 'Audit',
+    label: 'Historie změn',
     module: 'core',
     hiddenForRoles: ['Employee', 'Manager'],
   },
@@ -193,20 +223,35 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
   },
   {
     to: '/app/provozni-prehled',
-    label: 'Provozní přehled',
+    label: 'Výsledky provozu',
     module: 'reporting',
     hiddenForRoles: ['Employee'],
   },
   {
     to: '/app/konsolidace',
-    label: 'Konsolidace',
+    label: 'Porovnání poboček',
     module: 'reporting',
     hiddenForRoles: ['Employee'],
   },
-  { to: '/app/uzaverka', label: 'Uzávěrka', module: 'pos', hiddenForRoles: ['Employee'] },
+  {
+    to: '/app/uzaverka',
+    label: 'Denní uzávěrka',
+    module: 'pos',
+    hiddenForRoles: ['Employee'],
+  },
   { to: '/app/rezervace', label: 'Rezervace', module: 'booking' },
-  { to: '/app/kategorie', label: 'Kategorie', module: 'core' },
-  { to: '/app/nabidky', label: 'Nabídky', module: 'invoicing' },
+  {
+    to: '/app/kategorie',
+    label: 'Kategorie menu',
+    module: 'core',
+    hiddenForRoles: ['Employee', 'Accountant'],
+  },
+  {
+    to: '/app/nabidky',
+    label: 'Nabídky',
+    module: 'invoicing',
+    hiddenForRoles: ['Employee'],
+  },
   { to: '/app/faktury', label: 'Faktury', module: 'invoicing', hiddenForRoles: ['Employee'] },
   {
     to: '/app/opakovane-faktury',
@@ -214,12 +259,27 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
     module: 'invoicing',
     hiddenForRoles: ['Employee'],
   },
-  { to: '/app/cashflow', label: 'Cashflow', module: 'invoicing' },
-  { to: '/app/uctarna', label: 'Účtárna', module: 'invoicing' },
-  { to: '/app/dph', label: 'Přehled DPH', module: 'invoicing' },
+  {
+    to: '/app/cashflow',
+    label: 'Pohledávky a peníze',
+    module: 'invoicing',
+    hiddenForRoles: ['Employee'],
+  },
+  {
+    to: '/app/uctarna',
+    label: 'Export pro účetní',
+    module: 'invoicing',
+    hiddenForRoles: ['Employee'],
+  },
+  {
+    to: '/app/dph',
+    label: 'Přehled DPH',
+    module: 'invoicing',
+    hiddenForRoles: ['Employee'],
+  },
   { to: '/app/klienti', label: 'Klienti', module: 'invoicing', hiddenForRoles: ['Employee'] },
-  { to: '/app/import', label: 'Import dat', module: 'integrations', hiddenForRoles: ['Employee'] },
-  { to: '/app/vernost', label: 'Věrnost', module: 'loyalty' },
+  { to: '/app/import', label: 'Nahrát data', module: 'integrations', hiddenForRoles: ['Employee'] },
+  { to: '/app/vernost', label: 'Věrnost', module: 'loyalty', hiddenForRoles: ['Employee'] },
   { to: '/app/akce-ceny', label: 'Akce a ceny', module: 'loyalty', hiddenForRoles: ['Employee'] },
   { to: '/app/zakazky', label: 'Zakázky', module: 'jobs' },
   {
@@ -228,9 +288,14 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
     module: 'jobs',
     hiddenForRoles: ['Employee', 'Accountant'],
   },
-  { to: '/app/podpisy', label: 'Podpisy', module: 'verified_signing' },
-  { to: '/app/predplatne', label: 'Předplatné', module: 'core' },
-  { to: '/app/nastaveni', label: 'Nastavení', module: 'core' },
+  {
+    to: '/app/podpisy',
+    label: 'Podpisy',
+    module: 'verified_signing',
+    hiddenForRoles: ['Employee'],
+  },
+  { to: '/app/predplatne', label: 'Předplatné', module: 'core', hiddenForRoles: ['Employee'] },
+  { to: '/app/nastaveni', label: 'Nastavení', module: 'core', hiddenForRoles: ['Employee'] },
 ]
 
 export function normalizeModules(input: readonly string[] | null | undefined): AppModuleId[] {

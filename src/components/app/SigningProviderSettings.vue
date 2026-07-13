@@ -322,9 +322,9 @@ function signingErrorMessage(e: unknown): string {
   if (e instanceof ApiError && e.status === 403)
     return 'Modul Ověřené podpisy není povolený nebo nemáte oprávnění.'
   if (e instanceof ApiError && e.status === 503)
-    return 'Zabezpečený trezor credentialů není na serveru nakonfigurovaný (chybí šifrovací klíč na backendu). Kontaktujte správce.'
+    return 'Zabezpečené ukládání tajných klíčů není nastavené. Obraťte se na správce.'
   if (e instanceof ApiError && e.status === 422) return e.message
-  if (e instanceof ApiError && e.status === 0) return 'API není dostupné.'
+  if (e instanceof ApiError && e.status === 0) return 'Připojení se nezdařilo. Zkuste to znovu.'
   return 'Nastavení poskytovatelů se nepodařilo načíst.'
 }
 </script>
@@ -336,8 +336,8 @@ function signingErrorMessage(e: unknown): string {
       v-if="!apiMode"
       class="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground"
     >
-      Nastavení poskytovatelů podpisů a zabezpečený trezor credentialů jsou dostupné v ostrém (API)
-      režimu se zapnutým modulem Ověřené podpisy. V náhledu běží jen demo obálky.
+      Nastavení poskytovatelů podpisů a zabezpečené uložení klíčů jsou dostupné v online aplikaci se
+      zapnutým modulem Ověřené podpisy. V náhledu lze zobrazit jen ukázkové žádosti.
     </div>
 
     <template v-else>
@@ -346,8 +346,8 @@ function signingErrorMessage(e: unknown): string {
         <p class="text-muted-foreground">
           Napojte poskytovatele ověřených podpisů.
           <strong class="text-foreground">BankID</strong> je připravené k napojení — ostrý podpis se
-          zapne až po smlouvě s poskytovatelem a doplnění credentialů do trezoru. Uložení klíče
-          podpis nespouští.
+          zapne až po smlouvě s poskytovatelem a doplnění přístupových údajů. Uložení klíče podpis
+          nespouští.
         </p>
       </div>
 
@@ -382,7 +382,7 @@ function signingErrorMessage(e: unknown): string {
           <p class="mt-2 text-xs text-muted-foreground">{{ provider.notes }}</p>
           <ul class="mt-2 space-y-0.5 text-xs text-muted-foreground">
             <li v-if="provider.requiresPartnerContract">• Vyžaduje smlouvu s poskytovatelem</li>
-            <li v-if="provider.requiresCredentials">• Vyžaduje credentialy (trezor)</li>
+            <li v-if="provider.requiresCredentials">• Vyžaduje přístupové údaje</li>
             <li>{{ connectionsForProvider(provider.key).length }} konfigurací</li>
           </ul>
           <Button
@@ -543,11 +543,11 @@ function signingErrorMessage(e: unknown): string {
             >
               <div class="flex items-center gap-2">
                 <KeyRound class="h-4 w-4 text-muted-foreground" />
-                <Label class="text-sm font-semibold">Zabezpečený trezor credentialů</Label>
+                <Label class="text-sm font-semibold">Zabezpečené uložení klíčů</Label>
               </div>
               <p class="text-xs text-muted-foreground">
-                Klíče se ukládají zašifrovaně na serveru a už se nikdy nezobrazí. Uložení klíče
-                nespouští podpis — ostrý podpis zapne až napojený poskytovatel a smlouva.
+                Klíče se ukládají zašifrovaně a už se nikdy nezobrazí. Uložení klíče nespouští
+                podpis — ostrý podpis zapne až napojený poskytovatel a smlouva.
               </p>
 
               <p v-if="!connectionForm.id" class="text-xs text-muted-foreground">

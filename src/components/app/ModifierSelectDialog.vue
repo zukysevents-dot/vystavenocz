@@ -116,7 +116,7 @@ function confirm() {
   <Dialog v-model:open="openModel">
     <DialogContent class="max-h-[90vh] max-w-xl overflow-y-auto">
       <DialogHeader>
-        <DialogTitle>Vybrat modifikátory</DialogTitle>
+        <DialogTitle>Vybrat možnosti</DialogTitle>
         <DialogDescription>
           {{ product ? product.name : 'Položka' }}
         </DialogDescription>
@@ -124,7 +124,7 @@ function confirm() {
 
       <div v-if="!sortedGroups.length" class="rounded-lg border border-dashed p-6 text-center">
         <SlidersHorizontal class="mx-auto h-8 w-8 text-muted-foreground" />
-        <p class="mt-3 text-sm text-muted-foreground">Tato položka nemá nastavené modifikátory.</p>
+        <p class="mt-3 text-sm text-muted-foreground">Tato položka nemá žádné další možnosti.</p>
       </div>
 
       <div v-else class="space-y-4">
@@ -136,7 +136,7 @@ function confirm() {
           <div class="mb-2 flex flex-wrap items-center gap-2">
             <h3 class="font-semibold">{{ group.name }}</h3>
             <span class="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-              {{ group.selectionType === 'Single' ? 'Jedna volba' : 'Více voleb' }}
+              {{ group.selectionType === 'Single' ? 'Vyberte jednu' : 'Můžete vybrat více' }}
             </span>
             <span
               v-if="group.isRequired"
@@ -148,7 +148,7 @@ function confirm() {
               v-if="group.selectionType === 'Multi' && group.maxSelect"
               class="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
             >
-              max {{ group.maxSelect }}
+              nejvýše {{ group.maxSelect }}
             </span>
           </div>
 

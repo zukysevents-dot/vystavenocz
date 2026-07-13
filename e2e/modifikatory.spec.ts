@@ -123,7 +123,7 @@ test('správce založí skupinu modifikátorů', async ({ page }) => {
   await dismissCookies(page)
   await page.goto('/app/modifikatory')
 
-  await expect(page.getByRole('heading', { name: 'Modifikátory' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Volby k produktům' })).toBeVisible()
   await expect(page.getByText('Přílohy', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Nová skupina' }).click()
@@ -168,12 +168,12 @@ test('správce přiřadí skupiny modifikátorů k produktu ve skladu', async ({
   await page.goto('/app/sklad')
 
   await expect(page.getByText('Burger')).toBeVisible()
-  await page.getByTitle('Modifikátory').click()
-  await expect(page.getByRole('dialog', { name: 'Modifikátory produktu' })).toBeVisible()
+  await page.getByTitle('Volby k produktu').click()
+  await expect(page.getByRole('dialog', { name: 'Volby k produktu' })).toBeVisible()
   await page.getByText('Extra', { exact: true }).click()
   await page.getByRole('button', { name: 'Uložit' }).click()
 
-  await expect(page.getByText('Modifikátory produktu uloženy.')).toBeVisible()
+  await expect(page.getByText('Volby k produktu byly uloženy.')).toBeVisible()
   expect(assignPayload).toEqual({
     groups: [
       { modifierGroupId: 'group-sides', sortOrder: 0 },

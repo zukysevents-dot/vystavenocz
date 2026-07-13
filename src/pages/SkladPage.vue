@@ -195,7 +195,7 @@ async function onSubmit() {
     return
   }
   if (!form.sku.trim()) {
-    toast.error('Zadejte kód produktu (SKU).')
+    toast.error('Zadejte skladový kód produktu.')
     return
   }
   submitting.value = true
@@ -221,7 +221,7 @@ async function onSubmit() {
     }
     dialogOpen.value = false
   } catch (e) {
-    toast.error('Uložení selhalo. Zkontrolujte připojení k serveru.')
+    toast.error('Produkt se nepodařilo uložit. Zkontrolujte připojení a zkuste to znovu.')
     console.error(e)
   } finally {
     submitting.value = false
@@ -247,8 +247,8 @@ async function onDelete() {
   <div class="mx-auto max-w-6xl p-4 sm:p-6 md:p-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Sklad / katalog</h1>
-        <p class="mt-1 text-muted-foreground">Produkty a ceny pro prodej na pokladně.</p>
+        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Produkty a menu</h1>
+        <p class="mt-1 text-muted-foreground">Názvy, ceny a možnosti všeho, co prodáváte.</p>
       </div>
       <div class="flex gap-2">
         <Button variant="outline" as-child>
@@ -319,10 +319,20 @@ async function onDelete() {
               <Button variant="ghost" size="icon" title="Receptura" @click="openRecipe(p)">
                 <ClipboardList class="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" title="Modifikátory" @click="openModifiers(p)">
+              <Button
+                variant="ghost"
+                size="icon"
+                title="Volby k produktu"
+                @click="openModifiers(p)"
+              >
                 <SlidersHorizontal class="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" title="Varianty" @click="openVariants(p)">
+              <Button
+                variant="ghost"
+                size="icon"
+                title="Porce a velikosti"
+                @click="openVariants(p)"
+              >
                 <Scaling class="h-4 w-4" />
               </Button>
               <Button
@@ -415,11 +425,11 @@ async function onDelete() {
 
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="space-y-2">
-              <Label for="p-sku">Kód (SKU) *</Label>
+              <Label for="p-sku">Skladový kód *</Label>
               <Input id="p-sku" v-model="form.sku" required placeholder="ESP" />
             </div>
             <div class="space-y-2">
-              <Label for="p-ean">Čárový kód (EAN)</Label>
+              <Label for="p-ean">Čárový kód</Label>
               <Input id="p-ean" v-model="form.ean" inputmode="numeric" placeholder="volitelné" />
             </div>
           </div>

@@ -77,7 +77,7 @@ async function load() {
   try {
     groups.value = await api.list()
   } catch (e) {
-    toast.error('Skupiny modifikátorů se nepodařilo načíst.')
+    toast.error('Volby k produktům se nepodařilo načíst.')
     console.error(e)
   } finally {
     loading.value = false
@@ -223,17 +223,21 @@ async function onDelete() {
   <div class="mx-auto max-w-5xl p-4 sm:p-6 md:p-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Modifikátory</h1>
+        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Volby k produktům</h1>
         <p class="mt-1 text-muted-foreground">
-          Skupiny voleb pro menu položky, například přílohy, propečení nebo extra suroviny.
+          Nastavte velikosti, přílohy, propečení nebo extra suroviny, které si host vybere.
         </p>
       </div>
-      <Button variant="coral" @click="openCreate"> <Plus class="h-4 w-4" /> Nová skupina </Button>
+      <Button variant="coral" @click="openCreate">
+        <Plus class="h-4 w-4" /> Nová skupina voleb
+      </Button>
     </div>
 
     <div v-if="!apiMode" class="mt-6 rounded-lg border border-border bg-card p-6 text-center">
-      <p class="font-semibold">Modifikátory potřebují připojení k serveru.</p>
-      <p class="mt-1 text-sm text-muted-foreground">Katalog skupin běží proti backendu.</p>
+      <p class="font-semibold">Volby k produktům teď nelze otevřít.</p>
+      <p class="mt-1 text-sm text-muted-foreground">
+        Přihlaste se do online aplikace a zkuste to znovu.
+      </p>
     </div>
 
     <div v-else class="mt-6 rounded-2xl border border-border bg-card">
@@ -263,7 +267,7 @@ async function onDelete() {
             <div class="flex flex-wrap items-center gap-2">
               <span class="font-semibold">{{ group.name }}</span>
               <span class="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                {{ group.selectionType === 'Single' ? 'Jedna volba' : 'Více voleb' }}
+                {{ group.selectionType === 'Single' ? 'Vybere se jedna' : 'Lze vybrat více' }}
               </span>
               <span
                 v-if="group.isRequired"
@@ -313,7 +317,7 @@ async function onDelete() {
 
           <div class="grid gap-4 sm:grid-cols-3">
             <div class="space-y-2 sm:col-span-2">
-              <Label>Typ výběru</Label>
+              <Label>Kolik možností lze vybrat?</Label>
               <div class="flex gap-2">
                 <Button
                   type="button"
@@ -321,7 +325,7 @@ async function onDelete() {
                   class="flex-1"
                   @click="form.selectionType = 'Single'"
                 >
-                  Jedna volba
+                  Právě jednu
                 </Button>
                 <Button
                   type="button"
@@ -329,12 +333,12 @@ async function onDelete() {
                   class="flex-1"
                   @click="form.selectionType = 'Multi'"
                 >
-                  Více voleb
+                  Jednu nebo více
                 </Button>
               </div>
             </div>
             <div class="space-y-2">
-              <Label for="modifier-max">Maximum</Label>
+              <Label for="modifier-max">Nejvýše možností</Label>
               <Input
                 id="modifier-max"
                 v-model.number="form.maxSelect"
@@ -351,7 +355,7 @@ async function onDelete() {
             <span>
               <span class="block font-medium">Povinná volba</span>
               <span class="text-sm text-muted-foreground">
-                Obsluha ji ve fázi 6 nebude moct přeskočit.
+                Bez výběru nepůjde produkt přidat do objednávky.
               </span>
             </span>
           </label>
@@ -373,7 +377,7 @@ async function onDelete() {
                 v-model.number="option.priceDelta"
                 type="number"
                 step="0.01"
-                placeholder="Příplatek"
+                placeholder="Změna ceny"
               />
               <Button
                 type="button"

@@ -197,7 +197,7 @@ test('obsluha vybere povinné modifikátory při přidání položky na účet',
   await expect(page.getByTestId('restaurant-order-view')).toBeVisible()
 
   await page.getByRole('button', { name: /Burger/ }).click()
-  await expect(page.getByRole('dialog', { name: 'Vybrat modifikátory' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Vybrat možnosti' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Přidat na účet' })).toBeDisabled()
 
   await page.getByRole('button', { name: /Hranolky/ }).click()

@@ -81,12 +81,69 @@ const auth = useAuthStore()
 
 type SidebarNavItem = AppNavDefinition & { icon: (typeof navIcons)[keyof typeof navIcons] }
 
+const sidebarSections = [
+  { id: 'today', label: 'Dnes' },
+  { id: 'operations', label: 'Provoz' },
+  { id: 'products', label: 'Produkty a sklad' },
+  { id: 'team', label: 'Tým' },
+  { id: 'finance', label: 'Finance' },
+  { id: 'company', label: 'Firma a nastavení' },
+] as const
+
+type SidebarSectionId = (typeof sidebarSections)[number]['id']
+
+function sectionForPath(path: string): SidebarSectionId {
+  if (path === '/app') return 'today'
+  if (
+    [
+      '/app/pokladna',
+      '/app/restaurace',
+      '/app/kuchyne',
+      '/app/rezervace',
+      '/app/uzaverka',
+    ].includes(path)
+  )
+    return 'operations'
+  if (
+    [
+      '/app/sklad',
+      '/app/zasoby',
+      '/app/naskladneni',
+      '/app/modifikatory',
+      '/app/kategorie',
+    ].includes(path)
+  )
+    return 'products'
+  if (['/app/dochazka', '/app/smeny'].includes(path)) return 'team'
+  if (
+    [
+      '/app/nabidky',
+      '/app/faktury',
+      '/app/opakovane-faktury',
+      '/app/cashflow',
+      '/app/uctarna',
+      '/app/dph',
+      '/app/klienti',
+    ].includes(path)
+  )
+    return 'finance'
+  return 'company'
+}
+
 const nav = computed<SidebarNavItem[]>(() =>
   APP_NAV_DEFINITIONS.filter((item) => {
     if (!isModuleEnabled(item.module, auth.modules)) return false
     if (auth.role && item.hiddenForRoles?.includes(auth.role)) return false
     return true
   }).map((item) => ({ ...item, icon: navIcons[item.to as keyof typeof navIcons] })),
+)
+const groupedNav = computed(() =>
+  sidebarSections
+    .map((section) => ({
+      ...section,
+      items: nav.value.filter((item) => sectionForPath(item.to) === section.id),
+    }))
+    .filter((section) => section.items.length > 0),
 )
 const canInvoice = computed(() => auth.role !== 'Employee')
 const route = useRoute()
@@ -131,22 +188,27 @@ watch(
       <SiteLogo />
     </div>
 
-    <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto p-3">
-      <RouterLink
-        v-for="item in nav"
-        :key="item.to"
-        :to="item.to"
-        class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
-        :class="
-          isActive(item)
-            ? 'bg-primary-soft text-primary'
-            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-        "
-        @click="mobileOpen = false"
-      >
-        <component :is="item.icon" class="h-4 w-4" />
-        {{ item.label }}
-      </RouterLink>
+    <nav class="min-h-0 flex-1 space-y-4 overflow-y-auto p-3">
+      <section v-for="section in groupedNav" :key="section.id">
+        <h2 class="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-foreground">
+          {{ section.label }}
+        </h2>
+        <RouterLink
+          v-for="item in section.items"
+          :key="item.to"
+          :to="item.to"
+          class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
+          :class="
+            isActive(item)
+              ? 'bg-primary-soft text-primary'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+          "
+          @click="mobileOpen = false"
+        >
+          <component :is="item.icon" class="h-4 w-4" />
+          {{ item.label }}
+        </RouterLink>
+      </section>
     </nav>
 
     <div class="border-t border-border p-3">
@@ -206,22 +268,27 @@ watch(
       </Button>
     </div>
 
-    <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto p-3">
-      <RouterLink
-        v-for="item in nav"
-        :key="item.to"
-        :to="item.to"
-        class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
-        :class="
-          isActive(item)
-            ? 'bg-primary-soft text-primary'
-            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-        "
-        @click="mobileOpen = false"
-      >
-        <component :is="item.icon" class="h-4 w-4" />
-        {{ item.label }}
-      </RouterLink>
+    <nav class="min-h-0 flex-1 space-y-4 overflow-y-auto p-3">
+      <section v-for="section in groupedNav" :key="section.id">
+        <h2 class="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-foreground">
+          {{ section.label }}
+        </h2>
+        <RouterLink
+          v-for="item in section.items"
+          :key="item.to"
+          :to="item.to"
+          class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
+          :class="
+            isActive(item)
+              ? 'bg-primary-soft text-primary'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+          "
+          @click="mobileOpen = false"
+        >
+          <component :is="item.icon" class="h-4 w-4" />
+          {{ item.label }}
+        </RouterLink>
+      </section>
     </nav>
 
     <div class="border-t border-border p-3">

@@ -312,7 +312,7 @@ onMounted(async () => {
       v-if="!apiMode"
       class="mt-6 rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground"
     >
-      Rezervace potřebují připojení k serveru.
+      Rezervace teď nejsou dostupné. Zkontrolujte připojení a zkuste to znovu.
     </div>
 
     <template v-else>

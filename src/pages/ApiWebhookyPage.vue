@@ -92,7 +92,7 @@ async function refresh() {
     tokens.value = tokenList
     subscriptions.value = subscriptionList
   } catch (error) {
-    toast.error(errorMessage(error, 'Načtení API tokenů a webhooků se nezdařilo.'))
+    toast.error(errorMessage(error, 'Propojení se nepodařilo načíst.'))
   }
 }
 
@@ -100,8 +100,9 @@ function errorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiError) {
     if (error.status === 403) return 'Chybí oprávnění nebo je vypnutý modul Integrace.'
     if (error.status === 503)
-      return 'Na serveru chybí šifrovací klíč (Integrations__SecretEncryptionKey) — kontaktujte správce.'
-    return error.message || fallback
+      return 'Zabezpečené ukládání přístupových klíčů není nastavené. Obraťte se na správce.'
+    if (error.status === 0) return 'Připojení se nezdařilo. Zkuste to znovu.'
+    return fallback
   }
   return fallback
 }
@@ -142,7 +143,7 @@ function toggleTokenScope(scope: string, checked: boolean | 'indeterminate' | un
 
 async function submitToken() {
   if (!tokenForm.name.trim()) return toast.error('Zadejte název tokenu.')
-  if (tokenForm.scopes.length === 0) return toast.error('Vyberte alespoň jeden rozsah (scope).')
+  if (tokenForm.scopes.length === 0) return toast.error('Vyberte alespoň jedno oprávnění.')
   tokenSubmitting.value = true
   try {
     const created = await tokensApi.create({
@@ -154,7 +155,7 @@ async function submitToken() {
     Object.assign(reveal, {
       open: true,
       title: 'API token vytvořen',
-      description: `Token „${created.name}" pro napojení externího systému.`,
+      description: `Přístupový klíč „${created.name}" pro napojení externího systému.`,
       secret: created.token,
     })
     await refresh()
@@ -207,8 +208,8 @@ function toggleWebhookEvent(event: string, checked: boolean | 'indeterminate' | 
 
 async function submitWebhook() {
   if (!webhookForm.url.trim().toLowerCase().startsWith('https://'))
-    return toast.error('Zadejte platnou https:// adresu.')
-  if (webhookForm.events.length === 0) return toast.error('Vyberte alespoň jeden event.')
+    return toast.error('Zadejte platnou zabezpečenou adresu začínající https://.')
+  if (webhookForm.events.length === 0) return toast.error('Vyberte alespoň jednu událost.')
   webhookSubmitting.value = true
   try {
     if (editingWebhook.value) {
@@ -228,7 +229,7 @@ async function submitWebhook() {
         open: true,
         title: 'Webhook vytvořen',
         description:
-          'Signing secret pro ověření podpisu doručených webhooků (hlavička X-Vystaveno-Signature).',
+          'Tajný klíč ověřuje, že oznámení opravdu odeslalo Vystaveno. Uložte ho bezpečně.',
         secret: created.secret,
       })
     }
@@ -275,10 +276,10 @@ async function sendTest(subscription: WebhookSubscription) {
   try {
     await webhooksApi.sendTest(subscription.id)
     toast.success(
-      'Testovací event zařazen — doručí se do ~30 sekund. Výsledek uvidíte v historii doručení.',
+      'Zkušební oznámení bylo zařazeno. Výsledek uvidíte do 30 sekund v historii doručení.',
     )
   } catch (error) {
-    toast.error(errorMessage(error, 'Odeslání testovacího eventu se nezdařilo.'))
+    toast.error(errorMessage(error, 'Zkušební oznámení se nepodařilo odeslat.'))
   } finally {
     testingId.value = null
   }
@@ -330,10 +331,9 @@ function deliveryStatusLabel(status: WebhookDelivery['status']): string {
 <template>
   <div class="space-y-6">
     <div>
-      <h1 class="text-2xl font-bold">API a webhooky</h1>
+      <h1 class="text-2xl font-bold">Propojení pro vývojáře</h1>
       <p class="mt-1 text-sm text-muted-foreground">
-        Propojení Vystaveno s e-shopem, CRM nebo automatizací: API tokeny pro čtení dat a webhooky
-        pro okamžité notifikace o změnách.
+        Pokročilé propojení Vystaveno s e-shopem, zákaznickým systémem nebo automatizací.
       </p>
     </div>
 
@@ -341,8 +341,7 @@ function deliveryStatusLabel(status: WebhookDelivery['status']): string {
       v-if="!available"
       class="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground"
     >
-      Správa API tokenů a webhooků je dostupná v API režimu se zapnutým modulem Integrace a rolí
-      Vlastník nebo Admin.
+      Tuto pokročilou část může otevřít vlastník nebo správce firmy se zapnutým modulem Integrace.
     </div>
 
     <div v-else-if="loading" class="flex items-center gap-2 p-6 text-sm text-muted-foreground">
@@ -356,14 +355,14 @@ function deliveryStatusLabel(status: WebhookDelivery['status']): string {
           <h2
             class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground"
           >
-            <KeyRound class="h-4 w-4" /> API tokeny
+            <KeyRound class="h-4 w-4" /> Přístupové klíče API
           </h2>
           <Button type="button" size="sm" data-testid="new-token" @click="openNewToken">
-            <Plus class="h-4 w-4" /> Nový token
+            <Plus class="h-4 w-4" /> Nový klíč
           </Button>
         </div>
         <p class="mt-2 text-xs text-muted-foreground">
-          Token se zobrazí jen jednou při vytvoření. Externí systém ho posílá v hlavičce
+          Klíč se zobrazí jen jednou při vytvoření. Externí systém ho posílá v hlavičce
           <code>Authorization: Bearer vst_…</code>.
         </p>
 
@@ -371,7 +370,7 @@ function deliveryStatusLabel(status: WebhookDelivery['status']): string {
           v-if="tokens.length === 0"
           class="mt-4 rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground"
         >
-          Zatím žádné tokeny. Vytvořte první pro napojení e-shopu nebo CRM.
+          Zatím nemáte žádné přístupové klíče. Vytvořte první pro napojení dalšího systému.
         </div>
         <ul v-else class="mt-4 divide-y divide-border" data-testid="token-list">
           <li
@@ -421,15 +420,15 @@ function deliveryStatusLabel(status: WebhookDelivery['status']): string {
           <h2
             class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground"
           >
-            <Webhook class="h-4 w-4" /> Webhooky
+            <Webhook class="h-4 w-4" /> Automatická oznámení (webhooky)
           </h2>
           <Button type="button" size="sm" data-testid="new-webhook" @click="openNewWebhook">
-            <Plus class="h-4 w-4" /> Nový webhook
+            <Plus class="h-4 w-4" /> Nové oznámení
           </Button>
         </div>
         <p class="mt-2 text-xs text-muted-foreground">
-          Na vaši https:// adresu pošleme podepsaný požadavek při každé vybrané události. Podpis
-          ověříte signing secretem (zobrazí se jen při vytvoření).
+          Při vybrané události odešleme zprávu na zabezpečenou adresu vašeho systému. Tajný klíč pro
+          ověření se zobrazí jen při vytvoření.
         </p>
 
         <div
@@ -514,9 +513,9 @@ function deliveryStatusLabel(status: WebhookDelivery['status']): string {
     <Dialog v-model:open="tokenDialogOpen">
       <DialogContent class="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Nový API token</DialogTitle>
+          <DialogTitle>Nový přístupový klíč API</DialogTitle>
           <DialogDescription>
-            Token umožní externímu systému číst vybraná data firmy. Zobrazí se jen jednou.
+            Klíč umožní externímu systému číst pouze vybraná data firmy. Zobrazí se jen jednou.
           </DialogDescription>
         </DialogHeader>
         <form class="space-y-4" @submit.prevent="submitToken">
@@ -530,7 +529,7 @@ function deliveryStatusLabel(status: WebhookDelivery['status']): string {
             />
           </div>
           <div class="space-y-1.5">
-            <Label>Rozsah přístupu (scopes)</Label>
+            <Label>Oprávnění klíče</Label>
             <label
               v-for="scope in API_TOKEN_SCOPES"
               :key="scope.value"
@@ -544,14 +543,14 @@ function deliveryStatusLabel(status: WebhookDelivery['status']): string {
             </label>
           </div>
           <div class="space-y-1.5">
-            <Label for="token-expiry">Expirace (nepovinné)</Label>
+            <Label for="token-expiry">Platnost do (nepovinné)</Label>
             <Input id="token-expiry" v-model="tokenForm.expiresAt" type="date" :min="minExpiry" />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" @click="tokenDialogOpen = false">Zrušit</Button>
             <Button type="submit" :disabled="tokenSubmitting" data-testid="submit-token">
               <Loader2 v-if="tokenSubmitting" class="h-4 w-4 animate-spin" />
-              Vytvořit token
+              Vytvořit klíč
             </Button>
           </DialogFooter>
         </form>
@@ -562,7 +561,7 @@ function deliveryStatusLabel(status: WebhookDelivery['status']): string {
     <Dialog v-model:open="webhookDialogOpen">
       <DialogContent class="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{{ editingWebhook ? 'Upravit webhook' : 'Nový webhook' }}</DialogTitle>
+          <DialogTitle>{{ editingWebhook ? 'Upravit oznámení' : 'Nové oznámení' }}</DialogTitle>
           <DialogDescription>
             Zadejte https:// adresu vašeho systému a vyberte události, o kterých chcete vědět.
           </DialogDescription>
@@ -607,7 +606,7 @@ function deliveryStatusLabel(status: WebhookDelivery['status']): string {
             >
             <Button type="submit" :disabled="webhookSubmitting" data-testid="submit-webhook">
               <Loader2 v-if="webhookSubmitting" class="h-4 w-4 animate-spin" />
-              {{ editingWebhook ? 'Uložit' : 'Vytvořit webhook' }}
+              {{ editingWebhook ? 'Uložit' : 'Vytvořit oznámení' }}
             </Button>
           </DialogFooter>
         </form>

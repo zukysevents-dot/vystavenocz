@@ -46,7 +46,7 @@ export const HELP_GUIDES: readonly HelpGuide[] = [
     audience: 'manager',
     description: 'Produkty a kategorie jsou základ pro pokladnu, restauraci i sklad.',
     whatItMeans:
-      'Kategorie třídí nabídku. Produkt je položka, kterou zákazník kupuje; může mít cenu, DPH, EAN i skladovou zásobu.',
+      'Kategorie třídí nabídku. Produkt je položka, kterou zákazník kupuje; může mít cenu, DPH, čárový kód i skladovou zásobu.',
     whenToUse: 'Než začnete prodávat nebo když přidáváte nové zboží či jídlo.',
     steps: [
       step('Založte kategorie', 'Například Nápoje, Jídla nebo Služby.'),
@@ -106,7 +106,10 @@ export const HELP_GUIDES: readonly HelpGuide[] = [
       'Pokladna vytváří dokončený prodej. Ten se propíše do tržeb a u skladových položek i do zásob.',
     whenToUse: 'Při běžném prodeji u pultu nebo při rychlém prodeji zboží.',
     steps: [
-      step('Vyberte nebo naskenujte produkt', 'Můžete hledat názvem, SKU nebo EAN kódem.'),
+      step(
+        'Vyberte nebo naskenujte produkt',
+        'Můžete hledat názvem, skladovým kódem nebo čárovým kódem.',
+      ),
       step('Zkontrolujte košík', 'Upravte množství dřív, než začnete platbu.'),
       step(
         'Dokončete platbu',
@@ -130,14 +133,14 @@ export const HELP_GUIDES: readonly HelpGuide[] = [
       step('Otevřete stůl', 'Vyberte ho v seznamu, na mapě nebo ve frontě otevřených účtů.'),
       step(
         'Přidejte položky',
-        'Použijte kategorii nebo hledání názvu, SKU či EAN, doplňte modifikátory a zařaďte jídlo jako předkrm, hlavní chod nebo dezert.',
+        'Použijte kategorii nebo hledání názvu či kódu, doplňte přílohy a další volby a zařaďte jídlo jako předkrm, hlavní chod nebo dezert.',
       ),
       step(
         'Odešlete do kuchyně a zaplaťte',
         'Kuchyň uvidí jednotlivé chody pod oddělovači; po platbě se účet uzavře.',
       ),
     ],
-    tip: 'Účet se obnovuje automaticky a před platbou ještě jednou ověří server; zrušení i sloučení vyžaduje potvrzení.',
+    tip: 'Účet se obnovuje automaticky a před platbou se zkontroluje jeho aktuální stav; zrušení i sloučení vyžaduje potvrzení.',
     to: '/app/restaurace',
     action: 'Otevřít restauraci',
   },
@@ -157,7 +160,7 @@ export const HELP_GUIDES: readonly HelpGuide[] = [
     ],
     tip: 'Povinnou skupinu použijte jen tehdy, když bez volby nelze objednávku připravit.',
     to: '/app/modifikatory',
-    action: 'Otevřít modifikátory',
+    action: 'Otevřít volby k produktům',
   },
   {
     id: 'stock',
@@ -280,19 +283,19 @@ export const HELP_GUIDES: readonly HelpGuide[] = [
     title: 'Exporty, tisk a integrace',
     module: 'integrations',
     audience: 'manager',
-    description: 'Účetní soubory, lokální tiskový agent a připravená napojení.',
+    description: 'Účetní soubory, pomocná aplikace pro tisk a připravená propojení.',
     whatItMeans:
-      'Export vytvoří soubor pro účetní. Tiskový agent propojí aplikaci s místní tiskárnou. Stav Připraveno k napojení ještě neznamená aktivní službu.',
+      'Export vytvoří soubor pro účetní. Pomocná aplikace propojí Vystaveno s místní tiskárnou. Stav Připraveno k napojení ještě neznamená aktivní službu.',
     whenToUse: 'Při předání dat účetní, nastavování tisku nebo přípravě budoucího napojení.',
     steps: [
       step('Vyexportujte účetnictví', 'Vyberte období a stáhněte CSV nebo Pohoda XML.'),
-      step('Připojte tiskový agent', 'Token zobrazený při registraci bezpečně uložte.'),
+      step('Připojte pomocnou aplikaci pro tisk', 'Jednorázový přístupový kód bezpečně uložte.'),
       step(
-        'Nastavujte providera opatrně',
-        'Bez smlouvy, přístupů a aktivního adaptéru se platby nespouští.',
+        'Nastavujte poskytovatele opatrně',
+        'Bez smlouvy, přístupů a dokončeného propojení se platby nespouští.',
       ),
     ],
-    tip: 'API klíče patří jen do zabezpečeného trezoru, nikdy do poznámky konfigurace.',
+    tip: 'Přístupové klíče patří jen do zabezpečeného uložení, nikdy do poznámky.',
     to: '/app/nastaveni',
     action: 'Otevřít integrace',
   },
