@@ -96,7 +96,7 @@ test('klienti: tenant bez invoicing nevidí nav a /app/klienti přesměruje bez 
 
   // Route guard přesměruje na Přehled (name 'app').
   await expect(page).toHaveURL(/\/app$/)
-  await expect(page.getByRole('heading', { name: 'Přehled' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Dnes ve firmě' })).toBeVisible()
   // Nesmí se zobrazit stránka Klienti ani zavádějící chyba serveru.
   await expect(page.getByRole('heading', { name: 'Klienti' })).toHaveCount(0)
   await expect(page.getByText('Server je momentálně nedostupný')).toHaveCount(0)

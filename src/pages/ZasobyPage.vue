@@ -536,7 +536,7 @@ async function submitStocktake() {
   <div class="mx-auto max-w-5xl p-4 sm:p-6 md:p-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Zásoby</h1>
+        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Stav skladu</h1>
         <p class="mt-1 text-muted-foreground">Stav skladu, příjem/výdej, korekce a inventura.</p>
       </div>
       <Button variant="outline" :disabled="!apiMode" @click="openStocktake">
@@ -548,7 +548,7 @@ async function submitStocktake() {
       v-if="!apiMode"
       class="mt-6 rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground"
     >
-      Sklad potřebuje připojení k serveru.
+      Stav skladu teď není dostupný. Zkontrolujte připojení a zkuste to znovu.
     </div>
 
     <template v-else>
@@ -785,7 +785,11 @@ async function submitStocktake() {
           </div>
           <div class="grid min-w-56 flex-1 gap-1.5">
             <Label for="mirror-search">Položka</Label>
-            <Input id="mirror-search" v-model="mirrorSearch" placeholder="Název nebo SKU" />
+            <Input
+              id="mirror-search"
+              v-model="mirrorSearch"
+              placeholder="Název nebo skladový kód"
+            />
           </div>
           <Button type="button" variant="outline" :disabled="mirrorLoading" @click="loadMirror">
             <Loader2 v-if="mirrorLoading" class="h-4 w-4 animate-spin" />
@@ -955,7 +959,7 @@ async function submitStocktake() {
               />
               <Input
                 v-model="byLocationSearch"
-                placeholder="Hledat produkt (název / SKU)…"
+                placeholder="Hledat podle názvu nebo skladového kódu…"
                 class="pl-9"
                 @keyup.enter="loadByLocation"
               />

@@ -62,7 +62,7 @@ function order(id: string, tableId: string, total: number) {
         course: null,
         note: null,
         kitchenSection: 'Bar',
-        kitchenStatus: 'Sent',
+        kitchenStatus: id === 'order-target' ? 'New' : 'Sent',
         lineTotal: total,
       },
     ],
@@ -100,6 +100,7 @@ async function mockCockpit(page: Page, includeSource = true) {
   let cancelCalls = 0
   let mergeCalls = 0
   let mergePayload: unknown = null
+  let itemUpdatePayload: unknown = null
 
   await page.route(API, async (route: Route) => {
     const request = route.request()
@@ -115,6 +116,12 @@ async function mockCockpit(page: Page, includeSource = true) {
     if (method === 'GET' && path.startsWith('/orders/')) {
       const found = openOrders.find((candidate) => candidate.id === path.split('/')[2])
       return found ? route.fulfill({ json: found }) : route.fulfill({ status: 404, json: {} })
+    }
+    if (method === 'PUT' && path === '/orders/order-target/items/item-order-target') {
+      itemUpdatePayload = request.postDataJSON()
+      const target = openOrders.find((candidate) => candidate.id === 'order-target')!
+      target.items[0] = { ...target.items[0], ...(itemUpdatePayload as object) }
+      return route.fulfill({ json: target })
     }
     if (method === 'POST' && path === '/orders/order-target/cancel') {
       cancelCalls++
@@ -135,8 +142,30 @@ async function mockCockpit(page: Page, includeSource = true) {
     cancelCalls: () => cancelCalls,
     mergeCalls: () => mergeCalls,
     mergePayload: () => mergePayload,
+    itemUpdatePayload: () => itemUpdatePayload,
   }
 }
+
+test('obsluha zařadí jídlo do srozumitelného chodu a účet zobrazí oddělovač', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 })
+  await seed(page)
+  const calls = await mockCockpit(page, false)
+  await page.goto('/app/restaurace')
+
+  await page.getByTestId('restaurant-table-map-table-target').click()
+  await page
+    .getByRole('button', { name: 'Upravit poznámku a pořadí výdeje položky Espresso' })
+    .click()
+
+  await expect(page.getByRole('button', { name: 'Předkrm', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Hlavní chod', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Dezert', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Hlavní chod', exact: true }).click()
+  await page.getByRole('button', { name: 'Uložit', exact: true }).click()
+
+  expect(calls.itemUpdatePayload()).toEqual({ quantity: 1, note: null, course: 'Hlavní chod' })
+  await expect(page.getByTestId('restaurant-course-Hlavní chod')).toContainText('Hlavní chod')
+})
 
 test('zrušení účtu neodešle požadavek před potvrzením', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 })

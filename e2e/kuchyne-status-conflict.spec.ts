@@ -91,7 +91,7 @@ test('posun bonu, který mezitím posunul jiný terminál, hlásí konflikt a sy
 
   // Bon je ve frontě se jménem položky a akcí Připravit.
   await expect(page.getByText('Svíčková')).toBeVisible()
-  const prepare = page.getByRole('button', { name: /Připravit/ })
+  const prepare = page.getByRole('button', { name: /Začít přípravu/ })
   await expect(prepare).toBeVisible()
 
   // Posun → backend 409 → jasná hláška (ne generická chyba).

@@ -31,21 +31,23 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 1. Otevřete `Restaurace`. Provozní obrazovka se otevře přes celou plochu; tlačítkem `Přehled` se vrátíte do ostatních částí systému.
 2. Vyberte stůl. Na mobilu a tabletu se ukáže přehledný seznam; na širokém displeji vizuální mapa a vpravo nejstarší otevřené účty.
 3. Produkty přidávejte velkými dlaždicemi. Kategorie jsou vlevo nebo nahoře a pole hledání najde název, SKU i EAN.
-4. Účet je na široké obrazovce stále vpravo. Na mobilu ho otevřete klepnutím na částku ve spodní liště. `Úpravy` obsahují zákazníka, cenovou hladinu, slevu a spropitné; `Další` obsahuje split, přesun, sloučení a zrušení.
-5. Sloučení účtů je dvoukrokové: vyberte zdrojový stůl, zkontrolujte směr `zdroj → cíl` a teprve potom potvrďte. Zrušení účtu vždy vyžaduje samostatné potvrzení.
-6. Placení spustíte tlačítkem `Zaplatit` (celý účet) nebo ikonou bankovky u osoby v rozdělení účtu. Hotovost počítá vrácení, karta jde přes terminálový krok.
-7. Když host mezitím doobjedná přes QR kód ke stolu, otevřený účet se sám průběžně obnovuje a před stiskem `Zaplatit` se ještě jednou načte aktuální stav — vidíte tedy správný počet položek i částku, ne zastaralou.
-8. Pokud účet mezitím uzavřel nebo zrušil jiný terminál (nebo ho host doplatil přes QR) a vy zrovna přidáváte položku nebo posíláte do kuchyně, systém vás na to upozorní hláškou a vrátí vás na mapu stolů — nepracujete tak omylem se zavřeným účtem.
-9. Na mobilu zůstává dole rychlá lišta s přesným celkem a akcemi `Odeslat` a `Zaplatit`; na široké obrazovce jsou stejné akce pevně pod účtem.
-10. Po zaplacení zůstane otevřený jen nezaplacený zbytek účtu.
+4. Před odesláním klepněte u položky na poznámku a podle potřeby ji zařaďte jako `Předkrm`, `Hlavní chod` nebo `Dezert`. Účet i kuchyňský bon je zobrazí v tomto pořadí pod jednoduchými oddělovači; nezařazené položky jsou v části `Bez chodu`.
+5. Účet je na široké obrazovce stále vpravo. Na mobilu ho otevřete klepnutím na částku ve spodní liště. `Úpravy` obsahují zákazníka, cenovou hladinu, slevu a spropitné; `Další` obsahuje split, přesun, sloučení a zrušení.
+6. Sloučení účtů je dvoukrokové: vyberte zdrojový stůl, zkontrolujte směr `zdroj → cíl` a teprve potom potvrďte. Zrušení účtu vždy vyžaduje samostatné potvrzení.
+7. Placení spustíte tlačítkem `Zaplatit` (celý účet) nebo ikonou bankovky u osoby v rozdělení účtu. Hotovost počítá vrácení, karta jde přes terminálový krok.
+8. Když host mezitím doobjedná přes QR kód ke stolu, otevřený účet se sám průběžně obnovuje a před stiskem `Zaplatit` se ještě jednou načte aktuální stav — vidíte tedy správný počet položek i částku, ne zastaralou.
+9. Pokud účet mezitím uzavřel nebo zrušil jiný terminál (nebo ho host doplatil přes QR) a vy zrovna přidáváte položku nebo posíláte do kuchyně, systém vás na to upozorní hláškou a vrátí vás na mapu stolů — nepracujete tak omylem se zavřeným účtem.
+10. Na mobilu zůstává dole rychlá lišta s přesným celkem a akcemi `Odeslat` a `Zaplatit`; na široké obrazovce jsou stejné akce pevně pod účtem.
+11. Po zaplacení zůstane otevřený jen nezaplacený zbytek účtu.
 
 ## Kuchyně a bar
 
 1. Položky s kuchyňskou nebo barovou sekcí posílejte do výroby.
 2. `Kuchyně` ukazuje bony podle stanice, stolu a času přípravy.
-3. Stav bonu postupuje `Odesláno` → `Připravuje se` → `Hotovo` → `Vydáno`.
-4. Když stejný bon mezitím posunul jiný terminál (druhá obrazovka v kuchyni), systém vás upozorní hláškou „Bon už mezitím posunul jiný terminál." a hned frontu obnoví — nepřepíšete tak omylem novější stav zpět.
-5. Historie vydaných bonů je jen pro kontrolu, nemění stav objednávky.
+3. Položky na bonu jsou oddělené na `Předkrm`, `Hlavní chod`, `Dezert` a případně `Bez chodu`; stejné oddělovače jsou i na tištěném bonu.
+4. Stav bonu postupuje `Odesláno` → `Připravuje se` → `Hotovo` → `Vydáno`.
+5. Když stejný bon mezitím posunul jiný terminál (druhá obrazovka v kuchyni), systém vás upozorní hláškou „Bon už mezitím posunul jiný terminál." a hned frontu obnoví — nepřepíšete tak omylem novější stav zpět.
+6. Historie vydaných bonů je jen pro kontrolu, nemění stav objednávky.
 
 ## Online objednávky
 

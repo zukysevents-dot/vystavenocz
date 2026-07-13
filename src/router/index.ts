@@ -136,7 +136,7 @@ const routes: RouteRecordRaw[] = [
     path: '/app',
     name: 'app',
     component: () => import('@/pages/DashboardPage.vue'),
-    meta: { title: 'Přehled', layout: 'app', requiresAuth: true, requiresModule: 'core' },
+    meta: { title: 'Dnes ve firmě', layout: 'app', requiresAuth: true, requiresModule: 'core' },
   },
   {
     path: '/app/faktury',
@@ -183,7 +183,7 @@ const routes: RouteRecordRaw[] = [
     name: 'app-provozni-prehled',
     component: () => import('@/pages/ProvozniPrehledPage.vue'),
     meta: {
-      title: 'Provozní přehled',
+      title: 'Výsledky provozu',
       layout: 'app',
       requiresAuth: true,
       requiresModule: 'reporting',
@@ -195,7 +195,7 @@ const routes: RouteRecordRaw[] = [
     name: 'app-uzaverka',
     component: () => import('@/pages/UzaverkaPage.vue'),
     meta: {
-      title: 'Uzávěrka',
+      title: 'Denní uzávěrka',
       layout: 'app',
       requiresAuth: true,
       requiresModule: 'pos',
@@ -217,7 +217,12 @@ const routes: RouteRecordRaw[] = [
     path: '/app/uctarna',
     name: 'app-uctarna',
     component: () => import('@/pages/UctarnaPage.vue'),
-    meta: { title: 'Účtárna', layout: 'app', requiresAuth: true, requiresModule: 'invoicing' },
+    meta: {
+      title: 'Export pro účetní',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'invoicing',
+    },
   },
   {
     path: '/app/dph',
@@ -303,7 +308,7 @@ const routes: RouteRecordRaw[] = [
     name: 'app-import',
     component: () => import('@/pages/ImportPage.vue'),
     meta: {
-      title: 'Import dat',
+      title: 'Nahrát data',
       layout: 'app',
       requiresAuth: true,
       requiresModule: 'integrations',
@@ -330,7 +335,7 @@ const routes: RouteRecordRaw[] = [
     path: '/app/sklad',
     name: 'app-sklad',
     component: () => import('@/pages/SkladPage.vue'),
-    meta: { title: 'Sklad', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
+    meta: { title: 'Produkty a menu', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
   },
   {
     path: '/app/kategorie',
@@ -342,19 +347,24 @@ const routes: RouteRecordRaw[] = [
     path: '/app/modifikatory',
     name: 'app-modifikatory',
     component: () => import('@/pages/ModifikatoryPage.vue'),
-    meta: { title: 'Modifikátory', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
+    meta: {
+      title: 'Volby k produktům',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'stock',
+    },
   },
   {
     path: '/app/zasoby',
     name: 'app-zasoby',
     component: () => import('@/pages/ZasobyPage.vue'),
-    meta: { title: 'Zásoby', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
+    meta: { title: 'Stav skladu', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
   },
   {
     path: '/app/naskladneni',
     name: 'app-naskladneni',
     component: () => import('@/pages/NaskladneniPage.vue'),
-    meta: { title: 'Naskladnění', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
+    meta: { title: 'Příjem zboží', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
   },
   {
     path: '/app/dochazka',
@@ -393,7 +403,7 @@ const routes: RouteRecordRaw[] = [
     name: 'app-audit',
     component: () => import('@/pages/AuditPage.vue'),
     meta: {
-      title: 'Audit',
+      title: 'Historie změn',
       layout: 'app',
       requiresAuth: true,
       requiresModule: 'core',
@@ -423,7 +433,7 @@ const routes: RouteRecordRaw[] = [
     name: 'app-restaurace',
     component: () => import('@/pages/RestauracePage.vue'),
     meta: {
-      title: 'Restaurace',
+      title: 'Stoly a objednávky',
       layout: 'app',
       requiresAuth: true,
       requiresModule: 'gastro',
@@ -434,13 +444,23 @@ const routes: RouteRecordRaw[] = [
     path: '/app/kuchyne',
     name: 'app-kuchyne',
     component: () => import('@/pages/KuchynePage.vue'),
-    meta: { title: 'Kuchyně', layout: 'app', requiresAuth: true, requiresModule: 'gastro' },
+    meta: {
+      title: 'Kuchyňské objednávky',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'gastro',
+    },
   },
   {
     path: '/app/mapa-stolu',
     name: 'app-mapa-stolu',
     component: () => import('@/pages/MapaStoluPage.vue'),
-    meta: { title: 'Mapa stolů', layout: 'app', requiresAuth: true, requiresModule: 'gastro' },
+    meta: {
+      title: 'Nastavení stolů',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'gastro',
+    },
   },
   {
     path: '/app/nastaveni',
@@ -455,7 +475,7 @@ const routes: RouteRecordRaw[] = [
     // Správa API tokenů a webhooků — backend gate je integrations.api (jen Owner/Admin) + modul integrations;
     // stránka se sám gatuje i v UI a mimo API režim ukazuje poznámku (vzor Integrace a exporty).
     meta: {
-      title: 'API a webhooky',
+      title: 'Propojení pro vývojáře',
       layout: 'app',
       requiresAuth: true,
       requiresModule: 'integrations',

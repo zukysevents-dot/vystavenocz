@@ -207,7 +207,7 @@ async function doSend(envelope: SignatureEnvelope): Promise<void> {
     refreshInList(updated)
     toast.success(
       updated.providerReference
-        ? `Obálka odeslána přes poskytovatele (ref: ${updated.providerReference}).`
+        ? `Žádost byla odeslána přes poskytovatele. Referenční číslo: ${updated.providerReference}.`
         : 'Obálka odeslána k ověřenému podpisu.',
     )
   } catch (e) {
@@ -223,10 +223,9 @@ function sendErrorMessage(e: unknown, hadConnection: boolean): string {
     return 'Modul Ověřené podpisy není povolený nebo nemáte oprávnění.'
   if (e instanceof ApiError && e.status === 422) {
     const msg = e.message ?? ''
-    if (/adapter/i.test(msg))
-      return 'BankID konfigurace je připravená, ale ostrý adapter ještě není zapnutý.'
+    if (/adapter/i.test(msg)) return 'Podepisování přes BankID zatím není aktivní.'
     if (hadConnection)
-      return 'Konfigurace poskytovatele není připravená (chybí credentialy nebo stav Připraveno). Dokončete ji v tabu „Provider podpisů".'
+      return 'Chybějí přístupové údaje poskytovatele. Doplňte je v části Poskytovatel podpisu.'
     return msg || 'Obálku se nepodařilo odeslat.'
   }
   return 'Obálku se nepodařilo odeslat.'
@@ -310,7 +309,7 @@ async function submitCreate(): Promise<void> {
     <Tabs default-value="envelopes" class="mt-6">
       <TabsList>
         <TabsTrigger value="envelopes">Obálky</TabsTrigger>
-        <TabsTrigger value="providers">Provider podpisů</TabsTrigger>
+        <TabsTrigger value="providers">Poskytovatel podpisu</TabsTrigger>
       </TabsList>
 
       <TabsContent value="envelopes">

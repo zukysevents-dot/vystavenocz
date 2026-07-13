@@ -109,7 +109,7 @@ test('obsluha přidá produkt do pokladny skenem EAN', async ({ page }) => {
 
   await page.goto('/app/pokladna')
 
-  const scan = page.getByLabel('Sken / EAN')
+  const scan = page.getByLabel('Načíst čárový kód')
   await expect(scan).toBeVisible()
 
   await scan.fill(kofola.ean)
@@ -127,7 +127,7 @@ test('obsluha přidá produkt do pokladny skenem EAN', async ({ page }) => {
   await scan.fill('123456789')
   await scan.press('Enter')
 
-  await expect(page.getByText('EAN „123456789“ nenalezen v katalogu.')).toBeVisible()
+  await expect(page.getByText('Čárový kód „123456789“ nebyl v katalogu nalezen.')).toBeVisible()
 })
 
 test('obsluha najde produkt na pokladně podle názvu, SKU nebo EAN', async ({ page }) => {

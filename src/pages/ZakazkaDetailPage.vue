@@ -852,7 +852,7 @@ async function createInvoice(): Promise<void> {
                 v-else-if="job.handover.state === 'draft' && !signingEnabled"
                 class="mt-3 text-xs text-muted-foreground"
               >
-                Ověřený podpis vyžaduje modul Podpisy (připraveno k napojení).
+                Pro ověřený podpis zapněte doplněk Podpisy v Nastavení.
               </p>
               <p v-else class="mt-3 text-xs text-muted-foreground">
                 Protokol byl odeslán k ověřenému podpisu.
@@ -990,7 +990,7 @@ async function createInvoice(): Promise<void> {
             />
             <Input
               v-model="matSearch"
-              placeholder="Hledat produkt (název / SKU / EAN)"
+              placeholder="Hledat podle názvu, kódu nebo čárového kódu"
               aria-label="Hledat produkt"
               class="pl-9"
             />

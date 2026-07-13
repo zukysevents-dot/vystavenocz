@@ -34,7 +34,7 @@ test('dashboard zobrazí metriky, graf a poslední faktury', async ({ page }) =>
   })
   await page.goto('/app')
 
-  await expect(page.getByRole('heading', { name: 'Přehled' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Dnes ve firmě' })).toBeVisible()
   await expect(page.getByText('Faktury celkem')).toBeVisible()
   await expect(page.getByText('Tržby (posledních 6 měsíců)')).toBeVisible()
   await expect(page.getByText('FA-2026-0001').first()).toBeVisible()

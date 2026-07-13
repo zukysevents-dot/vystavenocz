@@ -1,23 +1,21 @@
 import { test, expect } from './fixtures/test'
 import type { Page, Route } from '@playwright/test'
 
-// Nastavení poskytovatelů ověřených podpisů + credential trezor — testováno v API mock režimu (Playwright route mock).
+// Nastavení poskytovatelů ověřených podpisů a bezpečného uložení přístupových údajů.
 // Modul verified_signing (ne integrations). Backend endpointy /api/v1/verified-signing/* mockujeme jako budoucí kontrakt.
 
 const API = '**/api/v1/**'
 
 const BANKID_CREDENTIAL_FIELDS = ['clientSecretRef', 'certificateRef']
 
-test('provider podpisů: katalog, vytvoření konfigurace a credential trezor (uložit → vyčistit → smazat)', async ({
-  page,
-}) => {
+test('poskytovatel podpisů: katalog, nastavení a bezpečné uložení klíčů', async ({ page }) => {
   await seedApiMode(page)
   const connections: Array<Record<string, unknown>> = []
   const secrets: Record<string, Record<string, string>> = {}
   await routeSigning(page, connections, secrets)
   await page.goto('/app/podpisy')
 
-  await page.getByRole('tab', { name: 'Provider podpisů' }).click()
+  await page.getByRole('tab', { name: 'Poskytovatel podpisu' }).click()
 
   // Katalog: BankID připravené k napojení (netvrdí ostrý podpis hotový).
   const bankidCard = page.getByTestId('signing-provider-bankid')
@@ -67,7 +65,7 @@ test('provider podpisů: 503 při chybějícím serverovém šifrovacím klíči
   await routeSigning(page, connections, {}, { put503: true })
   await page.goto('/app/podpisy')
 
-  await page.getByRole('tab', { name: 'Provider podpisů' }).click()
+  await page.getByRole('tab', { name: 'Poskytovatel podpisu' }).click()
   await page
     .getByTestId('signing-provider-bankid')
     .getByRole('button', { name: 'Nastavit' })
@@ -79,7 +77,7 @@ test('provider podpisů: 503 při chybějícím serverovém šifrovacím klíči
     .getByRole('button', { name: 'Uložit klíč' })
     .click()
 
-  await expect(page.getByText(/šifrovací klíč na backendu/i)).toBeVisible()
+  await expect(page.getByText(/zabezpečené ukládání tajných klíčů není nastavené/i)).toBeVisible()
 })
 
 test('podpisy: odeslat obálku přes Ready provider connection (providerConnectionId + reference)', async ({
@@ -235,7 +233,7 @@ test('podpisy: BankID přes Ready connection bez ostrého adapteru vrací poctiv
   await page.getByRole('button', { name: 'Odeslat k podpisu' }).click()
 
   // Poctivá hláška, ne falešné „podepsáno": BankID konfigurace je připravená, ostrý adapter čeká na zapnutí.
-  await expect(page.getByText(/ostrý adapter ještě není zapnutý/i)).toBeVisible()
+  await expect(page.getByText(/podepisování přes BankID zatím není aktivní/i)).toBeVisible()
   // Stav obálky se nezmění — odeslání se nezdařilo.
   await expect(page.getByTestId('detail-status')).toHaveText('Připraveno')
 })

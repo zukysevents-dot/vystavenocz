@@ -58,6 +58,7 @@ import ProductVariantSelectDialog, {
   type SelectableProductVariant,
 } from '@/components/app/ProductVariantSelectDialog.vue'
 import { buildReceipt, type ReceiptInfo } from '@/lib/receipt'
+import { groupItemsByCourse, normalizeOrderCourse, ORDER_COURSES } from '@/lib/order-courses'
 import { useCompanyStore } from '@/stores/company'
 import { useFloors } from '@/composables/useFloors'
 import { useTables } from '@/composables/useTables'
@@ -798,8 +799,7 @@ async function changeQty(item: OrderItemLine, quantity: number) {
   }
 }
 
-// --- Poznámka a chod položky (dokud není odeslaná do kuchyně) ---
-const COURSES = ['1. chod', '2. chod', '3. chod'] as const
+// --- Poznámka a pořadí výdeje položky (dokud není odeslaná do kuchyně) ---
 const itemDialogOpen = ref(false)
 const editingItem = ref<OrderItemLine | null>(null)
 const itemNote = ref('')
@@ -808,9 +808,11 @@ const itemCourse = ref<string | null>(null)
 function openItemMeta(item: OrderItemLine) {
   editingItem.value = item
   itemNote.value = item.note ?? ''
-  itemCourse.value = item.course
+  itemCourse.value = normalizeOrderCourse(item.course)
   itemDialogOpen.value = true
 }
+
+const orderCourseGroups = computed(() => groupItemsByCourse(currentOrder.value?.items ?? []))
 
 async function saveItemMeta() {
   if (!currentOrder.value || !editingItem.value || busy.value) return
@@ -1108,7 +1110,7 @@ async function openPayment(group: OrderSplitGroup | null = null) {
     if (!refreshed) return
     await refreshPricePreview()
     if (!pricingReady.value) {
-      toast.error('Cenu se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+      toast.error('Výslednou cenu se nepodařilo ověřit. Zkuste platbu znovu.')
       return
     }
   }
@@ -1121,7 +1123,7 @@ async function openPayment(group: OrderSplitGroup | null = null) {
     loyaltyEnabled.value &&
     (splitPricePreviewGroupId.value !== group.id || !splitPricePreview.value)
   ) {
-    toast.error('Cenu vybrané části se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+    toast.error('Cenu vybrané části se nepodařilo ověřit. Zkuste platbu znovu.')
     return
   }
   mobileAccountOpen.value = false
@@ -1138,7 +1140,7 @@ async function confirmPayment(payment: { method: PaymentMethod; cashReceived: nu
       loyaltyEnabled.value &&
       (splitPricePreviewGroupId.value !== paymentSplitGroup.value.id || !splitPricePreview.value)
     ) {
-      toast.error('Cenu vybrané části se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+      toast.error('Cenu vybrané části se nepodařilo ověřit. Zkuste platbu znovu.')
       return
     }
   } else {
@@ -1147,7 +1149,7 @@ async function confirmPayment(payment: { method: PaymentMethod; cashReceived: nu
     if (!refreshed) return
     await refreshPricePreview()
     if (!pricingReady.value) {
-      toast.error('Cenu se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+      toast.error('Výslednou cenu se nepodařilo ověřit. Zkuste platbu znovu.')
       return
     }
     if (Math.abs(previousTotal - checkoutTotal.value) >= 0.01) {
@@ -1421,7 +1423,7 @@ const currentOrderElapsed = computed(() =>
       class="m-4 rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground"
     >
       <Package class="mx-auto h-10 w-10" />
-      <p class="mt-3 font-semibold text-foreground">Restaurace potřebuje připojení k serveru</p>
+      <p class="mt-3 font-semibold text-foreground">Stoly a objednávky teď nejsou dostupné</p>
     </div>
 
     <div v-else-if="loading" class="grid h-full place-items-center">
@@ -1720,7 +1722,7 @@ const currentOrderElapsed = computed(() =>
                 v-model="productQuery"
                 type="search"
                 class="h-12 rounded-xl bg-card pl-12 pr-12 text-base"
-                placeholder="Hledat název, SKU nebo EAN…"
+                placeholder="Hledat podle názvu, skladového nebo čárového kódu…"
                 aria-label="Hledat produkt"
                 data-testid="restaurant-product-search"
               />
@@ -1838,106 +1840,113 @@ const currentOrderElapsed = computed(() =>
             <div
               v-else
               data-testid="restaurant-order-items"
-              class="min-h-0 flex-1 divide-y divide-border overflow-y-auto overscroll-contain"
+              class="min-h-0 flex-1 overflow-y-auto overscroll-contain"
             >
-              <div
-                v-for="item in currentOrder.items"
-                :key="item.id"
-                class="p-3"
-                :data-testid="'restaurant-order-item-' + item.id"
-              >
-                <div class="flex items-start gap-2">
-                  <div class="min-w-0 flex-1">
-                    <div class="text-sm font-bold leading-tight">
-                      {{ item.name }}<span v-if="item.variantName"> · {{ item.variantName }}</span>
+              <section v-for="group in orderCourseGroups" :key="group.key">
+                <div
+                  v-if="group.label"
+                  class="sticky top-0 z-10 flex items-center gap-2 border-y border-border bg-muted/95 px-3 py-2 backdrop-blur"
+                  :data-testid="'restaurant-course-' + group.key"
+                >
+                  <span
+                    class="shrink-0 text-xs font-black uppercase tracking-[0.14em] text-foreground"
+                  >
+                    {{ group.label }}
+                  </span>
+                  <span class="h-px flex-1 bg-border" aria-hidden="true" />
+                </div>
+                <div
+                  v-for="item in group.items"
+                  :key="item.id"
+                  class="border-b border-border p-3"
+                  :data-testid="'restaurant-order-item-' + item.id"
+                >
+                  <div class="flex items-start gap-2">
+                    <div class="min-w-0 flex-1">
+                      <div class="text-sm font-bold leading-tight">
+                        {{ item.name
+                        }}<span v-if="item.variantName"> · {{ item.variantName }}</span>
+                      </div>
+                      <div class="mt-1 text-xs text-muted-foreground tabular-nums">
+                        {{ formatCZK(item.unitPrice) }} × {{ item.quantity }}
+                        <span
+                          v-if="item.kitchenStatus !== 'New'"
+                          class="ml-1 rounded-md bg-muted px-1.5 py-0.5 font-semibold text-foreground"
+                          >v kuchyni</span
+                        >
+                      </div>
                     </div>
-                    <div class="mt-1 text-xs text-muted-foreground tabular-nums">
-                      {{ formatCZK(item.unitPrice) }} × {{ item.quantity }}
-                      <span
-                        v-if="item.kitchenStatus !== 'New'"
-                        class="ml-1 rounded-md bg-muted px-1.5 py-0.5 font-semibold text-foreground"
-                        >v kuchyni</span
+                    <div class="shrink-0 text-sm font-black tabular-nums">
+                      {{ formatCZK(item.lineTotal) }}
+                    </div>
+                  </div>
+
+                  <div v-if="item.modifiers?.length || item.note" class="mt-1.5 space-y-1">
+                    <div
+                      v-for="(modifier, index) in item.modifiers ?? []"
+                      :key="item.id + '-' + modifier.groupName + '-' + modifier.name + '-' + index"
+                      class="text-xs text-muted-foreground"
+                    >
+                      ↳ {{ modifier.groupName }}: {{ modifier.name }}
+                      <span v-if="modifier.priceDelta" class="tabular-nums"
+                        >({{ modifier.priceDelta > 0 ? '+' : ''
+                        }}{{ formatCZK(modifier.priceDelta) }})</span
                       >
                     </div>
+                    <div v-if="item.note" class="text-xs text-muted-foreground">
+                      ↳ {{ item.note }}
+                    </div>
                   </div>
-                  <div class="shrink-0 text-sm font-black tabular-nums">
-                    {{ formatCZK(item.lineTotal) }}
-                  </div>
-                </div>
 
-                <div
-                  v-if="item.modifiers?.length || item.course || item.note"
-                  class="mt-1.5 space-y-1"
-                >
                   <div
-                    v-for="(modifier, index) in item.modifiers ?? []"
-                    :key="item.id + '-' + modifier.groupName + '-' + modifier.name + '-' + index"
-                    class="text-xs text-muted-foreground"
+                    v-if="item.kitchenStatus === 'New'"
+                    class="mt-2 flex items-center justify-end gap-1.5"
                   >
-                    ↳ {{ modifier.groupName }}: {{ modifier.name }}
-                    <span v-if="modifier.priceDelta" class="tabular-nums"
-                      >({{ modifier.priceDelta > 0 ? '+' : ''
-                      }}{{ formatCZK(modifier.priceDelta) }})</span
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      class="h-12 w-12"
+                      :disabled="busy"
+                      :aria-label="'Upravit poznámku a pořadí výdeje položky ' + item.name"
+                      data-pos-target="secondary"
+                      @click="openItemMeta(item)"
                     >
-                  </div>
-                  <span
-                    v-if="item.course"
-                    class="inline-block rounded-md bg-primary-soft px-1.5 py-0.5 text-[10px] font-bold text-primary"
-                    >{{ item.course }}</span
-                  >
-                  <div v-if="item.note" class="text-xs text-muted-foreground">
-                    ↳ {{ item.note }}
+                      <StickyNote class="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      class="h-12 w-12"
+                      :disabled="busy"
+                      :aria-label="'Ubrat kus položky ' + item.name"
+                      data-pos-target="secondary"
+                      @click="changeQty(item, item.quantity - 1)"
+                    >
+                      <Minus class="h-4 w-4" />
+                    </Button>
+                    <span class="w-8 text-center font-black tabular-nums">{{ item.quantity }}</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      class="h-12 w-12"
+                      :disabled="busy"
+                      :aria-label="'Přidat kus položky ' + item.name"
+                      data-pos-target="secondary"
+                      @click="changeQty(item, item.quantity + 1)"
+                    >
+                      <Plus class="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-
-                <div
-                  v-if="item.kitchenStatus === 'New'"
-                  class="mt-2 flex items-center justify-end gap-1.5"
-                >
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    class="h-12 w-12"
-                    :disabled="busy"
-                    :aria-label="'Upravit poznámku a chod položky ' + item.name"
-                    data-pos-target="secondary"
-                    @click="openItemMeta(item)"
-                  >
-                    <StickyNote class="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    class="h-12 w-12"
-                    :disabled="busy"
-                    :aria-label="'Ubrat kus položky ' + item.name"
-                    data-pos-target="secondary"
-                    @click="changeQty(item, item.quantity - 1)"
-                  >
-                    <Minus class="h-4 w-4" />
-                  </Button>
-                  <span class="w-8 text-center font-black tabular-nums">{{ item.quantity }}</span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    class="h-12 w-12"
-                    :disabled="busy"
-                    :aria-label="'Přidat kus položky ' + item.name"
-                    data-pos-target="secondary"
-                    @click="changeQty(item, item.quantity + 1)"
-                  >
-                    <Plus class="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+              </section>
             </div>
 
             <div class="shrink-0 border-t border-border bg-card p-3">
               <div v-if="pricePreviewLoading" class="mb-2 text-xs text-muted-foreground">
-                Ověřuji cenu na serveru…
+                Ověřuji výslednou cenu…
               </div>
               <div v-if="totals?.discountAmount" class="mb-1 flex justify-between text-sm">
                 <span class="text-muted-foreground">Sleva</span>
@@ -2220,7 +2229,7 @@ const currentOrderElapsed = computed(() =>
                 >
               </div>
               <p v-if="pricePreviewError" class="text-xs text-muted-foreground">
-                Náhled není dostupný; finální cenu ověří server před platbou.
+                Náhled není dostupný; výsledná cena se ověří před platbou.
               </p>
             </div>
 
@@ -2283,11 +2292,11 @@ const currentOrderElapsed = computed(() =>
       </Sheet>
     </template>
 
-    <!-- Poznámka a chod položky (jen dokud není odeslaná do kuchyně) -->
+    <!-- Poznámka a pořadí výdeje (jen dokud není položka odeslaná do kuchyně) -->
     <Dialog v-model:open="itemDialogOpen">
       <DialogContent class="max-w-md">
         <DialogHeader>
-          <DialogTitle>Poznámka a chod</DialogTitle>
+          <DialogTitle>Poznámka a pořadí výdeje</DialogTitle>
           <DialogDescription>{{ editingItem?.name }}</DialogDescription>
         </DialogHeader>
         <form class="space-y-4" @submit.prevent="saveItemMeta">
@@ -2296,22 +2305,25 @@ const currentOrderElapsed = computed(() =>
             <Input id="item-note" v-model="itemNote" placeholder="bez cibule, dobře propečené…" />
           </div>
           <div class="space-y-2">
-            <Label>Chod</Label>
+            <Label>Zařazení na bonu</Label>
+            <p class="text-xs text-muted-foreground">
+              Kuchyně uvidí předkrmy, hlavní chody a dezerty odděleně.
+            </p>
             <div class="flex flex-wrap gap-2">
               <Button
                 type="button"
                 :variant="itemCourse === null ? 'coral' : 'outline'"
-                class="flex-1"
+                class="h-12 min-w-28 flex-1"
                 @click="itemCourse = null"
               >
                 Bez chodu
               </Button>
               <Button
-                v-for="c in COURSES"
+                v-for="c in ORDER_COURSES"
                 :key="c"
                 type="button"
                 :variant="itemCourse === c ? 'coral' : 'outline'"
-                class="flex-1"
+                class="h-12 min-w-28 flex-1"
                 @click="itemCourse = c"
               >
                 {{ c }}

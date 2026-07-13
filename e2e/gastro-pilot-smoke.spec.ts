@@ -315,7 +315,7 @@ test('pilotní gastro průchod: účet u stolu, kuchyň, platba a nenulová uzá
   await expect(page.getByText('Burger')).toBeVisible()
   await expect(page.getByText('↳ Přílohy: Hranolky')).toBeVisible()
   await expect(page.getByText('↳ Extra: Sýr navíc')).toBeVisible()
-  await expect(page.getByRole('button', { name: /Připravit/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Začít přípravu/ })).toBeVisible()
 
   await page.goto('/app/restaurace')
   await page.getByTestId('restaurant-table-map-table-1').click()

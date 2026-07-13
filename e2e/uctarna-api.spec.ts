@@ -128,7 +128,7 @@ test('Účtárna: ISDOC v API režimu dotáhne detail (řádky) a stáhne soubor
   await routeApp(page, detailHits)
 
   await page.goto('/app/uctarna')
-  await expect(page.getByRole('heading', { name: 'Účtárna' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Export pro účetní' })).toBeVisible()
   await expect(page.getByRole('cell', { name: 'FA-2026-0001' })).toBeVisible()
 
   // Klik na ISDOC v desktop tabulce → dotažení detailu + stažení souboru.
@@ -151,7 +151,7 @@ test('Účtárna: CSV přehled vystačí s hlavičkovými součty summary (bez d
   await routeApp(page, detailHits)
 
   await page.goto('/app/uctarna')
-  await expect(page.getByRole('heading', { name: 'Účtárna' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Export pro účetní' })).toBeVisible()
 
   const [download] = await Promise.all([
     page.waitForEvent('download'),

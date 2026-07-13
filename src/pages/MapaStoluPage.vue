@@ -381,7 +381,7 @@ function onCanvasPointerDown(e: PointerEvent) {
   <div class="p-4 sm:p-6">
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight">Mapa stolů</h1>
+        <h1 class="text-2xl font-bold tracking-tight">Nastavení stolů</h1>
         <p class="text-sm text-muted-foreground">
           Rozmístěte stoly tažením, měňte velikost úchytem v rohu. Editor pro správce.
         </p>
@@ -405,8 +405,8 @@ function onCanvasPointerDown(e: PointerEvent) {
       class="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground"
     >
       <LayoutGrid class="mx-auto h-10 w-10" />
-      <p class="mt-3 font-semibold text-foreground">Mapa stolů potřebuje připojení k serveru</p>
-      <p class="mt-1 text-sm">Nastavte <code>VITE_API_URL</code> a spusťte backend.</p>
+      <p class="mt-3 font-semibold text-foreground">Nastavení stolů teď není dostupné</p>
+      <p class="mt-1 text-sm">Zkontrolujte připojení nebo se obraťte na správce.</p>
     </div>
 
     <template v-else>

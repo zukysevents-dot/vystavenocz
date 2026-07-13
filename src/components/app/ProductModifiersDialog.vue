@@ -54,7 +54,7 @@ watch(
       groups.value = allGroups
       selected.value = new Set(assignedGroups.map((group) => group.id))
     } catch (e) {
-      toast.error('Modifikátory se nepodařilo načíst.')
+      toast.error('Volby k produktu se nepodařilo načíst.')
       console.error(e)
     } finally {
       loading.value = false
@@ -85,10 +85,10 @@ async function save() {
     .map((group, index) => ({ modifierGroupId: group.id, sortOrder: index }))
   try {
     await api.assignToProduct(props.product.id, { groups: assigned })
-    toast.success('Modifikátory produktu uloženy.')
+    toast.success('Volby k produktu byly uloženy.')
     openModel.value = false
   } catch (e) {
-    toast.error('Uložení modifikátorů selhalo.')
+    toast.error('Volby k produktu se nepodařilo uložit.')
     console.error(e)
   } finally {
     saving.value = false
@@ -100,7 +100,7 @@ async function save() {
   <Dialog v-model:open="openModel">
     <DialogContent class="max-h-[90vh] max-w-xl overflow-y-auto">
       <DialogHeader>
-        <DialogTitle>Modifikátory produktu</DialogTitle>
+        <DialogTitle>Volby k produktu</DialogTitle>
         <DialogDescription>
           {{ product ? `Skupiny nabízené u produktu ${product.name}.` : 'Vyberte produkt.' }}
         </DialogDescription>
@@ -115,7 +115,9 @@ async function save() {
       >
         <SlidersHorizontal class="mx-auto h-8 w-8 text-muted-foreground" />
         <p class="mt-3 font-medium">Zatím nejsou založené žádné skupiny.</p>
-        <p class="mt-1 text-sm text-muted-foreground">Nejdřív je vytvořte v sekci Modifikátory.</p>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Nejdřív je vytvořte v sekci Volby k produktům.
+        </p>
       </div>
       <div v-else class="space-y-3">
         <label
@@ -126,7 +128,7 @@ async function save() {
         >
           <Checkbox
             :model-value="selected.has(group.id)"
-            :aria-label="`Modifikátor ${group.name}`"
+            :aria-label="`Volba ${group.name}`"
             class="mt-1"
             @click.stop
             @update:model-value="onGroupChecked(group.id)"
@@ -135,7 +137,7 @@ async function save() {
             <span class="flex flex-wrap items-center gap-2">
               <span class="font-semibold">{{ group.name }}</span>
               <span class="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                {{ group.selectionType === 'Single' ? 'Jedna volba' : 'Více voleb' }}
+                {{ group.selectionType === 'Single' ? 'Vybere se jedna' : 'Lze vybrat více' }}
               </span>
               <span
                 v-if="group.isRequired"

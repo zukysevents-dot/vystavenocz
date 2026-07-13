@@ -199,7 +199,9 @@ async function onDelete() {
       <DialogContent class="max-w-md">
         <DialogHeader>
           <DialogTitle>{{ editing ? 'Upravit kategorii' : 'Nová kategorie' }}</DialogTitle>
-          <DialogDescription>Barva pro dlaždice a směrování do kuchyně/baru.</DialogDescription>
+          <DialogDescription>
+            Nastavte barvu dlaždice a pracoviště, kam se objednávka odešle.
+          </DialogDescription>
         </DialogHeader>
         <form class="space-y-4" @submit.prevent="onSubmit">
           <div class="space-y-2">
@@ -217,7 +219,7 @@ async function onDelete() {
               />
             </div>
             <div class="space-y-2">
-              <Label>Směrovat do</Label>
+              <Label>Kam poslat objednávku?</Label>
               <div class="flex gap-2">
                 <Button
                   v-for="s in SECTIONS"
@@ -230,6 +232,9 @@ async function onDelete() {
                   {{ s.label }}
                 </Button>
               </div>
+              <p class="text-xs text-muted-foreground">
+                Produkty této kategorie se po odeslání objeví na vybraném pracovišti.
+              </p>
             </div>
           </div>
           <DialogFooter>

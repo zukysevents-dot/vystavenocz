@@ -19,7 +19,7 @@ Cíl: prodat na pokladně a obsloužit stůl.
 
 1. Otevřete `Pokladna`. Přidejte pár položek (klik na dlaždici, hledání podle názvu/SKU/EAN, nebo `Sken / EAN` čtečkou).
 2. Klikněte `Zaplatit`, zvolte `Hotově` nebo `Kartou`. U hotovosti zadejte přijatou částku — systém ukáže, kolik vrátit. U karty potvrďte `Platba prošla` (terminál zatím potvrzuje obsluha ručně).
-3. Otevřete `Restaurace` na tabletu 1024 × 768. Ověřte plnoobrazovkový režim bez levého menu, vyberte stůl, najděte produkt názvem/SKU/EAN, přidejte ho, dejte `Odeslat` a nakonec `Zaplatit`.
+3. Otevřete `Restaurace` na tabletu 1024 × 768. Ověřte plnoobrazovkový režim bez levého menu, vyberte stůl, najděte produkt názvem/SKU/EAN a přidejte ho. U tří položek nastavte `Předkrm`, `Hlavní chod` a `Dezert`; na účtu i po `Odeslat` v kuchyni musí být v tomto pořadí pod samostatnými oddělovači. Nakonec účet zaplaťte.
 4. V `Další` vyzkoušejte, že výběr zdrojového stolu účet ještě nesloučí a až `Sloučit účty` provede akci. U `Zrušit účet` ověřte, že bez závěrečného potvrzení účet zůstane otevřený.
 5. V `Kuchyně` posuňte bon přes stavy `Odesláno → Připravuje se → Hotovo → Vydáno`.
 

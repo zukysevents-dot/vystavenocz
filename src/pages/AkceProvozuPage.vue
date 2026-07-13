@@ -262,11 +262,11 @@ function formatCZK(value: number): string {
       <div>
         <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Akce a ceny</h1>
         <p class="mt-1 text-muted-foreground">
-          Cenové hladiny, promo pravidla a serverový náhled finální ceny.
+          Cenové hladiny, slevová pravidla a kontrola výsledné ceny.
         </p>
       </div>
       <Badge :variant="hasApiBackend ? 'default' : 'secondary'">
-        {{ hasApiBackend ? 'Server počítá cenu' : 'Mock náhled' }}
+        {{ hasApiBackend ? 'Přesný výpočet' : 'Ukázkový výpočet' }}
       </Badge>
     </div>
 
@@ -472,7 +472,7 @@ function formatCZK(value: number): string {
         <div class="flex items-center justify-between gap-3">
           <div class="flex items-center gap-2">
             <Gift class="h-5 w-5 text-primary" />
-            <h2 class="font-semibold">Serverový náhled účtu</h2>
+            <h2 class="font-semibold">Kontrola výsledné ceny</h2>
           </div>
           <LoaderCircle v-if="calculating" class="h-4 w-4 animate-spin text-muted-foreground" />
         </div>

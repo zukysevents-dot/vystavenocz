@@ -187,7 +187,7 @@ test.describe('API a webhooky', () => {
 
     // Test event → potvrzující toast.
     await page.getByTestId('test-webhook-wh_1').click()
-    await expect(page.getByText('Testovací event zařazen')).toBeVisible()
+    await expect(page.getByText('Zkušební oznámení bylo zařazeno')).toBeVisible()
 
     // Historie doručení: úspěch i selhání s HTTP statusem a chybou.
     await page.getByRole('button', { name: 'Historie' }).click()
