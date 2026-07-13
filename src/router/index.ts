@@ -13,6 +13,8 @@ declare module 'vue-router' {
     requiresRole?: string[]
     /** Zapnutý runtime modul firmy. Nevyplněné = bez modulového omezení. */
     requiresModule?: AppModuleId
+    /** Provozní obrazovka přes celý viewport bez administračního sidebaru. */
+    operational?: boolean
   }
 }
 
@@ -420,7 +422,13 @@ const routes: RouteRecordRaw[] = [
     path: '/app/restaurace',
     name: 'app-restaurace',
     component: () => import('@/pages/RestauracePage.vue'),
-    meta: { title: 'Restaurace', layout: 'app', requiresAuth: true, requiresModule: 'gastro' },
+    meta: {
+      title: 'Restaurace',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'gastro',
+      operational: true,
+    },
   },
   {
     path: '/app/kuchyne',

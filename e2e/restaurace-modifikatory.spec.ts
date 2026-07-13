@@ -156,6 +156,7 @@ async function seedApiMode(page: Page): Promise<void> {
 test('obsluha vybere povinné modifikátory při přidání položky na účet', async ({ page }) => {
   await seedApiMode(page)
   let addPayload: unknown
+  let currentOrder = emptyOrder()
 
   await page.route(API, async (route: Route) => {
     const request = route.request()
@@ -172,13 +173,18 @@ test('obsluha vybere povinné modifikátory při přidání položky na účet',
     if (method === 'GET' && path === '/floors') return route.fulfill({ json: paged([floor]) })
     if (method === 'GET' && path === '/tables') return route.fulfill({ json: paged([table]) })
     if (method === 'GET' && path === '/orders') return route.fulfill({ json: paged([]) })
+    if (method === 'GET' && path === '/orders/order-1') return route.fulfill({ json: currentOrder })
     if (method === 'GET' && path === `/products/${product.id}/modifier-groups`) {
       return route.fulfill({ json: modifierGroups })
     }
-    if (method === 'POST' && path === '/orders') return route.fulfill({ json: emptyOrder() })
+    if (method === 'POST' && path === '/orders') {
+      currentOrder = emptyOrder()
+      return route.fulfill({ json: currentOrder })
+    }
     if (method === 'POST' && path === '/orders/order-1/items') {
       addPayload = request.postDataJSON()
-      return route.fulfill({ json: orderWithBurger() })
+      currentOrder = orderWithBurger()
+      return route.fulfill({ json: currentOrder })
     }
 
     return route.fulfill({ status: 404, json: { title: `Unhandled ${method} ${path}` } })
@@ -187,8 +193,8 @@ test('obsluha vybere povinné modifikátory při přidání položky na účet',
   await dismissCookies(page)
   await page.goto('/app/restaurace')
 
-  await page.getByRole('button', { name: /Stůl 1/ }).click()
-  await expect(page.getByRole('heading', { name: 'Účet — Stůl 1' })).toBeVisible()
+  await page.getByTestId('restaurant-table-map-table-1').click()
+  await expect(page.getByTestId('restaurant-order-view')).toBeVisible()
 
   await page.getByRole('button', { name: /Burger/ }).click()
   await expect(page.getByRole('dialog', { name: 'Vybrat modifikátory' })).toBeVisible()

@@ -126,6 +126,12 @@
 
 :root {
   --radius: 0.875rem;
+  --pos-header: 4rem;
+  --pos-touch: 3rem;
+  --pos-action: 3.5rem;
+  --pos-category: 9rem;
+  --pos-order: 22rem;
+  --pos-order-xl: 24rem;
 
   /* LIGHT — „den" mód: paper s magenta akcentem. */
   --background: #f7f1f4;
