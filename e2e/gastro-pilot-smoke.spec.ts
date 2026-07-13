@@ -302,12 +302,12 @@ test('pilotní gastro průchod: účet u stolu, kuchyň, platba a nenulová uzá
   })
 
   await page.goto('/app/restaurace')
-  await page.getByRole('button', { name: /Stůl 1/ }).click()
-  await expect(page.getByRole('heading', { name: 'Účet — Stůl 1' })).toBeVisible()
+  await page.getByTestId('restaurant-table-map-table-1').click()
+  await expect(page.getByTestId('restaurant-order-view')).toBeVisible()
   await expect(page.getByText('Přílohy: Hranolky')).toBeVisible()
   await expect(page.getByText('Extra: Sýr navíc')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Odeslat objednávku' }).click()
+  await page.getByRole('button', { name: 'Odeslat' }).click()
   await expect(page.getByText('Objednávka odeslána')).toBeVisible()
 
   await page.goto('/app/kuchyne')
@@ -318,7 +318,7 @@ test('pilotní gastro průchod: účet u stolu, kuchyň, platba a nenulová uzá
   await expect(page.getByRole('button', { name: /Připravit/ })).toBeVisible()
 
   await page.goto('/app/restaurace')
-  await page.getByRole('button', { name: /Stůl 1/ }).click()
+  await page.getByTestId('restaurant-table-map-table-1').click()
   await page.getByRole('button', { name: 'Zaplatit' }).click()
   await page.getByRole('button', { name: 'Kartou' }).click()
   await page.getByRole('button', { name: 'Platba prošla' }).click()

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { RouterLink } from 'vue-router'
 import {
   Loader2,
   Minus,
@@ -15,12 +16,26 @@ import {
   Users,
   Trash2,
   Check,
-  Gift,
   UserRound,
+  Search,
+  LayoutDashboard,
+  MoreHorizontal,
+  Clock3,
+  Wifi,
+  WifiOff,
+  X,
+  SlidersHorizontal,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 import {
   Dialog,
   DialogContent,
@@ -114,15 +129,25 @@ const modifierDialogProduct = computed(() =>
 
 const categories = ref<Category[]>([])
 const selectedCat = ref('')
-const visibleProducts = computed(() =>
-  selectedCat.value
-    ? products.value.filter((p) => p.categoryId === selectedCat.value)
-    : products.value,
-)
+const productQuery = ref('')
+const visibleProducts = computed(() => {
+  const query = productQuery.value.trim().toLocaleLowerCase('cs')
+  return products.value.filter((product) => {
+    if (selectedCat.value && product.categoryId !== selectedCat.value) return false
+    if (!query) return true
+    return [product.name, product.sku, product.ean]
+      .filter(Boolean)
+      .some((value) => String(value).toLocaleLowerCase('cs').includes(query))
+  })
+})
 
 const loading = ref(true)
 const busy = ref(false)
+const connectionState = ref<'online' | 'syncing' | 'offline'>('syncing')
 const mode = ref<'map' | 'order'>('map')
+const mobileAccountOpen = ref(false)
+const accountAdjustmentsOpen = ref(false)
+const moreActionsOpen = ref(false)
 
 const floors = ref<Floor[]>([])
 const currentFloorId = ref<string | null>(null)
@@ -137,6 +162,76 @@ const occupancy = computed(() => {
   for (const o of openOrders.value) if (o.tableId) map.set(o.tableId, o)
   return map
 })
+const occupiedTableCount = computed(() =>
+  tables.value.reduce((count, table) => count + (occupancy.value.has(table.id) ? 1 : 0), 0),
+)
+const freeTableCount = computed(() => Math.max(0, tables.value.length - occupiedTableCount.value))
+const openAccountRows = computed(() =>
+  openOrders.value
+    .map((order) => ({
+      order,
+      table: tables.value.find((table) => table.id === order.tableId),
+    }))
+    .filter((row) => row.table)
+    .sort((a, b) => new Date(a.order.openedAt).getTime() - new Date(b.order.openedAt).getTime()),
+)
+
+function elapsedMinutes(openedAt: string): number {
+  return Math.max(0, Math.floor((Date.now() - new Date(openedAt).getTime()) / 60_000))
+}
+
+function tableOperationalMeta(order: Order | undefined) {
+  if (!order) {
+    return {
+      label: 'Volný',
+      surface: 'border-border bg-card hover:border-primary hover:bg-primary-soft',
+      badge: 'bg-success/15 text-foreground',
+    }
+  }
+  if (elapsedMinutes(order.openedAt) >= 60) {
+    return {
+      label: 'Čeká dlouho',
+      surface: 'border-destructive bg-destructive/10 text-foreground',
+      badge: 'bg-destructive/15 text-foreground',
+    }
+  }
+  if (order.items.some((item) => item.kitchenStatus === 'Ready')) {
+    return {
+      label: 'Připraveno',
+      surface: 'border-success bg-success/10 text-foreground',
+      badge: 'bg-success/15 text-foreground',
+    }
+  }
+  if (order.items.some((item) => item.kitchenStatus === 'New')) {
+    return {
+      label: 'Neodesláno',
+      surface: 'border-sun bg-sun/10 text-foreground',
+      badge: 'bg-sun/20 text-foreground',
+    }
+  }
+  return {
+    label: 'V provozu',
+    surface: 'border-primary bg-primary-soft text-foreground',
+    badge: 'bg-primary/10 text-foreground',
+  }
+}
+
+const connectionLabel = computed(() => {
+  if (connectionState.value === 'offline') return 'Offline'
+  if (connectionState.value === 'syncing') return 'Obnovuji'
+  return 'Online'
+})
+
+let operationalRefreshInFlight = false
+let openOrdersRequestSequence = 0
+let currentOrderRefreshSequence = 0
+let orderMutationSequence = 0
+
+watch(busy, (isBusy) => {
+  if (!isBusy) return
+  orderMutationSequence++
+  currentOrderRefreshSequence++
+})
 
 onMounted(async () => {
   auth.init()
@@ -145,17 +240,21 @@ onMounted(async () => {
     loading.value = false
     return
   }
-  // Průběžně obnovuj otevřený účet (QR doobjednávky). refreshCurrentOrder si sám ohlídá, kdy je bezpečné načíst.
-  accountRefreshTimer = setInterval(() => void refreshCurrentOrder(), 5000)
+  // Mapa průběžně obnovuje obsazenost; otevřený účet položky/total kvůli QR doobjednávkám.
   try {
     await Promise.all([loadProducts(), refreshOpen(), loadPriceLevels(), loadLoyaltyCheckoutData()])
     categories.value = await categoriesApi.list()
     floors.value = await floorsApi.list()
     if (floors.value.length) currentFloorId.value = floors.value[0].id
     if (currentFloorId.value) await loadTables()
+    connectionState.value = 'online'
   } catch (e) {
+    connectionState.value = 'offline'
     console.error(e)
   } finally {
+    if (!accountRefreshTimer) {
+      accountRefreshTimer = setInterval(() => void refreshOperationalState(), 5000)
+    }
     loading.value = false
   }
 })
@@ -164,30 +263,73 @@ async function loadTables() {
   tables.value = currentFloorId.value ? await tablesApi.listByFloor(currentFloorId.value) : []
 }
 async function refreshOpen() {
-  openOrders.value = await ordersApi.listOpen()
+  const requestSequence = ++openOrdersRequestSequence
+  const nextOrders = await ordersApi.listOpen()
+  if (requestSequence === openOrdersRequestSequence) openOrders.value = nextOrders
+}
+async function refreshOperationalState() {
+  if (busy.value || operationalRefreshInFlight || document.visibilityState !== 'visible') return
+  operationalRefreshInFlight = true
+  connectionState.value = 'syncing'
+  try {
+    if (mode.value === 'map') {
+      await refreshOpen()
+    } else {
+      await Promise.all([refreshOpen(), refreshCurrentOrder()])
+    }
+    connectionState.value = 'online'
+  } catch (e) {
+    connectionState.value = 'offline'
+    console.error(e)
+  } finally {
+    operationalRefreshInFlight = false
+  }
 }
 // Host může přes QR doobjednat do otevřeného účtu (backend připíše položky ke stejnému účtu stolu). Aby obsluha
 // platila podle skutečného stavu, průběžně (interval) i před platbou znovu načteme aktuální účet ze serveru.
-async function refreshCurrentOrder() {
+async function refreshCurrentOrder(options: { required?: boolean; allowPayment?: boolean } = {}) {
   const order = currentOrder.value
-  if (!order || busy.value) return
+  if (!order || busy.value) return false
+  const refreshSequence = ++currentOrderRefreshSequence
+  const mutationSequence = orderMutationSequence
   // Neruš aktivní dialog (částka k platbě / rozdělení účtu) — změna položek pod rukama by mátla.
-  if (paymentOpen.value || splitDialogOpen.value || modifierDialogOpen.value) return
+  if (
+    (!options.allowPayment && paymentOpen.value) ||
+    splitDialogOpen.value ||
+    modifierDialogOpen.value ||
+    variantDialogOpen.value ||
+    itemDialogOpen.value ||
+    moveDialogOpen.value ||
+    mergeDialogOpen.value ||
+    cancelDialogOpen.value
+  )
+    return false
   try {
     const fresh = await ordersApi.get(order.id)
     // Obsluha mohla mezitím přepnout stůl nebo spustit akci — aplikuj jen na stále tentýž, needitovaný účet.
-    if (currentOrder.value?.id !== order.id || busy.value) return
+    if (
+      currentOrder.value?.id !== order.id ||
+      busy.value ||
+      refreshSequence !== currentOrderRefreshSequence ||
+      mutationSequence !== orderMutationSequence
+    )
+      return false
     if (fresh.status !== 'Open') {
       // Účet mezitím uzavřel/zrušil jiný terminál nebo host doplatil přes QR — zpět na mapu.
       toast.info('Účet byl mezitím uzavřen.')
       await refreshOpen()
       backToMap()
-      return
+      return false
     }
     // Jen položky/total; lokální slevu/tip (accountDiscountPercent/tipAmount) nepřepisujeme, ať nezrušíme editaci.
     currentOrder.value = fresh
+    return true
   } catch (e) {
-    console.error(e) // tiché selhání — další kolo intervalu to zkusí znovu
+    if (options.required) {
+      toast.error('Aktuální účet se nepodařilo načíst. Platbu zatím nelze bezpečně otevřít.')
+    }
+    console.error(e)
+    return false
   }
 }
 watch(currentFloorId, () => {
@@ -233,6 +375,25 @@ function backToMap() {
   splitPricePreviewSeq++
   splitPricePreview.value = null
   splitPricePreviewGroupId.value = null
+  mobileAccountOpen.value = false
+  accountAdjustmentsOpen.value = false
+  moreActionsOpen.value = false
+  productQuery.value = ''
+}
+
+function resetProductFilters() {
+  productQuery.value = ''
+  selectedCat.value = ''
+}
+
+function openSplitActions() {
+  moreActionsOpen.value = false
+  openSplitDialog()
+}
+
+function openCancelConfirmation() {
+  moreActionsOpen.value = false
+  cancelDialogOpen.value = true
 }
 
 // --- Sleva na účet + spropitné (ukládá se průběžně, ne až při platbě) ---
@@ -943,7 +1104,8 @@ async function openPayment(group: OrderSplitGroup | null = null) {
   // Platba celého účtu: napřed natáhni aktuální stav — host mohl QR doobjednat, obsluha musí platit podle reality.
   // (Split platba se neobnovuje: rozdělení účtu vychází ze známých položek a refresh by ho rozhodil.)
   if (group === null) {
-    await refreshCurrentOrder()
+    const refreshed = await refreshCurrentOrder({ required: true })
+    if (!refreshed) return
     await refreshPricePreview()
     if (!pricingReady.value) {
       toast.error('Cenu se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
@@ -962,6 +1124,9 @@ async function openPayment(group: OrderSplitGroup | null = null) {
     toast.error('Cenu vybrané části se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
     return
   }
+  mobileAccountOpen.value = false
+  accountAdjustmentsOpen.value = false
+  moreActionsOpen.value = false
   paymentOpen.value = true
 }
 
@@ -977,9 +1142,18 @@ async function confirmPayment(payment: { method: PaymentMethod; cashReceived: nu
       return
     }
   } else {
+    const previousTotal = checkoutTotal.value
+    const refreshed = await refreshCurrentOrder({ required: true, allowPayment: true })
+    if (!refreshed) return
     await refreshPricePreview()
     if (!pricingReady.value) {
       toast.error('Cenu se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
+      return
+    }
+    if (Math.abs(previousTotal - checkoutTotal.value) >= 0.01) {
+      toast.info(
+        `Účet se změnil z ${formatCZK(previousTotal)} na ${formatCZK(checkoutTotal.value)}. Zkontrolujte novou částku a potvrďte platbu znovu.`,
+      )
       return
     }
   }
@@ -1016,6 +1190,17 @@ async function saveSplit() {
 const moveDialogOpen = ref(false)
 const freeTables = computed(() => tables.value.filter((t) => !occupancy.value.has(t.id)))
 
+async function openMoveDialog() {
+  moreActionsOpen.value = false
+  try {
+    await refreshOpen()
+    moveDialogOpen.value = true
+  } catch (e) {
+    toast.error('Volné stoly se nepodařilo obnovit.')
+    console.error(e)
+  }
+}
+
 async function moveOrder(targetTableId: string) {
   if (!currentOrder.value || busy.value) return
   busy.value = true
@@ -1041,15 +1226,34 @@ async function moveOrder(targetTableId: string) {
 
 // --- Sloučení účtů — položky z jiného obsazeného stolu se přesunou na tento (cílový) účet ---
 const mergeDialogOpen = ref(false)
+const mergeCandidateTable = ref<DiningTable | null>(null)
+watch(mergeDialogOpen, (open) => {
+  if (!open) mergeCandidateTable.value = null
+})
 // Zdrojoví kandidáti = ostatní obsazené stoly na aktuálním patře (vyjma tohoto účtu).
 const otherOccupiedTables = computed(() =>
   tables.value.filter((t) => occupancy.value.has(t.id) && t.id !== selectedTable.value?.id),
 )
 
+async function openMergeDialog() {
+  moreActionsOpen.value = false
+  try {
+    await refreshOpen()
+    mergeDialogOpen.value = true
+  } catch (e) {
+    toast.error('Otevřené účty se nepodařilo obnovit.')
+    console.error(e)
+  }
+}
+
 async function mergeOrder(sourceTableId: string) {
   if (!currentOrder.value || busy.value) return
   const source = occupancy.value.get(sourceTableId)
-  if (!source) return
+  if (!source) {
+    mergeCandidateTable.value = null
+    toast.info('Zdrojový účet už není otevřený. Vyberte jiný stůl.')
+    return
+  }
   busy.value = true
   try {
     // currentOrder = cíl; zdrojový účet se do něj sloučí a jeho stůl se uvolní.
@@ -1058,12 +1262,14 @@ async function mergeOrder(sourceTableId: string) {
     syncDiscountFromOrder(currentOrder.value) // sleva/spropitné zůstávají na cílovém účtu
     await refreshOpen() // zdrojový stůl zmizí jako obsazený
     mergeDialogOpen.value = false
+    mergeCandidateTable.value = null
     toast.success('Účty sloučeny. Rozdělení účtu (split) je potřeba nastavit znovu.')
   } catch (e) {
     // 404/409 = zdrojový nebo cílový účet mezitím zaplatil/zrušil jiný terminál.
     if (e instanceof ApiError && (e.status === 404 || e.status === 409)) {
       toast.error('Účet mezitím zaplatil nebo zrušil jiný terminál.')
       await refreshOpen()
+      mergeCandidateTable.value = null
     } else {
       toast.error('Sloučení účtů selhalo.')
     }
@@ -1158,7 +1364,12 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
     return true
   } catch (e) {
     // 422 u hotovosti = přijatá částka nepokryla server-spočítaný Total; dialog zůstává otevřený.
-    if (e instanceof ApiError && e.status === 422 && cashReceived != null) {
+    if (e instanceof ApiError && (e.status === 404 || e.status === 409)) {
+      paymentOpen.value = false
+      toast.error('Účet mezitím zaplatil nebo zrušil jiný terminál.')
+      await refreshOpen()
+      backToMap()
+    } else if (e instanceof ApiError && e.status === 422 && cashReceived != null) {
       toast.error('Přijatá hotovost nepokrývá částku k úhradě. Zadejte vyšší částku.')
     } else {
       toast.error('Platba selhala.')
@@ -1170,12 +1381,15 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
   }
 }
 
+const cancelDialogOpen = ref(false)
+
 async function cancelOrder() {
   if (!currentOrder.value || busy.value) return
   busy.value = true
   try {
     await ordersApi.cancel(currentOrder.value.id)
     toast.success('Účet zrušen.')
+    cancelDialogOpen.value = false
     await refreshOpen()
     backToMap()
   } catch (e) {
@@ -1192,545 +1406,881 @@ const hasNewItems = computed(() =>
 const currentItemCount = computed(() =>
   (currentOrder.value?.items ?? []).reduce((sum, item) => sum + item.quantity, 0),
 )
+const currentOrderElapsed = computed(() =>
+  currentOrder.value ? elapsedMinutes(currentOrder.value.openedAt) : 0,
+)
 </script>
 
 <template>
-  <div class="p-4 sm:p-6" :class="mode === 'order' && currentOrder ? 'pb-28 lg:pb-6' : ''">
+  <div
+    data-testid="restaurant-page"
+    class="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground"
+  >
     <div
       v-if="!apiMode"
-      class="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground"
+      class="m-4 rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground"
     >
       <Package class="mx-auto h-10 w-10" />
       <p class="mt-3 font-semibold text-foreground">Restaurace potřebuje připojení k serveru</p>
     </div>
 
-    <div v-else-if="loading" class="flex justify-center p-12">
-      <Loader2 class="h-6 w-6 animate-spin text-primary" />
+    <div v-else-if="loading" class="grid h-full place-items-center">
+      <div
+        class="flex items-center gap-3 rounded-xl border border-border bg-card px-5 py-4 shadow-card"
+      >
+        <Loader2 class="h-6 w-6 animate-spin text-primary" />
+        <span class="font-medium">Připravuji provoz restaurace…</span>
+      </div>
     </div>
 
-    <!-- MAPA s obsazeností -->
-    <template v-else-if="mode === 'map'">
-      <h1 class="mb-1 text-2xl font-bold tracking-tight">Restaurace</h1>
-      <p class="mb-4 text-sm text-muted-foreground">Klepněte na stůl — otevře nebo zobrazí účet.</p>
-
-      <div v-if="!floors.length" class="rounded-2xl border border-border bg-card p-8 text-center">
-        <p class="font-semibold">Zatím žádná mapa stolů</p>
-        <p class="mt-1 text-sm text-muted-foreground">Vytvořte mapu v sekci „Mapa stolů".</p>
-      </div>
-
-      <template v-else>
-        <div class="mb-3 flex flex-wrap gap-2">
-          <button
-            v-for="f in floors"
-            :key="f.id"
-            type="button"
-            class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
-            :class="
-              currentFloorId === f.id
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground hover:bg-muted/70'
-            "
-            @click="currentFloorId = f.id"
-          >
-            {{ f.name }}
-          </button>
-        </div>
-
-        <div v-if="tables.length" class="grid gap-2 lg:hidden">
-          <button
-            v-for="t in tables"
-            :key="t.id"
-            type="button"
-            class="flex min-h-16 items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 text-left shadow-sm transition-colors active:scale-[0.99]"
-            :class="
-              occupancy.get(t.id)
-                ? 'border-primary bg-primary text-primary-foreground'
-                : 'border-border hover:border-primary'
-            "
-            @click="selectTable(t)"
-          >
-            <span class="min-w-0">
-              <span class="block truncate font-semibold">{{ t.name }}</span>
-              <span
-                class="mt-0.5 block text-xs"
-                :class="
-                  occupancy.get(t.id) ? 'text-primary-foreground/80' : 'text-muted-foreground'
-                "
-              >
-                {{ occupancy.get(t.id) ? 'obsazeno' : 'volný' }}
-              </span>
-            </span>
-            <span class="shrink-0 text-sm font-bold tabular-nums">
-              {{ occupancy.get(t.id) ? formatCZK(occupancy.get(t.id)!.total) : '—' }}
-            </span>
-          </button>
-        </div>
-
-        <div
-          v-if="tables.length"
-          class="relative hidden min-h-[560px] overflow-hidden rounded-2xl border border-border bg-muted/20 lg:block"
-          style="
-            background-image:
-              linear-gradient(to right, rgba(120, 120, 120, 0.12) 1px, transparent 1px),
-              linear-gradient(to bottom, rgba(120, 120, 120, 0.12) 1px, transparent 1px);
-            background-size: 24px 24px;
-          "
+    <template v-else>
+      <header
+        class="flex h-[var(--pos-header)] shrink-0 items-center gap-2 border-b border-border bg-card px-2 sm:gap-3 sm:px-4"
+      >
+        <RouterLink
+          to="/app"
+          class="inline-flex h-12 min-w-12 items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 text-sm font-semibold transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-4"
+          aria-label="Zpět do hlavního přehledu"
+          data-pos-target="secondary"
         >
-          <button
-            v-for="t in tables"
-            :key="t.id"
-            type="button"
-            class="absolute flex flex-col items-center justify-center border-2 text-center shadow-sm transition-colors"
-            :class="[
-              t.shape === 'Circle' ? 'rounded-full' : 'rounded-lg',
-              occupancy.get(t.id)
-                ? 'border-primary bg-primary text-primary-foreground'
-                : 'border-border bg-card hover:border-primary',
-            ]"
-            :style="{
-              left: t.x + 'px',
-              top: t.y + 'px',
-              width: t.width + 'px',
-              height: t.height + 'px',
-              transform: `rotate(${t.rotation}deg)`,
-            }"
-            @click="selectTable(t)"
-          >
-            <span class="px-1 text-xs font-semibold leading-none">{{ t.name }}</span>
-            <span v-if="occupancy.get(t.id)" class="mt-1 text-[10px] font-bold">
-              {{ formatCZK(occupancy.get(t.id)!.total) }}
-            </span>
-            <span v-else class="mt-1 text-[10px] text-muted-foreground">volný</span>
-          </button>
-        </div>
+          <LayoutDashboard class="h-5 w-5" />
+          <span class="hidden sm:inline">Přehled</span>
+        </RouterLink>
 
-        <div
-          v-else
-          class="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground"
+        <Button
+          v-if="mode === 'order'"
+          type="button"
+          variant="ghost"
+          class="h-12 min-w-12 px-3"
+          aria-label="Zpět na mapu stolů"
+          data-pos-target="secondary"
+          @click="backToMap"
         >
-          V této místnosti nejsou stoly.
-        </div>
-      </template>
-    </template>
+          <ArrowLeft class="h-5 w-5" />
+          <span class="hidden md:inline">Stoly</span>
+        </Button>
 
-    <!-- ÚČET na stole -->
-    <template v-else-if="currentOrder">
-      <div class="mb-4 flex items-center gap-3">
-        <Button variant="ghost" size="icon" aria-label="Zpět na mapu stolů" @click="backToMap"
-          ><ArrowLeft class="h-5 w-5"
-        /></Button>
-        <h1 class="text-2xl font-bold tracking-tight">Účet — {{ selectedTable?.name }}</h1>
-      </div>
-
-      <div class="grid gap-4 lg:grid-cols-[1fr_360px]">
-        <!-- Dlaždice produktů -->
-        <div class="rounded-2xl border border-border bg-card p-4">
-          <div
-            v-if="products.length === 0"
-            class="flex flex-col items-center p-12 text-center text-muted-foreground"
-          >
-            <Package class="h-10 w-10" />
-            <p class="mt-3 text-sm">Žádné produkty. Přidejte je v sekci Sklad.</p>
+        <div class="min-w-0 flex-1">
+          <div class="truncate text-base font-bold sm:text-lg">
+            {{ mode === 'map' ? 'Restaurace' : selectedTable?.name }}
           </div>
-          <template v-else>
-            <div v-if="categories.length" class="mb-3 flex flex-wrap gap-2">
+          <div class="truncate text-xs text-muted-foreground">
+            <template v-if="mode === 'map'">
+              {{ occupiedTableCount }} obsazených · {{ freeTableCount }} volných
+            </template>
+            <template v-else>
+              {{ currentItemCount }} {{ currentItemCount === 1 ? 'položka' : 'položek' }} · otevřeno
+              {{ currentOrderElapsed }} min
+            </template>
+          </div>
+        </div>
+
+        <div
+          data-testid="restaurant-connection-status"
+          class="inline-flex h-10 items-center gap-2 rounded-full px-3 text-xs font-bold text-foreground"
+          :class="
+            connectionState === 'offline'
+              ? 'bg-destructive/15'
+              : connectionState === 'syncing'
+                ? 'bg-sun/15'
+                : 'bg-success/15'
+          "
+          :aria-label="'Připojení ' + connectionLabel.toLocaleLowerCase('cs')"
+        >
+          <WifiOff v-if="connectionState === 'offline'" class="h-4 w-4 text-destructive" />
+          <Loader2 v-else-if="connectionState === 'syncing'" class="h-4 w-4 animate-spin" />
+          <Wifi v-else class="h-4 w-4 text-success" />
+          <span class="hidden sm:inline">{{ connectionLabel }}</span>
+        </div>
+      </header>
+
+      <main class="min-h-0 flex-1 overflow-hidden">
+        <section
+          v-if="mode === 'map'"
+          data-testid="restaurant-map-view"
+          class="flex h-full min-h-0 flex-col"
+          aria-label="Mapa restaurace"
+        >
+          <div
+            v-if="floors.length"
+            class="flex shrink-0 gap-2 overflow-x-auto border-b border-border bg-background px-3 py-2 sm:px-4"
+            data-testid="restaurant-floor-tabs"
+          >
+            <button
+              v-for="floor in floors"
+              :key="floor.id"
+              type="button"
+              class="h-12 shrink-0 rounded-xl px-4 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              :class="
+                currentFloorId === floor.id
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground'
+              "
+              :aria-pressed="currentFloorId === floor.id"
+              data-pos-target="secondary"
+              @click="currentFloorId = floor.id"
+            >
+              {{ floor.name }}
+            </button>
+          </div>
+
+          <div v-if="!floors.length" class="grid h-full place-items-center p-4">
+            <div class="max-w-md rounded-2xl border border-border bg-card p-8 text-center">
+              <Package class="mx-auto h-10 w-10 text-muted-foreground" />
+              <p class="mt-3 font-semibold">Zatím žádná mapa stolů</p>
+              <p class="mt-1 text-sm text-muted-foreground">Vytvořte ji v sekci Mapa stolů.</p>
+            </div>
+          </div>
+
+          <div
+            v-else-if="tables.length"
+            class="min-h-0 flex-1 overflow-auto p-3 sm:p-4 lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-3 lg:overflow-hidden"
+          >
+            <div
+              data-testid="restaurant-table-list"
+              class="grid auto-rows-fr grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:hidden"
+            >
               <button
+                v-for="table in tables"
+                :key="table.id"
                 type="button"
-                class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
-                :class="
-                  selectedCat === ''
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/70'
-                "
-                @click="selectedCat = ''"
+                class="flex min-h-28 flex-col justify-between rounded-2xl border p-4 text-left shadow-sm transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                :class="tableOperationalMeta(occupancy.get(table.id)).surface"
+                :data-testid="'restaurant-table-list-' + table.id"
+                data-pos-target="primary"
+                @click="selectTable(table)"
               >
-                Vše
-              </button>
-              <button
-                v-for="c in categories"
-                :key="c.id"
-                type="button"
-                class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
-                :class="
-                  selectedCat === c.id
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/70'
-                "
-                @click="selectedCat = c.id"
-              >
-                {{ c.name }}
+                <span class="flex w-full items-start justify-between gap-2">
+                  <span class="font-bold">{{ table.name }}</span>
+                  <span
+                    class="rounded-full px-2 py-1 text-xs font-black"
+                    :class="tableOperationalMeta(occupancy.get(table.id)).badge"
+                  >
+                    {{ tableOperationalMeta(occupancy.get(table.id)).label }}
+                  </span>
+                </span>
+                <span class="text-lg font-black tabular-nums">
+                  {{
+                    occupancy.get(table.id)
+                      ? formatCZK(occupancy.get(table.id)!.total)
+                      : 'Otevřít účet'
+                  }}
+                </span>
               </button>
             </div>
-            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+
+            <div
+              data-testid="restaurant-floor-map"
+              class="relative hidden min-h-0 overflow-auto rounded-2xl border border-border bg-muted/20 lg:block"
+              style="
+                background-image:
+                  linear-gradient(to right, rgba(120, 120, 120, 0.12) 1px, transparent 1px),
+                  linear-gradient(to bottom, rgba(120, 120, 120, 0.12) 1px, transparent 1px);
+                background-size: 24px 24px;
+              "
+            >
+              <div class="relative min-h-[620px] min-w-[760px]">
+                <button
+                  v-for="table in tables"
+                  :key="table.id"
+                  type="button"
+                  class="absolute flex min-h-12 min-w-12 flex-col items-center justify-center border-2 text-center shadow-sm transition-all hover:z-10 hover:scale-[1.03] focus-visible:z-10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/40"
+                  :class="[
+                    table.shape === 'Circle' ? 'rounded-full' : 'rounded-xl',
+                    tableOperationalMeta(occupancy.get(table.id)).surface,
+                    occupancy.get(table.id) ? 'shadow-card' : '',
+                  ]"
+                  :style="{
+                    left: table.x + 'px',
+                    top: table.y + 'px',
+                    width: table.width + 'px',
+                    height: table.height + 'px',
+                    transform: 'rotate(' + table.rotation + 'deg)',
+                  }"
+                  :data-testid="'restaurant-table-map-' + table.id"
+                  data-pos-target="primary"
+                  @click="selectTable(table)"
+                >
+                  <span class="px-1 text-xs font-black leading-none">{{ table.name }}</span>
+                  <span v-if="occupancy.get(table.id)" class="mt-1 text-xs font-bold tabular-nums">
+                    {{ formatCZK(occupancy.get(table.id)!.total) }}
+                  </span>
+                  <span class="mt-1 text-xs font-bold">
+                    {{ tableOperationalMeta(occupancy.get(table.id)).label }}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <aside
+              class="hidden min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-card lg:flex"
+              aria-label="Otevřené účty"
+            >
+              <div class="flex items-center justify-between border-b border-border px-4 py-3">
+                <div>
+                  <h2 class="font-bold">Otevřené účty</h2>
+                  <p class="text-xs text-muted-foreground">Nejstarší nahoře</p>
+                </div>
+                <span class="rounded-full bg-muted px-2.5 py-1 text-xs font-bold tabular-nums">{{
+                  openAccountRows.length
+                }}</span>
+              </div>
+              <div class="min-h-0 flex-1 space-y-2 overflow-y-auto p-2">
+                <button
+                  v-for="row in openAccountRows"
+                  :key="row.order.id"
+                  type="button"
+                  class="flex min-h-16 w-full items-center gap-3 rounded-xl border border-border bg-background p-3 text-left transition-colors hover:border-primary hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  data-pos-target="primary"
+                  @click="selectTable(row.table!)"
+                >
+                  <span
+                    class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-sm font-black text-primary-foreground"
+                    >{{ row.table!.name.slice(0, 2) }}</span
+                  >
+                  <span class="min-w-0 flex-1">
+                    <span class="block truncate font-bold">{{ row.table!.name }}</span>
+                    <span class="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock3 class="h-3.5 w-3.5" /> {{ elapsedMinutes(row.order.openedAt) }} min
+                    </span>
+                  </span>
+                  <span class="font-black tabular-nums">{{ formatCZK(row.order.total) }}</span>
+                </button>
+                <div
+                  v-if="!openAccountRows.length"
+                  class="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground"
+                >
+                  Žádné otevřené účty.
+                </div>
+              </div>
+            </aside>
+          </div>
+
+          <div v-else class="grid h-full place-items-center p-4">
+            <div
+              class="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground"
+            >
+              V této místnosti nejsou stoly.
+            </div>
+          </div>
+        </section>
+
+        <section
+          v-else-if="currentOrder"
+          data-testid="restaurant-order-view"
+          class="relative flex h-full min-h-0 flex-col overflow-hidden bg-muted/20 lg:grid lg:grid-cols-[var(--pos-category)_minmax(22rem,1fr)_var(--pos-order)] xl:grid-cols-[10rem_minmax(28rem,1fr)_var(--pos-order-xl)]"
+          aria-label="Objednávka na stole"
+        >
+          <nav
+            data-testid="restaurant-category-strip"
+            class="flex shrink-0 gap-2 overflow-x-auto border-b border-border bg-card p-2 lg:min-h-0 lg:flex-col lg:overflow-x-hidden lg:overflow-y-auto lg:border-b-0 lg:border-r"
+            aria-label="Kategorie produktů"
+          >
+            <button
+              type="button"
+              class="h-12 shrink-0 rounded-xl px-4 text-left text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:h-14 lg:w-full"
+              :class="
+                selectedCat === ''
+                  ? 'bg-primary text-primary-foreground'
+                  : 'border border-border bg-background hover:bg-muted'
+              "
+              :aria-pressed="selectedCat === ''"
+              data-pos-target="secondary"
+              @click="selectedCat = ''"
+            >
+              Vše
+            </button>
+            <button
+              v-for="category in categories"
+              :key="category.id"
+              type="button"
+              class="h-12 shrink-0 rounded-xl px-4 text-left text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:h-14 lg:w-full"
+              :class="
+                selectedCat === category.id
+                  ? 'bg-primary text-primary-foreground'
+                  : 'border border-border bg-background hover:bg-muted'
+              "
+              :aria-pressed="selectedCat === category.id"
+              data-pos-target="secondary"
+              @click="selectedCat = category.id"
+            >
+              <span class="block max-w-28 truncate">{{ category.name }}</span>
+            </button>
+          </nav>
+
+          <div
+            data-testid="restaurant-product-browser"
+            class="flex min-h-0 flex-1 flex-col overflow-hidden p-2 sm:p-3 lg:p-4"
+          >
+            <div class="relative mb-3 shrink-0">
+              <Search
+                class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                v-model="productQuery"
+                type="search"
+                class="h-12 rounded-xl bg-card pl-12 pr-12 text-base"
+                placeholder="Hledat název, SKU nebo EAN…"
+                aria-label="Hledat produkt"
+                data-testid="restaurant-product-search"
+              />
               <button
-                v-for="p in visibleProducts"
-                :key="p.id"
+                v-if="productQuery"
+                type="button"
+                class="absolute right-0 top-0 grid h-12 w-12 place-items-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="Vymazat hledání"
+                data-pos-target="secondary"
+                @click="productQuery = ''"
+              >
+                <X class="h-5 w-5" />
+              </button>
+            </div>
+
+            <div
+              v-if="products.length === 0"
+              class="grid min-h-0 flex-1 place-items-center rounded-2xl border border-dashed border-border bg-card"
+            >
+              <div class="p-8 text-center text-muted-foreground">
+                <Package class="mx-auto h-10 w-10" />
+                <p class="mt-3 text-sm">Žádné produkty. Přidejte je v sekci Sklad.</p>
+              </div>
+            </div>
+
+            <div
+              v-else-if="visibleProducts.length"
+              data-testid="restaurant-product-grid"
+              class="grid min-h-0 flex-1 auto-rows-[6.5rem] grid-cols-2 gap-2 overflow-y-auto pb-24 sm:grid-cols-3 sm:gap-3 lg:grid-cols-3 lg:pb-0 xl:grid-cols-4 2xl:grid-cols-5"
+            >
+              <button
+                v-for="product in visibleProducts"
+                :key="product.id"
                 type="button"
                 :disabled="busy"
-                class="flex min-h-20 flex-col justify-between rounded-xl border border-border bg-background p-3 text-left transition-colors hover:border-primary hover:bg-primary-soft active:scale-[0.98] disabled:opacity-50"
-                @click="addProduct(p)"
+                class="flex min-h-[6.5rem] flex-col justify-between rounded-2xl border border-border bg-card p-3 text-left shadow-sm transition-all hover:border-primary hover:bg-primary-soft active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                :data-testid="'restaurant-product-' + product.id"
+                data-pos-target="primary"
+                @click="addProduct(product)"
               >
-                <span class="text-sm font-semibold leading-tight">{{ p.name }}</span>
-                <span class="mt-1 text-sm font-bold text-primary tabular-nums">{{
-                  formatCZK(p.salePrice)
+                <span class="line-clamp-2 text-sm font-bold leading-tight">{{ product.name }}</span>
+                <span class="text-base font-black text-primary tabular-nums">{{
+                  formatCZK(product.salePrice)
                 }}</span>
               </button>
             </div>
-          </template>
-        </div>
 
-        <!-- Účet -->
-        <div
-          class="flex h-fit flex-col rounded-2xl border border-border bg-card lg:sticky lg:top-4"
-        >
-          <div class="border-b border-border p-4 font-semibold">Účet</div>
-
-          <div
-            v-if="!currentOrder.items.length"
-            class="p-8 text-center text-sm text-muted-foreground"
-          >
-            Klepnutím na produkt ho přidáte.
-          </div>
-          <div v-else class="max-h-[40vh] divide-y divide-border overflow-y-auto">
-            <div v-for="it in currentOrder.items" :key="it.id" class="flex items-center gap-2 p-3">
-              <div class="min-w-0 flex-1">
-                <div class="truncate text-sm font-medium">
-                  {{ it.name }}<span v-if="it.variantName"> · {{ it.variantName }}</span>
-                </div>
-                <div class="text-xs text-muted-foreground tabular-nums">
-                  {{ formatCZK(it.unitPrice) }} × {{ it.quantity }}
-                  <span
-                    v-if="it.kitchenStatus !== 'New'"
-                    class="ml-1 rounded bg-muted px-1 py-0.5 text-[10px] text-foreground"
-                    >v kuchyni</span
-                  >
-                </div>
-                <div v-if="it.modifiers?.length || it.course || it.note" class="mt-1 space-y-0.5">
-                  <div v-if="it.modifiers?.length" class="space-y-0.5">
-                    <div
-                      v-for="(modifier, index) in it.modifiers"
-                      :key="`${it.id}-${modifier.groupName}-${modifier.name}-${index}`"
-                      class="text-xs text-muted-foreground"
-                    >
-                      ↳ {{ modifier.groupName }}: {{ modifier.name }}
-                      <span v-if="modifier.priceDelta" class="tabular-nums">
-                        ({{ modifier.priceDelta > 0 ? '+' : ''
-                        }}{{ formatCZK(modifier.priceDelta) }})
-                      </span>
-                    </div>
-                  </div>
-                  <span
-                    v-if="it.course"
-                    class="inline-block rounded bg-primary-soft px-1.5 py-0.5 text-[10px] font-medium text-primary"
-                    >{{ it.course }}</span
-                  >
-                  <div v-if="it.note" class="text-xs text-muted-foreground">↳ {{ it.note }}</div>
-                </div>
-              </div>
-              <div v-if="it.kitchenStatus === 'New'" class="flex items-center gap-1">
+            <div
+              v-else
+              class="grid min-h-0 flex-1 place-items-center rounded-2xl border border-dashed border-border bg-card"
+              data-testid="restaurant-products-empty"
+            >
+              <div class="max-w-xs p-8 text-center">
+                <Search class="mx-auto h-9 w-9 text-muted-foreground" />
+                <p class="mt-3 font-bold">Nic jsme nenašli</p>
+                <p class="mt-1 text-sm text-muted-foreground">
+                  Zkuste jiné slovo nebo všechny kategorie.
+                </p>
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  class="h-8 w-8"
-                  title="Poznámka / chod"
-                  :disabled="busy"
-                  @click="openItemMeta(it)"
-                >
-                  <StickyNote class="h-3.5 w-3.5" />
-                </Button>
-                <Button
+                  type="button"
                   variant="outline"
-                  size="icon"
-                  class="h-8 w-8"
-                  :disabled="busy"
-                  aria-label="Ubrat kus"
-                  @click="changeQty(it, it.quantity - 1)"
+                  class="mt-4 h-12"
+                  data-pos-target="secondary"
+                  @click="resetProductFilters"
                 >
-                  <Minus class="h-3.5 w-3.5" />
+                  Zrušit filtry
                 </Button>
-                <span class="w-5 text-center tabular-nums">{{ it.quantity }}</span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  class="h-8 w-8"
-                  :disabled="busy"
-                  aria-label="Přidat kus"
-                  @click="changeQty(it, it.quantity + 1)"
-                >
-                  <Plus class="h-3.5 w-3.5" />
-                </Button>
-              </div>
-              <div class="w-16 text-right text-sm font-semibold tabular-nums">
-                {{ formatCZK(it.lineTotal) }}
               </div>
             </div>
           </div>
 
-          <div class="space-y-2 border-t border-border p-4">
-            <div v-if="priceLevels.length" class="flex items-center justify-between gap-2">
-              <span class="text-sm text-muted-foreground">Cenová hladina</span>
+          <div
+            v-if="mobileAccountOpen"
+            class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
+            aria-hidden="true"
+            @click="mobileAccountOpen = false"
+          />
+
+          <aside
+            data-testid="restaurant-order-panel"
+            class="min-h-0 flex-col overflow-hidden border-l border-border bg-card shadow-2xl lg:static lg:z-auto lg:flex lg:shadow-none"
+            :class="
+              mobileAccountOpen
+                ? 'fixed inset-x-2 bottom-24 top-20 z-50 flex rounded-2xl border border-border'
+                : 'hidden'
+            "
+            aria-label="Účet"
+          >
+            <div class="flex h-14 shrink-0 items-center gap-3 border-b border-border px-3">
+              <div class="min-w-0 flex-1">
+                <h2 class="truncate font-black">Účet · {{ selectedTable?.name }}</h2>
+                <p class="text-xs text-muted-foreground">
+                  {{ currentItemCount }} položek · {{ currentOrderElapsed }} min
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                class="h-12 w-12 p-0 lg:hidden"
+                aria-label="Zavřít účet"
+                data-pos-target="secondary"
+                @click="mobileAccountOpen = false"
+              >
+                <X class="h-5 w-5" />
+              </Button>
+            </div>
+
+            <div
+              v-if="!currentOrder.items.length"
+              class="grid min-h-0 flex-1 place-items-center p-8 text-center text-sm text-muted-foreground"
+            >
+              Klepnutím na produkt ho přidáte.
+            </div>
+
+            <div
+              v-else
+              data-testid="restaurant-order-items"
+              class="min-h-0 flex-1 divide-y divide-border overflow-y-auto overscroll-contain"
+            >
+              <div
+                v-for="item in currentOrder.items"
+                :key="item.id"
+                class="p-3"
+                :data-testid="'restaurant-order-item-' + item.id"
+              >
+                <div class="flex items-start gap-2">
+                  <div class="min-w-0 flex-1">
+                    <div class="text-sm font-bold leading-tight">
+                      {{ item.name }}<span v-if="item.variantName"> · {{ item.variantName }}</span>
+                    </div>
+                    <div class="mt-1 text-xs text-muted-foreground tabular-nums">
+                      {{ formatCZK(item.unitPrice) }} × {{ item.quantity }}
+                      <span
+                        v-if="item.kitchenStatus !== 'New'"
+                        class="ml-1 rounded-md bg-muted px-1.5 py-0.5 font-semibold text-foreground"
+                        >v kuchyni</span
+                      >
+                    </div>
+                  </div>
+                  <div class="shrink-0 text-sm font-black tabular-nums">
+                    {{ formatCZK(item.lineTotal) }}
+                  </div>
+                </div>
+
+                <div
+                  v-if="item.modifiers?.length || item.course || item.note"
+                  class="mt-1.5 space-y-1"
+                >
+                  <div
+                    v-for="(modifier, index) in item.modifiers ?? []"
+                    :key="item.id + '-' + modifier.groupName + '-' + modifier.name + '-' + index"
+                    class="text-xs text-muted-foreground"
+                  >
+                    ↳ {{ modifier.groupName }}: {{ modifier.name }}
+                    <span v-if="modifier.priceDelta" class="tabular-nums"
+                      >({{ modifier.priceDelta > 0 ? '+' : ''
+                      }}{{ formatCZK(modifier.priceDelta) }})</span
+                    >
+                  </div>
+                  <span
+                    v-if="item.course"
+                    class="inline-block rounded-md bg-primary-soft px-1.5 py-0.5 text-[10px] font-bold text-primary"
+                    >{{ item.course }}</span
+                  >
+                  <div v-if="item.note" class="text-xs text-muted-foreground">
+                    ↳ {{ item.note }}
+                  </div>
+                </div>
+
+                <div
+                  v-if="item.kitchenStatus === 'New'"
+                  class="mt-2 flex items-center justify-end gap-1.5"
+                >
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    class="h-12 w-12"
+                    :disabled="busy"
+                    :aria-label="'Upravit poznámku a chod položky ' + item.name"
+                    data-pos-target="secondary"
+                    @click="openItemMeta(item)"
+                  >
+                    <StickyNote class="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    class="h-12 w-12"
+                    :disabled="busy"
+                    :aria-label="'Ubrat kus položky ' + item.name"
+                    data-pos-target="secondary"
+                    @click="changeQty(item, item.quantity - 1)"
+                  >
+                    <Minus class="h-4 w-4" />
+                  </Button>
+                  <span class="w-8 text-center font-black tabular-nums">{{ item.quantity }}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    class="h-12 w-12"
+                    :disabled="busy"
+                    :aria-label="'Přidat kus položky ' + item.name"
+                    data-pos-target="secondary"
+                    @click="changeQty(item, item.quantity + 1)"
+                  >
+                    <Plus class="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div class="shrink-0 border-t border-border bg-card p-3">
+              <div v-if="pricePreviewLoading" class="mb-2 text-xs text-muted-foreground">
+                Ověřuji cenu na serveru…
+              </div>
+              <div v-if="totals?.discountAmount" class="mb-1 flex justify-between text-sm">
+                <span class="text-muted-foreground">Sleva</span>
+                <span class="font-bold text-primary tabular-nums"
+                  >−{{ formatCZK(totals.discountAmount) }}</span
+                >
+              </div>
+              <div v-if="promoDiscount" class="mb-1 flex justify-between text-sm">
+                <span class="text-muted-foreground">Akce</span>
+                <span class="font-bold text-primary tabular-nums"
+                  >−{{ formatCZK(promoDiscount) }}</span
+                >
+              </div>
+              <div class="mb-3 flex items-end justify-between gap-3">
+                <span class="text-sm font-semibold text-muted-foreground">Celkem</span>
+                <span
+                  data-testid="restaurant-total-main"
+                  class="text-2xl font-black tabular-nums"
+                  >{{ formatCZK(checkoutTotal) }}</span
+                >
+              </div>
+
+              <div class="mb-2 grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  class="h-12"
+                  data-pos-target="secondary"
+                  @click="accountAdjustmentsOpen = true"
+                >
+                  <SlidersHorizontal class="h-4 w-4" /> Úpravy
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  class="h-12"
+                  data-pos-target="secondary"
+                  @click="moreActionsOpen = true"
+                >
+                  <MoreHorizontal class="h-5 w-5" /> Další
+                </Button>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  class="h-14"
+                  :disabled="busy || !hasNewItems"
+                  data-pos-target="primary"
+                  @click="sendToKitchen"
+                >
+                  <ChefHat class="h-5 w-5" /> Odeslat
+                </Button>
+                <Button
+                  type="button"
+                  variant="coral"
+                  class="h-14"
+                  :disabled="busy || pricePreviewLoading || !currentOrder.items.length"
+                  data-pos-target="primary"
+                  @click="openPayment()"
+                >
+                  <Banknote class="h-5 w-5" /> Zaplatit
+                </Button>
+              </div>
+            </div>
+          </aside>
+
+          <div
+            data-testid="restaurant-mobile-actions"
+            class="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 px-3 pt-2 shadow-2xl backdrop-blur lg:hidden"
+            style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom))"
+            role="region"
+            aria-label="Akce účtu"
+          >
+            <div class="mx-auto flex max-w-3xl items-center gap-2">
+              <button
+                type="button"
+                class="min-w-0 flex-1 rounded-xl px-2 py-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                data-pos-target="secondary"
+                @click="mobileAccountOpen = true"
+              >
+                <span class="block truncate text-xs font-semibold text-muted-foreground"
+                  >Účet · {{ selectedTable?.name }}</span
+                >
+                <span
+                  data-testid="restaurant-total-mobile"
+                  class="block truncate text-lg font-black tabular-nums"
+                  >{{ formatCZK(checkoutTotal) }}</span
+                >
+              </button>
+              <Button
+                v-if="hasNewItems"
+                type="button"
+                variant="outline"
+                class="h-14 shrink-0"
+                :disabled="busy"
+                aria-label="Odeslat"
+                data-pos-target="primary"
+                @click="sendToKitchen"
+              >
+                <ChefHat class="h-5 w-5" /><span class="hidden min-[430px]:inline">Odeslat</span>
+              </Button>
+              <Button
+                type="button"
+                variant="coral"
+                class="h-14 shrink-0 px-5"
+                :disabled="busy || pricePreviewLoading || !currentOrder.items.length"
+                data-pos-target="primary"
+                @click="openPayment()"
+              >
+                <Banknote class="h-5 w-5" /> Zaplatit
+              </Button>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <Sheet v-model:open="accountAdjustmentsOpen">
+        <SheetContent side="right" class="w-full overflow-y-auto sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>Úpravy účtu</SheetTitle>
+            <SheetDescription>Cenová hladina, zákazník, sleva a spropitné.</SheetDescription>
+          </SheetHeader>
+          <div class="space-y-5 px-4 pb-8">
+            <div v-if="priceLevels.length" class="space-y-2">
+              <Label>Cenová hladina</Label>
               <Select v-model="selectedPriceLevelId" :disabled="busy">
-                <SelectTrigger class="h-8 w-44">
-                  <SelectValue placeholder="Běžná cena" />
-                </SelectTrigger>
+                <SelectTrigger class="h-12 w-full"
+                  ><SelectValue placeholder="Běžná cena"
+                /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem :value="STANDARD_PRICE_LEVEL">Běžná cena</SelectItem>
-                  <SelectItem v-for="level in priceLevels" :key="level.id" :value="level.id">
-                    {{ level.name }} ({{ level.adjustmentPercent }} %)
-                  </SelectItem>
+                  <SelectItem class="min-h-12 px-3 text-base" :value="STANDARD_PRICE_LEVEL"
+                    >Běžná cena</SelectItem
+                  >
+                  <SelectItem
+                    v-for="level in priceLevels"
+                    :key="level.id"
+                    class="min-h-12 px-3 text-base"
+                    :value="level.id"
+                    >{{ level.name }} ({{ level.adjustmentPercent }} %)</SelectItem
+                  >
                 </SelectContent>
               </Select>
             </div>
+
             <div v-if="loyaltyEnabled && loyaltyCustomers.length" class="space-y-2">
-              <div class="flex items-center justify-between gap-2">
-                <span class="inline-flex items-center gap-1 text-sm text-muted-foreground">
-                  <UserRound class="h-3.5 w-3.5" /> Zákazník
-                </span>
-                <Select v-model="selectedCustomerId" :disabled="busy">
-                  <SelectTrigger class="h-8 w-44">
-                    <SelectValue placeholder="Bez zákazníka" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem :value="NO_CUSTOMER">Bez zákazníka</SelectItem>
-                    <SelectItem
-                      v-for="customer in loyaltyCustomers"
-                      :key="customer.id"
-                      :value="customer.id"
-                    >
-                      {{ customer.name }} · {{ customer.loyaltyPoints }} b
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div
-                v-if="selectedCustomer"
-                class="rounded-lg border border-border bg-muted/30 p-2 text-xs"
+              <Label class="inline-flex items-center gap-2"
+                ><UserRound class="h-4 w-4" /> Zákazník</Label
               >
-                <div class="flex items-center justify-between gap-2">
-                  <span class="text-muted-foreground">Body</span>
-                  <span class="font-medium tabular-nums">{{ selectedCustomer.loyaltyPoints }}</span>
+              <Select v-model="selectedCustomerId" :disabled="busy">
+                <SelectTrigger class="h-12 w-full"
+                  ><SelectValue placeholder="Bez zákazníka"
+                /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem class="min-h-12 px-3 text-base" :value="NO_CUSTOMER"
+                    >Bez zákazníka</SelectItem
+                  >
+                  <SelectItem
+                    v-for="customer in loyaltyCustomers"
+                    :key="customer.id"
+                    class="min-h-12 px-3 text-base"
+                    :value="customer.id"
+                  >
+                    {{ customer.name }} · {{ customer.loyaltyPoints }} b
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              <div v-if="selectedCustomer" class="rounded-xl border border-border bg-muted/30 p-3">
+                <div class="flex items-center justify-between text-sm">
+                  <span class="text-muted-foreground">Dostupné body</span>
+                  <span class="font-bold tabular-nums">{{ selectedCustomer.loyaltyPoints }}</span>
                 </div>
-                <div class="mt-2 flex items-center justify-between gap-2">
-                  <span class="inline-flex items-center gap-1 text-muted-foreground">
-                    <Gift class="h-3.5 w-3.5" /> Uplatnit
-                  </span>
-                  <div class="flex items-center gap-1">
-                    <Input
-                      v-model.number="redeemPoints"
-                      type="number"
-                      min="0"
-                      :max="maxRedeemPoints"
-                      class="h-7 w-20 px-1 text-right text-xs"
-                      :disabled="busy || maxRedeemPoints === 0"
-                      aria-label="Uplatnit věrnostní body"
-                    />
-                    <span class="text-muted-foreground">b</span>
-                  </div>
+                <div class="mt-3 flex items-center gap-2">
+                  <Label for="restaurant-redeem" class="min-w-0 flex-1">Uplatnit body</Label>
+                  <Input
+                    id="restaurant-redeem"
+                    v-model.number="redeemPoints"
+                    type="number"
+                    min="0"
+                    :max="maxRedeemPoints"
+                    class="h-12 w-28 text-right"
+                    :disabled="busy || maxRedeemPoints === 0"
+                  />
                 </div>
-                <div class="mt-1 flex items-center justify-between gap-2 text-muted-foreground">
+                <div class="mt-2 flex justify-between text-xs text-muted-foreground">
                   <span>Max {{ maxRedeemPoints }} b</span>
-                  <span v-if="redeemDiscount" class="text-primary tabular-nums"
+                  <span v-if="redeemDiscount" class="font-bold text-primary"
                     >−{{ formatCZK(redeemDiscount) }}</span
                   >
                 </div>
               </div>
             </div>
-            <div class="flex items-center justify-between gap-2">
-              <span class="text-sm text-muted-foreground">Sleva na účet</span>
-              <div class="flex items-center">
+
+            <div class="space-y-2">
+              <Label for="restaurant-discount">Sleva na účet v procentech</Label>
+              <div class="relative">
                 <Input
+                  id="restaurant-discount"
                   v-model.number="accountDiscountPercent"
                   type="number"
                   min="0"
                   max="100"
-                  class="h-8 w-16 px-1 text-center"
+                  class="h-12 pr-10 text-right text-base"
                   :disabled="busy"
-                  aria-label="Sleva na účet v procentech"
                 />
-                <span class="ml-1 text-xs text-muted-foreground">%</span>
+                <span
+                  class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
+                  >%</span
+                >
               </div>
             </div>
-            <div class="flex items-center justify-between gap-2">
-              <span class="text-sm text-muted-foreground">Spropitné</span>
-              <div class="flex items-center gap-1">
+
+            <div class="space-y-2">
+              <Label for="restaurant-tip">Spropitné</Label>
+              <div class="relative">
                 <Input
+                  id="restaurant-tip"
                   v-model.number="tipAmount"
                   type="number"
                   min="0"
-                  class="h-8 w-20 px-1 text-right"
+                  class="h-12 pr-12 text-right text-base"
                   :disabled="busy"
-                  aria-label="Spropitné v Kč"
                 />
-                <span class="text-xs text-muted-foreground">Kč</span>
+                <span
+                  class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
+                  >Kč</span
+                >
+              </div>
+              <div class="grid grid-cols-4 gap-2">
+                <Button
+                  v-for="percent in TIP_PRESETS"
+                  :key="percent"
+                  type="button"
+                  variant="outline"
+                  class="h-12"
+                  :disabled="busy"
+                  @click="setTipPercent(percent)"
+                >
+                  {{ percent }} %
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  class="col-span-4 h-12"
+                  :disabled="busy"
+                  @click="tipAmount = 0"
+                  >Bez spropitného</Button
+                >
               </div>
             </div>
-            <div class="flex flex-wrap gap-1.5">
-              <Button
-                v-for="pct in TIP_PRESETS"
-                :key="pct"
-                type="button"
-                variant="outline"
-                size="sm"
-                class="h-7 px-2 text-xs"
-                :disabled="busy"
-                @click="setTipPercent(pct)"
-              >
-                {{ pct }} %
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                class="h-7 px-2 text-xs text-muted-foreground"
-                :disabled="busy"
-                @click="tipAmount = 0"
-              >
-                Bez spropitného
-              </Button>
-            </div>
-          </div>
 
-          <div class="border-t border-border p-4">
             <div
               v-if="
-                pricePreviewLoading ||
-                pricePreviewError ||
                 selectedPriceLevel ||
                 priceLevelAdjustment ||
-                promoDiscount
+                promoDiscount ||
+                redeemDiscount ||
+                pricePreviewError
               "
-              class="mb-3 space-y-1 rounded-lg border border-border bg-muted/30 p-2 text-xs"
+              class="space-y-2 rounded-xl border border-border bg-muted/30 p-3 text-sm"
             >
-              <div v-if="pricePreviewLoading" class="text-muted-foreground">
-                Počítám cenu na serveru…
-              </div>
-              <div v-if="selectedPriceLevel" class="flex items-center justify-between gap-2">
+              <div v-if="selectedPriceLevel" class="flex justify-between gap-2">
                 <span class="text-muted-foreground">{{ selectedPriceLevel.name }}</span>
-                <span
-                  class="tabular-nums"
-                  :class="priceLevelAdjustment >= 0 ? 'text-primary' : 'text-destructive'"
-                >
-                  {{ formatPriceLevelImpact(priceLevelAdjustment) }}
-                </span>
+                <span class="font-bold tabular-nums">{{
+                  formatPriceLevelImpact(priceLevelAdjustment)
+                }}</span>
               </div>
-              <div v-if="promoDiscount" class="flex items-center justify-between gap-2">
+              <div v-if="promoDiscount" class="flex justify-between gap-2">
                 <span class="text-muted-foreground">Akce</span>
-                <span class="tabular-nums text-primary">−{{ formatCZK(promoDiscount) }}</span>
+                <span class="font-bold text-primary tabular-nums"
+                  >−{{ formatCZK(promoDiscount) }}</span
+                >
               </div>
-              <div v-if="redeemDiscount" class="flex items-center justify-between gap-2">
+              <div v-if="redeemDiscount" class="flex justify-between gap-2">
                 <span class="text-muted-foreground">Body</span>
-                <span class="tabular-nums text-primary">−{{ formatCZK(redeemDiscount) }}</span>
+                <span class="font-bold text-primary tabular-nums"
+                  >−{{ formatCZK(redeemDiscount) }}</span
+                >
               </div>
-              <div v-if="earnedPointsPreview" class="flex items-center justify-between gap-2">
-                <span class="text-muted-foreground">Získá bodů</span>
-                <span class="tabular-nums">+{{ earnedPointsPreview }}</span>
-              </div>
-              <div v-if="pricePreviewError" class="text-muted-foreground">
-                Náhled ceny není dostupný, finální cenu dopočítá server při platbě.
-              </div>
+              <p v-if="pricePreviewError" class="text-xs text-muted-foreground">
+                Náhled není dostupný; finální cenu ověří server před platbou.
+              </p>
             </div>
+
             <div
-              v-if="totals?.discountAmount"
-              class="mb-1 flex items-center justify-between text-sm"
+              class="flex items-center justify-between rounded-xl bg-primary p-4 text-primary-foreground"
             >
-              <span class="text-muted-foreground">Sleva</span>
-              <span class="tabular-nums text-primary">−{{ formatCZK(totals.discountAmount) }}</span>
+              <span class="font-semibold">Celkem</span>
+              <span class="text-2xl font-black tabular-nums">{{ formatCZK(checkoutTotal) }}</span>
             </div>
-            <div class="mb-3 flex items-center justify-between">
-              <span class="text-sm text-muted-foreground">Celkem</span>
-              <span class="text-2xl font-bold tabular-nums">{{ formatCZK(checkoutTotal) }}</span>
-            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
 
+      <Sheet v-model:open="moreActionsOpen">
+        <SheetContent side="right" class="w-full sm:max-w-sm">
+          <SheetHeader>
+            <SheetTitle>Další akce</SheetTitle>
+            <SheetDescription>Správa otevřeného účtu {{ selectedTable?.name }}.</SheetDescription>
+          </SheetHeader>
+          <div class="grid gap-2 px-4">
             <Button
-              v-if="hasNewItems"
+              v-if="currentOrder?.items.length"
+              type="button"
               variant="outline"
-              class="mb-2 w-full"
+              class="h-14 justify-start"
+              @click="openSplitActions"
+            >
+              <Users class="h-5 w-5" /> Rozdělit účet
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              class="h-14 justify-start"
               :disabled="busy"
-              @click="sendToKitchen"
+              @click="openMoveDialog"
             >
-              <ChefHat class="h-4 w-4" /> Odeslat objednávku
-            </Button>
-
-            <Button
-              variant="coral"
-              size="lg"
-              class="w-full"
-              :disabled="busy || pricePreviewLoading || !currentOrder.items.length"
-              @click="openPayment()"
-            >
-              <Banknote class="h-4 w-4" /> Zaplatit
+              <ArrowLeftRight class="h-5 w-5" /> Přesunout na jiný stůl
             </Button>
             <Button
-              v-if="currentOrder.items.length"
+              type="button"
+              variant="outline"
+              class="h-14 justify-start"
+              :disabled="busy"
+              @click="openMergeDialog"
+            >
+              <Combine class="h-5 w-5" /> Sloučit s jiným účtem
+            </Button>
+            <div class="my-2 border-t border-border" />
+            <Button
+              type="button"
               variant="ghost"
-              class="mt-2 w-full"
+              class="h-14 justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
               :disabled="busy"
-              @click="openSplitDialog"
+              @click="openCancelConfirmation"
             >
-              <Users class="h-4 w-4" /> Rozdělit účet
-            </Button>
-            <Button
-              v-if="freeTables.length"
-              variant="ghost"
-              class="mt-2 w-full"
-              :disabled="busy"
-              @click="moveDialogOpen = true"
-            >
-              <ArrowLeftRight class="h-4 w-4" /> Přesunout na jiný stůl
-            </Button>
-            <Button
-              v-if="otherOccupiedTables.length"
-              variant="ghost"
-              class="mt-2 w-full"
-              :disabled="busy"
-              @click="mergeDialogOpen = true"
-            >
-              <Combine class="h-4 w-4" /> Sloučit s jiným účtem
-            </Button>
-            <Button
-              variant="ghost"
-              class="mt-2 w-full text-destructive"
-              :disabled="busy"
-              @click="cancelOrder"
-            >
-              <Ban class="h-4 w-4" /> Zrušit účet
+              <Ban class="h-5 w-5" /> Zrušit účet
             </Button>
           </div>
-        </div>
-      </div>
-
-      <div
-        class="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-4 py-3 shadow-2xl backdrop-blur lg:hidden"
-      >
-        <div class="mx-auto flex max-w-3xl items-center gap-3">
-          <div class="min-w-0 flex-1">
-            <div class="truncate text-sm font-semibold">{{ selectedTable?.name }}</div>
-            <div class="text-xs text-muted-foreground">
-              {{ currentItemCount }} {{ currentItemCount === 1 ? 'položka' : 'položek' }} ·
-              {{ formatCZK(totals?.total ?? currentOrder.total) }}
-            </div>
-          </div>
-          <Button
-            v-if="hasNewItems"
-            variant="outline"
-            size="sm"
-            class="shrink-0"
-            :disabled="busy"
-            @click="sendToKitchen"
-          >
-            <ChefHat class="h-4 w-4" /> Odeslat
-          </Button>
-          <Button
-            variant="coral"
-            size="sm"
-            class="shrink-0"
-            :disabled="busy || !currentOrder.items.length"
-            @click="openPayment()"
-          >
-            <Banknote class="h-4 w-4" /> Zaplatit
-          </Button>
-        </div>
-      </div>
+        </SheetContent>
+      </Sheet>
     </template>
 
     <!-- Poznámka a chod položky (jen dokud není odeslaná do kuchyně) -->
@@ -1798,6 +2348,12 @@ const currentItemCount = computed(() =>
             {{ t.name }}
           </Button>
         </div>
+        <p
+          v-if="!freeTables.length"
+          class="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground"
+        >
+          Na tomto patře teď není žádný volný stůl.
+        </p>
         <DialogFooter>
           <Button type="button" variant="ghost" @click="moveDialogOpen = false">Zrušit</Button>
         </DialogFooter>
@@ -1810,20 +2366,18 @@ const currentItemCount = computed(() =>
         <DialogHeader>
           <DialogTitle>Sloučit účet sem</DialogTitle>
           <DialogDescription>
-            Vyberte stůl, jehož účet se sloučí na „{{ selectedTable?.name }}". Položky se přesunou
-            na tento účet a druhý stůl se uvolní. Rozdělení účtu (split) je potřeba po sloučení
-            nastavit znovu.
+            Nejdřív vyberte zdrojový stůl. Sloučení provedeme až po dalším potvrzení.
           </DialogDescription>
         </DialogHeader>
-        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <div v-if="!mergeCandidateTable" class="grid grid-cols-2 gap-2 sm:grid-cols-3">
           <Button
             v-for="t in otherOccupiedTables"
             :key="t.id"
             type="button"
             variant="outline"
-            class="h-auto flex-col py-2"
+            class="h-16 flex-col py-2"
             :disabled="busy"
-            @click="mergeOrder(t.id)"
+            @click="mergeCandidateTable = t"
           >
             <span class="font-semibold">{{ t.name }}</span>
             <span class="text-xs text-muted-foreground tabular-nums">{{
@@ -1831,8 +2385,99 @@ const currentItemCount = computed(() =>
             }}</span>
           </Button>
         </div>
+        <p
+          v-if="!mergeCandidateTable && !otherOccupiedTables.length"
+          class="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground"
+        >
+          Není tu žádný další otevřený účet ke sloučení.
+        </p>
+        <div v-if="mergeCandidateTable" class="space-y-3">
+          <div class="rounded-xl border border-border bg-muted/30 p-4 text-center">
+            <div class="flex items-center justify-center gap-3 text-lg font-black">
+              <span>{{ mergeCandidateTable.name }}</span>
+              <ArrowLeftRight class="h-5 w-5 text-muted-foreground" />
+              <span>{{ selectedTable?.name }}</span>
+            </div>
+            <p class="mt-2 text-sm text-muted-foreground">
+              Zdrojový účet {{ formatCZK(occupancy.get(mergeCandidateTable.id)?.total ?? 0) }} se
+              přesune na cílový účet {{ formatCZK(checkoutTotal) }}. Zdrojový stůl se uvolní.
+            </p>
+          </div>
+          <p class="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+            Rozdělení účtu se po sloučení resetuje a je potřeba ho nastavit znovu.
+          </p>
+        </div>
         <DialogFooter>
-          <Button type="button" variant="ghost" @click="mergeDialogOpen = false">Zrušit</Button>
+          <Button
+            v-if="mergeCandidateTable"
+            type="button"
+            variant="ghost"
+            class="h-12"
+            :disabled="busy"
+            @click="mergeCandidateTable = null"
+          >
+            Zpět
+          </Button>
+          <Button
+            v-else
+            type="button"
+            variant="ghost"
+            class="h-12"
+            @click="mergeDialogOpen = false"
+          >
+            Zrušit
+          </Button>
+          <Button
+            v-if="mergeCandidateTable"
+            type="button"
+            variant="coral"
+            class="h-12"
+            :disabled="busy"
+            @click="mergeOrder(mergeCandidateTable.id)"
+          >
+            <Loader2 v-if="busy" class="h-4 w-4 animate-spin" />
+            Sloučit účty
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog v-model:open="cancelDialogOpen">
+      <DialogContent class="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Zrušit účet {{ selectedTable?.name }}?</DialogTitle>
+          <DialogDescription>
+            Účet obsahuje {{ currentItemCount }} položek v hodnotě {{ formatCZK(checkoutTotal) }}.
+            Tuto akci nelze vrátit zpět.
+          </DialogDescription>
+        </DialogHeader>
+        <div
+          data-testid="restaurant-cancel-dialog"
+          class="rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
+        >
+          Účet se uzavře jako zrušený a stůl se uvolní.
+        </div>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="ghost"
+            class="h-12"
+            :disabled="busy"
+            @click="cancelDialogOpen = false"
+          >
+            Ponechat účet
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            class="h-12"
+            :disabled="busy"
+            data-testid="restaurant-confirm-cancel"
+            @click="cancelOrder"
+          >
+            <Loader2 v-if="busy" class="h-4 w-4 animate-spin" />
+            Zrušit účet
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -1862,8 +2507,8 @@ const currentItemCount = computed(() =>
               type="button"
               variant="ghost"
               size="icon"
-              class="h-6 w-6"
-              title="Zaplatit tuto část"
+              class="h-12 w-12"
+              aria-label="Zaplatit tuto část"
               :disabled="busy || splitPaymentItems(g).length === 0"
               @click="openPayment(g)"
             >
@@ -1873,8 +2518,8 @@ const currentItemCount = computed(() =>
               type="button"
               variant="ghost"
               size="icon"
-              class="h-6 w-6"
-              title="Odebrat osobu"
+              class="h-12 w-12"
+              aria-label="Odebrat osobu"
               @click="removeSplitGroup(g.id)"
             >
               <Trash2 class="h-3 w-3 text-destructive" />
@@ -1906,7 +2551,7 @@ const currentItemCount = computed(() =>
                   v-for="g in splitGroups"
                   :key="g.id"
                   type="button"
-                  class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors"
+                  class="inline-flex min-h-11 items-center gap-1 rounded-full border px-3 py-2 text-xs font-medium transition-colors"
                   :class="
                     isAssigned(g, it.id)
                       ? 'border-primary bg-primary text-primary-foreground'

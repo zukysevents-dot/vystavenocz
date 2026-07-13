@@ -70,23 +70,33 @@ function confirmCard() {
 
 <template>
   <Dialog :open="open" @update:open="(v) => emit('update:open', v)">
-    <DialogContent class="max-w-sm">
+    <DialogContent class="max-w-md">
       <DialogHeader>
         <DialogTitle>Platba{{ label ? ` — ${label}` : '' }}</DialogTitle>
         <DialogDescription>Vyberte způsob platby a dokončete účet.</DialogDescription>
       </DialogHeader>
 
-      <div class="rounded-xl bg-muted p-4 text-center">
+      <div class="rounded-xl bg-muted p-5 text-center" data-testid="payment-total">
         <div class="text-sm text-muted-foreground">K úhradě</div>
-        <div class="text-3xl font-bold tabular-nums">{{ formatCZK(total) }}</div>
+        <div class="text-4xl font-bold tabular-nums">{{ formatCZK(total) }}</div>
       </div>
 
       <!-- Krok 1: způsob platby -->
       <div v-if="step === 'method'" class="grid grid-cols-2 gap-2">
-        <Button variant="coral" size="lg" class="h-16 flex-col gap-1" @click="step = 'cash'">
+        <Button
+          variant="coral"
+          size="lg"
+          class="h-20 flex-col gap-1 text-base"
+          @click="step = 'cash'"
+        >
           <Banknote class="h-5 w-5" /> Hotově
         </Button>
-        <Button variant="outline" size="lg" class="h-16 flex-col gap-1" @click="step = 'card'">
+        <Button
+          variant="outline"
+          size="lg"
+          class="h-20 flex-col gap-1 text-base"
+          @click="step = 'card'"
+        >
           <CreditCard class="h-5 w-5" /> Kartou
         </Button>
       </div>
@@ -99,8 +109,7 @@ function confirmCard() {
             :key="amount"
             type="button"
             variant="outline"
-            size="sm"
-            :class="received === amount ? 'border-primary bg-primary-soft' : ''"
+            :class="['h-12', received === amount ? 'border-primary bg-primary-soft' : '']"
             @click="pickAmount(amount)"
           >
             {{ formatCZK(amount) }}
@@ -113,7 +122,7 @@ function confirmCard() {
             type="number"
             min="0"
             inputmode="decimal"
-            class="h-10 flex-1 text-right text-base"
+            class="h-12 flex-1 text-right text-lg"
             aria-label="Přijatá hotovost v Kč"
             @update:model-value="
               (v) => {
@@ -137,10 +146,10 @@ function confirmCard() {
           </span>
         </div>
         <div class="grid grid-cols-[auto_1fr] gap-2">
-          <Button variant="ghost" :disabled="busy" @click="step = 'method'">
+          <Button variant="ghost" class="h-12" :disabled="busy" @click="step = 'method'">
             <ArrowLeft class="h-4 w-4" /> Zpět
           </Button>
-          <Button variant="coral" :disabled="busy || !cashReady" @click="confirmCash">
+          <Button variant="coral" class="h-12" :disabled="busy || !cashReady" @click="confirmCash">
             <Loader2 v-if="busy" class="h-4 w-4 animate-spin" />
             <Check v-else class="h-4 w-4" /> Zaplatit hotově
           </Button>
@@ -156,10 +165,10 @@ function confirmCard() {
           </p>
         </div>
         <div class="grid grid-cols-[auto_1fr] gap-2">
-          <Button variant="ghost" :disabled="busy" @click="step = 'method'">
+          <Button variant="ghost" class="h-12" :disabled="busy" @click="step = 'method'">
             <ArrowLeft class="h-4 w-4" /> Zpět
           </Button>
-          <Button variant="coral" :disabled="busy" @click="confirmCard">
+          <Button variant="coral" class="h-12" :disabled="busy" @click="confirmCard">
             <Loader2 v-if="busy" class="h-4 w-4 animate-spin" />
             <Check v-else class="h-4 w-4" /> Platba prošla
           </Button>
