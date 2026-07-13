@@ -16,6 +16,7 @@ import { useKitchen } from '@/composables/useKitchen'
 import { ApiError, isApiMode } from '@/lib/http'
 import { toast } from '@/components/ui/sonner'
 import LoadError from '@/components/app/LoadError.vue'
+import { groupItemsByCourse } from '@/lib/order-courses'
 import type { CategoryKitchenSection, KitchenQueueItem } from '@/lib/types'
 
 const kitchen = useKitchen()
@@ -183,14 +184,17 @@ function printTicket(t: Ticket) {
     toast.error('Tisk zablokoval prohlížeč (povolte vyskakovací okna).')
     return
   }
-  const rows = t.items
+  const rows = groupItemsByCourse(t.items)
     .map(
-      (i) =>
-        `<div class="row"><b>${i.quantity}×</b> ${escapeHtml(i.productName)}${
-          i.variantName ? ` · ${escapeHtml(i.variantName)}` : ''
-        }${
-          i.course ? ` <span class="course">[${escapeHtml(i.course)}]</span>` : ''
-        }${modifierRows(i)}${i.note ? `<div class="note">↳ ${escapeHtml(i.note)}</div>` : ''}</div>`,
+      (group) =>
+        `${group.label ? `<div class="course-separator"><span>${escapeHtml(group.label)}</span></div>` : ''}${group.items
+          .map(
+            (i) =>
+              `<div class="row"><b>${i.quantity}×</b> ${escapeHtml(i.productName)}${
+                i.variantName ? ` · ${escapeHtml(i.variantName)}` : ''
+              }${modifierRows(i)}${i.note ? `<div class="note">↳ ${escapeHtml(i.note)}</div>` : ''}</div>`,
+          )
+          .join('')}`,
     )
     .join('')
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Bon</title>
@@ -201,7 +205,8 @@ function printTicket(t: Ticket) {
       .sub{text-align:center;font-size:12px;margin-bottom:6px}
       hr{border:none;border-top:1px dashed #000}
       .row{font-size:16px;margin:6px 0}
-      .course{font-weight:bold}
+      .course-separator{display:flex;align-items:center;gap:6px;margin:10px 0 4px;font-size:12px;font-weight:bold;text-transform:uppercase}
+      .course-separator:after{content:'';height:1px;flex:1;background:#000}
       .note{font-size:13px;padding-left:18px}
     </style></head><body>
     <h2>${SECTION_LABEL[t.section].toUpperCase()}</h2>
@@ -373,26 +378,35 @@ onUnmounted(() => {
             </span>
           </div>
 
-          <ul class="flex-1 space-y-1.5 py-2 text-sm">
-            <li v-for="i in t.items" :key="i.itemId">
-              <span class="font-bold tabular-nums">{{ i.quantity }}×</span> {{ i.productName
-              }}<span v-if="i.variantName"> · {{ i.variantName }}</span>
-              <span
-                v-if="i.course"
-                class="ml-1 rounded bg-muted px-1 py-0.5 text-[10px] font-semibold text-foreground"
-                >{{ i.course }}</span
+          <div class="flex-1 py-2 text-sm">
+            <section v-for="group in groupItemsByCourse(t.items)" :key="group.key">
+              <div
+                v-if="group.label"
+                class="my-2 flex items-center gap-2 first:mt-0"
+                :data-testid="'kitchen-course-' + group.key"
               >
-              <div v-if="i.note" class="pl-4 text-xs text-muted-foreground">↳ {{ i.note }}</div>
-              <div v-if="i.modifiers?.length" class="pl-4 text-xs text-muted-foreground">
-                <div
-                  v-for="(modifier, index) in i.modifiers"
-                  :key="`${i.itemId}-${modifier.groupName}-${modifier.name}-${index}`"
-                >
-                  ↳ {{ modifier.groupName }}: {{ modifier.name }}
-                </div>
+                <span class="shrink-0 text-[11px] font-black uppercase tracking-[0.12em]">
+                  {{ group.label }}
+                </span>
+                <span class="h-px flex-1 bg-border" aria-hidden="true" />
               </div>
-            </li>
-          </ul>
+              <ul class="space-y-1.5">
+                <li v-for="i in group.items" :key="i.itemId">
+                  <span class="font-bold tabular-nums">{{ i.quantity }}×</span> {{ i.productName
+                  }}<span v-if="i.variantName"> · {{ i.variantName }}</span>
+                  <div v-if="i.note" class="pl-4 text-xs text-muted-foreground">↳ {{ i.note }}</div>
+                  <div v-if="i.modifiers?.length" class="pl-4 text-xs text-muted-foreground">
+                    <div
+                      v-for="(modifier, index) in i.modifiers"
+                      :key="`${i.itemId}-${modifier.groupName}-${modifier.name}-${index}`"
+                    >
+                      ↳ {{ modifier.groupName }}: {{ modifier.name }}
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </section>
+          </div>
 
           <div
             v-if="mode === 'history'"

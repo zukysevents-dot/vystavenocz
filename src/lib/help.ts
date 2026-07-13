@@ -130,9 +130,12 @@ export const HELP_GUIDES: readonly HelpGuide[] = [
       step('Otevřete stůl', 'Vyberte ho v seznamu, na mapě nebo ve frontě otevřených účtů.'),
       step(
         'Přidejte položky',
-        'Použijte kategorii nebo hledání názvu, SKU či EAN a doplňte modifikátory.',
+        'Použijte kategorii nebo hledání názvu, SKU či EAN, doplňte modifikátory a zařaďte jídlo jako předkrm, hlavní chod nebo dezert.',
       ),
-      step('Odešlete do kuchyně a zaplaťte', 'Kuchyň uvidí bon; po platbě se účet uzavře.'),
+      step(
+        'Odešlete do kuchyně a zaplaťte',
+        'Kuchyň uvidí jednotlivé chody pod oddělovači; po platbě se účet uzavře.',
+      ),
     ],
     tip: 'Účet se obnovuje automaticky a před platbou ještě jednou ověří server; zrušení i sloučení vyžaduje potvrzení.',
     to: '/app/restaurace',

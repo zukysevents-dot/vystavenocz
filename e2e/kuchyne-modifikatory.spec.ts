@@ -89,3 +89,31 @@ test('kuchyňský bon ukazuje vybrané modifikátory položky', async ({ page })
   await expect(page.getByText('Úpravy: Bez cibule')).toBeVisible()
   await expect(page.getByText('Velikost: Velká')).toBeVisible()
 })
+
+test('kuchyňský bon oddělí předkrm, hlavní chod, dezert a nezařazené položky', async ({ page }) => {
+  await seedApiMode(page)
+  const courseItems = [
+    { ...queueItem, itemId: 'dessert', productName: 'Dort', course: 'Dezert' },
+    { ...queueItem, itemId: 'none', productName: 'Pečivo', course: null },
+    { ...queueItem, itemId: 'main', productName: 'Steak', course: '2. chod' },
+    { ...queueItem, itemId: 'starter', productName: 'Polévka', course: 'Předkrm' },
+  ]
+
+  await page.route(API, async (route: Route) => {
+    const url = new URL(route.request().url())
+    const path = url.pathname.replace('/api/v1', '')
+    const method = route.request().method()
+
+    if (method === 'GET' && path === '/company') return route.fulfill({ json: company })
+    if (method === 'GET' && path === '/kitchen/queue') return route.fulfill({ json: courseItems })
+    if (method === 'GET' && path === '/kitchen/history') return route.fulfill({ json: [] })
+
+    return route.fulfill({ status: 404, json: { title: `Unhandled ${method} ${path}` } })
+  })
+
+  await dismissCookies(page)
+  await page.goto('/app/kuchyne')
+
+  const separators = page.locator('[data-testid^="kitchen-course-"]')
+  await expect(separators).toHaveText(['Předkrm', 'Hlavní chod', 'Dezert', 'Bez chodu'])
+})
