@@ -168,7 +168,7 @@ function confirm() {
             >
               <span class="inline-flex min-w-0 items-center gap-2">
                 <Check v-if="isSelected(group.id, option.id)" class="h-4 w-4 shrink-0" />
-                <span class="truncate font-medium">{{ option.name }}</span>
+                <span class="whitespace-normal font-medium">{{ option.name }}</span>
               </span>
               <span
                 v-if="option.priceDelta"
@@ -193,8 +193,10 @@ function confirm() {
       </div>
 
       <DialogFooter>
-        <Button type="button" variant="ghost" @click="openModel = false">Zrušit</Button>
-        <Button variant="coral" :disabled="busy || !!validationError" @click="confirm">
+        <Button type="button" variant="ghost" class="h-12" @click="openModel = false"
+          >Zrušit</Button
+        >
+        <Button variant="coral" class="h-12" :disabled="busy || !!validationError" @click="confirm">
           <Loader2 v-if="busy" class="h-4 w-4 animate-spin" />
           {{ confirmLabel ?? 'Přidat na účet' }}
         </Button>

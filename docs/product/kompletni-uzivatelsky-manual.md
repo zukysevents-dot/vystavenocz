@@ -315,18 +315,18 @@ Tato obrazovka je hlavní dotykové pracoviště obsluhy.
 2. Otevřete existující účet nebo založte nový.
 3. Přidávejte produkty z dlaždic nebo hledání.
 4. Vyberte porci, velikost a další možnosti.
-5. Případnou neobvyklou žádost napište do poznámky.
+5. Případnou neobvyklou žádost otevřete viditelným tlačítkem Poznámka · chod a napište ji pro kuchyni.
 
 ### 7.2 Chody
 
-Chod určuje pořadí přípravy a výdeje. Dostupné skupiny jsou:
+Chod určuje pořadí přípravy a výdeje. Otevřete jej u položky tlačítkem Poznámka · chod. Dostupné skupiny jsou pevně dané:
 
 - Předkrm
 - Hlavní chod
 - Dezert
 - Bez chodu
 
-Na účtu, v kuchyni a na tisku jsou chody oddělené výrazným nadpisem a čárou. Poznámka popisuje konkrétní požadavek; chod není poznámka.
+Na účtu, v kuchyni a na tisku jsou chody oddělené výrazným nadpisem a čárou. Poznámka popisuje konkrétní požadavek; chod není poznámka ani volba k produktu.
 
 Příklad:
 
@@ -334,15 +334,17 @@ Příklad:
 - Hlavní chod — steak, medium, hranolky.
 - Dezert — cheesecake.
 
-### 7.3 Odeslání do kuchyně
+### 7.3 Odeslání na stanice
 
-Zkontrolujte účet a zvolte Odeslat. Nové položky se objeví v kuchyni nebo na baru podle kategorie. Později přidané položky odešlete jako další objednávku.
+Zkontrolujte účet a zvolte Odeslat na stanice. Nové položky se objeví v kuchyni nebo na baru podle kategorie. Později přidané položky odešlete jako další objednávku. Pokud se pokusíte zaplatit účet s neodeslanými položkami, systém vás upozorní a nabídne doporučené odeslání před platbou.
+
+V kuchyňské obrazovce posouvejte každý chod samostatně přes Připravuje se, Hotovo a Vydáno. Vydání předkrmu tak nezmění stav hlavního chodu nebo dezertu.
 
 ### 7.4 Přesun a sloučení
 
 - Přesunout účet — změní stůl, účet zůstane zachovaný.
 - Sloučit účty — spojí položky dvou účtů. Před potvrzením zkontrolujte cílový stůl.
-- Zrušit účet — používejte jen s oprávněním a vždy uveďte důvod.
+- Zrušit účet — používejte jen s oprávněním a potvrďte samostatné varování. Akce se zapíše do auditu.
 
 ### 7.5 Rozdělení účtu
 
@@ -672,6 +674,8 @@ Kód musí být jedinečný. Vyberte produkt ručně a duplicitu opravte v Produ
 - Povinné volby lze dokončit a příplatky se počítají správně.
 - Chody se zobrazují jako Předkrm, Hlavní chod a Dezert.
 - Kuchyně a bar přijímají správné položky.
+- Každý chod lze v kuchyni posunout bez změny ostatních chodů.
+- Platba upozorní na nové položky, které ještě nebyly odeslané na stanice.
 - Tisk a platební terminál byly otestované skutečnou zkušební transakcí.
 - Skladový odečet odpovídá recepturám.
 - Obsluha umí rozdělit účet, opravit chybu a reagovat na změnu z jiného zařízení.

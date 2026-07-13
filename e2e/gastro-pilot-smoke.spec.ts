@@ -307,7 +307,7 @@ test('pilotní gastro průchod: účet u stolu, kuchyň, platba a nenulová uzá
   await expect(page.getByText('Přílohy: Hranolky')).toBeVisible()
   await expect(page.getByText('Extra: Sýr navíc')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Odeslat' }).click()
+  await page.getByRole('button', { name: 'Odeslat na stanice' }).click()
   await expect(page.getByText('Objednávka odeslána')).toBeVisible()
 
   await page.goto('/app/kuchyne')

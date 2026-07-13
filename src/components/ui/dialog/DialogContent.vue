@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue'
+import { useAttrs } from 'vue'
 import { DialogClose, DialogContent, DialogOverlay, DialogPortal } from 'reka-ui'
 import { X } from 'lucide-vue-next'
 import { cn } from '@/lib/utils'
 
+defineOptions({ inheritAttrs: false })
+
 const props = defineProps<{
   class?: HTMLAttributes['class']
 }>()
+
+const attrs = useAttrs()
 </script>
 
 <template>
@@ -15,6 +20,7 @@ const props = defineProps<{
       class="fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=open]:fade-in-0"
     />
     <DialogContent
+      v-bind="attrs"
       :class="
         cn(
           'pointer-events-auto fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg',

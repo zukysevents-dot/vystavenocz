@@ -199,7 +199,7 @@ const routes: RouteRecordRaw[] = [
       layout: 'app',
       requiresAuth: true,
       requiresModule: 'pos',
-      requiresRole: ['Owner', 'Manager'],
+      requiresRole: ['Owner', 'Admin', 'Manager'],
     },
   },
   {
@@ -395,7 +395,7 @@ const routes: RouteRecordRaw[] = [
       layout: 'app',
       requiresAuth: true,
       requiresModule: 'core',
-      requiresRole: ['Owner', 'Manager'],
+      requiresRole: ['Owner', 'Admin'],
     },
   },
   {

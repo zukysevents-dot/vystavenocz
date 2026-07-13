@@ -207,7 +207,7 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
     to: '/app/pobocky',
     label: 'Pobočky',
     module: 'core',
-    hiddenForRoles: ['Employee', 'Accountant'],
+    hiddenForRoles: ['Employee', 'Accountant', 'Manager'],
   },
   {
     to: '/app/audit',
@@ -237,7 +237,7 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
     to: '/app/uzaverka',
     label: 'Denní uzávěrka',
     module: 'pos',
-    hiddenForRoles: ['Employee'],
+    hiddenForRoles: ['Employee', 'Accountant'],
   },
   { to: '/app/rezervace', label: 'Rezervace', module: 'booking' },
   {

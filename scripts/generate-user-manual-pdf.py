@@ -223,8 +223,10 @@ class ManualDocTemplate(BaseDocTemplate):
     def afterFlowable(self, flowable):
         if isinstance(flowable, Paragraph):
             style_name = flowable.style.name
-            if style_name in {"ManualH1", "ManualH2", "ManualH3"}:
-                level = {"ManualH1": 0, "ManualH2": 1, "ManualH3": 2}[style_name]
+            # Keep the printed TOC concise: chapters and numbered subsections are useful for
+            # navigation, while every small example heading made a nearly empty spill page.
+            if style_name in {"ManualH1", "ManualH2"}:
+                level = {"ManualH1": 0, "ManualH2": 1}[style_name]
                 text = flowable.getPlainText()
                 key = f"heading-{self.seq.nextf('heading')}"
                 self.canv.bookmarkPage(key)
