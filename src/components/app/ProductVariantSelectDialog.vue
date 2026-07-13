@@ -61,9 +61,9 @@ function confirm() {
 
 <template>
   <Dialog v-model:open="openModel">
-    <DialogContent class="max-w-md">
+    <DialogContent class="max-h-[calc(100dvh-2rem)] max-w-md overflow-y-auto">
       <DialogHeader>
-        <DialogTitle>Vybrat porci</DialogTitle>
+        <DialogTitle>Vyberte velikost</DialogTitle>
         <DialogDescription>{{ productName }}</DialogDescription>
       </DialogHeader>
 
@@ -84,7 +84,7 @@ function confirm() {
           <span class="inline-flex min-w-0 items-center gap-2">
             <Check v-if="selectedId === variant.id" class="h-4 w-4 shrink-0" />
             <Scaling v-else class="h-4 w-4 shrink-0 text-muted-foreground" />
-            <span class="truncate font-medium">{{ variant.name }}</span>
+            <span class="whitespace-normal font-medium">{{ variant.name }}</span>
           </span>
           <span class="shrink-0 font-semibold tabular-nums">{{
             formatCZK(variant.priceWithVat)
@@ -93,8 +93,10 @@ function confirm() {
       </div>
 
       <DialogFooter>
-        <Button type="button" variant="ghost" @click="openModel = false">Zrušit</Button>
-        <Button variant="coral" :disabled="busy || !selected" @click="confirm">
+        <Button type="button" variant="ghost" class="h-12" @click="openModel = false"
+          >Zrušit</Button
+        >
+        <Button variant="coral" class="h-12" :disabled="busy || !selected" @click="confirm">
           <Loader2 v-if="busy" class="h-4 w-4 animate-spin" />
           {{ confirmLabel ?? 'Přidat' }}
         </Button>

@@ -49,6 +49,14 @@ describe('module capabilities', () => {
     expect(smeny.hiddenForRoles).toEqual(['Employee', 'Accountant'])
   })
 
+  it('keeps branch and day-close navigation aligned with their route role gates', () => {
+    const branches = APP_NAV_DEFINITIONS.find((item) => item.to === '/app/pobocky')!
+    const dayClose = APP_NAV_DEFINITIONS.find((item) => item.to === '/app/uzaverka')!
+
+    expect(branches.hiddenForRoles).toEqual(['Employee', 'Accountant', 'Manager'])
+    expect(dayClose.hiddenForRoles).toEqual(['Employee', 'Accountant'])
+  })
+
   it('business profiles define actionable onboarding setup steps', () => {
     const gastro = BUSINESS_PROFILES.find((profile) => profile.id === 'gastro')!
 

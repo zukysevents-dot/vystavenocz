@@ -69,9 +69,9 @@ function order(id: string, tableId: string, total: number) {
   }
 }
 
-async function seed(page: Page) {
+async function seed(page: Page, role = 'Owner') {
   await dismissCookies(page)
-  await page.addInitScript(() => {
+  await page.addInitScript((sessionRole) => {
     window.__VYSTAVENO_API_URL__ = '/api/v1'
     localStorage.setItem(
       'vystaveno.auth.tokens.v1',
@@ -82,7 +82,7 @@ async function seed(page: Page) {
       JSON.stringify({
         user: { id: 'u_e2e', email: 'e2e@vystaveno.cz', fullName: 'E2E Test' },
         companyId: 'c_e2e',
-        role: 'Owner',
+        role: sessionRole,
         modules: ['core', 'gastro', 'pos', 'stock', 'reporting'],
         features: [],
       }),
@@ -91,7 +91,7 @@ async function seed(page: Page) {
       'vystaveno.subscription.v1',
       JSON.stringify({ active: true, plan: 'pro', trialEndsAt: null, subscriptionUntil: null }),
     )
-  })
+  }, role)
 }
 
 async function mockCockpit(page: Page, includeSource = true) {
@@ -99,6 +99,7 @@ async function mockCockpit(page: Page, includeSource = true) {
   if (includeSource) openOrders.push(order('order-source', 'table-source', 89))
   let cancelCalls = 0
   let mergeCalls = 0
+  let sendCalls = 0
   let mergePayload: unknown = null
   let itemUpdatePayload: unknown = null
 
@@ -128,6 +129,12 @@ async function mockCockpit(page: Page, includeSource = true) {
       openOrders = openOrders.filter((candidate) => candidate.id !== 'order-target')
       return route.fulfill({ status: 204, body: '' })
     }
+    if (method === 'POST' && path === '/orders/order-target/send-to-kitchen') {
+      sendCalls++
+      const target = openOrders.find((candidate) => candidate.id === 'order-target')!
+      target.items = target.items.map((item) => ({ ...item, kitchenStatus: 'Sent' }))
+      return route.fulfill({ json: target })
+    }
     if (method === 'POST' && path === '/orders/order-target/merge') {
       mergeCalls++
       mergePayload = request.postDataJSON()
@@ -141,10 +148,30 @@ async function mockCockpit(page: Page, includeSource = true) {
   return {
     cancelCalls: () => cancelCalls,
     mergeCalls: () => mergeCalls,
+    sendCalls: () => sendCalls,
     mergePayload: () => mergePayload,
     itemUpdatePayload: () => itemUpdatePayload,
   }
 }
+
+test('platba upozorní na neodeslané položky a umí je bezpečně poslat do kuchyně', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 768 })
+  await seed(page)
+  const calls = await mockCockpit(page, false)
+  await page.goto('/app/restaurace')
+
+  await page.getByTestId('restaurant-table-map-table-target').click()
+  await page.getByTestId('restaurant-pay-desktop').click()
+
+  await expect(page.getByRole('heading', { name: 'Nejdřív odeslat do kuchyně?' })).toBeVisible()
+  expect(calls.sendCalls()).toBe(0)
+
+  await page.getByTestId('restaurant-send-and-pay').click()
+  await expect(page.getByRole('dialog', { name: /Platba/ })).toBeVisible()
+  expect(calls.sendCalls()).toBe(1)
+})
 
 test('obsluha zařadí jídlo do srozumitelného chodu a účet zobrazí oddělovač', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 })
@@ -153,9 +180,7 @@ test('obsluha zařadí jídlo do srozumitelného chodu a účet zobrazí oddělo
   await page.goto('/app/restaurace')
 
   await page.getByTestId('restaurant-table-map-table-target').click()
-  await page
-    .getByRole('button', { name: 'Upravit poznámku a pořadí výdeje položky Espresso' })
-    .click()
+  await page.getByRole('button', { name: 'Upravit poznámku a chod položky Espresso' }).click()
 
   await expect(page.getByRole('button', { name: 'Předkrm', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Hlavní chod', exact: true })).toBeVisible()
@@ -187,6 +212,19 @@ test('zrušení účtu neodešle požadavek před potvrzením', async ({ page })
   await page.getByTestId('restaurant-confirm-cancel').click()
   await expect(page.getByTestId('restaurant-map-view')).toBeVisible()
   expect(calls.cancelCalls()).toBe(1)
+})
+
+test('obsluha bez manažerského oprávnění nevidí zrušení účtu', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 })
+  await seed(page, 'Employee')
+  const calls = await mockCockpit(page, false)
+  await page.goto('/app/restaurace')
+
+  await page.getByTestId('restaurant-table-map-table-target').click()
+  await page.getByRole('button', { name: 'Další', exact: true }).click()
+
+  await expect(page.getByRole('button', { name: 'Zrušit účet', exact: true })).toHaveCount(0)
+  expect(calls.cancelCalls()).toBe(0)
 })
 
 test('sloučení je dvoukrokové a pošle přesný zdrojový účet', async ({ page }) => {

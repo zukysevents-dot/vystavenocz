@@ -92,12 +92,13 @@ test('kuchyňský bon ukazuje vybrané modifikátory položky', async ({ page })
 
 test('kuchyňský bon oddělí předkrm, hlavní chod, dezert a nezařazené položky', async ({ page }) => {
   await seedApiMode(page)
-  const courseItems = [
+  let courseItems = [
     { ...queueItem, itemId: 'dessert', productName: 'Dort', course: 'Dezert' },
     { ...queueItem, itemId: 'none', productName: 'Pečivo', course: null },
     { ...queueItem, itemId: 'main', productName: 'Steak', course: '2. chod' },
     { ...queueItem, itemId: 'starter', productName: 'Polévka', course: 'Předkrm' },
   ]
+  const statusCalls: Array<{ itemId: string; status: string }> = []
 
   await page.route(API, async (route: Route) => {
     const url = new URL(route.request().url())
@@ -107,6 +108,15 @@ test('kuchyňský bon oddělí předkrm, hlavní chod, dezert a nezařazené pol
     if (method === 'GET' && path === '/company') return route.fulfill({ json: company })
     if (method === 'GET' && path === '/kitchen/queue') return route.fulfill({ json: courseItems })
     if (method === 'GET' && path === '/kitchen/history') return route.fulfill({ json: [] })
+    if (method === 'POST' && path.startsWith('/kitchen/items/')) {
+      const itemId = path.split('/')[3]
+      const { status } = route.request().postDataJSON() as { status: string }
+      statusCalls.push({ itemId, status })
+      courseItems = courseItems.map((item) =>
+        item.itemId === itemId ? { ...item, kitchenStatus: status } : item,
+      )
+      return route.fulfill({ status: 204, body: '' })
+    }
 
     return route.fulfill({ status: 404, json: { title: `Unhandled ${method} ${path}` } })
   })
@@ -116,4 +126,9 @@ test('kuchyňský bon oddělí předkrm, hlavní chod, dezert a nezařazené pol
 
   const separators = page.locator('[data-testid^="kitchen-course-"]')
   await expect(separators).toHaveText(['Předkrm', 'Hlavní chod', 'Dezert', 'Bez chodu'])
+
+  await page.getByRole('button', { name: 'Začít přípravu — Předkrm' }).click()
+  expect(statusCalls).toEqual([{ itemId: 'starter', status: 'Preparing' }])
+  await expect(page.getByRole('button', { name: 'Označit jako hotové — Předkrm' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Začít přípravu — Hlavní chod' })).toBeVisible()
 })

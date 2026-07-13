@@ -224,10 +224,10 @@ test('mobilní obsluha vybere stůl ze seznamu a má hlavní akce pořád po ruc
   await page.getByTestId('restaurant-product-prod-espresso').click()
   const waiterBar = page.getByTestId('restaurant-mobile-actions')
   await expect(page.getByTestId('restaurant-total-mobile')).toContainText('59,00 Kč')
-  await expect(waiterBar.getByRole('button', { name: /^Odeslat$/ })).toBeVisible()
+  await expect(waiterBar.getByRole('button', { name: 'Odeslat na stanice' })).toBeVisible()
   await expect(waiterBar.getByRole('button', { name: /^Zaplatit$/ })).toBeVisible()
 
-  await waiterBar.getByRole('button', { name: /^Odeslat$/ }).click()
+  await waiterBar.getByRole('button', { name: 'Odeslat na stanice' }).click()
   await expect(page.getByText(/Objednávka odeslána/)).toBeVisible()
 })
 

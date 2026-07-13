@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 import { Cookie, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
@@ -10,6 +10,10 @@ import { CONSENT_RESET_EVENT, getCookieConsent, saveCookieConsent } from '@/lib/
 
 const visible = ref(false)
 const analyticsOn = ref(false)
+const route = useRoute()
+const isPosScreen = computed(() =>
+  ['/app/pokladna', '/app/restaurace', '/app/kuchyne'].some((path) => route.path.startsWith(path)),
+)
 
 function check() {
   const existing = getCookieConsent()
@@ -52,7 +56,8 @@ function handleNecessaryOnly() {
     role="dialog"
     aria-labelledby="cookie-banner-title"
     aria-describedby="cookie-banner-desc"
-    class="fixed inset-x-3 bottom-3 z-50 sm:inset-x-auto sm:bottom-4 sm:right-4 sm:max-w-md"
+    class="fixed inset-x-3 z-50 sm:inset-x-auto sm:right-4 sm:max-w-md"
+    :class="isPosScreen ? 'top-3 sm:top-4' : 'bottom-3 sm:bottom-4'"
   >
     <div class="rounded-2xl border border-border bg-card p-5 shadow-glow">
       <div class="flex items-start gap-3">
@@ -69,10 +74,10 @@ function handleNecessaryOnly() {
             <button
               type="button"
               aria-label="Zavřít a uložit pouze nezbytné"
-              class="-mr-1 -mt-1 rounded-md p-1 text-muted-foreground hover:bg-surface-soft hover:text-foreground"
+              class="-mr-2 -mt-2 grid h-11 w-11 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-surface-soft hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               @click="handleNecessaryOnly"
             >
-              <X class="h-4 w-4" />
+              <X class="h-5 w-5" />
             </button>
           </div>
           <p id="cookie-banner-desc" class="mt-1 text-xs text-muted-foreground">
