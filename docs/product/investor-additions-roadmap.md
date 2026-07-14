@@ -706,3 +706,13 @@ Závislosti nebo další bezpečný krok:
 **Kontrakty/dokumentace:** změněna pouze tato roadmapa přidáním `INV-16`; existující roadmapové body ani jejich kontext nebyly odstraněny.
 
 **Závislosti nebo další bezpečný krok:** nejdřív uzavřít inventory doménový audit frontend + backend a navrhnout ledger/migraci. Případný PML regulovaný profil závisí na `INV-15`; role a oprávnění dodá Standa.
+
+### 2026-07-14 | Codex | INV-01 | první mobilní vertikální slice | feat/inv-01-mobile-web / PR #184
+
+**Výsledek:** Webový editor faktury je použitelný na 360, 390 i 768 px. Náhled se přizpůsobuje šířce bez oříznutí dlouhého dokladu, primární uložení zůstává na mobilu dostupné a rozpracovaný koncept má lokální obnovu s tenant/session izolací a 24hodinovým úklidem. Doplněna validace, přístupné názvy akcí a pravdivý read-only stav vystavených dokladů. `INV-01` zůstává částečně otevřený pro ostré odeslání e-mailu a responsivní audit dalších webových obrazovek.
+
+**Ověření:** `npm run build`, `npm run lint`, 528/528 unit testů a 88/88 Playwright E2E. Produkční PWA ověřena přes manifest, ikony a aktivní service worker; mobilní editor prošel axe kontrolou bez serious/critical porušení.
+
+**Kontrakty/dokumentace:** API kontrakt se neměnil. Doplněn uživatelský manuál a shodný kontext v `AGENTS.md` a `CLAUDE.md`.
+
+**Závislosti nebo další bezpečný krok:** ostré odesílání e-mailu vyžaduje samostatný backendový slice. Nativní Android/iOS, role/oprávnění a AI/MCP zůstávají ve Standově oblasti.
