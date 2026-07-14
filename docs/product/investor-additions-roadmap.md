@@ -52,6 +52,8 @@ Vystaveno.cz není produkt jen pro gastro, sklady nebo jeden vybraný obor. Cíl
 
 Společný základ musí pokrýt klienty a dodavatele, nabídky a objednávky, faktury a zálohy, příjmové i výdajové pokladní doklady, produkty/služby, náklady, cashflow, upomínky, exporty a přehled podnikání. POS účtenka je další podporovaný typ dokladu pro provozy, které prodávají přes pokladnu; nenahrazuje účetní příjmový nebo výdajový pokladní doklad. Sklad, POS/gastro, CRM, rezervace, docházka, výroba a regulované evidence jsou volitelné moduly nad společným základem.
 
+**Důležité upřesnění stavu:** klienti, nabídky, objednávky, fakturace, pokladna, sklad a další uvedené oblasti už ve Vystaveno.cz existují. Nejsou novými body k vývoji a tato roadmapa je nesmí plánovat znovu. Jsou zde pouze jako existující společný produktový základ; implementační backlog řeší výhradně investorské dodatky, konkrétní chybějící funkce, sjednocení existujících toků a pravdivě ověřené mezery proti požadovanému výsledku.
+
 Oborová specializace nesmí komplikovat základní používání ani vytvářet samostatné neslučitelné produkty. Všechny moduly používají stejnou firmu, kontakty, produkty, doklady, platby, exporty a reporting tam, kde je jejich význam společný.
 
 ## 3. Pevné hranice odpovědnosti
@@ -735,3 +737,13 @@ Závislosti nebo další bezpečný krok:
 **Kontrakty/dokumentace:** přidán pouze nový produktový kontext, rozhodnutí k `INV-01` a tento append-only záznam; existující kontext zůstal zachován.
 
 **Závislosti nebo další bezpečný krok:** při návrhu registrace a ceníku zobrazit jednoduchý společný základ a oborové moduly doporučovat podle typu podnikání, nikoli je všem vnucovat.
+
+### 2026-07-14 | Codex | produktový rozsah | oprava interpretace | docs/investor-additions-roadmap
+
+**Výsledek:** Výslovně potvrzeno, že klienti, nabídky, objednávky, fakturace, pokladna, sklad a ostatní současné moduly jsou existující základ Vystaveno.cz, nikoli nový backlog. Roadmapa plánuje pouze dodatky a skutečně chybějící části.
+
+**Ověření:** oprava navazuje na úvodní pravidlo roadmapy, že jde o rozdíl proti současnému produktu, ne o stavbu nové aplikace.
+
+**Kontrakty/dokumentace:** přidáno pouze vysvětlení stavu a tento append-only záznam; žádný existující bod ani kontext nebyl odstraněn.
+
+**Závislosti nebo další bezpečný krok:** před každým `INV-XX` nejprve ověřit existující implementaci a vytvořit pouze delta plán bez duplikace hotových modulů.
