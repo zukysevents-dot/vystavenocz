@@ -46,6 +46,14 @@ Hlavní hodnoty, které musí být z produktu i webu čitelné:
 - fakturace, provoz, zákazníci a statistiky v jednom systému,
 - jednoduchý přechod z konkurence a srozumitelná cena.
 
+### Produktové upřesnění — systém pro všechny živnostníky
+
+Vystaveno.cz není produkt jen pro gastro, sklady nebo jeden vybraný obor. Cílem je společné podnikatelské jádro použitelné pro živnostníky a malé firmy napříč obory — například řemeslníky, konzultanty, kadeřníky, maloobchod, gastro, služby s materiálem i lehkou výrobu. Uživatel při registraci dostane jednoduchý základ a podle svého podnikání si zapne pouze relevantní moduly.
+
+Společný základ musí pokrýt klienty a dodavatele, nabídky a objednávky, faktury a zálohy, příjmové i výdajové pokladní doklady, produkty/služby, náklady, cashflow, upomínky, exporty a přehled podnikání. POS účtenka je další podporovaný typ dokladu pro provozy, které prodávají přes pokladnu; nenahrazuje účetní příjmový nebo výdajový pokladní doklad. Sklad, POS/gastro, CRM, rezervace, docházka, výroba a regulované evidence jsou volitelné moduly nad společným základem.
+
+Oborová specializace nesmí komplikovat základní používání ani vytvářet samostatné neslučitelné produkty. Všechny moduly používají stejnou firmu, kontakty, produkty, doklady, platby, exporty a reporting tam, kde je jejich význam společný.
+
 ## 3. Pevné hranice odpovědnosti
 
 ### Mimo tuto roadmapu — řeší Standa
@@ -146,6 +154,7 @@ Rozsah:
 - kontrola klávesnice, safe-area, focusu, dlouhých názvů a validačních chyb,
 - ověření instalace PWA a light/dark varianty,
 - ověření, zda „pokladní doklad“ v požadavku znamená existující účetní/pokladní entitu nebo POS účtenku; nový doménový model se nevymýšlí bez této kontroly.
+- produktové rozhodnutí: podporovat oba scénáře — samostatný příjmový/výdajový pokladní doklad pro obecné podnikání a POS účtenku pro provozy s pokladnou; UI a exporty je musí jasně rozlišovat.
 
 Akceptace:
 
@@ -716,3 +725,13 @@ Závislosti nebo další bezpečný krok:
 **Kontrakty/dokumentace:** API kontrakt se neměnil. Doplněn uživatelský manuál a shodný kontext v `AGENTS.md` a `CLAUDE.md`.
 
 **Závislosti nebo další bezpečný krok:** ostré odesílání e-mailu vyžaduje samostatný backendový slice. Nativní Android/iOS, role/oprávnění a AI/MCP zůstávají ve Standově oblasti.
+
+### 2026-07-14 | Codex | produktový rozsah | upřesněno | docs/investor-additions-roadmap
+
+**Výsledek:** Roadmapa výslovně stanovuje Vystaveno.cz jako modulární systém pro všechny živnostníky a malé firmy, nikoli jako produkt omezený na gastro nebo sklad. Společný základ zahrnuje obecné podnikatelské doklady a podporuje příjmový/výdajový pokladní doklad i POS účtenku jako dva rozdílné scénáře.
+
+**Ověření:** upřesnění navazuje na existující modulární architekturu a nemění hranice Standovy oblasti.
+
+**Kontrakty/dokumentace:** přidán pouze nový produktový kontext, rozhodnutí k `INV-01` a tento append-only záznam; existující kontext zůstal zachován.
+
+**Závislosti nebo další bezpečný krok:** při návrhu registrace a ceníku zobrazit jednoduchý společný základ a oborové moduly doporučovat podle typu podnikání, nikoli je všem vnucovat.
