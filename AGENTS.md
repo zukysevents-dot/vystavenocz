@@ -155,3 +155,7 @@ Staging demo data: backend `vystaveno-api` má explicitní CLI helper `dotnet Vy
 ## Ověřování backendu bez lokálního .NET
 
 .NET není potřeba instalovat — backend (`../vystaveno-api`) se dá buildit, migrovat i testovat v Docker SDK kontejneru. Postup je v `AGENTS.md` uvnitř repa `vystaveno-api`.
+
+## Mobilní editor faktury
+
+`FakturyEditorPage.vue` má pod `sm` výchozí zavřený A4 náhled, který se po otevření škáluje do dostupné šířky; skrytý 794px PDF render zůstává beze změny. Mobilní `Uložit koncept` je sticky se safe-area, ikonové akce mají explicitní přístupné názvy a nedraftové doklady jsou read-only. Editor ukládá poznámku a validuje odběratele, data i položky. `src/lib/invoice-editor-recovery.ts` drží nejvýše 24hodinový lokální checkpoint oddělený podle uživatele, firmy, invoice id a session otevřeného editoru; po serverovém uložení se maže a není API source of truth. Regrese: `e2e/faktura-editor-mobile.spec.ts` a mobilní axe v `e2e/a11y.spec.ts`.

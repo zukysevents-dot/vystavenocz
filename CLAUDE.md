@@ -155,3 +155,7 @@ Pravidla:
 ---
 
 Tato pravidla fungují, když: v diffech je méně zbytečných změn, méně přepisování kvůli překomplikování, a doptávání přichází před implementací, ne až po chybách.
+
+## Mobilní editor faktury
+
+`FakturyEditorPage.vue` má pod `sm` výchozí zavřený A4 náhled, který se po otevření škáluje do dostupné šířky; skrytý 794px PDF render zůstává beze změny. Mobilní `Uložit koncept` je sticky se safe-area, ikonové akce mají explicitní přístupné názvy a nedraftové doklady jsou read-only. Editor ukládá poznámku a validuje odběratele, data i položky. `src/lib/invoice-editor-recovery.ts` drží nejvýše 24hodinový lokální checkpoint oddělený podle uživatele, firmy, invoice id a session otevřeného editoru; po serverovém uložení se maže a není API source of truth. Regrese: `e2e/faktura-editor-mobile.spec.ts` a mobilní axe v `e2e/a11y.spec.ts`.

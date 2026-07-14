@@ -157,6 +157,10 @@ test('editor: výběr typu Zálohová faktura vytvoří proforma doklad', async 
   await page.getByRole('option', { name: 'Zálohová faktura' }).click()
   await expect(page.getByRole('heading', { name: 'Zálohová faktura' })).toBeVisible()
 
+  await page.locator('#inv-client').click()
+  await page.getByRole('option', { name: 'E2E Klient' }).click()
+  await page.getByLabel('Popis položky').fill('Záloha na služby')
+
   await page.getByRole('button', { name: 'Uložit koncept' }).click()
   await expect(page.getByText('Koncept uložen.')).toBeVisible()
 

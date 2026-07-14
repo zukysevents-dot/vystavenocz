@@ -6,6 +6,11 @@ import { seedApp } from './helpers/seed'
 // proto vygenerují stejné číslo. Guard v useInvoices.create() druhé uložení zablokuje.
 test.describe('Faktury — unikátní číslo', () => {
   const numberInput = (p: Page) => p.locator('#inv-number')
+  const fillValidDraft = async (page: Page) => {
+    await page.locator('#inv-client').click()
+    await page.getByRole('option', { name: 'E2E Klient' }).click()
+    await page.getByLabel('Popis položky').fill('Test duplicity')
+  }
 
   test('dva taby se stejným číslem: druhý koncept se neuloží (žádná duplicita)', async ({
     browser,
@@ -21,6 +26,8 @@ test.describe('Faktury — unikátní číslo', () => {
     await seedApp(tabB, { subscription: 'pro' })
     await tabB.goto('/app/faktury/editor')
     await expect(numberInput(tabB)).not.toHaveValue('')
+    await fillValidDraft(tabA)
+    await fillValidDraft(tabB)
 
     // Oba taby vygenerovaly stejné číslo (reprodukce příčiny).
     const number = await numberInput(tabA).inputValue()

@@ -427,6 +427,6 @@ function lineTotal(it: DocItem): number {
   border-top: 1px solid #e2e8f0;
   text-align: center;
   font-size: 10px;
-  color: #94a3b8;
+  color: #64748b;
 }
 </style>

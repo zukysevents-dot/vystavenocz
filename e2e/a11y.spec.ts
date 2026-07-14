@@ -69,3 +69,14 @@ test.describe('a11y (axe) — bez serious/critical porušení', () => {
     expect(await blockingViolations(page)).toEqual([])
   })
 })
+
+test.describe('a11y (axe) — mobilní editor faktury', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('nový doklad včetně náhledu', async ({ page }) => {
+    await seedApp(page, { subscription: 'pro' })
+    await page.goto('/app/faktury/editor')
+    await page.getByRole('button', { name: 'Zobrazit náhled' }).click()
+    expect(await blockingViolations(page)).toEqual([])
+  })
+})

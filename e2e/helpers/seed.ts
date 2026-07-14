@@ -7,6 +7,7 @@ const KEYS = {
   subscription: 'vystaveno.subscription.v1',
   invoices: 'vystaveno:invoices',
   clients: 'vystaveno:clients',
+  cookieConsent: 'vystaveno.cookieConsent.v1',
 }
 
 // Jeden klient stačí, aby se vypnul demo seeding (seed.ts seedne jen při 0 klientech) —
@@ -94,6 +95,10 @@ export async function seedApp(page: Page, opts: SeedOptions = {}): Promise<void>
       localStorage.setItem(keys.subscription, JSON.stringify(subscription))
       localStorage.setItem(keys.invoices, JSON.stringify(invoices ?? []))
       localStorage.setItem(keys.clients, JSON.stringify([client]))
+      localStorage.setItem(
+        keys.cookieConsent,
+        JSON.stringify({ necessary: true, analytics: false, decidedAt: new Date().toISOString() }),
+      )
       localStorage.setItem('__e2e_seeded__', '1')
     },
     { keys: KEYS, user, company, subscription, invoices: opts.invoices, client: DEFAULT_CLIENT },

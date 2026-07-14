@@ -12,6 +12,8 @@ Tento návod je pro běžnou práci v aplikaci. Než začnete, zkontrolujte v **
 
 V **Klientech** založte odběratele a ve **Fakturách** vystavte doklad. Pro zálohy použijte proformu, po úhradě ji převeďte na daňový doklad. Dobropis vždy založte z původní faktury. Pro pravidelné platby slouží **Opakované faktury**.
 
+Editor faktury funguje i na mobilním webu/PWA. Primární uložení zůstává dostupné ve spodní liště, náhled lze otevřít bez opuštění editoru a rozepsaný koncept se po nečekaném obnovení stránky obnoví z lokální zálohy. Lokální záloha je oddělená podle uživatele, firmy, dokladu a otevřeného editoru, po úspěšném uložení se smaže a nejpozději za 24 hodin expiruje.
+
 ## Gastro a obchod
 
 Na začátku nastavte produkty, kategorie a sklad. V gastru připravte stoly, menu, receptury a modifikátory. Obsluha pracuje přes **Pokladnu** nebo **Restauraci**, kuchyně vidí bony v samostatné frontě. Po prodeji se propíše tržba a sklad; den končí **Uzávěrkou**.
