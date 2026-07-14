@@ -4,6 +4,7 @@ import {
   invoicesToCsv,
   isdocFilename,
   canExportIsdoc,
+  canExportIsdocHeader,
 } from '@/lib/accounting-export'
 import type { Invoice } from '@/lib/types'
 
@@ -242,6 +243,15 @@ describe('canExportIsdoc', () => {
   it('faktura bez položek → false (ISDOC vyžaduje aspoň řádek)', () => {
     expect(canExportIsdoc(inv({ items: [] }))).toBe(false)
   })
+  it('proforma, koncept a stornovaný doklad → false', () => {
+    expect(canExportIsdoc(inv({ documentType: 'proforma' }))).toBe(false)
+    expect(canExportIsdoc(inv({ status: 'draft' }))).toBe(false)
+    expect(canExportIsdoc(inv({ status: 'cancelled' }))).toBe(false)
+  })
+  it('summary hlavička může nabídnout ISDOC před dotažením řádků', () => {
+    expect(canExportIsdocHeader(inv({ items: [] }))).toBe(true)
+    expect(canExportIsdocHeader(inv({ items: [], currency: 'EUR' }))).toBe(false)
+  })
 })
 
 describe('isdocFilename', () => {
@@ -255,16 +265,46 @@ describe('invoicesToCsv', () => {
     const i = inv()
     const lines = invoicesToCsv([i]).split('\r\n')
     expect(lines[0]).toBe(
-      'Číslo;Vystaveno;DUZP;Splatnost;Odběratel;IČO;DIČ;Základ;DPH;Celkem;Měna;Stav;VS;Uhrazeno',
+      'Číslo;Typ dokladu;Vystaveno;DUZP;Splatnost;Odběratel;IČO;DIČ;Základ;DPH;Celkem;Měna;Stav;VS;Uhrazeno',
     )
     expect(lines[1]).toContain(i.invoiceNumber!)
     expect(lines[1]).toContain('1300,00') // čárka, ne tečka
     expect(lines[1]).toContain('Vystaveno') // lokalizovaný stav
+    expect(lines[1]).toContain('Faktura')
   })
 
   it('obalí buňku s oddělovačem do uvozovek', () => {
     const csv = invoicesToCsv([inv({ clientSnapshot: { name: 'Firma; a.s.', email: null } })])
     expect(csv).toContain('"Firma; a.s."')
+  })
+
+  it('zneškodní vzorec v textu a zachová záporné částky dobropisu jako čísla', () => {
+    const csv = invoicesToCsv([
+      inv({
+        documentType: 'credit_note',
+        invoiceNumber: '=1+1',
+        clientSnapshot: { name: '  +SUM(A1:A2)', ico: '@IMPORT', dic: '-10' },
+        variableSymbol: '\t=1+1',
+        subtotal: -100,
+        vatTotal: -21,
+        total: -121,
+      }),
+    ])
+    const row = csv.split('\r\n')[1].split(';')
+    expect(row[0]).toBe("'=1+1")
+    expect(row[5]).toBe("'  +SUM(A1:A2)")
+    expect(row[6]).toBe("'@IMPORT")
+    expect(row[7]).toBe("'-10")
+    expect(row[8]).toBe('-100,00')
+    expect(row[9]).toBe('-21,00')
+    expect(row[10]).toBe('-121,00')
+    expect(row[13]).toBe("'\t=1+1")
+  })
+
+  it('uzavře samostatný carriage return do jedné chráněné CSV buňky', () => {
+    const csv = invoicesToCsv([inv({ variableSymbol: '\r=1+1' })])
+    expect(csv).toContain(`;"'\r=1+1";`)
+    expect(csv.split('\r\n')).toHaveLength(2)
   })
 
   it('zaplacená faktura má datum úhrady', () => {

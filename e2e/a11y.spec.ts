@@ -44,6 +44,47 @@ test.describe('a11y (axe) — bez serious/critical porušení', () => {
     expect(await blockingViolations(page)).toEqual([])
   })
 
+  test('export pro účetní na mobilu', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await seedApp(page, {
+      subscription: 'pro',
+      invoices: [
+        {
+          id: 'inv-export-a11y',
+          documentType: 'invoice',
+          status: 'issued',
+          invoiceNumber: 'FA-2026-0001',
+          clientId: null,
+          clientSnapshot: { name: 'Acme s.r.o.' },
+          supplierSnapshot: { companyName: 'E2E s.r.o.' },
+          items: [],
+          currency: 'CZK',
+          issueDate: '2026-07-10',
+          dueDate: '2026-07-24',
+          taxableDate: '2026-07-10',
+          paidAt: null,
+          variableSymbol: '20260001',
+          constantSymbol: null,
+          specificSymbol: null,
+          paymentMethod: 'bank_transfer',
+          subtotal: 1000,
+          vatTotal: 210,
+          total: 1210,
+          notes: null,
+          createdAt: '2026-07-10T00:00:00.000Z',
+          updatedAt: '2026-07-10T00:00:00.000Z',
+        },
+      ],
+    })
+    await page.goto('/app/uctarna')
+    await expect(page.getByRole('heading', { name: 'Export pro účetní' })).toBeVisible()
+    const hasHorizontalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth,
+    )
+    expect(hasHorizontalOverflow).toBe(false)
+    expect(await blockingViolations(page)).toEqual([])
+  })
+
   test('opakované faktury (seznam + dialog)', async ({ page }) => {
     await seedApp(page, { subscription: 'pro' })
     await page.goto('/app/opakovane-faktury')

@@ -205,6 +205,12 @@ const STATUS_CS: Record<InvoiceStatus, string> = {
   cancelled: 'Stornováno',
 }
 
+const DOCUMENT_TYPE_CS: Record<Invoice['documentType'], string> = {
+  invoice: 'Faktura',
+  proforma: 'Zálohová faktura',
+  credit_note: 'Dobropis',
+}
+
 /** Číslo s desetinnou čárkou (české Excel CSV). */
 function csvNum(n: number): string {
   return n2(n).replace('.', ',')
@@ -212,7 +218,13 @@ function csvNum(n: number): string {
 
 /** Obalí pole do uvozovek, jen když obsahuje oddělovač/uvozovku/nový řádek. */
 function csvCell(v: string): string {
-  return /[";\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v
+  return /[";\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v
+}
+
+/** Uživatelský text nesmí tabulkový editor vyhodnotit jako vzorec. */
+function csvTextCell(v: string): string {
+  const safe = /^[\u0000-\u0020]*[=+@-]/.test(v) ? `'${v}` : v
+  return csvCell(safe)
 }
 
 /**
@@ -222,6 +234,7 @@ function csvCell(v: string): string {
 export function invoicesToCsv(invoices: Invoice[]): string {
   const header = [
     'Číslo',
+    'Typ dokladu',
     'Vystaveno',
     'DUZP',
     'Splatnost',
@@ -238,23 +251,22 @@ export function invoicesToCsv(invoices: Invoice[]): string {
   ]
   const rows = invoices.map((inv) =>
     [
-      inv.invoiceNumber || '',
-      inv.issueDate || '',
-      inv.taxableDate || '',
-      inv.dueDate || '',
-      inv.clientSnapshot?.name || '',
-      inv.clientSnapshot?.ico || '',
-      inv.clientSnapshot?.dic || '',
-      csvNum(inv.subtotal),
-      csvNum(inv.vatTotal),
-      csvNum(inv.total),
-      inv.currency || 'CZK',
-      STATUS_CS[inv.status] ?? inv.status,
-      inv.variableSymbol || '',
-      inv.paidAt ? inv.paidAt.slice(0, 10) : '',
-    ]
-      .map((c) => csvCell(String(c)))
-      .join(';'),
+      csvTextCell(inv.invoiceNumber || ''),
+      csvTextCell(DOCUMENT_TYPE_CS[inv.documentType]),
+      csvCell(inv.issueDate || ''),
+      csvCell(inv.taxableDate || ''),
+      csvCell(inv.dueDate || ''),
+      csvTextCell(inv.clientSnapshot?.name || ''),
+      csvTextCell(inv.clientSnapshot?.ico || ''),
+      csvTextCell(inv.clientSnapshot?.dic || ''),
+      csvCell(csvNum(inv.subtotal)),
+      csvCell(csvNum(inv.vatTotal)),
+      csvCell(csvNum(inv.total)),
+      csvTextCell(inv.currency || 'CZK'),
+      csvTextCell(STATUS_CS[inv.status] ?? inv.status),
+      csvTextCell(inv.variableSymbol || ''),
+      csvCell(inv.paidAt ? inv.paidAt.slice(0, 10) : ''),
+    ].join(';'),
   )
   return [header.join(';'), ...rows].join('\r\n')
 }
@@ -273,10 +285,16 @@ export function isdocFilename(inv: Invoice): string {
  */
 export function canExportIsdoc(inv: Invoice): boolean {
   // Proforma (zálohová) není daňový doklad → ISDOC se pro ni nenabízí.
+  return canExportIsdocHeader(inv) && inv.items.length > 0
+}
+
+/** Podmínky dostupné už ze summary hlavičky; řádky se v API režimu dotáhnou až po kliknutí. */
+export function canExportIsdocHeader(inv: Invoice): boolean {
   return (
     inv.documentType !== 'proforma' &&
-    (!inv.currency || inv.currency === 'CZK') &&
-    inv.items.length > 0
+    inv.status !== 'draft' &&
+    inv.status !== 'cancelled' &&
+    (!inv.currency || inv.currency === 'CZK')
   )
 }
 

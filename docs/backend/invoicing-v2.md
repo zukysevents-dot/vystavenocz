@@ -47,7 +47,7 @@ Frontendové report-liby už rozlišují typ; backend má stejnou logiku:
 
 - **Pohledávky** (`cashflow.ts`) a **věrnostní obrat** (`loyalty.ts`): jen `documentType==='invoice'` → vylučují proformu i dobropis.
 - **DPH přehled** (`dph.ts`): `invoice` + `credit_note` → dobropis nese **záporné `lineVat`** a daň na výstupu **nettuje**; **proforma NE**.
-- **Účetní export** (`accounting-export.ts`, `UctarnaPage.vue`): `invoice` + `credit_note` (Pohoda `DocumentType` `1`/`2`; `canExportIsdoc` vylučuje proformu); **proforma NE**.
+- **Účetní export** (`accounting-export.ts`, `UctarnaPage.vue`): daňový výchozí výběr a ISDOC obsahují jen `invoice` + `credit_note` (Pohoda `DocumentType` `1`/`2`; `canExportIsdoc` vylučuje proformu). Přesný CSV přehled smí zahrnout i proformu, ale pouze po jejím vědomém zapnutí; tím se z ní nestává daňový doklad a nevstupuje do DPH ani obratu.
 - **Dashboard/obrat**: jen daňové doklady (faktura kladně, dobropis záporně), proforma NE.
 - Backend jen vrací `documentType` + `parentInvoiceId` a u dobropisu záporné částky/DPH; FE nic nepočítá.
 
