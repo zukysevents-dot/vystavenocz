@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select'
 import CameraScanner from '@/components/app/CameraScanner.vue'
 import LoadError from '@/components/app/LoadError.vue'
+import PurchaseOrdersPanel from '@/components/app/PurchaseOrdersPanel.vue'
 import { useProducts } from '@/composables/useProducts'
 import { useInventory } from '@/composables/useInventory'
 import { useLocations } from '@/composables/useLocations'
@@ -31,8 +32,8 @@ import { toast } from '@/components/ui/sonner'
 import { reorderSuggestions, findByEan } from '@/lib/reorder'
 import type { Product, PurchaseReceipt, PurchaseSuggestionItem } from '@/lib/types'
 
-const { products, load: loadProducts } = useProducts()
-const { locations, load: loadLocations } = useLocations()
+const { products, loadAll: loadProducts } = useProducts()
+const { locations, loadAll: loadLocations } = useLocations()
 const inv = useInventory()
 const apiMode = isApiMode()
 const ALL_LOCATIONS = '__all__'
@@ -62,7 +63,7 @@ const apiSuggestionsLoaded = ref(false)
 
 const scanEan = ref('')
 const search = ref('')
-const scanInput = ref<HTMLInputElement | null>(null)
+const scanInput = ref<InstanceType<typeof Input> | null>(null)
 const scannerOpen = ref(false)
 
 interface ReceiveLine {
@@ -126,6 +127,15 @@ async function reload() {
   }
 }
 
+async function reloadAfterOrderReceipt() {
+  try {
+    await Promise.all([loadLevels(), loadRecentReceipts(), loadPurchaseSuggestions()])
+  } catch (e) {
+    console.error(e)
+    toast.error('Objednávka byla přijata, ale přehled skladu se nepodařilo obnovit.')
+  }
+}
+
 // Změna pobočky → přenačíst stav, poslední příjemky a doporučení pro danou pobočku.
 // Ošetření chyb konzistentně se `Zásoby`: guard na běžící init + toast při selhání.
 watch(receiveLocationId, async () => {
@@ -147,7 +157,10 @@ onMounted(() => {
 })
 
 function focusScan() {
-  nextTick(() => scanInput.value?.focus())
+  nextTick(() => {
+    const element = scanInput.value?.$el as HTMLInputElement | undefined
+    element?.focus()
+  })
 }
 
 function addProduct(p: Product, qty = 1) {
@@ -393,6 +406,13 @@ function fmtQuantity(value: number | null): string {
           vždy na konkrétní pobočku.
         </div>
       </div>
+
+      <PurchaseOrdersPanel
+        :products="products"
+        :locations="locations"
+        :location-id="filterLocationId"
+        @received="reloadAfterOrderReceipt"
+      />
 
       <div class="grid gap-4 lg:grid-cols-[1fr_340px]">
         <!-- Příjemka -->

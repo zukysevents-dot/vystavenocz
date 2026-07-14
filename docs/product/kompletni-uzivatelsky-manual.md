@@ -415,13 +415,27 @@ Před vytištěním QR kódů ověřte:
 4. Zadejte skutečné množství a nákupní cenu.
 5. Zkontrolujte všechny řádky a příjem potvrďte.
 
-### 10.2 Stav skladu
+### 10.2 Nákupní objednávky a dodavatelé
+
+Pro běžnou dodávku bez předchozí objednávky můžete dál použít přímou příjemku. Když chcete hlídat, co bylo objednáno a co skutečně dorazilo:
+
+1. V části Nákupní objednávky otevřete Dodavatelé a založte dodavatele. Uložte název a podle potřeby IČO, DIČ, kontaktní osobu, telefon a e-mail.
+2. Zvolte Nová objednávka, vyberte dodavatele a konkrétní pobočku, přidejte produkty, množství a známé nákupní ceny.
+3. Uložte návrh. Dokud je ve stavu Návrh, můžete ho upravovat.
+4. Po skutečném odeslání dodavateli zvolte Objednat. Objednávka už se nepřepisuje.
+5. Při dodávce zvolte Přijmout, doplňte číslo dodacího listu nebo faktury a u každého řádku zadejte skutečně přijaté množství.
+6. Když dorazí jen část, objednávka zůstane Částečně přijato. Další dodávku zapište novou příjemkou ze stejné objednávky.
+7. Po přijetí posledního zbytku se objednávka označí Přijato. Každá dílčí dodávka vytvoří samostatnou dohledatelnou příjemku a skladový pohyb.
+
+Dodavatele, kterého už nepoužíváte, archivujte. Historické objednávky a příjemky zůstanou zachované. Objednávku lze zrušit jen před prvním příjmem.
+
+### 10.3 Stav skladu
 
 Přehled ukazuje očekávané množství, pohyby a případné rozdíly. Zobrazení Všechny pobočky je určeno ke kontrole; příjem, výdej, opravu nebo přesun provádějte vždy pro konkrétní pobočku.
 
 Karta Pohyby slouží k dohledání úplné historie. Vyberte období, produkt, typ pohybu a pobočku. Řádek ukazuje změnu množství, stav po pohybu, poznámku a vazbu na zdrojový prodej, příjemku, inventuru, výrobu nebo zakázku. Export CSV stáhne přesně zvolený výřez. Pokud se sklad během načítání změnil, spusťte export znovu, aby byl soubor úplný.
 
-### 10.3 Inventura
+### 10.4 Inventura
 
 1. Vyberte pobočku.
 2. Zadejte fyzicky spočítané množství.
@@ -429,7 +443,7 @@ Karta Pohyby slouží k dohledání úplné historie. Vyberte období, produkt, 
 4. U významného rozdílu doplňte důvod.
 5. Inventuru potvrďte.
 
-### 10.4 Přesun a výroba
+### 10.5 Přesun a výroba
 
 Přesun snižuje zásobu na výchozí pobočce a zvyšuje ji na cílové. Výrobní dávka polotovaru spotřebuje suroviny podle receptury a zvýší množství vyrobeného polotovaru.
 

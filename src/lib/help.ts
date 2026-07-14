@@ -169,10 +169,13 @@ export const HELP_GUIDES: readonly HelpGuide[] = [
     audience: 'manager',
     description: 'Příjem, inventura a rozdíly mezi evidencí a skutečností.',
     whatItMeans:
-      'Naskladnění zvýší zásobu. Inventura porovná skutečné množství s tím, co očekává systém.',
+      'Naskladnění zvýší zásobu. Plánovaný nákup můžete vést přes dodavatele a objednávku, která podporuje více dílčích dodávek. Inventura porovná skutečné množství s tím, co očekává systém.',
     whenToUse: 'Při dodávce zboží, pravidelné kontrole skladu nebo po zjištění rozdílu.',
     steps: [
-      step('Naskladněte dodávku', 'Zapište skutečné množství a nákupní cenu.'),
+      step(
+        'Objednejte nebo přijměte dodávku',
+        'Jednoduchou dodávku zapište rovnou. Plánovaný nákup veďte přes dodavatele a objednávku.',
+      ),
       step('Proveďte inventuru', 'Zadejte fyzicky spočítané množství.'),
       step('Vyřešte rozdíly', 'Ve skladu uvidíte, zda jde o manko nebo přebytek.'),
     ],
