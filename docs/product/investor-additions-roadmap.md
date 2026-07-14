@@ -747,3 +747,13 @@ Závislosti nebo další bezpečný krok:
 **Kontrakty/dokumentace:** přidáno pouze vysvětlení stavu a tento append-only záznam; žádný existující bod ani kontext nebyl odstraněn.
 
 **Závislosti nebo další bezpečný krok:** před každým `INV-XX` nejprve ověřit existující implementaci a vytvořit pouze delta plán bez duplikace hotových modulů.
+
+### 2026-07-14 | Codex | INV-03 | první fakturační vertikální slice | agent/inv-03-export-filter / PR #185
+
+**Výsledek:** Export pro účetní načte všechny stránky fakturačních dokladů a umožní přesný výběr podle data vystavení, typu, stavu, odběratele a měny. Náhled, souhrny, seznam a CSV používají stejný seřazený výběr; měny se nesčítají, dobropisy zůstávají záporné a proformy, koncepty nebo storna se přidávají pouze vědomě. ISDOC zůstává po jednom podporovaném dokladu. `INV-03` zůstává částečně otevřený pro další datové sady.
+
+**Ověření:** `npm run build`, `npm run lint`, 558/558 unit testů a 93/93 Playwright E2E. Mobilní obrazovka 390 px prošla axe a overflow kontrolou; desktop i mobil byly vizuálně ověřeny bez chyb v konzoli. Nezávislé QA a finální code review nenašly P0/P1/P2.
+
+**Kontrakty/dokumentace:** API endpoint ani tvar response se neměnil; frontend nově stránkuje stávající `GET /invoices` do úplného výsledku a dál používá serverové peněžní součty. Zpřesněn Invoicing V2 kontrakt, `AGENTS.md`, `CLAUDE.md`, oba uživatelské návody a vygenerovaný PDF manuál. CSV chrání uživatelský text před spuštěním jako tabulkový vzorec.
+
+**Závislosti nebo další bezpečný krok:** navázat samostatnými řezy pro produkty, klienty, POS doklady a Z-reporty. Filtr více firem doplnit až po Standově multi-company/auth kontraktu; role/oprávnění, nativní Android/iOS a AI/MCP zůstávají ve Standově oblasti.
