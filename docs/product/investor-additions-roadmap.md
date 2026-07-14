@@ -72,6 +72,7 @@ Tato roadmapa nesmí Standovu oblast paralelně předělávat. Pokud některý b
 - Viva Payments průzkum a rozhodnutí,
 - právní, certifikační a nákladový audit,
 - produktová a funnel analytika.
+- kompletní skladové hospodářství od nákupu a příjmu přes šarže, přesuny, spotřebu a inventury až po dohledatelné výstupy.
 
 ### Co není cílem
 
@@ -93,6 +94,7 @@ Tato roadmapa nesmí Standovu oblast paralelně předělávat. Pokud některý b
 | Ceník | současně existují `PRO_*` a orientační modulární `PRICING_MODULES`; app billing zatím používá starší Pro model | sjednotit produktovou hierarchii, základní balíček, moduly, odkazy a skutečný billing; odstranit dvojí interpretaci |
 | Zákazníci | fakturační `Client`, loyalty `Customer`, klientská zóna, nabídky, zakázky a faktury | CRM vrstvu stavět nad existujícími entitami, ne zakládat třetí izolovaný adresář |
 | Pobočky | locations, pobočkový sklad, reporty a konsolidace | nezaměňovat pobočku za firmu; dodat skutečný multi-company context switch |
+| Sklad | API skladové stavy a pohyby, příjem/výdej/korekce, převody mezi pobočkami, inventury, skladové zrcadlo, příjemky s cenami, návrhy objednání, EAN skenování a výrobní dávky | doplnit ucelený skladový ledger, dodavatele a objednávky, rezervace, šarže/expirace, oceňování, dohledatelnost, automatizace, auditní exporty a volitelný regulovaný režim podle ověřených povinností |
 | Promo a loyalty | cenové hladiny, provozní promo pravidla a věrnostní ledger | přidat oddělené subscription claim kódy a referral odměny; nemíchat je s POS slevami |
 | Platby | provider-neutral katalog, connection foundation a credential vault | nejdřív vyhodnotit Viva; živý adapter označit jako hotový až po skutečné platbě, refundaci a webhook testu |
 | Podpisy | provider-neutral verified-signing foundation a trezor | právní/provider audit; netvrdit konkrétní právní účinek ani živé BankID bez smlouvy a adapteru |
@@ -109,6 +111,7 @@ Tato roadmapa nesmí Standovu oblast paralelně předělávat. Pokud některý b
 5. `INV-05` Registrace, IČO a webové Google/Apple přihlášení
 6. `INV-06` Sjednocení ceníku a modulové navigace
 7. `INV-07` Subscription promo/claim kódy
+16. `INV-16` Kompletní skladové hospodářství a dohledatelnost
 
 ### P1 — růst, retence a jasná hodnota
 
@@ -458,6 +461,8 @@ Srovnávací skupiny:
 
 KiloMayo se používá jako benchmark pro spojení POS, skladu, týmu, zákazníků, loyalty, statistik a financí do jednoho provozního flow. iDoklad je benchmark pro jednoduchost fakturace, mobilní použití, účetní spolupráci a klientskou zkušenost.
 
+[ePML](https://epml.cz/) se používá jako veřejně ověřitelný benchmark pro dohledatelný tok příjem → výdej/prodej → šarže → inventura → kontrolní export, pobočkové zásoby, čárové kódy, upozornění a auditní historii. Jeho PML legislativní režim se nekopíruje automaticky do obecného skladu; případná specializace pro psychomodulační nebo jiné regulované zboží musí projít `INV-15` a mít ověřené právní požadavky.
+
 Výstupní matice:
 
 - funkce/workflow,
@@ -521,6 +526,92 @@ Pro každou položku zaznamenat:
 
 Právní účinek podpisu ani certifikační shodu neprohlašovat bez potvrzení kvalifikovanou osobou.
 
+### INV-16 — Kompletní skladové hospodářství a dohledatelnost
+
+**Výsledek:** Vystaveno pokrývá celý skladový tok od nákupní potřeby a objednávky přes příjem, umístění, přesun, prodej/spotřebu a výrobu až po inventuru, ocenění, dohledání původu a kontrolní výstup. Existující sklad se rozšiřuje; nevytváří se druhý paralelní skladový model.
+
+Benchmark a hranice:
+
+- veřejný přehled [ePML](https://epml.cz/) potvrzuje jako relevantní vzor evidenci každého příjmu/výdeje a šarže, pobočkové zásoby, inventury, CSV/PDF výstupy, prodej s čárovým kódem, notifikace a auditní dohledatelnost,
+- obecné skladové jádro musí fungovat pro gastro, maloobchod, služby s materiálem i lehkou výrobu,
+- PML nebo jiný regulovaný vertikální režim je volitelná nadstavba; legislativní tvrzení, povinná pole, archivace, podpisy a časová razítka se implementují až podle výsledku `INV-15`,
+- role a oprávnění inventur, odpisů, schválení a kontrolních exportů dodá Standa; tento bod spotřebuje jeho autorizační kontrakt.
+
+Existující základ, který se zachová a sjednotí:
+
+- `useInventory` a API pro stavy, pohyby, příjem, výdej, korekce, převody a inventury,
+- skladové zrcadlo, centrální přehled zásob podle poboček a návrhy doobjednání,
+- vícepoložkové příjemky s dodavatelem, číslem dokladu, nákupní cenou a historií,
+- EAN skenování čtečkou nebo mobilní kamerou,
+- odpisy, expirace, rozbití, personální spotřeba, prodej/storno a návaznost na schvalování,
+- receptury, odpis surovin prodejem a existující výrobní dávky/polotovary.
+
+Doménový a datový základ:
+
+- výslovně odlišit `Company`, `Location`, fyzický/logický `Warehouse` a skladovou pozici; nepotvrzené pojmy neslévat do jedné entity,
+- jeden neměnný skladový ledger, kde každá změna množství vzniká pohybem s důvodem, zdrojovým dokladem, časem, autorem, firmou, skladem a případně šarží,
+- opravy a storna provádět kompenzačním pohybem, ne přepisem nebo smazáním historie,
+- oddělit fyzický stav, rezervované množství a disponibilní množství,
+- definovat politiku záporného skladu, souběžných změn, idempotence a zamykání inventury,
+- všechny finanční výpočty a ocenění držet na backendu; frontend nesmí být druhý source of truth.
+
+Nákup a dodavatelé:
+
+- adresář dodavatelů včetně kontaktů, dodacích podmínek, dodavatelských SKU/EAN, balení, minimálního odběru a obvyklé ceny,
+- návrh nákupu → nákupní objednávka → částečné/plné přijetí → příjemka → vazba na dodavatelský doklad,
+- stav objednávky, očekávané datum, backorder, rozdíl objednáno/přijato a historie změn,
+- převod existujícího návrhu doobjednání do skutečné objednávky bez ručního přepisování,
+- jednotky a převody balení, například karton → kus nebo sud → litr, s přesně definovaným zaokrouhlením,
+- import/export katalogu a počátečních stavů s validačním reportem a možností bezpečného opakování.
+
+Šarže, expirace a dohledatelnost:
+
+- šarže/dávka, datum výroby, datum minimální trvanlivosti/expirace, dodavatel, nákupní doklad a volitelně sériové číslo,
+- výdej podle explicitní politiky FIFO/FEFO nebo ruční volby šarže,
+- upozornění na blížící se expiraci, expirované zásoby, nízký stav a chybějící povinná data,
+- dohledání dopředu i zpět: z příjemky/šarže na výrobu, přesun, prodej a odpis a z prodeje zpět na původ,
+- blokace, karanténa, uvolnění a hromadné stažení šarže s auditní stopou,
+- výrobní dávka eviduje spotřebované vstupní šarže, výtěžnost, odpad/ztrátu a vzniklou výstupní šarži.
+
+Skladové operace a inventury:
+
+- příjem, výdej, interní spotřeba, odpis, vratka, korekce a obousměrně svázaný převod mezi sklady/pobočkami,
+- převod má stav odesláno → na cestě → přijato a nesmí vytvořit nebo ztratit zásobu při opakovaném requestu,
+- úplná, částečná, cyklická a namátková inventura; možnost slepého počítání bez zobrazení systémového stavu,
+- rozpracovaná inventura s uložením průběhu, mobilním skenem, druhým přepočítáním a protokolem rozdílů,
+- schválení rozdílů podle Standova permission kontraktu a atomické propsání schválené inventury do ledgeru,
+- tisk/CSV/PDF inventurního protokolu, příjemky, výdejky, převodky a karty zásoby.
+
+Ocenění, reporting a automatizace:
+
+- rozhodnout a zdokumentovat metodu ocenění (například vážený průměr nebo FIFO) podle účetních a produktových potřeb,
+- nákupní hodnota, skladová hodnota, COGS/spotřeba, marže, ztráty, odpisy a inventurní rozdíly podle firmy, skladu, produktu, šarže a období,
+- karta produktu se stavem, rezervací, disponibilním množstvím, historií, průměrnou spotřebou, obrátkou a odhadem dnů do vyprodání,
+- min/max zásoba, bezpečnostní zásoba, doporučené množství objednávky a notifikace s potlačením duplicit,
+- filtry a exporty CSV/PDF podle data, firmy, pobočky/skladu, produktu, kategorie, typu pohybu, dodavatele a šarže,
+- kontrolní výstupy musí být reprodukovatelné: stejný filtr a uzavřené období vrátí stejná data a součty,
+- POS prodej/storno, receptura, výroba, zakázka s materiálem a veřejná objednávka mění sklad přes stejný ledger a transakční pravidla.
+
+Mobilní/PWA použití:
+
+- příjem, výdej, převod a inventura jsou použitelné na 360/390/768 px,
+- EAN/QR sken má klávesnicový fallback, ruční zadání a srozumitelný stav oprávnění kamery,
+- rozpracovaná vícepoložková operace se po refreshi neztratí a opakované odeslání nevytvoří duplicitní pohyby,
+- primární akce respektují softwarovou klávesnici a safe-area a žádný hlavní tok nemá horizontální scroll stránky.
+
+Akceptace:
+
+- součet ledgeru odpovídá stavu zásoby pro každý produkt, sklad a šarži a existuje automatická reconciliation kontrola,
+- dva tenanty ani dvě pobočky si nikdy nezobrazí nebo nezapíší cizí zásobu,
+- nákupní objednávka projde přes částečný příjem až do uzavření a nevytvoří duplicitní zásobu,
+- šarži lze dohledat od příjmu přes přesuny/výrobu až ke konkrétnímu prodeji, spotřebě nebo odpisu,
+- prodej, storno, receptura a výrobní dávka mění zásobu atomicky a při retry idempotentně,
+- inventura podporuje přerušení, pokračování, schválení a auditní protokol bez tiché změny historie,
+- ocenění a exportní součty odpovídají backendovému ledgeru a zvolené metodě ocenění,
+- mobilní příjem a inventura projdou e2e i a11y gate; kritická ledger/ocenění/šaržová logika má unit a integrační testy,
+- migrace existujících stavů a pohybů má dry-run, reconciliation report, rollback strategii a neztratí současná data,
+- regulovaný/PML režim není označen za legislativně vyhovující bez právního potvrzení a odpovídajících kontrolních testů.
+
 ## 7. Závislosti a paralelní práce agentů
 
 Práce se řídí závislostmi, ne kalendářem.
@@ -532,6 +623,7 @@ Skutečný audit repa
 ├── klienti → CRM → klientská zóna
 ├── současný pricing → sjednocený ceník → promo benefit v subscription
 ├── integrační foundation → Viva rozhodnutí → případný runtime adapter
+├── současný inventory API → jednotný ledger → nákup/šarže/ocenění → kontrolní exporty
 └── signing foundation → právní/provider audit → pravdivý obchodní wording
 ```
 
@@ -545,6 +637,7 @@ Paralelně lze bezpečně oddělit:
 - promo/referral,
 - pricing/copy,
 - competitor/Viva/compliance research.
+- kompletní sklad po vertikálních řezech: ledger, nákup, šarže, inventura, ocenění a reporting.
 
 Agenti nesmějí paralelně měnit stejné centrální soubory (`src/lib/types.ts`, `src/lib/pricing.ts`, `auth.ts`, router, API DTO/migrace) bez explicitního rozdělení vlastnictví. Každá větev má řešit jeden vertikální slice a uvést závislosti na backendu nebo Standově kontraktu.
 
@@ -603,3 +696,13 @@ Závislosti nebo další bezpečný krok:
 **Kontrakty/dokumentace:** přidán pouze tento nový soubor; existující kontext nebyl změněn.
 
 **Závislosti nebo další bezpečný krok:** při zahájení implementace vybrat jeden `INV-XX`, ověřit stav v obou repech a zapsat delta plán.
+
+### 2026-07-14 | Codex | INV-16 | roadmap doplněna | docs/investor-additions-roadmap
+
+**Výsledek:** Přidán kompletní plán skladového hospodářství navazující na existující inventory API. Pokrývá jednotný ledger, dodavatele a nákupní objednávky, příjemky, šarže/expirace, převody, výrobu, inventury, ocenění, automatizace, auditní výstupy a mobilní skenování.
+
+**Ověření:** porovnáno se současnými `useInventory`, skladovými typy a obrazovkami v repu a s veřejným přehledem funkcí [ePML](https://epml.cz/) dne 2026-07-14.
+
+**Kontrakty/dokumentace:** změněna pouze tato roadmapa přidáním `INV-16`; existující roadmapové body ani jejich kontext nebyly odstraněny.
+
+**Závislosti nebo další bezpečný krok:** nejdřív uzavřít inventory doménový audit frontend + backend a navrhnout ledger/migraci. Případný PML regulovaný profil závisí na `INV-15`; role a oprávnění dodá Standa.
