@@ -8,6 +8,7 @@ import type {
   StockLevel,
   StockMirror,
   StockMovement,
+  StockMovementFilters,
   StockMovementType,
   Stocktake,
   ProductionBatch,
@@ -30,6 +31,14 @@ export interface StockMirrorQuery {
   search?: string
 }
 
+export interface StockMovementQuery {
+  from?: string
+  to?: string
+  productId?: string | null
+  type?: StockMovementType | null
+  locationId?: string | null
+}
+
 export interface PurchaseSuggestionsQuery {
   from?: string
   to?: string
@@ -46,13 +55,92 @@ export interface CreateProductionBatchRequest {
 
 // Sklad / zásoby (gastro/retail). Jen API mód — nad existujícím inventory backendem.
 export function useInventory() {
+  const pageConcurrency = 4
+
   async function levels(query: StockLevelQuery = {}): Promise<StockLevel[]> {
-    const params = new URLSearchParams({ pageSize: '200' })
-    if (query.locationId) params.set('locationId', query.locationId)
-    return (await http.get<PagedResult<StockLevel>>(`/inventory/stock-levels?${params}`)).items
+    const levelUrl = (page: number) => {
+      const params = new URLSearchParams({ page: String(page), pageSize: '100' })
+      if (query.locationId) params.set('locationId', query.locationId)
+      return `/inventory/stock-levels?${params}`
+    }
+    const first = await http.get<PagedResult<StockLevel>>(levelUrl(1))
+    const expectedTotal = first.total
+    const byProductId = new Map(first.items.map((level) => [level.productId, level]))
+    const totalPages = Math.ceil(expectedTotal / 100)
+
+    for (let firstPage = 2; firstPage <= totalPages; firstPage += pageConcurrency) {
+      const pageNumbers = Array.from(
+        { length: Math.min(pageConcurrency, totalPages - firstPage + 1) },
+        (_, index) => firstPage + index,
+      )
+      const pages = await Promise.all(
+        pageNumbers.map((page) => http.get<PagedResult<StockLevel>>(levelUrl(page))),
+      )
+      for (const next of pages) {
+        if (next.total !== expectedTotal) {
+          throw new Error('Skladové stavy se během načítání změnily. Načtěte stránku znovu.')
+        }
+        for (const level of next.items) byProductId.set(level.productId, level)
+      }
+    }
+
+    const verification = await http.get<PagedResult<StockLevel>>(levelUrl(1))
+    if (verification.total !== expectedTotal || byProductId.size !== expectedTotal) {
+      throw new Error('Skladové stavy se během načítání změnily. Načtěte stránku znovu.')
+    }
+    return [...byProductId.values()]
   }
-  async function movements(): Promise<StockMovement[]> {
-    return (await http.get<PagedResult<StockMovement>>('/inventory/movements?pageSize=100')).items
+  function movementUrl(query: StockMovementQuery, page: number): string {
+    const params = new URLSearchParams({ page: String(page), pageSize: '100', sort: '-date' })
+    if (query.from) params.set('from', query.from)
+    if (query.to) params.set('to', query.to)
+    if (query.productId) params.set('productId', query.productId)
+    if (query.type) params.set('type', query.type)
+    if (query.locationId) params.set('locationId', query.locationId)
+    return `/inventory/movements?${params}`
+  }
+
+  function movementPage(
+    query: StockMovementQuery = {},
+    page = 1,
+  ): Promise<PagedResult<StockMovement>> {
+    return http.get<PagedResult<StockMovement>>(movementUrl(query, page))
+  }
+
+  function movementFilters(): Promise<StockMovementFilters> {
+    return http.get<StockMovementFilters>('/inventory/movement-filters')
+  }
+
+  async function movements(query: StockMovementQuery = {}): Promise<StockMovement[]> {
+    const first = await movementPage(query, 1)
+    const expectedTotal = first.total
+    const byId = new Map(first.items.map((movement) => [movement.id, movement]))
+    const totalPages = Math.ceil(expectedTotal / 100)
+
+    for (let firstPage = 2; firstPage <= totalPages; firstPage += pageConcurrency) {
+      const pageNumbers = Array.from(
+        { length: Math.min(pageConcurrency, totalPages - firstPage + 1) },
+        (_, index) => firstPage + index,
+      )
+      const pages = await Promise.all(pageNumbers.map((page) => movementPage(query, page)))
+      for (const next of pages) {
+        if (next.total !== expectedTotal) {
+          throw new Error('Skladové pohyby se během načítání změnily. Načtěte výběr znovu.')
+        }
+        for (const movement of next.items) byId.set(movement.id, movement)
+      }
+    }
+
+    // Ledger je append-only. Druhá kontrola první stránky odhalí nový pohyb, který by během stránkování
+    // posunul řádky mezi stránkami; export raději selže, než aby tiše vynechal nebo zdvojil záznam.
+    const verification = await movementPage(query, 1)
+    if (verification.total !== expectedTotal || byId.size !== expectedTotal) {
+      throw new Error('Skladové pohyby se během načítání změnily. Načtěte výběr znovu.')
+    }
+
+    // Stránky skládáme ve vzestupném pořadí a zachováme autoritativní řazení serveru
+    // (CreatedAt + databázové pořadí UUID), místo dalšího klientského přerovnávání.
+    return [...byId.values()]
   }
   // Centrální sklad: přehled zásob napříč pobočkami (matice produkt × provozovna).
   function stockByLocation(search = ''): Promise<StockByLocationResponse> {
@@ -158,6 +246,8 @@ export function useInventory() {
   }
   return {
     levels,
+    movementPage,
+    movementFilters,
     movements,
     stockByLocation,
     receive,

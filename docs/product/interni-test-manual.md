@@ -32,8 +32,10 @@ Cíl: vidět, že sklad sedí a rozdíly se dají vysvětlit.
 1. Otevřete `Naskladnění`, vyberte pobočku skladu (má-li firma víc poboček), vyplňte dodavatele/doklad/datum, přidejte zboží s množstvím a uložte příjemku.
 2. Otevřete `Zásoby`. Vpravo je tab `Zrcadlo` — porovnává `Stav má být`, `Realitu` a `Rozdíl`. V detailu řádku uvidíte výpočet (otevření + příjem + storno − prodej − výdej = stav má být).
 3. Spusťte `Inventuru` na konkrétní pobočku: zadejte fyzicky napočítané množství a uložte. `Rozdíl` = realita minus systém, ukazuje se v kusech i v Kč.
+4. V tabu `Pohyby` nastavte období, produkt, typ pohybu a pobočku. Ověřte čitelné názvy, změnu množství, stav po pohybu a zdrojové ID.
+5. Stáhněte `Export CSV`. Počet datových řádků musí odpovídat zobrazenému počtu a soubor nesmí obsahovat pohyby mimo filtry.
 
-Co ověřit: příjemka zvýší stav, prodej ho sníží, inventura/korekce se projeví jako rozdíl ve zrcadle. Inventura ani výdej nejdou spustit pro „Všechny pobočky" — vždy pro konkrétní sklad.
+Co ověřit: příjemka zvýší stav, prodej ho sníží, inventura/korekce se projeví jako rozdíl ve zrcadle. Inventura ani výdej nejdou spustit pro „Všechny pobočky" — vždy pro konkrétní sklad. Skladová karta i CSV respektují období, produkt, typ a pobočku a načtou celou vyfiltrovanou historii, ne jen první stránku.
 
 ## 3. Uzávěrka
 
@@ -102,7 +104,7 @@ Tohle je nejdůležitější tabulka pro interní test. **Netvrďte zákazníkov
 | ------------------------------------------------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Gastro POS prodej (hotovost/karta)                                                          | **Ostré**                 | Karta: výsledek potvrzuje obsluha ručně, terminál není propojený.                                                          |
 | Restaurace, stoly, kuchyně (KDS)                                                            | **Ostré**                 | Účty, sloučení, split, bony, historie.                                                                                     |
-| Sklad, naskladnění, inventura, zrcadlo                                                      | **Ostré**                 | Odečet surovin přes receptury, per-pobočka.                                                                                |
+| Sklad, naskladnění, inventura, zrcadlo, skladová karta a CSV                                | **Ostré**                 | Odečet surovin přes receptury, per-pobočka; export respektuje zvolené filtry.                                              |
 | Uzávěrka + Z-report + exporty                                                               | **Ostré**                 | Denní i měsíční účetní CSV, předávka.                                                                                      |
 | Akce/ceny, věrnost, audit                                                                   | **Ostré**                 | Serverový výpočet promo a bodů.                                                                                            |
 | Veřejné / QR objednávky                                                                     | **Ostré**                 | Bez přihlášení, ceny ze serveru.                                                                                           |

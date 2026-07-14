@@ -792,6 +792,10 @@ export type StockMovementType =
   | 'Stocktaking'
   | 'TransferOut'
   | 'TransferIn'
+  | 'ProductionConsumption'
+  | 'ProductionOutput'
+  | 'JobConsumption'
+  | 'StornoJobConsumption'
 
 export interface StockLevel {
   productId: string
@@ -843,7 +847,31 @@ export interface StockMovement {
   relatedSaleId: string | null
   relatedStocktakeId: string | null
   relatedPurchaseReceiptId: string | null
+  relatedProductionBatchId?: string | null
+  relatedJobId?: string | null
   createdAt: string
+  productName?: string | null
+  productSku?: string | null
+  locationName?: string | null
+  createdBy?: string | null
+}
+
+export interface StockMovementProductFilterOption {
+  id: string
+  name: string
+  sku: string
+  isArchived: boolean
+}
+
+export interface StockMovementLocationFilterOption {
+  id: string
+  name: string
+  isArchived: boolean
+}
+
+export interface StockMovementFilters {
+  products: StockMovementProductFilterOption[]
+  locations: StockMovementLocationFilterOption[]
 }
 
 export interface StocktakeItem {

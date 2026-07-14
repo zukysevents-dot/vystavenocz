@@ -419,6 +419,8 @@ Před vytištěním QR kódů ověřte:
 
 Přehled ukazuje očekávané množství, pohyby a případné rozdíly. Zobrazení Všechny pobočky je určeno ke kontrole; příjem, výdej, opravu nebo přesun provádějte vždy pro konkrétní pobočku.
 
+Karta Pohyby slouží k dohledání úplné historie. Vyberte období, produkt, typ pohybu a pobočku. Řádek ukazuje změnu množství, stav po pohybu, poznámku a vazbu na zdrojový prodej, příjemku, inventuru, výrobu nebo zakázku. Export CSV stáhne přesně zvolený výřez. Pokud se sklad během načítání změnil, spusťte export znovu, aby byl soubor úplný.
+
 ### 10.3 Inventura
 
 1. Vyberte pobočku.

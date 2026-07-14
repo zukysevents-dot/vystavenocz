@@ -121,6 +121,8 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 4. Máte-li víc poboček, tab `Podle poboček` ukáže přehlednou tabulku: u každého produktu vidíte, kolik ho je na které provozovně, plus celkový součet. Zboží bez přiřazené pobočky je ve sloupci `Nezařazeno`.
 5. Ruční výdej vždy vyberte podle důvodu: běžný výdej, odpis, jídlo personálu, rozbití nebo expirace.
 6. Přesun mezi barem, kuchyní nebo skladem zapisujte přes přesun. Celkový sklad firmy se nemění, mění se jen místo.
+7. Tab `Pohyby` je skladová karta. Vyberte období, produkt, typ pohybu a případně pobočku. U každého řádku vidíte změnu, stav po pohybu, poznámku a vazbu na příjemku, prodej, inventuru, výrobu nebo zakázku.
+8. `Export CSV` stáhne přesně aktuálně vyfiltrovanou historii. Export se vytvoří až po načtení všech řádků; pokud se sklad během načítání změnil, použijte `Zkusit znovu`, aby nevznikl neúplný soubor.
 
 ## Směny a docházka
 

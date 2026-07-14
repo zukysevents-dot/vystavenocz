@@ -37,19 +37,18 @@ import { useInventory, type StocktakeItemInput } from '@/composables/useInventor
 import { useLocations } from '@/composables/useLocations'
 import { isApiMode, ApiError } from '@/lib/http'
 import { isApprovalRequest } from '@/lib/types'
-import { formatDate } from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
+import StockLedgerPanel from '@/components/app/StockLedgerPanel.vue'
 import type {
   StockByLocationResponse,
   StockLocationColumn,
   StockMirror,
   StockMirrorItem,
-  StockMovement,
   StockMovementType,
 } from '@/lib/types'
 
-const { products, load: loadProducts } = useProducts()
-const { locations, load: loadLocations } = useLocations()
+const { products, loadAll: loadProducts } = useProducts()
+const { locations, loadAll: loadLocations } = useLocations()
 const inv = useInventory()
 const apiMode = isApiMode()
 const ALL_LOCATIONS = '__all__'
@@ -59,8 +58,6 @@ const busy = ref(false)
 const tab = ref<'levels' | 'movements' | 'mirror' | 'byLocation'>('levels')
 const search = ref('')
 const levelMap = ref(new Map<string, number>())
-const movements = ref<StockMovement[]>([])
-const movementsLoaded = ref(false)
 const mirror = ref<StockMirror | null>(null)
 const mirrorLoaded = ref(false)
 const mirrorLoading = ref(false)
@@ -92,20 +89,6 @@ const byLocationRows = computed(() =>
   }),
 )
 
-const MOVE_LABEL: Record<StockMovementType, string> = {
-  Receipt: 'Příjem',
-  Issue: 'Výdej',
-  WriteOff: 'Odpis',
-  StaffMeal: 'Staff meal',
-  Breakage: 'Rozbito',
-  Expiration: 'Expirace',
-  Correction: 'Korekce',
-  Sale: 'Prodej',
-  StornoSale: 'Storno',
-  Stocktaking: 'Inventura',
-  TransferOut: 'Přesun ven',
-  TransferIn: 'Přesun dovnitř',
-}
 const ISSUE_TYPE_OPTIONS: Array<{ value: StockMovementType; label: string }> = [
   { value: 'Issue', label: 'Běžný výdej' },
   { value: 'WriteOff', label: 'Odpis' },
@@ -176,9 +159,6 @@ const mirrorVarianceValue = computed(() => {
   return values.reduce((sum, value) => sum + value, 0)
 })
 
-function productName(id: string): string {
-  return products.value.find((p) => p.id === id)?.name ?? '—'
-}
 function locationName(id: string | null): string | null {
   if (!id) return null
   return locations.value.find((l) => l.id === id)?.name ?? 'Neznámá pobočka'
@@ -260,18 +240,6 @@ onMounted(async () => {
     loading.value = false
   }
 })
-
-async function showMovements() {
-  tab.value = 'movements'
-  if (!movementsLoaded.value) {
-    try {
-      movements.value = await inv.movements()
-      movementsLoaded.value = true
-    } catch (e) {
-      console.error(e)
-    }
-  }
-}
 
 async function loadMirror() {
   mirrorLoading.value = true
@@ -371,7 +339,6 @@ async function submitAction() {
       }
     } else await inv.correct(id, amount, actionForm.note.trim(), locationId)
     await loadLevels()
-    if (movementsLoaded.value) movements.value = await inv.movements()
     if (mirrorLoaded.value) await loadMirror()
     actionOpen.value = false
     toast.success(`${ACTION_LABEL[actionMode.value]} uložen.`)
@@ -429,7 +396,6 @@ async function submitTransfer() {
       transferForm.note.trim() || null,
     )
     await loadLevels()
-    if (movementsLoaded.value) movements.value = await inv.movements()
     if (mirrorLoaded.value) await loadMirror()
     transferOpen.value = false
     toast.success('Přesun uložen.')
@@ -519,7 +485,6 @@ async function submitStocktake() {
       return
     }
     await loadLevels()
-    if (movementsLoaded.value) movements.value = await inv.movements()
     if (mirrorLoaded.value) await loadMirror()
     stocktakeOpen.value = false
     toast.success('Inventura uložena — stav srovnán.')
@@ -552,7 +517,7 @@ async function submitStocktake() {
     </div>
 
     <template v-else>
-      <div class="mt-6 flex items-center gap-2">
+      <div class="mt-6 flex flex-wrap items-center gap-2">
         <button
           type="button"
           class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
@@ -573,7 +538,7 @@ async function submitStocktake() {
               ? 'bg-primary text-primary-foreground'
               : 'bg-muted text-muted-foreground hover:bg-muted/70'
           "
-          @click="showMovements"
+          @click="tab = 'movements'"
         >
           Pohyby
         </button>
@@ -722,38 +687,11 @@ async function submitStocktake() {
 
       <!-- POHYBY -->
       <template v-else-if="tab === 'movements'">
-        <div class="mt-4 overflow-hidden rounded-2xl border border-border bg-card">
-          <div v-if="!movements.length" class="p-12 text-center text-muted-foreground">
-            Zatím žádné skladové pohyby.
-          </div>
-          <div v-else class="divide-y divide-border">
-            <div
-              v-for="m in movements"
-              :key="m.id"
-              class="flex flex-wrap items-center justify-between gap-2 p-3 text-sm"
-            >
-              <div class="min-w-0">
-                <div class="font-medium">{{ productName(m.productId) }}</div>
-                <div class="text-xs text-muted-foreground">
-                  {{ MOVE_LABEL[m.type] }} • {{ formatDate(m.createdAt) }}
-                  <span v-if="locationName(m.locationId)"> • {{ locationName(m.locationId) }}</span>
-                  <span v-if="m.note"> • {{ m.note }}</span>
-                </div>
-              </div>
-              <div class="flex items-center gap-4 tabular-nums">
-                <span
-                  class="font-semibold"
-                  :class="m.quantity >= 0 ? 'text-success' : 'text-destructive'"
-                >
-                  {{ m.quantity >= 0 ? '+' : '' }}{{ fmtQty(m.quantity) }}
-                </span>
-                <span class="w-16 text-right text-muted-foreground"
-                  >= {{ fmtQty(m.quantityAfter) }}</span
-                >
-              </div>
-            </div>
-          </div>
-        </div>
+        <StockLedgerPanel
+          :products="products"
+          :locations="locations"
+          :initial-location-id="stockFilterLocationId"
+        />
       </template>
 
       <!-- ZRCADLO -->

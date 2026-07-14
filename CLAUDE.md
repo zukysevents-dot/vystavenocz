@@ -96,6 +96,8 @@ Zeptej se sám sebe: „Řekl by senior engineer, že je to zbytečně složité
 
 ## 3. Zásahy, opravy a updaty
 
+Skladová karta INV-16 je popsaná v `docs/backend/inventory-ledger-export.md`. Obrazovka používá serverové stránkování a `/inventory/movement-filters` včetně archivovaných hodnot; `Zásoby` → `Pohyby` exportuje přesně vyfiltrovaný ledger až po načtení a ověření všech stránek. Při souběžné změně skladu nesmí vytvořit částečný CSV. Názvy produktu/pobočky jsou jen aktuální popisky, dohledatelnost stojí na stabilních ID a `related*Id`. Nativní aplikace a oprávnění jsou mimo tento řez.
+
 Sahej jen na to, na co musíš. Uklízej jen po sobě.
 
 Když upravuješ existující kód:

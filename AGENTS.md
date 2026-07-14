@@ -106,6 +106,8 @@ Frontend volá backend přes **same-origin `/api/v1`** (žádné CORS).
 Datový kontrakt: `src/lib/types.ts` (FE) musí sedět s DTO na backendu; sdílené kontrakty jsou popsané v `docs/backend/*.md`.
 **Když měníš tvar přenášených dat, uprav OBĚ strany** (FE typy + BE DTO) a případně kontrakt v `docs/backend/`.
 
+Skladová karta INV-16: `Zásoby` → `Pohyby` používá serverově stránkované `useInventory.movementPage()`, úplný export `movements()` a filtrační katalog `/inventory/movement-filters`; kontrakt je v `docs/backend/inventory-ledger-export.md`. Klient musí pro přesný CSV export načíst všechny stránky, zachovat `related*Id` a při změně `total` během načítání skončit bezpečně bez souboru. `productName`, `productSku` a `locationName` jsou aktuální popisky; autoritativní jsou stabilní ID. Nativní mobilní aplikace a oprávnění nejsou součástí tohoto řezu.
+
 ## Dva režimy (důležité)
 
 `src/composables/useApi.ts` je swap-point mezi daty:
