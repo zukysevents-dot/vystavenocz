@@ -20,6 +20,15 @@ export function useLocations() {
     }
   }
 
+  async function loadAll(): Promise<void> {
+    try {
+      store.locations = await api.listAll()
+    } catch (e) {
+      console.warn('Načtení poboček selhalo:', e)
+      store.locations = []
+    }
+  }
+
   async function create(input: LocationInput): Promise<Location> {
     const now = new Date().toISOString()
     const created = await api.create({
@@ -44,5 +53,5 @@ export function useLocations() {
     store.locations = store.locations.filter((l) => l.id !== id)
   }
 
-  return { locations, load, create, update, remove }
+  return { locations, load, loadAll, create, update, remove }
 }

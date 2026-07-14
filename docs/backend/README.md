@@ -23,3 +23,7 @@ jakmile endpoint existuje, FE se přepne bez dalšího zásahu.
 | 9   | [`api-tokeny-webhooky.md`](./api-tokeny-webhooky.md)         | HOTOVO   | Public API V1: tokeny, read-only čtení, podepsané webhooky      |
 
 U každého jsou i **otázky/rozhodnutí**, na které potřebuju od tebe odpověď, ať doladím FE.
+
+## Hotové sdílené kontrakty
+
+- [`inventory-ledger-export.md`](./inventory-ledger-export.md) — úplná skladová karta, pobočkové filtry a bezpečný kontrolní CSV export (INV-16, první řez).

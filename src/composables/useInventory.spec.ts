@@ -11,20 +11,118 @@ beforeEach(() => {
 })
 
 describe('useInventory', () => {
+  it('movements načte všechny stránky a po dokončení ověří stabilní ledger', async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({
+      id: `move-${String(102 - index).padStart(3, '0')}`,
+      createdAt: `2026-07-14T10:${String(index % 60).padStart(2, '0')}:00Z`,
+    }))
+    const secondPage = [
+      { id: 'move-002', createdAt: '2026-07-01T10:00:00Z' },
+      { id: 'move-001', createdAt: '2026-07-01T09:00:00Z' },
+    ]
+    vi.mocked(http.get)
+      .mockResolvedValueOnce({ items: firstPage, total: 102, page: 1, pageSize: 100 } as never)
+      .mockResolvedValueOnce({ items: secondPage, total: 102, page: 2, pageSize: 100 } as never)
+      .mockResolvedValueOnce({ items: firstPage, total: 102, page: 1, pageSize: 100 } as never)
+
+    const result = await useInventory().movements({
+      from: '2026-07-01',
+      to: '2026-07-14',
+      productId: 'prod-1',
+      type: 'Receipt',
+      locationId: 'loc-1',
+    })
+
+    expect(result).toHaveLength(102)
+    expect(http.get).toHaveBeenNthCalledWith(
+      1,
+      '/inventory/movements?page=1&pageSize=100&sort=-date&from=2026-07-01&to=2026-07-14&productId=prod-1&type=Receipt&locationId=loc-1',
+    )
+    expect(http.get).toHaveBeenNthCalledWith(
+      2,
+      '/inventory/movements?page=2&pageSize=100&sort=-date&from=2026-07-01&to=2026-07-14&productId=prod-1&type=Receipt&locationId=loc-1',
+    )
+    expect(http.get).toHaveBeenNthCalledWith(
+      3,
+      '/inventory/movements?page=1&pageSize=100&sort=-date&from=2026-07-01&to=2026-07-14&productId=prod-1&type=Receipt&locationId=loc-1',
+    )
+  })
+
+  it('movements selže zavřeně, když se ledger během stránkování změní', async () => {
+    vi.mocked(http.get)
+      .mockResolvedValueOnce({
+        items: [{ id: 'move-1' }],
+        total: 1,
+        page: 1,
+        pageSize: 100,
+      } as never)
+      .mockResolvedValueOnce({
+        items: [{ id: 'move-2' }],
+        total: 2,
+        page: 1,
+        pageSize: 100,
+      } as never)
+
+    await expect(useInventory().movements()).rejects.toThrow('během načítání změnily')
+  })
+
+  it('movements zachová autoritativní pořadí serveru i při různé přesnosti času', async () => {
+    const items = [
+      { id: 'newer', createdAt: '2026-07-14T10:00:00.100Z' },
+      { id: 'older', createdAt: '2026-07-14T10:00:00Z' },
+    ]
+    vi.mocked(http.get).mockResolvedValue({ items, total: 2, page: 1, pageSize: 100 } as never)
+
+    const result = await useInventory().movements()
+
+    expect(result.map((movement) => movement.id)).toEqual(['newer', 'older'])
+  })
+
   it('levels bez filtru volá základní stránkovaný endpoint', async () => {
-    vi.mocked(http.get).mockResolvedValue({ items: [] } as never)
+    vi.mocked(http.get).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 100 } as never)
 
     await useInventory().levels()
 
-    expect(http.get).toHaveBeenCalledWith('/inventory/stock-levels?pageSize=200')
+    expect(http.get).toHaveBeenCalledWith('/inventory/stock-levels?page=1&pageSize=100')
   })
 
   it('levels posílá pobočku jako query', async () => {
-    vi.mocked(http.get).mockResolvedValue({ items: [] } as never)
+    vi.mocked(http.get).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 100 } as never)
 
     await useInventory().levels({ locationId: 'bar-1' })
 
-    expect(http.get).toHaveBeenCalledWith('/inventory/stock-levels?pageSize=200&locationId=bar-1')
+    expect(http.get).toHaveBeenCalledWith(
+      '/inventory/stock-levels?page=1&pageSize=100&locationId=bar-1',
+    )
+  })
+
+  it('levels načte všechny stránky, aby produkty nad první stovkou nedostaly falešnou nulu', async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({
+      productId: `prod-${index + 1}`,
+      quantity: index + 1,
+    }))
+    const secondPage = [
+      { productId: 'prod-101', quantity: 101 },
+      { productId: 'prod-102', quantity: 102 },
+    ]
+    vi.mocked(http.get)
+      .mockResolvedValueOnce({ items: firstPage, total: 102, page: 1, pageSize: 100 } as never)
+      .mockResolvedValueOnce({ items: secondPage, total: 102, page: 2, pageSize: 100 } as never)
+      .mockResolvedValueOnce({ items: firstPage, total: 102, page: 1, pageSize: 100 } as never)
+
+    const result = await useInventory().levels()
+
+    expect(result).toHaveLength(102)
+    expect(result.at(-1)).toEqual({ productId: 'prod-102', quantity: 102 })
+    expect(http.get).toHaveBeenNthCalledWith(2, '/inventory/stock-levels?page=2&pageSize=100')
+  })
+
+  it('movementFilters načte tenantový katalog filtru z ledgeru', async () => {
+    vi.mocked(http.get).mockResolvedValue({ products: [], locations: [] } as never)
+
+    await useInventory().movementFilters()
+
+    expect(http.get).toHaveBeenCalledWith('/inventory/movement-filters')
   })
 
   it('receive posílá pobočku do těla příjmu', async () => {

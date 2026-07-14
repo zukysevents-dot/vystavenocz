@@ -11,10 +11,16 @@ function formatNum(n: number): string {
   return String(n).replace('.', ',')
 }
 
+/** Uživatelský text nesmí tabulkový editor spustit jako vzorec. Čísla nechávej jako čísla. */
+export function safeCsvText(value: string | null | undefined): string {
+  const text = value ?? ''
+  return /^[\s\u0000-\u001f]*[=+\-@]/.test(text) ? `'${text}` : text
+}
+
 /** Buňka: uvozovky jen když obsahuje `;`, `"` nebo nový řádek (uvozovky se zdvojují). */
 function cell(v: CsvValue): string {
   const s = typeof v === 'number' ? formatNum(v) : (v ?? '')
-  return /["\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  return /["\r\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 
 /** Sestaví CSV text z hlaviček a řádků (bez BOM). */
