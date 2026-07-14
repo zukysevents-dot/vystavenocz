@@ -12,6 +12,8 @@ Tento návod je pro běžnou práci v aplikaci. Než začnete, zkontrolujte v **
 
 V **Klientech** založte odběratele a ve **Fakturách** vystavte doklad. Pro zálohy použijte proformu, po úhradě ji převeďte na daňový doklad. Dobropis vždy založte z původní faktury. Pro pravidelné platby slouží **Opakované faktury**.
 
+V **Exportu pro účetní** vyberte období, typ dokladu, stav, odběratele a měnu. Náhled ukáže přesný počet dokladů a součty oddělené podle měn; tlačítko **Export CSV** stáhne právě tento výběr. Zálohy, koncepty a storna nejsou ve výchozím výběru a musíte je zapnout vědomě. ISDOC stáhnete u jednotlivého podporovaného vystaveného dokladu.
+
 ## Gastro a obchod
 
 Na začátku nastavte produkty, kategorie a sklad. V gastru připravte stoly, menu, receptury a modifikátory. Obsluha pracuje přes **Pokladnu** nebo **Restauraci**, kuchyně vidí bony v samostatné frontě. Po prodeji se propíše tržba a sklad; den končí **Uzávěrkou**.

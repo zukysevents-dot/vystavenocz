@@ -169,3 +169,9 @@ Staging demo data: backend `vystaveno-api` má explicitní CLI helper `dotnet Vy
 - Technické termíny ponechávej jen v pokročilé části pro vývojáře a hned je vysvětli běžnými slovy.
 - Falešné úspěchy jsou zakázané: ukázková akce nesmí tvrdit, že odeslala e-mail, strhla platbu nebo provedla právní podpis.
 - Zdroj kompletní příručky je `docs/product/kompletni-uzivatelsky-manual.md`. PDF generuje `scripts/generate-user-manual-pdf.py`; po změně zásadního workflow aktualizuj zdroj i PDF.
+
+## Přesný export fakturačních dokladů
+
+`src/pages/UctarnaPage.vue` načítá pro export všechny stránky `GET /invoices` přes `src/composables/useInvoiceExport.ts`; nesmí tiše skončit na první stovce ani exportovat neúplný výběr. Filtry data vystavení, typu dokladu, stavu, odběratele a měny se aplikují jednou v `src/lib/invoice-export.ts` a stejný seřazený snapshot používá náhled, souhrn i CSV. Peníze a DPH se v API režimu nepřepočítávají: používají se serverové součty, dobropis zůstává záporný a různé měny se zobrazují odděleně. Výchozí výběr obsahuje faktury a dobropisy ve stavu vystaveno, zaplaceno nebo po splatnosti; proformy, koncepty a storna jen po výslovném zapnutí. Hromadný formát této obrazovky je pouze skutečně podporované CSV. ISDOC je po jednom dokladu, vyžaduje detail s řádky a nenabízí se pro proformu, koncept, storno ani cizí měnu bez kurzového přepočtu. `useIntegrations` exporty prodejů a Z-reportů nejsou exportem fakturačních dokladů. Regrese: `src/lib/invoice-export.spec.ts`, `src/composables/useInvoiceExport.spec.ts`, `src/lib/accounting-export.spec.ts`, `e2e/uctarna-api.spec.ts` a mobilní axe kontrola v `e2e/a11y.spec.ts`.
+
+Textová pole CSV, která mohou pocházet od uživatele, musí zůstat chráněná proti spuštění jako tabulkový vzorec (`=`, `+`, `-`, `@` i po úvodních řídicích znacích). Ochrana se nesmí aplikovat na číselné sloupce, aby záporné částky dobropisů zůstaly čísly.
