@@ -14,6 +14,8 @@ Veřejný ceník (`src/lib/pricing.ts` + `IndustryPackages.vue`) prodává jen o
 
 Předávací protokol zakázky je neměnný snapshot práce a materiálu. API detail vrací `handover.items` s `kind` `work`/`material`; `useJobs` musí detail defensivně normalizovat, aby neúplná starší odpověď nikdy neshodila stránku zakázky.
 
+Nákupní objednávky V1 jsou přímo v existující stránce `/app/naskladneni`, nikoli v paralelním skladu: adresář dodavatelů → `Draft → Ordered → PartiallyReceived → Received`, s možností zrušení jen před prvním příjmem. UI `PurchaseOrdersPanel.vue` je mobilní, katalog načítá celý přes `loadAll()` a dílčí příjem drží stejný klientský UUID `idempotencyKey` při opakování po chybě. Backend atomicky znovupoužije existující `PurchaseReceipt` a append-only ledger. Používej jen stávající `inventory.read/manage`; role/oprávnění, nativní aplikace a AI/MCP v tomto toku neměň. Kontrakt: `docs/backend/purchase-orders-v1.md`.
+
 ## Co to je
 
 Vystaveno.cz — fakturační + pokladní (POS) / gastro SaaS pro malé české firmy.

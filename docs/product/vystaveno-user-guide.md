@@ -20,7 +20,7 @@ Podrobný návod pro restauraci je v [gastro-user-manual.md](gastro-user-manual.
 
 ## Sklad
 
-Zboží přijímejte přes **Naskladnění**. Pravidelně udělejte inventuru a ve **Zrcadle skladu** vyřešte rozdíly mezi očekávaným a skutečným stavem. Každá oprava zanechává auditní stopu.
+Zboží přijímejte přes **Naskladnění**. Jednoduchou dodávku zapište rovnou příjemkou; plánovaný nákup ve stejné obrazovce veďte přes dodavatele a nákupní objednávku. Objednávku lze přijímat postupně a každý dílčí příjem zvýší stejný sklad jen o skutečně dodané množství. Pravidelně udělejte inventuru a ve **Zrcadle skladu** vyřešte rozdíly mezi očekávaným a skutečným stavem. Každá oprava zanechává auditní stopu.
 
 ## Směny a docházka
 

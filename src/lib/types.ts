@@ -900,6 +900,7 @@ export interface PurchaseReceiptItem {
 
 export interface PurchaseReceipt {
   id: string
+  purchaseOrderId: string | null
   locationId: string | null
   supplierName: string | null
   documentNumber: string | null
@@ -923,6 +924,110 @@ export interface CreatePurchaseReceiptRequest {
   note: string | null
   locationId: string | null
   items: PurchaseReceiptItemInput[]
+}
+
+export interface InventorySupplier {
+  id: string
+  name: string
+  ico: string | null
+  dic: string | null
+  email: string | null
+  phone: string | null
+  contactPerson: string | null
+  note: string | null
+  isArchived: boolean
+  createdAt: string
+}
+
+export interface InventorySupplierInput {
+  name: string
+  ico: string | null
+  dic: string | null
+  email: string | null
+  phone: string | null
+  contactPerson: string | null
+  note: string | null
+}
+
+export type PurchaseOrderStatus =
+  | 'Draft'
+  | 'Ordered'
+  | 'PartiallyReceived'
+  | 'Received'
+  | 'Cancelled'
+
+export interface PurchaseOrderItemInput {
+  productId: string
+  orderedQuantity: number
+  unitCost: number | null
+}
+
+export interface PurchaseOrderItem {
+  id: string
+  productId: string
+  productName: string
+  productSku: string
+  orderedQuantity: number
+  receivedQuantity: number
+  remainingQuantity: number
+  unitCost: number | null
+  lineCost: number | null
+}
+
+export interface PurchaseOrderReceiptSummary {
+  id: string
+  documentNumber: string | null
+  receivedOn: string
+  totalCost: number | null
+  createdAt: string
+}
+
+export interface PurchaseOrder {
+  id: string
+  number: string
+  status: PurchaseOrderStatus
+  supplierId: string
+  supplierName: string
+  locationId: string | null
+  orderedOn: string
+  expectedOn: string | null
+  note: string | null
+  totalCost: number | null
+  placedAt: string | null
+  completedAt: string | null
+  cancelledAt: string | null
+  cancellationReason: string | null
+  createdAt: string
+  items: PurchaseOrderItem[]
+  receipts: PurchaseOrderReceiptSummary[]
+}
+
+export interface PurchaseOrderInput {
+  supplierId: string
+  locationId: string | null
+  orderedOn: string | null
+  expectedOn: string | null
+  note: string | null
+  items: PurchaseOrderItemInput[]
+}
+
+export interface PurchaseOrderReceiptItemInput {
+  purchaseOrderItemId: string
+  quantity: number
+  unitCost: number | null
+}
+
+export interface ReceivePurchaseOrderInput {
+  idempotencyKey: string
+  documentNumber: string | null
+  receivedOn: string | null
+  note: string | null
+  items: PurchaseOrderReceiptItemInput[]
+}
+
+export interface ReceivePurchaseOrderResponse {
+  order: PurchaseOrder
+  receipt: PurchaseReceipt
 }
 
 export interface PurchaseSuggestionItem {

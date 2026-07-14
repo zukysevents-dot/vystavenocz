@@ -71,6 +71,10 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 5. Zadejte množství a volitelně nákupní cenu.
 6. Uložte příjemku. Sklad se mění přes příjemku, ne přes anonymní ruční příjem.
 7. Blok `K doobjednání` doporučuje množství podle minim, skutečné spotřeby a receptur (pro vybranou pobočku).
+8. Pro dodávku, kterou objednáváte předem, otevřete nahoře `Dodavatelé`, založte kontakt a potom `Nová objednávka`.
+9. Návrh naplňte produkty, množstvím a cenami; po odeslání dodavateli zvolte `Objednat`.
+10. Při doručení zvolte `Přijmout` a zadejte jen skutečně dodané množství. Nedodaný zbytek zůstane ve stavu `Částečně přijato` pro další příjemku.
+11. Každý dílčí příjem je samostatný skladový doklad. Opakované potvrzení po výpadku nevytvoří druhou příjemku ani druhý pohyb.
 
 ## Polotovary a výrobní dávky
 
