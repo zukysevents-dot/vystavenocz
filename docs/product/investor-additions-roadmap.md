@@ -757,3 +757,13 @@ Závislosti nebo další bezpečný krok:
 **Kontrakty/dokumentace:** API endpoint ani tvar response se neměnil; frontend nově stránkuje stávající `GET /invoices` do úplného výsledku a dál používá serverové peněžní součty. Zpřesněn Invoicing V2 kontrakt, `AGENTS.md`, `CLAUDE.md`, oba uživatelské návody a vygenerovaný PDF manuál. CSV chrání uživatelský text před spuštěním jako tabulkový vzorec.
 
 **Závislosti nebo další bezpečný krok:** navázat samostatnými řezy pro produkty, klienty, POS doklady a Z-reporty. Filtr více firem doplnit až po Standově multi-company/auth kontraktu; role/oprávnění, nativní Android/iOS a AI/MCP zůstávají ve Standově oblasti.
+
+### 2026-07-14 | Codex | INV-16 | skladová karta a kontrolní export | frontend PR #186 / backend PR #253
+
+**Výsledek:** Existující append-only skladový ledger má první ucelenou skladovou kartu: serverově stránkovaný přehled a přesný CSV export podle období, produktu, typu pohybu a pobočky. Pohyby nesou čitelné popisky i auditní ID a filtry zpřístupní také archivované produkty a pobočky bez obejití tenantového nebo pobočkového scope. Web načítá celý ledger pouze při výslovném exportu, kontroluje souběžnou změnu dat a bezpečně pokrývá i více než 100 produktů. Rozhraní funguje jako mobilní web/PWA na 390 px; nativní aplikace nejsou součástí řezu.
+
+**Ověření:** frontend `npm run build`, `npm run lint`, 551/551 unit testů a 93/93 Playwright E2E; skladová karta prošla přesným vícestránkovým exportem, axe a kontrolou horizontálního overflow. Backend build bez varování, `dotnet format --verify-no-changes`, 42/42 cílených `InventoryTests`; před aditivním dokončením řezu prošlo také 365/365 unit a 1177/1177 integračních testů. Všechny závěrečné QA/review nálezy byly opraveny a znovu cíleně ověřeny.
+
+**Kontrakty/dokumentace:** backend rozšiřuje `GET /api/v1/inventory/movements` o `locationId`, deterministické řazení a čitelné metadata a přidává `GET /api/v1/inventory/movement-filters`; bez databázové migrace. Frontend kontraktuje úplné stránkování, stabilní export a ochranu CSV proti formula injection. Doplněny oba repozitářové kontexty, backendové dokumenty, uživatelské návody a vizuálně ověřený 17stránkový PDF manuál. Implementace netvrdí shodu s PML ani jiným regulovaným režimem.
+
+**Závislosti nebo další bezpečný krok:** `INV-16` zůstává otevřený pro navazující samostatné řezy: dodavatelé a nákupní objednávky, rezervace/disponibilita, šarže a expirace, skenerová inventura, ocenění a hlubší reporting. Role a oprávnění dodá Standa; nativní Android/iOS a AI/MCP zůstávají mimo tuto roadmapu.
