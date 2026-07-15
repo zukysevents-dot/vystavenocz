@@ -1,9 +1,19 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { AlertTriangle, CalendarClock, Loader2, RefreshCw, Trash2 } from 'lucide-vue-next'
+import {
+  AlertTriangle,
+  CalendarClock,
+  History,
+  Loader2,
+  RefreshCw,
+  ShieldAlert,
+  Trash2,
+} from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -21,7 +31,14 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from '@/components/ui/sonner'
 import { useInventory } from '@/composables/useInventory'
-import { isApprovalRequest, type Location, type Product, type StockLot } from '@/lib/types'
+import {
+  isApprovalRequest,
+  type Location,
+  type Product,
+  type StockLot,
+  type StockLotStatus,
+  type StockLotStatusEvent,
+} from '@/lib/types'
 
 const props = defineProps<{
   products: Product[]
@@ -32,10 +49,12 @@ const props = defineProps<{
 const inventory = useInventory()
 const ALL_PRODUCTS = '__all_products__'
 const ALL_LOCATIONS = '__all_locations__'
+const ALL_STATUSES = '__all_statuses__'
 const productId = ref(ALL_PRODUCTS)
 const locationId = ref(props.initialLocationId || ALL_LOCATIONS)
 const search = ref('')
 const expiresTo = ref('')
+const status = ref<StockLotStatus | typeof ALL_STATUSES>(ALL_STATUSES)
 const lots = ref<StockLot[]>([])
 const total = ref(0)
 const page = ref(1)
@@ -47,6 +66,35 @@ const pageCount = computed(() => Math.max(1, Math.ceil(total.value / pageSize.va
 const trackedProducts = computed(() =>
   props.products.filter((product) => product.lotTrackingEnabled),
 )
+const STATUS_OPTIONS: Array<{ value: StockLotStatus; label: string; description: string }> = [
+  { value: 'Active', label: 'Uvolněná', description: 'Lze ji prodávat, vydávat a přesouvat.' },
+  {
+    value: 'Quarantined',
+    label: 'Karanténa',
+    description: 'Dočasně se nesmí použít, dokud neproběhne kontrola.',
+  },
+  {
+    value: 'Blocked',
+    label: 'Blokovaná',
+    description: 'Nesmí se použít ani objednat do stejné šarže.',
+  },
+  {
+    value: 'Recalled',
+    label: 'Reklamovaná',
+    description: 'Trvale stažená z oběhu; tento stav už nelze vrátit.',
+  },
+]
+
+function statusLabel(value: StockLotStatus): string {
+  return STATUS_OPTIONS.find((option) => option.value === value)?.label ?? value
+}
+
+function statusTone(value: StockLotStatus): string {
+  if (value === 'Active') return 'border-success/30 bg-success/10 text-success'
+  if (value === 'Quarantined')
+    return 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+  return 'border-destructive/30 bg-destructive/10 text-destructive'
+}
 
 function fmtQuantity(value: number): string {
   return value.toLocaleString('cs-CZ', { maximumFractionDigits: 3 })
@@ -84,6 +132,7 @@ async function load(targetPage = page.value) {
       expiresTo: expiresTo.value || null,
       search: search.value,
       positiveOnly: true,
+      status: status.value === ALL_STATUSES ? null : status.value,
     })
     lots.value = result.items
     total.value = result.total
@@ -95,6 +144,69 @@ async function load(targetPage = page.value) {
   } finally {
     loading.value = false
   }
+}
+
+const statusOpen = ref(false)
+const statusLot = ref<StockLot | null>(null)
+const targetStatus = ref<StockLotStatus>('Quarantined')
+const statusReason = ref('')
+const statusSaving = ref(false)
+const allowedStatusOptions = computed(() => {
+  const current = statusLot.value?.status
+  if (!current || current === 'Recalled') return []
+  return STATUS_OPTIONS.filter((option) => option.value !== current)
+})
+
+function openStatusChange(lot: StockLot) {
+  if (lot.status === 'Recalled') return
+  statusLot.value = lot
+  targetStatus.value = lot.status === 'Active' ? 'Quarantined' : 'Active'
+  statusReason.value = ''
+  statusOpen.value = true
+}
+
+async function submitStatusChange() {
+  const lot = statusLot.value
+  if (!lot || !statusReason.value.trim()) {
+    toast.error('Uveďte důvod změny stavu šarže.')
+    return
+  }
+  statusSaving.value = true
+  try {
+    await inventory.changeStockLotStatus(lot.id, targetStatus.value, statusReason.value.trim())
+    statusOpen.value = false
+    toast.success(`Šarže je nyní: ${statusLabel(targetStatus.value)}.`)
+    await load()
+  } catch (cause) {
+    console.error(cause)
+    toast.error('Stav šarže se nepodařilo změnit.')
+  } finally {
+    statusSaving.value = false
+  }
+}
+
+const historyOpen = ref(false)
+const historyLot = ref<StockLot | null>(null)
+const historyRows = ref<StockLotStatusEvent[]>([])
+const historyLoading = ref(false)
+
+async function openHistory(lot: StockLot) {
+  historyLot.value = lot
+  historyRows.value = []
+  historyOpen.value = true
+  historyLoading.value = true
+  try {
+    historyRows.value = await inventory.stockLotStatusHistory(lot.id)
+  } catch (cause) {
+    console.error(cause)
+    toast.error('Historii stavu šarže se nepodařilo načíst.')
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+function fmtDateTime(value: string): string {
+  return new Date(value).toLocaleString('cs-CZ')
 }
 
 watch(
@@ -173,7 +285,7 @@ async function submitWriteOff() {
         </Button>
       </div>
 
-      <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <div class="grid gap-1.5">
           <Label for="lot-search">Hledat</Label>
           <Input
@@ -215,6 +327,24 @@ async function submitWriteOff() {
           <Label for="lot-expiry">Expiruje nejpozději</Label>
           <Input id="lot-expiry" v-model="expiresTo" type="date" />
         </div>
+        <div class="grid gap-1.5">
+          <Label for="lot-status">Stav</Label>
+          <Select v-model="status">
+            <SelectTrigger id="lot-status"
+              ><SelectValue placeholder="Všechny stavy"
+            /></SelectTrigger>
+            <SelectContent>
+              <SelectItem :value="ALL_STATUSES">Všechny stavy</SelectItem>
+              <SelectItem
+                v-for="option in STATUS_OPTIONS"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
     </div>
 
@@ -247,7 +377,12 @@ async function submitWriteOff() {
               {{ lot.productSku }} · {{ lot.locationName || 'Nezařazeno' }}
             </p>
           </div>
-          <strong class="shrink-0 text-lg tabular-nums">{{ fmtQuantity(lot.quantity) }}</strong>
+          <div class="shrink-0 text-right">
+            <strong class="block text-lg tabular-nums">{{ fmtQuantity(lot.quantity) }}</strong>
+            <Badge variant="outline" :class="statusTone(lot.status)">
+              {{ statusLabel(lot.status) }}
+            </Badge>
+          </div>
         </div>
         <div class="mt-3 rounded-lg bg-muted/40 p-3 text-sm">
           <div class="font-medium">{{ lot.lotNumber }}</div>
@@ -259,16 +394,30 @@ async function submitWriteOff() {
             {{ fmtDate(lot.expiresOn) }} · {{ expiryLabel(lot) }}
           </div>
         </div>
-        <Button
-          v-if="lot.expiresOn"
-          type="button"
-          variant="outline"
-          size="sm"
-          class="mt-3 w-full sm:w-auto"
-          @click="openWriteOff(lot)"
-        >
-          <Trash2 class="h-4 w-4" /> Odepsat expiraci
-        </Button>
+        <div class="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          <Button
+            v-if="lot.expiresOn && lot.status === 'Active'"
+            type="button"
+            variant="outline"
+            size="sm"
+            class="col-span-2 sm:w-auto"
+            @click="openWriteOff(lot)"
+          >
+            <Trash2 class="h-4 w-4" /> Odepsat expiraci
+          </Button>
+          <Button
+            v-if="lot.status !== 'Recalled'"
+            type="button"
+            variant="outline"
+            size="sm"
+            @click="openStatusChange(lot)"
+          >
+            <ShieldAlert class="h-4 w-4" /> Změnit stav
+          </Button>
+          <Button type="button" variant="ghost" size="sm" @click="openHistory(lot)">
+            <History class="h-4 w-4" /> Historie
+          </Button>
+        </div>
       </article>
     </div>
 
@@ -322,6 +471,90 @@ async function submitWriteOff() {
           <Loader2 v-if="writeOffSaving" class="h-4 w-4 animate-spin" /> Odepsat
         </Button>
       </DialogFooter>
+    </DialogContent>
+  </Dialog>
+
+  <Dialog v-model:open="statusOpen">
+    <DialogContent class="max-w-md">
+      <DialogHeader>
+        <DialogTitle>Změnit stav šarže</DialogTitle>
+        <DialogDescription>
+          {{ statusLot?.productName }} · {{ statusLot?.lotNumber }}. Blokovaný stav okamžitě odebere
+          šarži z disponibilní zásoby i automatického FEFO výdeje.
+        </DialogDescription>
+      </DialogHeader>
+      <div class="space-y-4">
+        <div class="space-y-2">
+          <Label for="lot-target-status">Nový stav</Label>
+          <Select v-model="targetStatus">
+            <SelectTrigger id="lot-target-status"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem
+                v-for="option in allowedStatusOptions"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <p class="text-xs text-muted-foreground">
+            {{ STATUS_OPTIONS.find((option) => option.value === targetStatus)?.description }}
+          </p>
+        </div>
+        <div class="space-y-2">
+          <Label for="lot-status-reason">Důvod</Label>
+          <Textarea
+            id="lot-status-reason"
+            v-model="statusReason"
+            maxlength="500"
+            placeholder="Např. poškozený obal, kontrola kvality nebo stažení série"
+          />
+        </div>
+      </div>
+      <DialogFooter>
+        <Button variant="ghost" @click="statusOpen = false">Zrušit</Button>
+        <Button :disabled="statusSaving || !statusReason.trim()" @click="submitStatusChange">
+          <Loader2 v-if="statusSaving" class="h-4 w-4 animate-spin" /> Uložit stav
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+
+  <Dialog v-model:open="historyOpen">
+    <DialogContent class="max-h-[85vh] max-w-lg overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle>Historie stavu šarže</DialogTitle>
+        <DialogDescription>
+          {{ historyLot?.productName }} · {{ historyLot?.lotNumber }}. Historie je neměnná.
+        </DialogDescription>
+      </DialogHeader>
+      <div v-if="historyLoading" class="flex justify-center p-8">
+        <Loader2 class="h-6 w-6 animate-spin text-primary" />
+      </div>
+      <div
+        v-else-if="!historyRows.length"
+        class="rounded-xl bg-muted/40 p-5 text-sm text-muted-foreground"
+      >
+        Stav této šarže zatím nebyl změněn.
+      </div>
+      <ol v-else class="space-y-3">
+        <li v-for="entry in historyRows" :key="entry.id" class="rounded-xl border p-3">
+          <div class="flex flex-wrap items-center gap-2 text-sm font-medium">
+            <Badge variant="outline" :class="statusTone(entry.fromStatus)">
+              {{ statusLabel(entry.fromStatus) }}
+            </Badge>
+            <span aria-hidden="true">→</span>
+            <Badge variant="outline" :class="statusTone(entry.toStatus)">
+              {{ statusLabel(entry.toStatus) }}
+            </Badge>
+          </div>
+          <p class="mt-2 text-sm">{{ entry.reason }}</p>
+          <time class="mt-1 block text-xs text-muted-foreground" :datetime="entry.changedAt">
+            {{ fmtDateTime(entry.changedAt) }}
+          </time>
+        </li>
+      </ol>
     </DialogContent>
   </Dialog>
 </template>

@@ -12,6 +12,8 @@ import type {
   StockMovementFilters,
   StockMovementType,
   StockLot,
+  StockLotStatus,
+  StockLotStatusEvent,
   StockReservation,
   StockReservationStatus,
   CreateStockReservationRequest,
@@ -38,6 +40,7 @@ export interface StockLotQuery {
   search?: string
   page?: number
   pageSize?: number
+  status?: StockLotStatus | null
 }
 
 export interface StockMirrorQuery {
@@ -375,6 +378,7 @@ export function useInventory() {
     if (query.locationId) params.set('locationId', query.locationId)
     if (query.expiresTo) params.set('expiresTo', query.expiresTo)
     if (query.search?.trim()) params.set('search', query.search.trim())
+    if (query.status) params.set('status', query.status)
     return http.get(`/inventory/stock-lots?${params}`)
   }
   async function allStockLots(query: Omit<StockLotQuery, 'page' | 'pageSize'> = {}) {
@@ -398,6 +402,16 @@ export function useInventory() {
   }
   function enableLotTracking(productId: string): Promise<EnableLotTrackingResponse> {
     return http.post(`/inventory/stock-lots/products/${productId}/enable`, {})
+  }
+  function changeStockLotStatus(
+    stockLotId: string,
+    status: StockLotStatus,
+    reason: string,
+  ): Promise<StockLot> {
+    return http.post(`/inventory/stock-lots/${stockLotId}/status`, { status, reason })
+  }
+  function stockLotStatusHistory(stockLotId: string): Promise<StockLotStatusEvent[]> {
+    return http.get(`/inventory/stock-lots/${stockLotId}/status-history`)
   }
   return {
     levels,
@@ -424,5 +438,7 @@ export function useInventory() {
     stockLots,
     allStockLots,
     enableLotTracking,
+    changeStockLotStatus,
+    stockLotStatusHistory,
   }
 }

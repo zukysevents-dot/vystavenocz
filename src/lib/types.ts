@@ -811,6 +811,7 @@ export interface StockLevel {
   locationId: string | null
   reservedQuantity: number
   availableQuantity: number
+  restrictedQuantity?: number
 }
 
 // Centrální sklad: přehled zásob napříč pobočkami (matice produkt × provozovna).
@@ -825,6 +826,7 @@ export interface StockByLocationCell {
   quantity: number
   reservedQuantity: number
   availableQuantity: number
+  restrictedQuantity?: number
 }
 
 export interface StockByLocationRow {
@@ -835,6 +837,7 @@ export interface StockByLocationRow {
   totalReservedQuantity: number
   totalAvailableQuantity: number
   cells: StockByLocationCell[]
+  totalRestrictedQuantity?: number
 }
 
 export interface StockByLocationResponse {
@@ -943,6 +946,18 @@ export interface StockLot {
   daysToExpiry: number | null
   quantity: number
   isUnspecified: boolean
+  status: StockLotStatus
+}
+
+export type StockLotStatus = 'Active' | 'Quarantined' | 'Blocked' | 'Recalled'
+
+export interface StockLotStatusEvent {
+  id: string
+  fromStatus: StockLotStatus
+  toStatus: StockLotStatus
+  reason: string
+  changedBy: string | null
+  changedAt: string
 }
 
 export interface EnableLotTrackingResponse {

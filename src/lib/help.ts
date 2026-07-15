@@ -169,7 +169,7 @@ export const HELP_GUIDES: readonly HelpGuide[] = [
     audience: 'manager',
     description: 'Příjem, inventura a rozdíly mezi evidencí a skutečností.',
     whatItMeans:
-      'Naskladnění zvýší zásobu. Plánovaný nákup můžete vést přes dodavatele a objednávku, která podporuje více dílčích dodávek. Nastavené balení dodavatele převede aktuální návrh doobjednání na celé kartony nebo balíky. U zboží s expirací lze sledovat šarže a vydávat nejbližší expiraci jako první. Inventura porovná skutečné množství s tím, co očekává systém.',
+      'Naskladnění zvýší zásobu. Plánovaný nákup můžete vést přes dodavatele a objednávku, která podporuje více dílčích dodávek. Nastavené balení dodavatele převede aktuální návrh doobjednání na celé kartony nebo balíky. U zboží s expirací lze sledovat šarže, vydávat nejbližší expiraci jako první a nevyhovující šarži dát do karantény, zablokovat nebo stáhnout. Inventura porovná skutečné množství s tím, co očekává systém.',
     whenToUse: 'Při dodávce zboží, pravidelné kontrole skladu nebo po zjištění rozdílu.',
     steps: [
       step(
@@ -183,6 +183,10 @@ export const HELP_GUIDES: readonly HelpGuide[] = [
       step(
         'Sledujte šarže a expirace',
         'U citlivého zboží zapněte šarže pro celou firmu a při příjmu zadejte číslo a datum. Aktivaci nelze vrátit a bez dostatečné zásoby pak prodej ani výdej neprojde.',
+      ),
+      step(
+        'Oddělte nevyhovující šarži',
+        'Karanténa a blokace ji vyřadí z dostupné zásoby. Stažení je konečné; každou změnu potvrďte konkrétním důvodem a zkontrolujte její historii.',
       ),
       step('Proveďte inventuru', 'Zadejte fyzicky spočítané množství.'),
       step('Vyřešte rozdíly', 'Ve skladu uvidíte, zda jde o manko nebo přebytek.'),

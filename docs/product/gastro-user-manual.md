@@ -132,6 +132,7 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 10. Tab `Šarže` ukazuje autoritativní množství po šarži a pobočce, datum a počet dní do expirace. Odtud lze odepsat přesně vybranou expirovanou šarži.
 11. Při výdeji nebo přesunu můžete zvolit konkrétní šarži. Bez výběru systém použije FEFO — nejdřív zboží s nejbližší expirací. Přesun zachová číslo šarže v cílové pobočce.
 12. V `Pohyby` lze filtrovat jednu šarži; detail i CSV ukazují číslo, expiraci a množství. Jeden výdej přes více šarží má v CSV samostatný řádek pro každou alokaci.
+13. Podezřelou šarži dejte přes `Změnit stav` do karantény nebo blokace a napište důvod. Okamžitě se odečte z disponibilního množství a nepůjde prodat, vydat, rezervovat, přesunout ani použít ve výrobě. Po kontrole ji lze uvolnit; `Reklamovaná` je konečné stažení série. Všechny změny zůstávají v `Historii`.
 
 ## Směny a docházka
 
