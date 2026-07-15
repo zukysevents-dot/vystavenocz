@@ -14,6 +14,7 @@ import {
   ArrowRightLeft,
   Building2,
   CalendarClock,
+  PackageCheck,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -41,8 +42,10 @@ import { isApprovalRequest } from '@/lib/types'
 import { toast } from '@/components/ui/sonner'
 import StockLedgerPanel from '@/components/app/StockLedgerPanel.vue'
 import StockLotsPanel from '@/components/app/StockLotsPanel.vue'
+import StockReservationsPanel from '@/components/app/StockReservationsPanel.vue'
 import type {
   StockLot,
+  StockLevel,
   StockByLocationResponse,
   StockLocationColumn,
   StockMirror,
@@ -59,9 +62,9 @@ const AUTO_LOT = '__auto_fefo__'
 
 const loading = ref(true)
 const busy = ref(false)
-const tab = ref<'levels' | 'movements' | 'lots' | 'mirror' | 'byLocation'>('levels')
+const tab = ref<'levels' | 'reservations' | 'movements' | 'lots' | 'mirror' | 'byLocation'>('levels')
 const search = ref('')
-const levelMap = ref(new Map<string, number>())
+const levelMap = ref(new Map<string, StockLevel>())
 const mirror = ref<StockMirror | null>(null)
 const mirrorLoaded = ref(false)
 const mirrorLoading = ref(false)
@@ -87,8 +90,13 @@ const byLocationColumns = computed(() => byLocation.value?.locations ?? [])
 // Řídké buňky → mapa množství podle sloupce, ať se v tabulce chybějící buňka doplní na 0.
 const byLocationRows = computed(() =>
   (byLocation.value?.products.items ?? []).map((r) => {
-    const q: Record<string, number> = {}
-    for (const c of r.cells) q[colKey(c.locationId)] = c.quantity
+    const q: Record<string, { quantity: number; reserved: number; available: number }> = {}
+    for (const c of r.cells)
+      q[colKey(c.locationId)] = {
+        quantity: c.quantity,
+        reserved: c.reservedQuantity,
+        available: c.availableQuantity,
+      }
     return { ...r, q }
   }),
 )
@@ -112,6 +120,8 @@ interface Row {
   sku: string
   min: number
   qty: number
+  reserved: number
+  available: number
   low: boolean
   lotTrackingEnabled: boolean
 }
@@ -130,14 +140,19 @@ const rows = computed<Row[]>(() => {
   return products.value
     .filter((p) => !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q))
     .map((p) => {
-      const qty = levelMap.value.get(p.id) ?? 0
+      const level = levelMap.value.get(p.id)
+      const qty = level?.quantity ?? 0
+      const reserved = level?.reservedQuantity ?? 0
+      const available = level?.availableQuantity ?? qty
       return {
         id: p.id,
         name: p.name,
         sku: p.sku,
         min: p.minQuantity,
         qty,
-        low: p.minQuantity > 0 && qty < p.minQuantity,
+        reserved,
+        available,
+        low: p.minQuantity > 0 && available < p.minQuantity,
         lotTrackingEnabled: p.lotTrackingEnabled === true,
       }
     })
@@ -219,11 +234,7 @@ function todayISO(): string {
 
 async function loadLevels() {
   const levels = await inv.levels({ locationId: stockFilterLocationId.value })
-  const totals = new Map<string, number>()
-  for (const level of levels) {
-    totals.set(level.productId, (totals.get(level.productId) ?? 0) + level.quantity)
-  }
-  levelMap.value = totals
+  levelMap.value = new Map(levels.map((level) => [level.productId, level]))
 }
 
 watch(stockLocationId, async (locationId) => {
@@ -407,7 +418,8 @@ async function submitAction() {
         amount < 0 && actionForm.stockLotId !== AUTO_LOT ? actionForm.stockLotId : null,
       )
   } catch (e) {
-    if (e instanceof ApiError && e.status === 409) toast.error('Nedostatek zásoby na skladě.')
+    if (e instanceof ApiError && e.status === 409)
+      toast.error('Není dost disponibilní zásoby. Zkontrolujte aktivní rezervace.')
     else toast.error('Operace selhala.')
     console.error(e)
     return
@@ -507,7 +519,8 @@ async function submitTransfer() {
       transferForm.stockLotId === AUTO_LOT ? null : transferForm.stockLotId,
     )
   } catch (e) {
-    if (e instanceof ApiError && e.status === 409) toast.error('Nedostatek zásoby na skladě.')
+    if (e instanceof ApiError && e.status === 409)
+      toast.error('Není dost disponibilní zásoby. Zkontrolujte aktivní rezervace.')
     else if (e instanceof ApiError && e.status === 403)
       toast.error('Přesun mimo vaši pobočku není povolen.')
     else toast.error('Přesun selhal.')
@@ -539,7 +552,7 @@ function openStocktake() {
     return
   }
   counts.value = Object.fromEntries(
-    products.value.map((p) => [p.id, levelMap.value.get(p.id) ?? 0]),
+    products.value.map((p) => [p.id, levelMap.value.get(p.id)?.quantity ?? 0]),
   )
   stocktakeSearch.value = ''
   stocktakeNote.value = 'Inventura'
@@ -554,7 +567,7 @@ function normalizeCount(value: number | ''): number {
 
 const allStocktakeRows = computed<StocktakeRow[]>(() =>
   products.value.map((p) => {
-    const expectedQuantity = levelMap.value.get(p.id) ?? 0
+    const expectedQuantity = levelMap.value.get(p.id)?.quantity ?? 0
     const countedQuantity = normalizeCount(counts.value[p.id] ?? expectedQuantity)
     return {
       id: p.id,
@@ -646,6 +659,18 @@ async function submitStocktake() {
           @click="tab = 'levels'"
         >
           Stav zásob
+        </button>
+        <button
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+          :class="
+            tab === 'reservations'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted text-muted-foreground hover:bg-muted/70'
+          "
+          @click="tab = 'reservations'"
+        >
+          <PackageCheck class="h-4 w-4" /> Rezervace
         </button>
         <button
           type="button"
@@ -771,12 +796,22 @@ async function submitStocktake() {
                   {{ r.sku }}<span v-if="r.min > 0"> • min {{ fmtQty(r.min) }}</span>
                 </div>
               </div>
-              <div class="flex items-center gap-3">
-                <div
-                  class="w-16 text-right text-lg font-bold tabular-nums"
-                  :class="r.low ? 'text-destructive' : ''"
-                >
-                  {{ fmtQty(r.qty) }}
+              <div class="flex flex-1 flex-wrap items-center justify-end gap-3 sm:flex-none">
+                <div class="grid min-w-[210px] grid-cols-3 gap-3 text-right tabular-nums">
+                  <div>
+                    <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Skladem</div>
+                    <div class="font-semibold">{{ fmtQty(r.qty) }}</div>
+                  </div>
+                  <div>
+                    <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Rezervováno</div>
+                    <div class="font-semibold text-amber-700 dark:text-amber-300">{{ fmtQty(r.reserved) }}</div>
+                  </div>
+                  <div>
+                    <div class="text-[10px] uppercase tracking-wide text-muted-foreground">K dispozici</div>
+                    <div class="text-lg font-bold" :class="r.low ? 'text-destructive' : ''">
+                      {{ fmtQty(r.available) }}
+                    </div>
+                  </div>
                 </div>
                 <div class="flex gap-1">
                   <Button
@@ -812,6 +847,16 @@ async function submitStocktake() {
             </div>
           </div>
         </div>
+      </template>
+
+      <!-- REZERVACE ZÁSOB -->
+      <template v-else-if="tab === 'reservations'">
+        <StockReservationsPanel
+          :products="products"
+          :locations="locations"
+          :initial-location-id="stockFilterLocationId"
+          @changed="loadLevels"
+        />
       </template>
 
       <!-- POHYBY -->
@@ -1068,8 +1113,12 @@ async function submitStocktake() {
                     class="px-3 py-2 text-right font-medium"
                   >
                     {{ colLabel(col) }}
+                    <span class="block text-[10px] font-normal normal-case">k dispozici / stav</span>
                   </th>
-                  <th class="px-3 py-2 text-right font-semibold text-foreground">Celkem</th>
+                  <th class="px-3 py-2 text-right font-semibold text-foreground">
+                    Celkem
+                    <span class="block text-[10px] font-normal normal-case">k dispozici / stav</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -1087,15 +1136,29 @@ async function submitStocktake() {
                     :key="colKey(col.locationId)"
                     class="px-3 py-2 text-right tabular-nums"
                     :class="
-                      (row.q[colKey(col.locationId)] ?? 0) === 0
+                      (row.q[colKey(col.locationId)]?.available ?? 0) === 0
                         ? 'text-muted-foreground/50'
                         : 'text-foreground'
                     "
                   >
-                    {{ fmtQty(row.q[colKey(col.locationId)] ?? 0) }}
+                    <div class="font-semibold">
+                      {{ fmtQty(row.q[colKey(col.locationId)]?.available ?? 0) }}
+                    </div>
+                    <div class="text-[11px] text-muted-foreground">
+                      stav {{ fmtQty(row.q[colKey(col.locationId)]?.quantity ?? 0) }}
+                      <template v-if="(row.q[colKey(col.locationId)]?.reserved ?? 0) > 0">
+                        · rez. {{ fmtQty(row.q[colKey(col.locationId)]?.reserved ?? 0) }}
+                      </template>
+                    </div>
                   </td>
                   <td class="px-3 py-2 text-right font-semibold tabular-nums text-foreground">
-                    {{ fmtQty(row.totalQuantity) }}
+                    <div>{{ fmtQty(row.totalAvailableQuantity) }}</div>
+                    <div class="text-[11px] font-normal text-muted-foreground">
+                      stav {{ fmtQty(row.totalQuantity) }}
+                      <template v-if="row.totalReservedQuantity > 0">
+                        · rez. {{ fmtQty(row.totalReservedQuantity) }}
+                      </template>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -1111,7 +1174,8 @@ async function submitStocktake() {
         <DialogHeader>
           <DialogTitle>{{ ACTION_LABEL[actionMode] }} — {{ actionProduct?.name }}</DialogTitle>
           <DialogDescription>
-            {{ stockLocationLabel }} · aktuální stav: {{ fmtQty(actionProduct?.qty ?? 0) }}
+            {{ stockLocationLabel }} · skladem {{ fmtQty(actionProduct?.qty ?? 0) }} · k dispozici
+            {{ fmtQty(actionProduct?.available ?? 0) }}
           </DialogDescription>
         </DialogHeader>
         <form class="space-y-4" @submit.prevent="submitAction">

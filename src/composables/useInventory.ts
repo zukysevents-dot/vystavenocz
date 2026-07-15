@@ -11,6 +11,9 @@ import type {
   StockMovementFilters,
   StockMovementType,
   StockLot,
+  StockReservation,
+  StockReservationStatus,
+  CreateStockReservationRequest,
   EnableLotTrackingResponse,
   Stocktake,
   ProductionBatch,
@@ -57,6 +60,15 @@ export interface PurchaseSuggestionsQuery {
   to?: string
   daysAhead?: number
   locationId?: string | null
+}
+
+export interface StockReservationQuery {
+  status?: StockReservationStatus | null
+  productId?: string | null
+  locationId?: string | null
+  search?: string
+  page?: number
+  pageSize?: number
 }
 
 export interface CreateProductionBatchRequest {
@@ -163,6 +175,40 @@ export function useInventory() {
     const params = new URLSearchParams({ pageSize: '200' })
     if (search.trim()) params.set('search', search.trim())
     return http.get<StockByLocationResponse>(`/inventory/stock-by-location?${params}`)
+  }
+  function stockReservations(
+    query: StockReservationQuery = {},
+  ): Promise<PagedResult<StockReservation>> {
+    const params = new URLSearchParams({
+      page: String(query.page ?? 1),
+      pageSize: String(query.pageSize ?? 100),
+      sort: '-date',
+    })
+    if (query.status) params.set('status', query.status)
+    if (query.productId) params.set('productId', query.productId)
+    if (query.locationId) params.set('locationId', query.locationId)
+    if (query.search?.trim()) params.set('search', query.search.trim())
+    return http.get(`/inventory/stock-reservations?${params}`)
+  }
+  function createStockReservation(
+    request: CreateStockReservationRequest,
+  ): Promise<StockReservation> {
+    return http.post('/inventory/stock-reservations', {
+      ...request,
+      reservedFor: request.reservedFor.trim(),
+      locationId: request.locationId || null,
+      note: request.note?.trim() || null,
+    })
+  }
+  function releaseStockReservation(id: string, note?: string | null): Promise<StockReservation> {
+    return http.post(`/inventory/stock-reservations/${id}/release`, {
+      note: note?.trim() || null,
+    })
+  }
+  function fulfillStockReservation(id: string, note?: string | null): Promise<StockReservation> {
+    return http.post(`/inventory/stock-reservations/${id}/fulfill`, {
+      note: note?.trim() || null,
+    })
   }
   function receive(
     productId: string,
@@ -310,6 +356,10 @@ export function useInventory() {
     movementFilters,
     movements,
     stockByLocation,
+    stockReservations,
+    createStockReservation,
+    releaseStockReservation,
+    fulfillStockReservation,
     receive,
     purchaseReceipts,
     createPurchaseReceipt,

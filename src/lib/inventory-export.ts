@@ -20,6 +20,7 @@ export const STOCK_MOVEMENT_LABELS: Record<StockMovementType, string> = {
   JobConsumption: 'Materiál na zakázce',
   StornoJobConsumption: 'Vrácení ze zakázky',
   LotAssignment: 'Přiřazení počáteční šarže',
+  ReservationFulfillment: 'Vyskladnění rezervace',
 }
 
 export const STOCK_MOVEMENT_COLUMNS = [
@@ -50,6 +51,8 @@ export interface StockMovementExportFallbacks {
 }
 
 export function stockMovementSource(movement: StockMovement): { label: string; id: string } {
+  if (movement.relatedStockReservationId)
+    return { label: 'Skladová rezervace', id: movement.relatedStockReservationId }
   if (movement.relatedPurchaseReceiptId)
     return { label: 'Nákupní příjemka', id: movement.relatedPurchaseReceiptId }
   if (movement.relatedStocktakeId) return { label: 'Inventura', id: movement.relatedStocktakeId }

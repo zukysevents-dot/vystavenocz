@@ -359,6 +359,52 @@ describe('useInventory', () => {
     )
   })
 
+  it('stockReservations posílá stav, produkt, pobočku a hledání', async () => {
+    vi.mocked(http.get).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 25 } as never)
+
+    await useInventory().stockReservations({
+      status: 'Active',
+      productId: 'prod-1',
+      locationId: 'bar-1',
+      search: ' zakázka 7 ',
+      page: 2,
+      pageSize: 25,
+    })
+
+    expect(http.get).toHaveBeenCalledWith(
+      '/inventory/stock-reservations?page=2&pageSize=25&sort=-date&status=Active&productId=prod-1&locationId=bar-1&search=zak%C3%A1zka+7',
+    )
+  })
+
+  it('vytvoření a vyřízení rezervace používá samostatné endpointy', async () => {
+    vi.mocked(http.post).mockResolvedValue({} as never)
+    const inventory = useInventory()
+
+    await inventory.createStockReservation({
+      productId: 'prod-1',
+      quantity: 2.5,
+      reservedFor: ' Zakázka Z-1 ',
+      locationId: 'bar-1',
+      note: ' připravit ',
+    })
+    await inventory.releaseStockReservation('res-1', ' zrušeno ')
+    await inventory.fulfillStockReservation('res-2', ' předáno ')
+
+    expect(http.post).toHaveBeenNthCalledWith(1, '/inventory/stock-reservations', {
+      productId: 'prod-1',
+      quantity: 2.5,
+      reservedFor: 'Zakázka Z-1',
+      locationId: 'bar-1',
+      note: 'připravit',
+    })
+    expect(http.post).toHaveBeenNthCalledWith(2, '/inventory/stock-reservations/res-1/release', {
+      note: 'zrušeno',
+    })
+    expect(http.post).toHaveBeenNthCalledWith(3, '/inventory/stock-reservations/res-2/fulfill', {
+      note: 'předáno',
+    })
+  })
+
   it('createPurchaseReceipt pošle pobočku v těle dokladu', async () => {
     vi.mocked(http.post).mockResolvedValue({} as never)
 
