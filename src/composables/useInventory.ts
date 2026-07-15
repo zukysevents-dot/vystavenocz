@@ -10,6 +10,8 @@ import type {
   StockMovement,
   StockMovementFilters,
   StockMovementType,
+  StockLot,
+  EnableLotTrackingResponse,
   Stocktake,
   ProductionBatch,
 } from '@/lib/types'
@@ -22,6 +24,16 @@ export interface StocktakeItemInput {
 
 export interface StockLevelQuery {
   locationId?: string | null
+}
+
+export interface StockLotQuery {
+  productId?: string | null
+  locationId?: string | null
+  expiresTo?: string | null
+  positiveOnly?: boolean
+  search?: string
+  page?: number
+  pageSize?: number
 }
 
 export interface StockMirrorQuery {
@@ -37,6 +49,7 @@ export interface StockMovementQuery {
   productId?: string | null
   type?: StockMovementType | null
   locationId?: string | null
+  stockLotId?: string | null
 }
 
 export interface PurchaseSuggestionsQuery {
@@ -51,6 +64,8 @@ export interface CreateProductionBatchRequest {
   producedQuantity: number
   locationId?: string | null
   note?: string | null
+  outputLotNumber?: string | null
+  outputExpiresOn?: string | null
 }
 
 // Sklad / zásoby (gastro/retail). Jen API mód — nad existujícím inventory backendem.
@@ -97,6 +112,7 @@ export function useInventory() {
     if (query.productId) params.set('productId', query.productId)
     if (query.type) params.set('type', query.type)
     if (query.locationId) params.set('locationId', query.locationId)
+    if (query.stockLotId) params.set('stockLotId', query.stockLotId)
     return `/inventory/movements?${params}`
   }
 
@@ -153,12 +169,16 @@ export function useInventory() {
     quantity: number,
     note: string | null,
     locationId?: string | null,
+    lotNumber?: string | null,
+    expiresOn?: string | null,
   ): Promise<unknown> {
     return http.post('/inventory/receipts', {
       productId,
       quantity,
       note,
       locationId: locationId || null,
+      lotNumber: lotNumber?.trim() || null,
+      expiresOn: expiresOn || null,
     })
   }
   function purchaseReceipts(query: StockLevelQuery = {}): Promise<PurchaseReceipt[]> {
@@ -177,6 +197,7 @@ export function useInventory() {
     note: string | null,
     type: StockMovementType = 'Issue',
     locationId?: string | null,
+    stockLotId?: string | null,
   ): Promise<StockMovement | ApprovalRequest> {
     return http.post('/inventory/issues', {
       productId,
@@ -184,6 +205,7 @@ export function useInventory() {
       note,
       type,
       locationId: locationId || null,
+      stockLotId: stockLotId || null,
     })
   }
   function correct(
@@ -191,12 +213,14 @@ export function useInventory() {
     delta: number,
     note: string,
     locationId?: string | null,
+    stockLotId?: string | null,
   ): Promise<unknown> {
     return http.post('/inventory/corrections', {
       productId,
       delta,
       note,
       locationId: locationId || null,
+      stockLotId: stockLotId || null,
     })
   }
   function transfer(
@@ -205,6 +229,7 @@ export function useInventory() {
     fromLocationId: string,
     toLocationId: string,
     note: string | null,
+    stockLotId?: string | null,
   ): Promise<StockMovement[]> {
     return http.post('/inventory/transfers', {
       productId,
@@ -212,6 +237,7 @@ export function useInventory() {
       fromLocationId,
       toLocationId,
       note,
+      stockLotId: stockLotId || null,
     })
   }
   function stocktake(
@@ -244,6 +270,40 @@ export function useInventory() {
   function createProductionBatch(request: CreateProductionBatchRequest): Promise<ProductionBatch> {
     return http.post('/production-batches', request)
   }
+  function stockLots(query: StockLotQuery = {}): Promise<PagedResult<StockLot>> {
+    const params = new URLSearchParams({
+      page: String(query.page ?? 1),
+      pageSize: String(query.pageSize ?? 100),
+      positiveOnly: String(query.positiveOnly ?? true),
+    })
+    if (query.productId) params.set('productId', query.productId)
+    if (query.locationId) params.set('locationId', query.locationId)
+    if (query.expiresTo) params.set('expiresTo', query.expiresTo)
+    if (query.search?.trim()) params.set('search', query.search.trim())
+    return http.get(`/inventory/stock-lots?${params}`)
+  }
+  async function allStockLots(query: Omit<StockLotQuery, 'page' | 'pageSize'> = {}) {
+    const first = await stockLots({ ...query, page: 1, pageSize: 100 })
+    const expectedTotal = first.total
+    const rowKey = (lot: StockLot) => `${lot.id}:${lot.locationId ?? ''}`
+    const rows = new Map(first.items.map((lot) => [rowKey(lot), lot]))
+    const totalPages = Math.ceil(expectedTotal / 100)
+
+    for (let page = 2; page <= totalPages; page += 1) {
+      const next = await stockLots({ ...query, page, pageSize: 100 })
+      if (next.total !== expectedTotal)
+        throw new Error('Šarže se během načítání změnily. Načtěte výběr znovu.')
+      for (const lot of next.items) rows.set(rowKey(lot), lot)
+    }
+
+    const verification = await stockLots({ ...query, page: 1, pageSize: 100 })
+    if (verification.total !== expectedTotal || rows.size !== expectedTotal)
+      throw new Error('Šarže se během načítání změnily. Načtěte výběr znovu.')
+    return [...rows.values()]
+  }
+  function enableLotTracking(productId: string): Promise<EnableLotTrackingResponse> {
+    return http.post(`/inventory/stock-lots/products/${productId}/enable`, {})
+  }
   return {
     levels,
     movementPage,
@@ -260,5 +320,8 @@ export function useInventory() {
     stockMirror,
     purchaseSuggestions,
     createProductionBatch,
+    stockLots,
+    allStockLots,
+    enableLotTracking,
   }
 }

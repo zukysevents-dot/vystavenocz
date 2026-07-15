@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,14 +23,35 @@ const { createProductionBatch } = useInventory()
 const apiMode = isApiMode()
 const quantity = ref(1)
 const note = ref('')
+const outputLotNumber = ref('')
+const outputExpiresOn = ref('')
 const saving = ref(false)
 
+function resetForm() {
+  quantity.value = 1
+  note.value = ''
+  outputLotNumber.value = ''
+  outputExpiresOn.value = ''
+}
+
 function setOpen(open: boolean) {
+  if (!open) resetForm()
   emit('update:open', open)
 }
+
+watch(
+  () => props.product?.id,
+  () => {
+    if (props.open) resetForm()
+  },
+)
 async function createBatch() {
   if (!props.product || !(Number(quantity.value) > 0)) {
     toast.error('Zadejte kladné vyrobené množství.')
+    return
+  }
+  if (props.product.lotTrackingEnabled && !outputLotNumber.value.trim()) {
+    toast.error('Zadejte číslo šarže vyrobeného polotovaru.')
     return
   }
   saving.value = true
@@ -39,10 +60,10 @@ async function createBatch() {
       semiProductId: props.product.id,
       producedQuantity: Number(quantity.value),
       note: note.value.trim() || null,
+      outputLotNumber: outputLotNumber.value.trim() || null,
+      outputExpiresOn: outputExpiresOn.value || null,
     })
     toast.success('Výrobní dávka vytvořena a sklad upraven.')
-    quantity.value = 1
-    note.value = ''
     emit('created')
     setOpen(false)
   } catch (error) {
@@ -76,6 +97,16 @@ async function createBatch() {
             min="0.001"
             step="0.001"
           />
+        </div>
+        <div v-if="product?.lotTrackingEnabled" class="grid gap-3 sm:grid-cols-2">
+          <div class="space-y-2">
+            <Label for="batch-lot">Číslo výstupní šarže *</Label>
+            <Input id="batch-lot" v-model="outputLotNumber" placeholder="Např. VAR-2026-07" />
+          </div>
+          <div class="space-y-2">
+            <Label for="batch-expiry">Expirace</Label>
+            <Input id="batch-expiry" v-model="outputExpiresOn" type="date" />
+          </div>
         </div>
         <div class="space-y-2">
           <Label for="batch-note">Poznámka</Label

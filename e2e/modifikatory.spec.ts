@@ -44,6 +44,15 @@ const product = {
   categoryId: null,
 }
 
+const trackedSemiProduct = {
+  ...product,
+  id: 'prod-sauce',
+  name: 'Rajčatová omáčka',
+  sku: 'SAUCE',
+  productKind: 'SemiProduct',
+  lotTrackingEnabled: true,
+}
+
 const groups = [
   {
     id: 'group-sides',
@@ -179,5 +188,68 @@ test('správce přiřadí skupiny modifikátorů k produktu ve skladu', async ({
       { modifierGroupId: 'group-sides', sortOrder: 0 },
       { modifierGroupId: 'group-extra', sortOrder: 1 },
     ],
+  })
+})
+
+test('výroba sledovaného polotovaru vyžaduje novou výstupní šarži a resetuje formulář', async ({
+  page,
+}) => {
+  await seedApiMode(page)
+  let productionPayload: unknown
+
+  await page.route(API, async (route: Route) => {
+    const request = route.request()
+    const url = new URL(request.url())
+    const path = url.pathname.replace('/api/v1', '')
+    const method = request.method()
+
+    if (method === 'GET' && path === '/company') return route.fulfill({ json: company })
+    if (method === 'GET' && path === '/products')
+      return route.fulfill({ json: paged([trackedSemiProduct]) })
+    if (method === 'GET' && path === '/categories') return route.fulfill({ json: paged([]) })
+    if (method === 'POST' && path === '/production-batches') {
+      productionPayload = request.postDataJSON()
+      return route.fulfill({
+        status: 201,
+        json: {
+          id: 'batch-1',
+          semiProductId: trackedSemiProduct.id,
+          semiProductName: trackedSemiProduct.name,
+          locationId: null,
+          producedQuantity: 3,
+          note: 'ranní várka',
+          createdAt: '2026-07-14T10:00:00Z',
+          ingredients: [],
+          outputStockLotId: 'lot-output',
+          outputLotNumber: 'SAUCE-JUL',
+          outputExpiresOn: '2026-07-31',
+        },
+      })
+    }
+
+    return route.fulfill({ status: 404, json: { title: `Unhandled ${method} ${path}` } })
+  })
+
+  await dismissCookies(page)
+  await page.goto('/app/sklad')
+  await page.getByTitle('Vyrobit polotovar').click()
+  await page.getByLabel('Číslo výstupní šarže *').fill('STARÁ-ŠARŽE')
+  await page.getByRole('button', { name: 'Zrušit' }).click()
+
+  await page.getByTitle('Vyrobit polotovar').click()
+  await expect(page.getByLabel('Číslo výstupní šarže *')).toHaveValue('')
+  await page.getByLabel('Vyrobené množství').fill('3')
+  await page.getByLabel('Číslo výstupní šarže *').fill('SAUCE-JUL')
+  await page.getByLabel('Expirace').fill('2026-07-31')
+  await page.getByLabel('Poznámka').fill('ranní várka')
+  await page.getByRole('button', { name: 'Vyrobit', exact: true }).click()
+
+  await expect(page.getByText('Výrobní dávka vytvořena a sklad upraven.')).toBeVisible()
+  expect(productionPayload).toEqual({
+    semiProductId: trackedSemiProduct.id,
+    producedQuantity: 3,
+    note: 'ranní várka',
+    outputLotNumber: 'SAUCE-JUL',
+    outputExpiresOn: '2026-07-31',
   })
 })

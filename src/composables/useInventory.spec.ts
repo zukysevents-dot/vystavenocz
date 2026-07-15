@@ -31,20 +31,21 @@ describe('useInventory', () => {
       productId: 'prod-1',
       type: 'Receipt',
       locationId: 'loc-1',
+      stockLotId: 'lot-1',
     })
 
     expect(result).toHaveLength(102)
     expect(http.get).toHaveBeenNthCalledWith(
       1,
-      '/inventory/movements?page=1&pageSize=100&sort=-date&from=2026-07-01&to=2026-07-14&productId=prod-1&type=Receipt&locationId=loc-1',
+      '/inventory/movements?page=1&pageSize=100&sort=-date&from=2026-07-01&to=2026-07-14&productId=prod-1&type=Receipt&locationId=loc-1&stockLotId=lot-1',
     )
     expect(http.get).toHaveBeenNthCalledWith(
       2,
-      '/inventory/movements?page=2&pageSize=100&sort=-date&from=2026-07-01&to=2026-07-14&productId=prod-1&type=Receipt&locationId=loc-1',
+      '/inventory/movements?page=2&pageSize=100&sort=-date&from=2026-07-01&to=2026-07-14&productId=prod-1&type=Receipt&locationId=loc-1&stockLotId=lot-1',
     )
     expect(http.get).toHaveBeenNthCalledWith(
       3,
-      '/inventory/movements?page=1&pageSize=100&sort=-date&from=2026-07-01&to=2026-07-14&productId=prod-1&type=Receipt&locationId=loc-1',
+      '/inventory/movements?page=1&pageSize=100&sort=-date&from=2026-07-01&to=2026-07-14&productId=prod-1&type=Receipt&locationId=loc-1&stockLotId=lot-1',
     )
   })
 
@@ -135,6 +136,23 @@ describe('useInventory', () => {
       quantity: 5,
       note: 'bar',
       locationId: 'bar-1',
+      lotNumber: null,
+      expiresOn: null,
+    })
+  })
+
+  it('receive posílá číslo šarže a expiraci', async () => {
+    vi.mocked(http.post).mockResolvedValue({} as never)
+
+    await useInventory().receive('prod-1', 5, null, 'bar-1', ' LOT-2026-A ', '2026-09-30')
+
+    expect(http.post).toHaveBeenCalledWith('/inventory/receipts', {
+      productId: 'prod-1',
+      quantity: 5,
+      note: null,
+      locationId: 'bar-1',
+      lotNumber: 'LOT-2026-A',
+      expiresOn: '2026-09-30',
     })
   })
 
@@ -149,6 +167,22 @@ describe('useInventory', () => {
       note: 'rozbito',
       type: 'Breakage',
       locationId: 'bar-1',
+      stockLotId: null,
+    })
+  })
+
+  it('issue dovolí přesný výdej z jedné šarže', async () => {
+    vi.mocked(http.post).mockResolvedValue({} as never)
+
+    await useInventory().issue('prod-1', 2, null, 'Expiration', 'bar-1', 'lot-1')
+
+    expect(http.post).toHaveBeenCalledWith('/inventory/issues', {
+      productId: 'prod-1',
+      quantity: 2,
+      note: null,
+      type: 'Expiration',
+      locationId: 'bar-1',
+      stockLotId: 'lot-1',
     })
   })
 
@@ -162,6 +196,7 @@ describe('useInventory', () => {
       delta: -1,
       note: 'kontrola',
       locationId: 'bar-1',
+      stockLotId: null,
     })
   })
 
@@ -215,7 +250,56 @@ describe('useInventory', () => {
       fromLocationId: 'bar-1',
       toLocationId: 'kitchen-1',
       note: 'doplnění kuchyně',
+      stockLotId: null,
     })
+  })
+
+  it('stockLots a aktivace sledování používají samostatné endpointy', async () => {
+    vi.mocked(http.get).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 25 } as never)
+    vi.mocked(http.post).mockResolvedValue({} as never)
+
+    await useInventory().stockLots({
+      productId: 'prod-1',
+      locationId: 'bar-1',
+      expiresTo: '2026-08-31',
+      positiveOnly: true,
+      search: ' lot a ',
+      page: 2,
+      pageSize: 25,
+    })
+    await useInventory().enableLotTracking('prod-1')
+
+    expect(http.get).toHaveBeenCalledWith(
+      '/inventory/stock-lots?page=2&pageSize=25&positiveOnly=true&productId=prod-1&locationId=bar-1&expiresTo=2026-08-31&search=lot+a',
+    )
+    expect(http.post).toHaveBeenCalledWith('/inventory/stock-lots/products/prod-1/enable', {})
+  })
+
+  it('allStockLots načte i šarže za první stovkou a ověří stabilní počet', async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({
+      id: `lot-${index + 1}`,
+      locationId: 'bar-1',
+    }))
+    const secondPage = [
+      { id: 'lot-101', locationId: 'bar-1' },
+      { id: 'lot-102', locationId: 'bar-1' },
+    ]
+    vi.mocked(http.get)
+      .mockResolvedValueOnce({ items: firstPage, total: 102, page: 1, pageSize: 100 } as never)
+      .mockResolvedValueOnce({ items: secondPage, total: 102, page: 2, pageSize: 100 } as never)
+      .mockResolvedValueOnce({ items: firstPage, total: 102, page: 1, pageSize: 100 } as never)
+
+    const result = await useInventory().allStockLots({
+      productId: 'prod-1',
+      locationId: 'bar-1',
+      positiveOnly: true,
+    })
+
+    expect(result).toHaveLength(102)
+    expect(http.get).toHaveBeenNthCalledWith(
+      2,
+      '/inventory/stock-lots?page=2&pageSize=100&positiveOnly=true&productId=prod-1&locationId=bar-1',
+    )
   })
 
   it('purchaseSuggestions posílá období, horizont a pobočku jako query', async () => {

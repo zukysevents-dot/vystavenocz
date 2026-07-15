@@ -504,12 +504,17 @@ function canCancel(order: PurchaseOrder): boolean {
 
 // --- Částečný / úplný příjem objednávky ---
 interface ReceiveLineForm {
+  allocationId: string
   id: string
+  productId: string
   name: string
   sku: string
   remaining: number
   quantity: number | ''
   unitCost: number | ''
+  lotTrackingEnabled: boolean
+  lotNumber: string
+  expiresOn: string
 }
 
 const receiveDialogOpen = ref(false)
@@ -527,12 +532,19 @@ function openReceive(order: PurchaseOrder) {
   receiveLines.value = order.items
     .filter((item) => item.remainingQuantity > 0)
     .map((item) => ({
+      allocationId: crypto.randomUUID(),
       id: item.id,
+      productId: item.productId,
       name: item.productName,
       sku: item.productSku,
       remaining: item.remainingQuantity,
       quantity: 0,
       unitCost: item.unitCost ?? '',
+      lotTrackingEnabled:
+        props.products.find((product) => product.id === item.productId)?.lotTrackingEnabled ??
+        false,
+      lotNumber: '',
+      expiresOn: '',
     }))
   // Klíč se při neúspěšném pokusu nemění. Stejné kliknutí po timeoutu proto nemůže vytvořit
   // druhou příjemku ani druhý skladový pohyb.
@@ -541,7 +553,21 @@ function openReceive(order: PurchaseOrder) {
 }
 
 function receiveAllRemaining() {
-  for (const line of receiveLines.value) line.quantity = line.remaining
+  const filled = new Set<string>()
+  for (const line of receiveLines.value) {
+    line.quantity = filled.has(line.id) ? 0 : line.remaining
+    filled.add(line.id)
+  }
+}
+
+function addReceiveLot(line: ReceiveLineForm) {
+  receiveLines.value.push({
+    ...line,
+    allocationId: crypto.randomUUID(),
+    quantity: 0,
+    lotNumber: '',
+    expiresOn: '',
+  })
 }
 
 async function receiveOrder() {
@@ -549,10 +575,15 @@ async function receiveOrder() {
   if (!order) return
   const selected = receiveLines.value.filter((line) => Number(line.quantity) > 0)
   if (selected.length === 0) return toast.error('Zadejte množství alespoň u jedné položky.')
-  if (selected.some((line) => Number(line.quantity) > line.remaining))
+  const receivedByItem = new Map<string, number>()
+  for (const line of selected)
+    receivedByItem.set(line.id, (receivedByItem.get(line.id) ?? 0) + Number(line.quantity))
+  if (selected.some((line) => (receivedByItem.get(line.id) ?? 0) > line.remaining))
     return toast.error('Nelze přijmout více než zbývá na objednávce.')
   if (selected.some((line) => line.unitCost !== '' && Number(line.unitCost) < 0))
     return toast.error('Nákupní cena nesmí být záporná.')
+  if (selected.some((line) => line.lotTrackingEnabled && !line.lotNumber.trim()))
+    return toast.error('U produktů se sledováním šarží vyplňte číslo šarže.')
 
   receiveSaving.value = true
   try {
@@ -565,6 +596,8 @@ async function receiveOrder() {
         purchaseOrderItemId: line.id,
         quantity: Number(line.quantity),
         unitCost: line.unitCost === '' ? null : Number(line.unitCost),
+        lotNumber: line.lotNumber.trim() || null,
+        expiresOn: line.expiresOn || null,
       })),
     })
     receiveDialogOpen.value = false
@@ -979,13 +1012,32 @@ async function receiveOrder() {
       <div class="divide-y rounded-lg border">
         <div
           v-for="line in receiveLines"
-          :key="line.id"
+          :key="line.allocationId"
           class="grid gap-3 p-3 sm:grid-cols-[minmax(0,1fr)_120px_130px] sm:items-end"
         >
           <div class="min-w-0">
             <div class="truncate text-sm font-medium">{{ line.name }}</div>
             <div class="text-xs text-muted-foreground">
               {{ line.sku }} · zbývá {{ fmtQuantity(line.remaining) }}
+            </div>
+            <div v-if="line.lotTrackingEnabled" class="mt-2 grid gap-2 sm:grid-cols-2">
+              <label class="space-y-1 text-xs font-medium text-muted-foreground">
+                <span>Číslo šarže *</span>
+                <Input v-model="line.lotNumber" placeholder="Např. 2026-07-A" />
+              </label>
+              <label class="space-y-1 text-xs font-medium text-muted-foreground">
+                <span>Expirace</span>
+                <Input v-model="line.expiresOn" type="date" />
+              </label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                class="justify-start sm:col-span-2"
+                @click="addReceiveLot(line)"
+              >
+                <Plus class="h-4 w-4" /> Rozdělit do další šarže
+              </Button>
             </div>
           </div>
           <label class="space-y-1 text-xs font-medium text-muted-foreground">

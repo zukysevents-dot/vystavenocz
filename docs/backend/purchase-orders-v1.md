@@ -36,9 +36,11 @@ Vše je pod `/api/v1/inventory` a používá stávající `inventory.read/manage
 
 Poslední endpoint vyžaduje UUID `idempotencyKey`. Stejný klíč a tělo vrací původní výsledek, stejný klíč s jiným tělem vrací `409`. Backend v jedné transakci kontroluje zbytek, vytvoří existující `PurchaseReceipt` a skladové pohyby a aktualizuje stav objednávky.
 
-## Vědomě mimo V1
+## Navazující šarže
 
-Odesílání objednávky e-mailem/PDF, dodavatelská SKU, schvalování, vratky, šarže/expirace, OCR/EDI a více měn. Nativní Android/iOS, AI/MCP a změny oprávnění řeší samostatný vlastník; v tomto workflow je nerozšiřovat.
+Sledovaný produkt lze při jednom příjmu objednávky rozdělit do více šarží. Každý odeslaný řádek nese stejné `purchaseOrderItemId`, vlastní `quantity`, `lotNumber` a volitelné `expiresOn`; součet řádků nesmí překročit zbývající množství. Úplný kontrakt je v `stock-lots-expiry-v1.md`.
+
+Mimo V1 zůstává odesílání objednávky e-mailem/PDF, dodavatelská SKU, schvalování, vratky, OCR/EDI a více měn. Nativní Android/iOS, AI/MCP a změny oprávnění řeší samostatný vlastník; v tomto workflow je nerozšiřovat.
 
 ## Regrese
 

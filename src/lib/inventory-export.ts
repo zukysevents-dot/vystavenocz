@@ -19,6 +19,7 @@ export const STOCK_MOVEMENT_LABELS: Record<StockMovementType, string> = {
   ProductionOutput: 'Výstup z výroby',
   JobConsumption: 'Materiál na zakázce',
   StornoJobConsumption: 'Vrácení ze zakázky',
+  LotAssignment: 'Přiřazení počáteční šarže',
 }
 
 export const STOCK_MOVEMENT_COLUMNS = [
@@ -27,7 +28,11 @@ export const STOCK_MOVEMENT_COLUMNS = [
   'SKU',
   'Pobočka',
   'Typ pohybu',
-  'Změna',
+  'Změna pohybu',
+  'Šarže',
+  'Expirace',
+  'Změna šarže',
+  'ID šarže',
   'Stav po pohybu',
   'Zdroj',
   'ID zdroje',
@@ -93,15 +98,20 @@ export function buildStockMovementRows(
   movements: StockMovement[],
   fallbacks: StockMovementExportFallbacks = {},
 ): CsvValue[][] {
-  return movements.map((movement) => {
+  return movements.flatMap((movement) => {
     const source = stockMovementSource(movement)
-    return [
+    const allocations = movement.lotAllocations?.length ? movement.lotAllocations : [null]
+    return allocations.map((allocation, index) => [
       movement.createdAt,
       safeCsvText(stockMovementProductName(movement, fallbacks)),
       safeCsvText(stockMovementProductSku(movement, fallbacks)),
       safeCsvText(stockMovementLocationName(movement, fallbacks)),
       STOCK_MOVEMENT_LABELS[movement.type],
-      movement.quantity,
+      index === 0 ? movement.quantity : '',
+      safeCsvText(allocation?.lotNumber ?? ''),
+      allocation?.expiresOn ?? '',
+      allocation?.quantity ?? '',
+      allocation?.stockLotId ?? '',
       movement.quantityAfter,
       source.label,
       source.id,
@@ -110,7 +120,7 @@ export function buildStockMovementRows(
       movement.productId,
       movement.locationId ?? '',
       movement.createdBy ?? '',
-    ]
+    ])
   })
 }
 

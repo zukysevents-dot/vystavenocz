@@ -13,17 +13,18 @@ Podporované query parametry:
 - `type` — jeden typ skladového pohybu;
 - `from`, `to` — včetně zadaných dnů v časové zóně Europe/Prague;
 - `locationId` — konkrétní pobočka/sklad;
+- `stockLotId` — jedna skladová šarže;
 - `sort` — výchozí je nejnovější pohyb první; při shodném čase rozhoduje ID pohybu.
 
-Odpověď zachovává všechny vazby ledgeru a navíc vrací `productName`, `productSku`, `locationName` a `createdBy`. Názvy a SKU jsou aktuální popisky z katalogu, nikoli historické snapshoty. Autoritativní stopou pro dohledání jsou stabilní `id`, `productId`, `locationId` a příslušná `related*Id`.
+Odpověď zachovává všechny vazby ledgeru a navíc vrací `productName`, `productSku`, `locationName`, `createdBy` a `lotAllocations`. Názvy a SKU jsou aktuální popisky z katalogu, nikoli historické snapshoty. Autoritativní stopou pro dohledání jsou stabilní `id`, `productId`, `locationId`, ID šarže a příslušná `related*Id`.
 
-`GET /api/v1/inventory/movement-filters` vrací tenantový/scoped seznam produktů a poboček, které se v ledgeru vyskytují, včetně příznaku archivace. Historickou položku proto lze vybrat přímo, i když není na aktuální stránce nebo v aktuálním měsíci.
+`GET /api/v1/inventory/movement-filters` vrací tenantový/scoped seznam produktů, poboček a šarží, které se v ledgeru vyskytují, včetně příznaku archivace produktu/pobočky. Historickou položku proto lze vybrat přímo, i když není na aktuální stránce nebo v aktuálním měsíci.
 
 Uživatel omezený na jednu pobočku vždy vidí jen svou pobočku. Pokus vyžádat jinou pobočku skončí `403`. Uživatel bez pobočkového omezení může pobočku vybrat; neexistující pobočka skončí `422`.
 
 ## Chování webu
 
-Panel `Zásoby` → `Pohyby` nabízí filtr období, produktu, typu pohybu a pobočky. Výchozí období je od prvního dne aktuálního měsíce do dneška.
+Panel `Zásoby` → `Pohyby` nabízí filtr období, produktu, šarže, typu pohybu a pobočky. Výchozí období je od prvního dne aktuálního měsíce do dneška.
 
 Po změně filtru zůstává export vypnutý, dokud uživatel nepoužije `Použít filtry` a nové načtení úspěšně neskončí. Starý výsledek proto nelze omylem stáhnout pod nově zvoleným rozsahem.
 
@@ -37,7 +38,7 @@ Při exportu web:
 3. znovu ověří první stránku a celkový počet;
 4. při změně ledgeru během načítání skončí bezpečně chybou a vyzve uživatele k opakování, místo aby vytvořil neúplný export.
 
-CSV obsahuje čas, produkt, SKU, pobočku, typ, změnu množství, stav po pohybu, zdroj, zdrojové ID, poznámku, ID pohybu, produktu, pobočky a autora. Uživatelský text je chráněný proti spuštění tabulkového vzorce po otevření v Excelu nebo podobném programu. Číselné hodnoty zůstávají čísly.
+CSV obsahuje čas, produkt, SKU, pobočku, typ, změnu pohybu, číslo/expiraci/změnu/ID šarže, stav po pohybu, zdroj, zdrojové ID, poznámku, ID pohybu, produktu, pobočky a autora. Pohyb rozdělený přes více šarží vytvoří více řádků; množství rodičovského pohybu je uvedeno jen na prvním, aby se při součtu neduplikovalo. Uživatelský text je chráněný proti spuštění tabulkového vzorce po otevření v Excelu nebo podobném programu. Číselné hodnoty zůstávají čísly.
 
 Rozhraní zobrazuje nejvýše 100 pohybů na serverovou stránku, aby velká historie nevytvářela tisíce řádků současně v desktopové tabulce i mobilních kartách. CSV dál obsahuje celý úspěšně načtený výřez.
 
@@ -46,9 +47,9 @@ Rozhraní zobrazuje nejvýše 100 pohybů na serverovou stránku, aby velká his
 ## Hranice tohoto kroku
 
 - Ledger zůstává append-only; staré pohyby se nepřepisují.
-- Není potřeba databázová migrace.
+- Základ ledgeru migraci nepotřeboval; navazující šarže přidávají vlastní aditivní migraci popsanou v `stock-lots-expiry-v1.md`.
 - Tento krok netvrdí shodu s PML ani jiným zákonným režimem.
-- Šarže, expirace, inventura skenerem a další rozšíření kompletního skladového hospodářství navazují v dalších řezech INV-16.
+- Šarže, expirace a FEFO jsou hotový navazující řez INV-16; inventura skenerem a další rozšíření zůstávají později.
 - Nativní Android/iOS aplikace a matice oprávnění jsou mimo tento krok.
 
 ## Regrese

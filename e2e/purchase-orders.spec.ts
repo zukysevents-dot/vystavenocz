@@ -40,6 +40,7 @@ const product = {
   minQuantity: 3,
   categoryId: null,
   allergens: [],
+  lotTrackingEnabled: true,
 }
 
 const secondProduct = {
@@ -49,6 +50,7 @@ const secondProduct = {
   sku: 'COFFEE',
   ean: '8590000000013',
   purchasePrice: 80,
+  lotTrackingEnabled: false,
 }
 
 const supplier = {
@@ -269,14 +271,35 @@ test('objednávka projde na mobilu návrhem, objednáním a vícepoložkovým č
 
   await page.getByTestId('receive-purchase-order').click()
   await page.getByLabel('Číslo dokladu').last().fill('DL-1')
-  await page.getByLabel('Přijato nyní').first().fill('2')
+  await page.getByLabel('Přijato nyní').first().fill('1')
+  await page.getByLabel('Číslo šarže *').fill('RUM-JUL-A')
+  await page.getByRole('button', { name: 'Rozdělit do další šarže' }).click()
+  await page.getByLabel('Přijato nyní').last().fill('1')
+  await page.getByLabel('Číslo šarže *').nth(1).fill('RUM-JUL-B')
+  await page.getByLabel('Expirace').first().fill('2026-07-31')
+  await page.getByLabel('Expirace').nth(1).fill('2026-08-31')
   await page.getByTestId('confirm-purchase-order-receipt').click()
 
   await expect(page.getByText('Částečně přijato', { exact: true })).toBeVisible()
   await expect(page.getByText('Přijato 2 z 10 jednotek')).toBeVisible()
   expect(receivePayload).toMatchObject({
     documentNumber: 'DL-1',
-    items: [{ purchaseOrderItemId: 'order-item-1', quantity: 2, unitCost: 120 }],
+    items: [
+      {
+        purchaseOrderItemId: 'order-item-1',
+        quantity: 1,
+        unitCost: 120,
+        lotNumber: 'RUM-JUL-A',
+        expiresOn: '2026-07-31',
+      },
+      {
+        purchaseOrderItemId: 'order-item-1',
+        quantity: 1,
+        unitCost: 120,
+        lotNumber: 'RUM-JUL-B',
+        expiresOn: '2026-08-31',
+      },
+    ],
   })
   expect(receivePayload?.idempotencyKey).toMatch(
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,

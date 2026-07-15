@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Download, Loader2, RefreshCw } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -41,6 +41,7 @@ const props = defineProps<{
 const ALL_PRODUCTS = '__all_products__'
 const ALL_TYPES = '__all_types__'
 const ALL_LOCATIONS = '__all_locations__'
+const ALL_LOTS = '__all_lots__'
 const today = localDateIso(new Date())
 
 const from = ref(`${today.slice(0, 8)}01`)
@@ -48,6 +49,7 @@ const to = ref(today)
 const productId = ref(ALL_PRODUCTS)
 const movementType = ref(ALL_TYPES)
 const locationId = ref(props.initialLocationId || ALL_LOCATIONS)
+const stockLotId = ref(ALL_LOTS)
 const loading = ref(false)
 const exporting = ref(false)
 const error = ref('')
@@ -57,7 +59,7 @@ const loadedQuery = ref<StockMovementQuery | null>(null)
 const totalMovements = ref(0)
 const responsePageSize = ref(100)
 const displayPage = ref(1)
-const filterCatalog = ref<StockMovementFilters>({ products: [], locations: [] })
+const filterCatalog = ref<StockMovementFilters>({ products: [], locations: [], lots: [] })
 
 const inventory = useInventory()
 const movementTypeOptions = Object.entries(STOCK_MOVEMENT_LABELS) as Array<
@@ -89,6 +91,7 @@ const selectedQuery = computed(() => ({
   productId: productId.value === ALL_PRODUCTS ? null : productId.value,
   type: movementType.value === ALL_TYPES ? null : (movementType.value as StockMovementType),
   locationId: locationId.value === ALL_LOCATIONS ? null : locationId.value,
+  stockLotId: stockLotId.value === ALL_LOTS ? null : stockLotId.value,
 }))
 const filterKey = computed(() => JSON.stringify(selectedQuery.value))
 const filtersDirty = computed(() => filterKey.value !== loadedFilterKey.value)
@@ -143,6 +146,19 @@ const locationOptions = computed(() => {
     }
   }
   return [...options.values()].sort((a, b) => a.name.localeCompare(b.name, 'cs'))
+})
+const lotOptions = computed(() =>
+  (filterCatalog.value.lots ?? [])
+    .filter((lot) => productId.value === ALL_PRODUCTS || lot.productId === productId.value)
+    .sort((a, b) => a.lotNumber.localeCompare(b.lotNumber, 'cs')),
+)
+
+watch(productId, () => {
+  if (
+    stockLotId.value !== ALL_LOTS &&
+    !lotOptions.value.some((lot) => lot.id === stockLotId.value)
+  )
+    stockLotId.value = ALL_LOTS
 })
 const displayPageCount = computed(() => Math.ceil(totalMovements.value / responsePageSize.value))
 
@@ -286,7 +302,7 @@ onMounted(() => {
         </Button>
       </div>
 
-      <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <div class="grid gap-1.5">
           <Label for="ledger-from">Od</Label>
           <Input id="ledger-from" v-model="from" type="date" />
@@ -306,6 +322,20 @@ onMounted(() => {
               <SelectItem v-for="product in productOptions" :key="product.id" :value="product.id">
                 {{ product.name }}<template v-if="product.sku"> · {{ product.sku }}</template>
                 <template v-if="product.archived"> (archiv)</template>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div class="grid min-w-0 gap-1.5">
+          <Label for="ledger-lot">Šarže</Label>
+          <Select v-model="stockLotId">
+            <SelectTrigger id="ledger-lot"
+              ><SelectValue placeholder="Všechny šarže"
+            /></SelectTrigger>
+            <SelectContent>
+              <SelectItem :value="ALL_LOTS">Všechny šarže</SelectItem>
+              <SelectItem v-for="lot in lotOptions" :key="lot.id" :value="lot.id">
+                {{ lot.lotNumber }}<template v-if="lot.expiresOn"> · {{ lot.expiresOn }}</template>
               </SelectItem>
             </SelectContent>
           </Select>
@@ -397,6 +427,7 @@ onMounted(() => {
               <th class="px-4 py-3 font-medium">Pobočka</th>
               <th class="px-4 py-3 font-medium">Typ</th>
               <th class="px-4 py-3 font-medium">Zdroj</th>
+              <th class="px-4 py-3 font-medium">Šarže</th>
               <th class="px-4 py-3 text-right font-medium">Změna</th>
               <th class="px-4 py-3 text-right font-medium">Stav po</th>
               <th class="px-4 py-3 font-medium">Poznámka</th>
@@ -416,6 +447,18 @@ onMounted(() => {
                 <div class="max-w-56 break-all font-mono text-xs text-muted-foreground">
                   {{ stockMovementSource(movement).id || '—' }}
                 </div>
+              </td>
+              <td class="px-4 py-3">
+                <div v-if="movement.lotAllocations?.length" class="space-y-1">
+                  <div v-for="lot in movement.lotAllocations" :key="lot.stockLotId" class="text-xs">
+                    <span class="font-medium">{{ lot.lotNumber }}</span>
+                    <span class="text-muted-foreground">
+                      · {{ signedQuantity(lot.quantity)
+                      }}<template v-if="lot.expiresOn"> · do {{ lot.expiresOn }}</template>
+                    </span>
+                  </div>
+                </div>
+                <span v-else class="text-muted-foreground">Bez sledování</span>
               </td>
               <td
                 class="px-4 py-3 text-right font-semibold tabular-nums"
@@ -480,6 +523,16 @@ onMounted(() => {
               </dd>
             </div>
           </dl>
+          <div
+            v-if="movement.lotAllocations?.length"
+            class="mt-3 rounded-lg bg-muted/40 p-2 text-xs"
+          >
+            <div v-for="lot in movement.lotAllocations" :key="lot.stockLotId">
+              <span class="font-medium">{{ lot.lotNumber }}</span>
+              · {{ signedQuantity(lot.quantity) }}
+              <template v-if="lot.expiresOn"> · expirace {{ lot.expiresOn }}</template>
+            </div>
+          </div>
           <p v-if="movement.note" class="mt-3 break-words text-sm text-muted-foreground">
             {{ movement.note }}
           </p>

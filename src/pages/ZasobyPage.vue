@@ -13,6 +13,7 @@ import {
   Scale,
   ArrowRightLeft,
   Building2,
+  CalendarClock,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,7 +40,9 @@ import { isApiMode, ApiError } from '@/lib/http'
 import { isApprovalRequest } from '@/lib/types'
 import { toast } from '@/components/ui/sonner'
 import StockLedgerPanel from '@/components/app/StockLedgerPanel.vue'
+import StockLotsPanel from '@/components/app/StockLotsPanel.vue'
 import type {
+  StockLot,
   StockByLocationResponse,
   StockLocationColumn,
   StockMirror,
@@ -52,10 +55,11 @@ const { locations, loadAll: loadLocations } = useLocations()
 const inv = useInventory()
 const apiMode = isApiMode()
 const ALL_LOCATIONS = '__all__'
+const AUTO_LOT = '__auto_fefo__'
 
 const loading = ref(true)
 const busy = ref(false)
-const tab = ref<'levels' | 'movements' | 'mirror' | 'byLocation'>('levels')
+const tab = ref<'levels' | 'movements' | 'lots' | 'mirror' | 'byLocation'>('levels')
 const search = ref('')
 const levelMap = ref(new Map<string, number>())
 const mirror = ref<StockMirror | null>(null)
@@ -109,6 +113,7 @@ interface Row {
   min: number
   qty: number
   low: boolean
+  lotTrackingEnabled: boolean
 }
 
 interface StocktakeRow {
@@ -133,6 +138,7 @@ const rows = computed<Row[]>(() => {
         min: p.minQuantity,
         qty,
         low: p.minQuantity > 0 && qty < p.minQuantity,
+        lotTrackingEnabled: p.lotTrackingEnabled === true,
       }
     })
 })
@@ -174,6 +180,12 @@ function fmtMoney(n: number): string {
 }
 function fmtSignedMoney(n: number): string {
   return `${n > 0 ? '+' : ''}${fmtMoney(n)}`
+}
+function lotOptionLabel(lot: StockLot): string {
+  const expiry = lot.expiresOn
+    ? ` · exp. ${new Date(`${lot.expiresOn}T00:00:00`).toLocaleDateString('cs-CZ')}`
+    : ' · bez expirace'
+  return `${lot.lotNumber}${expiry} · ${fmtQty(lot.quantity)} skladem`
 }
 function varianceTone(item: StockMirrorItem): string {
   if (item.varianceQuantity > 0) return 'text-success'
@@ -289,13 +301,46 @@ async function showByLocation() {
 const actionOpen = ref(false)
 const actionMode = ref<'receive' | 'issue' | 'correct'>('receive')
 const actionProduct = ref<Row | null>(null)
-const actionForm = reactive<{ amount: number; note: string; issueType: StockMovementType }>({
+const actionLots = ref<StockLot[]>([])
+const actionLotsLoading = ref(false)
+const actionForm = reactive<{
+  amount: number
+  note: string
+  issueType: StockMovementType
+  lotNumber: string
+  expiresOn: string
+  stockLotId: string
+}>({
   amount: 0,
   note: '',
   issueType: 'Issue',
+  lotNumber: '',
+  expiresOn: '',
+  stockLotId: AUTO_LOT,
 })
 
-function openAction(row: Row, mode: 'receive' | 'issue' | 'correct') {
+async function loadActionLots(row: Row) {
+  if (!row.lotTrackingEnabled || !actionLocationId.value) {
+    actionLots.value = []
+    return
+  }
+  actionLotsLoading.value = true
+  try {
+    actionLots.value = await inv.allStockLots({
+      productId: row.id,
+      locationId: actionLocationId.value,
+      positiveOnly: true,
+    })
+  } catch (e) {
+    actionLots.value = []
+    toast.error('Dostupné šarže se nepodařilo načíst. Výdej může použít automatické FEFO.')
+    console.error(e)
+  } finally {
+    actionLotsLoading.value = false
+  }
+}
+
+async function openAction(row: Row, mode: 'receive' | 'issue' | 'correct') {
   if (locations.value.length > 1 && stockLocationId.value === ALL_LOCATIONS) {
     toast.error('Nejdřív vyberte konkrétní pobočku skladu.')
     return
@@ -305,7 +350,12 @@ function openAction(row: Row, mode: 'receive' | 'issue' | 'correct') {
   actionForm.amount = 0
   actionForm.note = ''
   actionForm.issueType = 'Issue'
+  actionForm.lotNumber = ''
+  actionForm.expiresOn = ''
+  actionForm.stockLotId = AUTO_LOT
+  actionLots.value = []
   actionOpen.value = true
+  if (mode !== 'receive') await loadActionLots(row)
 }
 
 async function submitAction() {
@@ -318,12 +368,22 @@ async function submitAction() {
   } else if (amount <= 0) {
     return toast.error('Zadejte kladné množství.')
   }
+  if (row.lotTrackingEnabled && actionMode.value === 'receive' && !actionForm.lotNumber.trim()) {
+    return toast.error('U této položky zadejte číslo šarže.')
+  }
   busy.value = true
   try {
     const id = row.id
     const locationId = actionLocationId.value
     if (actionMode.value === 'receive')
-      await inv.receive(id, amount, actionForm.note || null, locationId)
+      await inv.receive(
+        id,
+        amount,
+        actionForm.note || null,
+        locationId,
+        actionForm.lotNumber,
+        actionForm.expiresOn,
+      )
     else if (actionMode.value === 'issue') {
       const result = await inv.issue(
         id,
@@ -331,37 +391,76 @@ async function submitAction() {
         actionForm.note || null,
         actionForm.issueType,
         locationId,
+        actionForm.stockLotId === AUTO_LOT ? null : actionForm.stockLotId,
       )
       if (isApprovalRequest(result)) {
         actionOpen.value = false
         toast.success('Výdej čeká na schválení managerem.')
         return
       }
-    } else await inv.correct(id, amount, actionForm.note.trim(), locationId)
-    await loadLevels()
-    if (mirrorLoaded.value) await loadMirror()
-    actionOpen.value = false
-    toast.success(`${ACTION_LABEL[actionMode.value]} uložen.`)
+    } else
+      await inv.correct(
+        id,
+        amount,
+        actionForm.note.trim(),
+        locationId,
+        amount < 0 && actionForm.stockLotId !== AUTO_LOT ? actionForm.stockLotId : null,
+      )
   } catch (e) {
     if (e instanceof ApiError && e.status === 409) toast.error('Nedostatek zásoby na skladě.')
     else toast.error('Operace selhala.')
     console.error(e)
+    return
   } finally {
     busy.value = false
+  }
+  actionOpen.value = false
+  toast.success(`${ACTION_LABEL[actionMode.value]} uložen.`)
+  try {
+    await loadLevels()
+    if (mirrorLoaded.value) await loadMirror()
+  } catch (e) {
+    console.error(e)
+    toast.warning('Operace je uložená, ale přehled skladu se nepodařilo obnovit.')
   }
 }
 
 // --- Přesun mezi provozovnami/sklady ---
 const transferOpen = ref(false)
 const transferProduct = ref<Row | null>(null)
+const transferLots = ref<StockLot[]>([])
+const transferLotsLoading = ref(false)
 const transferForm = reactive({
   amount: 0,
   fromLocationId: '',
   toLocationId: '',
   note: '',
+  stockLotId: AUTO_LOT,
 })
 
-function openTransfer(row: Row) {
+async function loadTransferLots() {
+  const row = transferProduct.value
+  if (!row?.lotTrackingEnabled || !transferForm.fromLocationId) {
+    transferLots.value = []
+    return
+  }
+  transferLotsLoading.value = true
+  try {
+    transferLots.value = await inv.allStockLots({
+      productId: row.id,
+      locationId: transferForm.fromLocationId,
+      positiveOnly: true,
+    })
+  } catch (e) {
+    transferLots.value = []
+    toast.error('Šarže ve zdrojovém skladu se nepodařilo načíst.')
+    console.error(e)
+  } finally {
+    transferLotsLoading.value = false
+  }
+}
+
+async function openTransfer(row: Row) {
   if (locations.value.length < 2) {
     toast.error('Pro přesun založte alespoň dvě pobočky.')
     return
@@ -373,8 +472,19 @@ function openTransfer(row: Row) {
   transferForm.toLocationId =
     locations.value.find((l) => l.id !== transferForm.fromLocationId)?.id ?? ''
   transferForm.note = ''
+  transferForm.stockLotId = AUTO_LOT
+  transferLots.value = []
   transferOpen.value = true
+  await loadTransferLots()
 }
+
+watch(
+  () => transferForm.fromLocationId,
+  () => {
+    transferForm.stockLotId = AUTO_LOT
+    if (transferOpen.value) void loadTransferLots()
+  },
+)
 
 async function submitTransfer() {
   const row = transferProduct.value
@@ -394,19 +504,26 @@ async function submitTransfer() {
       transferForm.fromLocationId,
       transferForm.toLocationId,
       transferForm.note.trim() || null,
+      transferForm.stockLotId === AUTO_LOT ? null : transferForm.stockLotId,
     )
-    await loadLevels()
-    if (mirrorLoaded.value) await loadMirror()
-    transferOpen.value = false
-    toast.success('Přesun uložen.')
   } catch (e) {
     if (e instanceof ApiError && e.status === 409) toast.error('Nedostatek zásoby na skladě.')
     else if (e instanceof ApiError && e.status === 403)
       toast.error('Přesun mimo vaši pobočku není povolen.')
     else toast.error('Přesun selhal.')
     console.error(e)
+    return
   } finally {
     busy.value = false
+  }
+  transferOpen.value = false
+  toast.success('Přesun uložen.')
+  try {
+    await loadLevels()
+    if (mirrorLoaded.value) await loadMirror()
+  } catch (e) {
+    console.error(e)
+    toast.warning('Přesun je uložený, ale přehled skladu se nepodařilo obnovit.')
   }
 }
 
@@ -541,6 +658,18 @@ async function submitStocktake() {
           @click="tab = 'movements'"
         >
           Pohyby
+        </button>
+        <button
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+          :class="
+            tab === 'lots'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted text-muted-foreground hover:bg-muted/70'
+          "
+          @click="tab = 'lots'"
+        >
+          <CalendarClock class="h-4 w-4" /> Šarže
         </button>
         <button
           type="button"
@@ -688,6 +817,15 @@ async function submitStocktake() {
       <!-- POHYBY -->
       <template v-else-if="tab === 'movements'">
         <StockLedgerPanel
+          :products="products"
+          :locations="locations"
+          :initial-location-id="stockFilterLocationId"
+        />
+      </template>
+
+      <!-- ŠARŽE A EXPIRACE -->
+      <template v-else-if="tab === 'lots'">
+        <StockLotsPanel
           :products="products"
           :locations="locations"
           :initial-location-id="stockFilterLocationId"
@@ -1005,6 +1143,58 @@ async function submitStocktake() {
               </option>
             </select>
           </div>
+          <div
+            v-if="actionProduct?.lotTrackingEnabled && actionMode === 'receive'"
+            class="grid gap-3 rounded-lg border border-border bg-muted/30 p-3 sm:grid-cols-2"
+          >
+            <div class="space-y-2">
+              <Label for="action-lot-number">Číslo šarže *</Label>
+              <Input
+                id="action-lot-number"
+                v-model="actionForm.lotNumber"
+                autocomplete="off"
+                placeholder="Např. 2026-07-A"
+              />
+            </div>
+            <div class="space-y-2">
+              <Label for="action-lot-expiry">Expirace</Label>
+              <Input id="action-lot-expiry" v-model="actionForm.expiresOn" type="date" />
+            </div>
+          </div>
+          <div
+            v-if="
+              actionProduct?.lotTrackingEnabled &&
+              (actionMode === 'issue' || (actionMode === 'correct' && actionForm.amount < 0))
+            "
+            class="space-y-2"
+          >
+            <Label for="action-stock-lot">Šarže</Label>
+            <Select v-model="actionForm.stockLotId" :disabled="actionLotsLoading">
+              <SelectTrigger id="action-stock-lot">
+                <SelectValue
+                  :placeholder="actionLotsLoading ? 'Načítám šarže…' : 'Automaticky FEFO'"
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem :value="AUTO_LOT">Automaticky — nejbližší expirace</SelectItem>
+                <SelectItem v-for="lot in actionLots" :key="lot.id" :value="lot.id">
+                  {{ lotOptionLabel(lot) }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p class="text-xs text-muted-foreground">
+              Bez ručního výběru systém vydá nejdřív šarži s nejbližší expirací.
+            </p>
+          </div>
+          <p
+            v-if="
+              actionProduct?.lotTrackingEnabled && actionMode === 'correct' && actionForm.amount > 0
+            "
+            class="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground"
+          >
+            Kladná korekce se zařadí do systémové šarže. Pro běžné doplnění s číslem šarže použijte
+            příjem.
+          </p>
           <div class="space-y-2">
             <Label for="note">Poznámka{{ actionMode === 'correct' ? ' (důvod) *' : '' }}</Label>
             <Input id="note" v-model="actionForm.note" placeholder="volitelné" />
@@ -1065,6 +1255,25 @@ async function submitStocktake() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div v-if="transferProduct?.lotTrackingEnabled" class="space-y-2">
+            <Label for="transfer-lot">Šarže ze zdrojového skladu</Label>
+            <Select v-model="transferForm.stockLotId" :disabled="transferLotsLoading">
+              <SelectTrigger id="transfer-lot">
+                <SelectValue
+                  :placeholder="transferLotsLoading ? 'Načítám šarže…' : 'Automaticky FEFO'"
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem :value="AUTO_LOT">Automaticky — nejbližší expirace</SelectItem>
+                <SelectItem v-for="lot in transferLots" :key="lot.id" :value="lot.id">
+                  {{ lotOptionLabel(lot) }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p class="text-xs text-muted-foreground">
+              Vybraná šarže se zachová i v cílové pobočce.
+            </p>
           </div>
           <div class="space-y-2">
             <Label for="transfer-note">Poznámka</Label>

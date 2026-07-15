@@ -412,7 +412,7 @@ Před vytištěním QR kódů ověřte:
 1. Vyberte konkrétní pobočku.
 2. Vytvořte nový příjem.
 3. Načtěte čárový kód nebo vyhledejte produkt.
-4. Zadejte skutečné množství a nákupní cenu.
+4. Zadejte skutečné množství a nákupní cenu. U sledovaného produktu doplňte číslo šarže a expiraci; jednu položku lze rozdělit do více šarží.
 5. Zkontrolujte všechny řádky a příjem potvrďte.
 
 ### 10.2 Nákupní objednávky a dodavatelé
@@ -435,7 +435,18 @@ Přehled ukazuje očekávané množství, pohyby a případné rozdíly. Zobraze
 
 Karta Pohyby slouží k dohledání úplné historie. Vyberte období, produkt, typ pohybu a pobočku. Řádek ukazuje změnu množství, stav po pohybu, poznámku a vazbu na zdrojový prodej, příjemku, inventuru, výrobu nebo zakázku. Export CSV stáhne přesně zvolený výřez. Pokud se sklad během načítání změnil, spusťte export znovu, aby byl soubor úplný.
 
-### 10.4 Inventura
+### 10.4 Šarže a expirace
+
+1. V katalogu produktu zapněte Sledování šarží. Jde o celofiremní jednosměrnou změnu, kterou provádí uživatel bez omezení na jedinou pobočku; stávající zásoba se bezpečně označí jako počáteční šarže.
+2. Při každém dalším příjmu zadejte číslo šarže a volitelnou expiraci.
+3. V Zásoby otevřete kartu Šarže. Filtrujte produkt, pobočku nebo datum expirace a zkontrolujte skutečné množství.
+4. Prošlou zásobu odepište akcí Odepsat expiraci. Odečte se jen vybraná šarže.
+5. Ruční výdej a přesun mohou určit konkrétní šarži. Bez výběru systém použije nejbližší expiraci jako první.
+6. V Pohybech a CSV lze dohledat číslo šarže, expiraci a množství každé alokace.
+
+Po aktivaci musí být pro prodej, výdej, spotřebu zakázky i výrobu dostatečný zůstatek šarží. Systém nepovolí záporný stav: při nedostatku operaci odmítne a nic částečně neuloží.
+
+### 10.5 Inventura
 
 1. Vyberte pobočku.
 2. Zadejte fyzicky spočítané množství.
@@ -443,9 +454,9 @@ Karta Pohyby slouží k dohledání úplné historie. Vyberte období, produkt, 
 4. U významného rozdílu doplňte důvod.
 5. Inventuru potvrďte.
 
-### 10.5 Přesun a výroba
+### 10.6 Přesun a výroba
 
-Přesun snižuje zásobu na výchozí pobočce a zvyšuje ji na cílové. Výrobní dávka polotovaru spotřebuje suroviny podle receptury a zvýší množství vyrobeného polotovaru.
+Přesun snižuje zásobu na výchozí pobočce a zvyšuje ji na cílové; u sledovaného produktu zachová šarži. Výrobní dávka polotovaru spotřebuje suroviny podle receptury a zvýší množství vyrobeného polotovaru. Sledovaný výstup vyžaduje číslo výstupní šarže.
 
 ## 11. Denní uzávěrka a výsledky provozu
 

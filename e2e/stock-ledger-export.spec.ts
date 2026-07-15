@@ -63,6 +63,14 @@ const targetMovement = {
   productSku: 'RUM04',
   locationName: 'Bar',
   createdBy: 'user-1',
+  lotAllocations: [
+    {
+      stockLotId: 'lot-rum',
+      lotNumber: 'RUM-JUL',
+      expiresOn: '2026-07-31',
+      quantity: 3.5,
+    },
+  ],
 }
 
 const movements = [
@@ -171,6 +179,14 @@ async function routeApp(page: Page, movementRequests: string[]): Promise<void> {
             })),
             { id: 'loc-archive', name: 'Zavřená provozovna', isArchived: true },
           ],
+          lots: [
+            {
+              id: 'lot-rum',
+              productId: 'prod-rum',
+              lotNumber: 'RUM-JUL',
+              expiresOn: '2026-07-31',
+            },
+          ],
         },
       })
     }
@@ -180,11 +196,17 @@ async function routeApp(page: Page, movementRequests: string[]): Promise<void> {
       const productId = url.searchParams.get('productId')
       const type = url.searchParams.get('type')
       const locationId = url.searchParams.get('locationId')
+      const stockLotId = url.searchParams.get('stockLotId')
       const from = url.searchParams.get('from')
       const to = url.searchParams.get('to')
       if (productId) filtered = filtered.filter((movement) => movement.productId === productId)
       if (type) filtered = filtered.filter((movement) => movement.type === type)
       if (locationId) filtered = filtered.filter((movement) => movement.locationId === locationId)
+      if (stockLotId) {
+        filtered = filtered.filter((movement) =>
+          movement.lotAllocations?.some((allocation) => allocation.stockLotId === stockLotId),
+        )
+      }
       if (from) filtered = filtered.filter((movement) => movement.createdAt.slice(0, 10) >= from)
       if (to) filtered = filtered.filter((movement) => movement.createdAt.slice(0, 10) <= to)
       filtered.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))
@@ -213,7 +235,14 @@ test('skladová karta načte všechny stránky, filtruje a exportuje přesně vy
   await openLedger(page, movementRequests)
   expect(movementRequests.some((query) => query.includes('page=2'))).toBe(false)
 
-  await page.getByLabel('Produkt').click()
+  const firstDesktopRow = page.locator('table tbody tr').first().locator('td')
+  await expect(firstDesktopRow.nth(1)).toContainText('Rum 0,04l')
+  await expect(firstDesktopRow.nth(2)).toHaveText('Bar')
+  await expect(firstDesktopRow.nth(3)).toHaveText('Příjem')
+  await expect(firstDesktopRow.nth(4)).toContainText('Nákupní příjemka')
+  await expect(firstDesktopRow.nth(5)).toContainText('RUM-JUL')
+
+  await page.getByLabel('Produkt', { exact: true }).click()
   await expect(page.getByRole('option', { name: 'Staré zboží · OLD (archiv)' })).toBeVisible()
   await page.keyboard.press('Escape')
   await page.getByLabel('Pobočka', { exact: true }).click()
@@ -225,8 +254,17 @@ test('skladová karta načte všechny stránky, filtruje a exportuje přesně vy
   await completeDownloadPromise
   expect(movementRequests.some((query) => query.includes('page=2'))).toBe(true)
 
-  await page.getByLabel('Produkt').click()
+  await page.getByLabel('Produkt', { exact: true }).click()
   await page.getByRole('option', { name: /Rum 0,04l/ }).click()
+  await page.getByLabel('Šarže').click()
+  await page.getByRole('option', { name: /RUM-JUL/ }).click()
+  await page.getByLabel('Produkt', { exact: true }).click()
+  await page.getByRole('option', { name: /Káva/ }).click()
+  await expect(page.getByLabel('Šarže')).toContainText('Všechny šarže')
+  await page.getByLabel('Produkt', { exact: true }).click()
+  await page.getByRole('option', { name: /Rum 0,04l/ }).click()
+  await page.getByLabel('Šarže').click()
+  await page.getByRole('option', { name: /RUM-JUL/ }).click()
   await page.getByLabel('Typ pohybu').click()
   await page.getByRole('option', { name: 'Příjem', exact: true }).click()
   await page.getByLabel('Pobočka', { exact: true }).click()
@@ -242,6 +280,7 @@ test('skladová karta načte všechny stránky, filtruje a exportuje přesně vy
   expect(movementRequests.at(-1)).toContain('productId=prod-rum')
   expect(movementRequests.at(-1)).toContain('type=Receipt')
   expect(movementRequests.at(-1)).toContain('locationId=loc-bar')
+  expect(movementRequests.at(-1)).toContain('stockLotId=lot-rum')
 
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Export CSV' }).click()
@@ -251,7 +290,9 @@ test('skladová karta načte všechny stránky, filtruje a exportuje přesně vy
   expect(path).toBeTruthy()
   const csv = await readFile(path!, 'utf8')
   expect(csv).toContain('Datum a čas;Produkt;SKU;Pobočka;Typ pohybu')
-  expect(csv).toContain('Rum 0,04l;RUM04;Bar;Příjem;3,5;8;Nákupní příjemka;receipt-1')
+  expect(csv).toContain(
+    'Rum 0,04l;RUM04;Bar;Příjem;3,5;RUM-JUL;2026-07-31;3,5;lot-rum;8;Nákupní příjemka;receipt-1',
+  )
   expect(csv).toContain(`'=HYPERLINK(""https://example.test"")`)
   expect(csv).not.toContain('move-001')
 })
