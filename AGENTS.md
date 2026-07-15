@@ -20,6 +20,8 @@ Nákupní objednávky V1 jsou přímo v existující stránce `/app/naskladneni`
 
 Rezervované a disponibilní zásoby INV-16 jsou mobilní webová vrstva nad stejným skladem. `StockLevel` z API vrací `quantity`, `reservedQuantity` a `availableQuantity`; nic z toho nepočítej z lokálních akcí. `ZasobyPage.vue` ukazuje všechny tři hodnoty a tab `Rezervace` používá `StockReservationsPanel.vue` pro vytvoření, uvolnění a úplné vyskladnění. U více poboček vyžaduje vytvoření konkrétní pobočku. Vyskladnění je nevratná fyzická mutace, proto musí mít potvrzovací dialog; u sledovaného produktu backend použije FEFO. Konflikt 409 u výdeje znamená i blokaci aktivní rezervací a UI má uživatele odkázat na rezervace. Neměň role/oprávnění, nativní Android/iOS ani AI/MCP. Kontrakt `docs/backend/stock-availability-v1.md`, regrese `useInventory.spec.ts` a `e2e/stock-reservations-mobile.spec.ts`.
 
+Skladové ocenění INV-16 je mobilní tab `Ocenění` v `ZasobyPage.vue` přes `StockValuationPanel.vue`. Zdroj pravdy je serverový `GET /inventory/stock-valuation`; frontend nesmí dopočítávat finanční souhrny, COGS ani jednotkové náklady. Zobrazuj měnu z odpovědi a u `isCostComplete=false` jasně vysvětli neúplný odhad; `null` finanční hodnotu nikdy neformátuj jako nulu. CSV načte všechny serverové stránky přes `allStockValuation`, kontroluje stejný `dataVersion` i opakovanou první stránku a při souběžné změně export ukončí; text chraň proti tabulkovým formulím. V1 je provozní výkaz, ne účetní uzávěrka. Neměň role/oprávnění, nativní Android/iOS ani AI/MCP. Kontrakt `docs/backend/stock-valuation-v1.md`, regrese `useInventory.spec.ts`, `inventory-export.spec.ts` a `e2e/stock-valuation-mobile.spec.ts`.
+
 ## Co to je
 
 Vystaveno.cz — fakturační + pokladní (POS) / gastro SaaS pro malé české firmy.

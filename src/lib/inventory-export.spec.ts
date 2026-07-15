@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { buildCsv } from '@/lib/csv-export'
 import {
   buildStockMovementRows,
+  buildStockValuationRows,
   STOCK_MOVEMENT_COLUMNS,
+  STOCK_VALUATION_COLUMNS,
   stockMovementFilename,
   stockMovementSource,
+  stockValuationFilename,
 } from '@/lib/inventory-export'
-import type { StockMovement } from '@/lib/types'
+import type { StockMovement, StockValuationResponse } from '@/lib/types'
 
 const movement: StockMovement = {
   id: 'move-1',
@@ -103,6 +106,84 @@ describe('inventory movement export', () => {
   it('sestaví stabilní název souboru z období', () => {
     expect(stockMovementFilename('2026-07-01', '2026-07-14')).toBe(
       'skladove-pohyby-2026-07-01_2026-07-14.csv',
+    )
+  })
+})
+
+describe('inventory valuation export', () => {
+  const response: StockValuationResponse = {
+    method: 'PeriodicWeightedAverage',
+    from: '2026-07-01',
+    to: '2026-07-14',
+    locationId: null,
+    currency: 'CZK',
+    dataVersion: 'version-1',
+    summary: {
+      openingStockValue: 0,
+      closingStockValue: 52,
+      purchaseValue: 78,
+      cogsValue: 26,
+      consumptionValue: 0,
+      lossValue: 0,
+      inventoryAdjustmentValue: 0,
+      missingCostProductCount: 0,
+      missingPurchaseCostProductCount: 0,
+      isComplete: true,
+    },
+    products: {
+      total: 1,
+      page: 1,
+      pageSize: 100,
+      items: [
+        {
+          productId: 'prod-1',
+          productName: '=Nebezpečný produkt',
+          productSku: 'SKU-1',
+          unitCost: 26,
+          costSource: 'CompanyPurchaseReceipts',
+          isCostComplete: true,
+          openingQuantity: 0,
+          openingStockValue: 0,
+          closingQuantity: 2,
+          closingStockValue: 52,
+          purchaseQuantity: 3,
+          purchaseValue: 78,
+          cogsQuantity: 1,
+          cogsValue: 26,
+          consumptionQuantity: 0,
+          consumptionValue: 0,
+          lossQuantity: 0,
+          lossValue: 0,
+          inventoryAdjustmentQuantity: 0,
+          inventoryAdjustmentValue: 0,
+        },
+      ],
+    },
+  }
+
+  it('exportuje produktový i součtový řádek a chrání uživatelský text', () => {
+    const rows = buildStockValuationRows(response, response.products.items, '+Všechny pobočky')
+
+    expect(rows).toHaveLength(2)
+    expect(rows[0]?.slice(0, 9)).toEqual([
+      '2026-07-01',
+      '2026-07-14',
+      "'+Všechny pobočky",
+      "'=Nebezpečný produkt",
+      'SKU-1',
+      'Periodický vážený průměr',
+      'CZK',
+      'Vážený průměr příjemek firmy',
+      26,
+    ])
+    expect(rows[1]?.[3]).toBe('CELKEM')
+    expect(rows[1]?.[12]).toBe(52)
+    expect(buildCsv(STOCK_VALUATION_COLUMNS, rows)).toContain(';2;52;3;78;1;26;')
+  })
+
+  it('sestaví stabilní název ocenění podle období', () => {
+    expect(stockValuationFilename('2026-07-01', '2026-07-14')).toBe(
+      'oceneni-skladu-2026-07-01_2026-07-14.csv',
     )
   })
 })

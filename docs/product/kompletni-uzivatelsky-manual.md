@@ -457,7 +457,17 @@ U každého produktu vidíte tři hodnoty: **Skladem** je fyzický stav, **Rezer
 
 Aktivní rezervace chrání zásobu také před ručním výdejem, odpisem, korekcí dolů, přesunem, prodejem, spotřebou na zakázce, výrobou a příliš nízkou inventurou. Pokud operace narazí na rezervované množství, nejprve rezervaci uvolněte nebo snižte požadovaný výdej.
 
-### 10.6 Inventura
+### 10.6 Ocenění skladu
+
+V Zásoby otevřete kartu Ocenění. Vyberte období, pobočku nebo všechny pobočky a podle potřeby vyhledejte produkt či změňte řazení. Přehled ukáže počáteční a konečnou hodnotu zásob, nákupy, náklady prodaného zboží (COGS), ostatní spotřebu, ztráty a inventurní rozdíl.
+
+Systém používá periodický vážený průměr nákupních cen do konce období. Pro pobočku nejprve použije její příjemky, potom celofiremní nákupní historii a nakonec nákupní cenu z katalogu produktu. Zdroj ceny je vidět u každé položky.
+
+Pokud se objeví stav Neúplné ocenění, alespoň jedné relevantní příjemce nebo produktu chybí cena. Známý dílčí průměr je pouze orientační a neúplné finanční hodnoty systém nezobrazuje jako nulu. Doplňte nákupní ceny na příjemkách nebo v katalogu a výkaz načtěte znovu.
+
+Akce Export CSV stáhne přesně filtrovaný výkaz včetně kontrolního součtu. Při změně skladu během vícestránkového exportu se soubor nevytvoří a je potřeba export zopakovat. Ocenění V1 je provozní manažerský výkaz; nenahrazuje účetní uzávěrku ani účetní potvrzení zvolené metody.
+
+### 10.7 Inventura
 
 1. Vyberte pobočku.
 2. Zadejte fyzicky spočítané množství.
@@ -465,7 +475,7 @@ Aktivní rezervace chrání zásobu také před ručním výdejem, odpisem, kore
 4. U významného rozdílu doplňte důvod.
 5. Inventuru potvrďte.
 
-### 10.7 Přesun a výroba
+### 10.8 Přesun a výroba
 
 Přesun snižuje zásobu na výchozí pobočce a zvyšuje ji na cílové; u sledovaného produktu zachová šarži. Výrobní dávka polotovaru spotřebuje suroviny podle receptury a zvýší množství vyrobeného polotovaru. Sledovaný výstup vyžaduje číslo výstupní šarže.
 

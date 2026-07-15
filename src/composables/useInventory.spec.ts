@@ -239,6 +239,74 @@ describe('useInventory', () => {
     )
   })
 
+  it('stockValuation posílá období, pobočku, hledání, řazení a stránku', async () => {
+    vi.mocked(http.get).mockResolvedValue({ products: { items: [], total: 0 } } as never)
+
+    await useInventory().stockValuation({
+      from: '2026-07-01',
+      to: '2026-07-14',
+      locationId: 'loc-1',
+      search: '  káva  ',
+      sort: '-loss',
+      page: 2,
+      pageSize: 25,
+    })
+
+    expect(http.get).toHaveBeenCalledWith(
+      '/inventory/stock-valuation?page=2&pageSize=25&sort=-loss&from=2026-07-01&to=2026-07-14&locationId=loc-1&search=k%C3%A1va',
+    )
+  })
+
+  it('allStockValuation načte všechny stránky a zavřeně ověří verzi výpočtu', async () => {
+    const base = {
+      method: 'PeriodicWeightedAverage',
+      from: '2026-07-01',
+      to: '2026-07-14',
+      locationId: null,
+      currency: 'CZK',
+      dataVersion: 'stable-v1',
+      summary: { isComplete: true },
+    }
+    const firstItems = Array.from({ length: 100 }, (_, index) => ({
+      productId: `prod-${index + 1}`,
+    }))
+    vi.mocked(http.get)
+      .mockResolvedValueOnce({
+        ...base,
+        products: { items: firstItems, total: 101, page: 1, pageSize: 100 },
+      } as never)
+      .mockResolvedValueOnce({
+        ...base,
+        products: { items: [{ productId: 'prod-101' }], total: 101, page: 2, pageSize: 100 },
+      } as never)
+      .mockResolvedValueOnce({
+        ...base,
+        products: { items: firstItems, total: 101, page: 1, pageSize: 100 },
+      } as never)
+
+    const result = await useInventory().allStockValuation({ from: '2026-07-01', to: '2026-07-14' })
+
+    expect(result.products.items).toHaveLength(101)
+    expect(http.get).toHaveBeenNthCalledWith(
+      2,
+      '/inventory/stock-valuation?page=2&pageSize=100&sort=-stockValue&from=2026-07-01&to=2026-07-14',
+    )
+  })
+
+  it('allStockValuation odmítne export, když se data mezi stránkami změní', async () => {
+    vi.mocked(http.get)
+      .mockResolvedValueOnce({
+        dataVersion: 'v1',
+        products: { items: [{ productId: 'prod-1' }], total: 1, page: 1, pageSize: 100 },
+      } as never)
+      .mockResolvedValueOnce({
+        dataVersion: 'v2',
+        products: { items: [{ productId: 'prod-1' }], total: 1, page: 1, pageSize: 100 },
+      } as never)
+
+    await expect(useInventory().allStockValuation()).rejects.toThrow('během exportu změnilo')
+  })
+
   it('transfer pošle přesun mezi pobočkami na backend', async () => {
     vi.mocked(http.post).mockResolvedValue([] as never)
 
