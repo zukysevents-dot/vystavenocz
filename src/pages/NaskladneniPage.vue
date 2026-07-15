@@ -10,6 +10,7 @@ import {
   Camera,
   FileText,
   Building2,
+  Plus,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -67,11 +68,14 @@ const scanInput = ref<InstanceType<typeof Input> | null>(null)
 const scannerOpen = ref(false)
 
 interface ReceiveLine {
+  id: string
   productId: string
   name: string
   sku: string
   quantity: number
   unitCost: number | ''
+  lotNumber: string
+  expiresOn: string
 }
 const lines = ref<ReceiveLine[]>([])
 
@@ -164,15 +168,20 @@ function focusScan() {
 }
 
 function addProduct(p: Product, qty = 1) {
-  const existing = lines.value.find((l) => l.productId === p.id)
+  const existing = p.lotTrackingEnabled
+    ? lines.value.find((l) => l.productId === p.id && !l.lotNumber && !l.expiresOn)
+    : lines.value.find((l) => l.productId === p.id)
   if (existing) existing.quantity += qty
   else {
     lines.value.push({
+      id: crypto.randomUUID(),
       productId: p.id,
       name: p.name,
       sku: p.sku,
       quantity: qty,
       unitCost: p.purchasePrice ?? '',
+      lotNumber: '',
+      expiresOn: '',
     })
   }
 }
@@ -219,8 +228,18 @@ function pick(p: Product) {
   search.value = ''
 }
 
+function addLotLine(line: ReceiveLine) {
+  lines.value.push({
+    ...line,
+    id: crypto.randomUUID(),
+    quantity: 1,
+    lotNumber: '',
+    expiresOn: '',
+  })
+}
+
 function removeLine(id: string) {
-  lines.value = lines.value.filter((l) => l.productId !== id)
+  lines.value = lines.value.filter((l) => l.id !== id)
 }
 
 const totalUnits = computed(() => lines.value.reduce((a, l) => a + (Number(l.quantity) || 0), 0))
@@ -253,12 +272,21 @@ async function submit() {
     return toast.error('U všech položek zadejte kladné množství.')
   if (lines.value.some((l) => normalizeUnitCost(l.unitCost) !== null && Number(l.unitCost) < 0))
     return toast.error('Nákupní cena nesmí být záporná.')
+  if (
+    lines.value.some(
+      (line) =>
+        products.value.find((product) => product.id === line.productId)?.lotTrackingEnabled &&
+        !line.lotNumber.trim(),
+    )
+  )
+    return toast.error('U produktů se sledováním šarží vyplňte číslo šarže.')
   // U víc poboček musí obsluha vybrat konkrétní sklad (příjemka se zapíše na něj).
   if (locations.value.length > 1 && receiveLocationId.value === ALL_LOCATIONS)
     return toast.error('Vyberte konkrétní pobočku, na kterou příjemku uložit.')
   submitting.value = true
+  let receipt: PurchaseReceipt
   try {
-    const receipt = await inv.createPurchaseReceipt({
+    receipt = await inv.createPurchaseReceipt({
       supplierName: supplierName.value.trim() || null,
       documentNumber: documentNumber.value.trim() || null,
       receivedOn: receivedOn.value || null,
@@ -268,20 +296,29 @@ async function submit() {
         productId: l.productId,
         quantity: Number(l.quantity),
         unitCost: normalizeUnitCost(l.unitCost),
+        lotNumber: l.lotNumber.trim() || null,
+        expiresOn: l.expiresOn || null,
       })),
     })
-    lines.value = []
-    documentNumber.value = ''
-    note.value = ''
-    await Promise.all([loadLevels(), loadRecentReceipts(), loadPurchaseSuggestions()])
-    toast.success(`Příjemka uložena: ${receipt.items.length} položek.`)
-    focusScan()
   } catch (e) {
     console.error(e)
     toast.error('Příjemka se neuložila. Sklad zůstal beze změny.')
+    submitting.value = false
+    return
+  }
+
+  lines.value = []
+  documentNumber.value = ''
+  note.value = ''
+  toast.success(`Příjemka uložena: ${receipt.items.length} položek.`)
+  try {
     await Promise.all([loadLevels(), loadRecentReceipts(), loadPurchaseSuggestions()])
+  } catch (e) {
+    console.error(e)
+    toast.warning('Příjemka je uložená, ale přehled skladu se nepodařilo obnovit.')
   } finally {
     submitting.value = false
+    focusScan()
   }
 }
 
@@ -340,11 +377,14 @@ function addSuggestion(suggestion: SuggestionRow) {
   if (p) addProduct(p, suggestion.suggested)
   else {
     lines.value.push({
+      id: crypto.randomUUID(),
       productId: suggestion.productId,
       name: suggestion.name,
       sku: suggestion.sku,
       quantity: suggestion.suggested,
       unitCost: suggestion.purchasePrice ?? '',
+      lotNumber: '',
+      expiresOn: '',
     })
   }
 }
@@ -503,12 +543,36 @@ function fmtQuantity(value: number | null): string {
             <div v-else class="divide-y divide-border">
               <div
                 v-for="l in lines"
-                :key="l.productId"
+                :key="l.id"
                 class="grid gap-3 p-3 sm:grid-cols-[minmax(0,1fr)_96px_128px_40px] sm:items-end"
               >
                 <div class="min-w-0">
                   <div class="truncate font-medium">{{ l.name }}</div>
                   <div class="text-xs text-muted-foreground">{{ l.sku }}</div>
+                  <div
+                    v-if="
+                      products.find((product) => product.id === l.productId)?.lotTrackingEnabled
+                    "
+                    class="mt-2 grid gap-2 sm:grid-cols-2"
+                  >
+                    <label class="space-y-1 text-xs font-medium text-muted-foreground">
+                      <span>Číslo šarže *</span>
+                      <Input v-model="l.lotNumber" class="h-9" placeholder="Např. 2026-07-A" />
+                    </label>
+                    <label class="space-y-1 text-xs font-medium text-muted-foreground">
+                      <span>Expirace</span>
+                      <Input v-model="l.expiresOn" class="h-9" type="date" />
+                    </label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      class="justify-start sm:col-span-2"
+                      @click="addLotLine(l)"
+                    >
+                      <Plus class="h-4 w-4" /> Další šarže stejného produktu
+                    </Button>
+                  </div>
                 </div>
                 <label class="space-y-1 text-xs font-medium text-muted-foreground">
                   <span>Množství</span>
@@ -536,7 +600,7 @@ function fmtQuantity(value: number | null): string {
                   size="icon"
                   class="self-end"
                   title="Odebrat"
-                  @click="removeLine(l.productId)"
+                  @click="removeLine(l.id)"
                 >
                   <Trash2 class="h-4 w-4 text-destructive" />
                 </Button>
@@ -629,6 +693,18 @@ function fmtQuantity(value: number | null): string {
                       >
                         · {{ locationName(receipt.locationId) }}</template
                       >
+                    </div>
+                    <div
+                      v-if="receipt.items.some((item) => item.lotNumber)"
+                      class="mt-1 text-xs text-muted-foreground"
+                    >
+                      Šarže:
+                      {{
+                        receipt.items
+                          .map((item) => item.lotNumber)
+                          .filter(Boolean)
+                          .join(', ')
+                      }}
                     </div>
                   </div>
                   <div class="shrink-0 text-sm font-semibold">

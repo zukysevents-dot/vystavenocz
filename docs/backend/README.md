@@ -27,3 +27,4 @@ U každého jsou i **otázky/rozhodnutí**, na které potřebuju od tebe odpově
 ## Hotové sdílené kontrakty
 
 - [`inventory-ledger-export.md`](./inventory-ledger-export.md) — úplná skladová karta, pobočkové filtry a bezpečný kontrolní CSV export (INV-16, první řez).
+- [`stock-lots-expiry-v1.md`](./stock-lots-expiry-v1.md) — šarže, expirace, FEFO, přesný odpis a mobilní skladové workflow (INV-16).

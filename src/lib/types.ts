@@ -194,6 +194,7 @@ export interface Product {
   categoryId: string | null
   allergens?: number[]
   productKind?: ProductKind
+  lotTrackingEnabled?: boolean
 }
 
 export type ProductKind = 'Standard' | 'SemiProduct'
@@ -229,6 +230,9 @@ export interface ProductionBatch {
   note: string | null
   createdAt: string
   ingredients: ProductionBatchItem[]
+  outputStockLotId?: string | null
+  outputLotNumber?: string | null
+  outputExpiresOn?: string | null
 }
 
 export interface ProductRecipeIngredient {
@@ -796,6 +800,7 @@ export type StockMovementType =
   | 'ProductionOutput'
   | 'JobConsumption'
   | 'StornoJobConsumption'
+  | 'LotAssignment'
 
 export interface StockLevel {
   productId: string
@@ -849,11 +854,20 @@ export interface StockMovement {
   relatedPurchaseReceiptId: string | null
   relatedProductionBatchId?: string | null
   relatedJobId?: string | null
+  relatedJobMaterialItemId?: string | null
   createdAt: string
   productName?: string | null
   productSku?: string | null
   locationName?: string | null
   createdBy?: string | null
+  lotAllocations?: StockMovementLotAllocation[]
+}
+
+export interface StockMovementLotAllocation {
+  stockLotId: string
+  lotNumber: string
+  expiresOn: string | null
+  quantity: number
 }
 
 export interface StockMovementProductFilterOption {
@@ -869,9 +883,37 @@ export interface StockMovementLocationFilterOption {
   isArchived: boolean
 }
 
+export interface StockMovementLotFilterOption {
+  id: string
+  productId: string
+  lotNumber: string
+  expiresOn: string | null
+}
+
 export interface StockMovementFilters {
   products: StockMovementProductFilterOption[]
   locations: StockMovementLocationFilterOption[]
+  lots?: StockMovementLotFilterOption[]
+}
+
+export interface StockLot {
+  id: string
+  productId: string
+  productName: string
+  productSku: string
+  locationId: string | null
+  locationName: string | null
+  lotNumber: string
+  expiresOn: string | null
+  daysToExpiry: number | null
+  quantity: number
+  isUnspecified: boolean
+}
+
+export interface EnableLotTrackingResponse {
+  productId: string
+  lotTrackingEnabled: boolean
+  assignedLocations: number
 }
 
 export interface StocktakeItem {
@@ -896,6 +938,9 @@ export interface PurchaseReceiptItem {
   quantity: number
   unitCost: number | null
   lineCost: number | null
+  stockLotId?: string | null
+  lotNumber?: string | null
+  expiresOn?: string | null
 }
 
 export interface PurchaseReceipt {
@@ -915,6 +960,8 @@ export interface PurchaseReceiptItemInput {
   productId: string
   quantity: number
   unitCost?: number | null
+  lotNumber?: string | null
+  expiresOn?: string | null
 }
 
 export interface CreatePurchaseReceiptRequest {
@@ -1015,6 +1062,8 @@ export interface PurchaseOrderReceiptItemInput {
   purchaseOrderItemId: string
   quantity: number
   unitCost: number | null
+  lotNumber?: string | null
+  expiresOn?: string | null
 }
 
 export interface ReceivePurchaseOrderInput {

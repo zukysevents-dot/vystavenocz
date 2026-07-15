@@ -75,13 +75,14 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 9. Návrh naplňte produkty, množstvím a cenami; po odeslání dodavateli zvolte `Objednat`.
 10. Při doručení zvolte `Přijmout` a zadejte jen skutečně dodané množství. Nedodaný zbytek zůstane ve stavu `Částečně přijato` pro další příjemku.
 11. Každý dílčí příjem je samostatný skladový doklad. Opakované potvrzení po výpadku nevytvoří druhou příjemku ani druhý pohyb.
+12. U produktu se sledováním šarží vyplňte při každém příjmu číslo šarže a podle potřeby expiraci. Jednu dodávku stejného produktu můžete rozdělit do více řádků šarží.
 
 ## Polotovary a výrobní dávky
 
 1. V `Sklad / katalog` otevřete produkt, který vyrábíte ze surovin, a jako typ nastavte `Polotovar vyráběný ze surovin`.
 2. Uložte mu recepturu stejným tlačítkem jako u jídel. Receptura určuje spotřebu jedné vyrobené jednotky včetně odpadu.
 3. V seznamu produktu klikněte na ikonu výroby, zadejte vyrobené množství a potvrďte dávku.
-4. Systém odečte suroviny a naskladní hotový polotovar jako propojené pohyby. Dávku neupravujte zpětně; případný omyl opravte běžnou skladovou korekcí.
+4. Pokud má výstupní polotovar zapnuté šarže, zadejte číslo výstupní šarže a expiraci. Systém odečte suroviny a naskladní hotový polotovar jako propojené pohyby. Dávku neupravujte zpětně; případný omyl opravte běžnou skladovou korekcí.
 5. Ikona `Varianty` slouží pro velikosti porce a odlišné ceny. U každé varianty nastavte název, případnou cenu a násobek receptury.
 6. V `Pokladna`, `Restaurace` i ve veřejné/QR objednávce se před přidáním takového produktu vybere konkrétní varianta. Cena a spotřeba surovin se dopočítají na serveru.
 7. Název, cena i spotřeba se uloží k účtu a prodeji. Pozdější změna varianty nebo receptury proto nemění staré účtenky, bon ani storno skladu.
@@ -127,6 +128,10 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 6. Přesun mezi barem, kuchyní nebo skladem zapisujte přes přesun. Celkový sklad firmy se nemění, mění se jen místo.
 7. Tab `Pohyby` je skladová karta. Vyberte období, produkt, typ pohybu a případně pobočku. U každého řádku vidíte změnu, stav po pohybu, poznámku a vazbu na příjemku, prodej, inventuru, výrobu nebo zakázku.
 8. `Export CSV` stáhne přesně aktuálně vyfiltrovanou historii. Export se vytvoří až po načtení všech řádků; pokud se sklad během načítání změnil, použijte `Zkusit znovu`, aby nevznikl neúplný soubor.
+9. Pro zboží s expirací nejdřív v `Sklad` zapněte `Sledování šarží`. Aktivace platí pro celou firmu a nelze ji vypnout; dosavadní zásoba zůstane v systémové počáteční šarži. Od této chvíle POS, QR platba, zakázka i výroba při nedostatku šarží operaci odmítnou místo vytvoření záporného stavu.
+10. Tab `Šarže` ukazuje autoritativní množství po šarži a pobočce, datum a počet dní do expirace. Odtud lze odepsat přesně vybranou expirovanou šarži.
+11. Při výdeji nebo přesunu můžete zvolit konkrétní šarži. Bez výběru systém použije FEFO — nejdřív zboží s nejbližší expirací. Přesun zachová číslo šarže v cílové pobočce.
+12. V `Pohyby` lze filtrovat jednu šarži; detail i CSV ukazují číslo, expiraci a množství. Jeden výdej přes více šarží má v CSV samostatný řádek pro každou alokaci.
 
 ## Směny a docházka
 

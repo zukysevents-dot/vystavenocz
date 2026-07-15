@@ -32,10 +32,12 @@ Cíl: vidět, že sklad sedí a rozdíly se dají vysvětlit.
 1. Otevřete `Naskladnění`, vyberte pobočku skladu (má-li firma víc poboček), vyplňte dodavatele/doklad/datum, přidejte zboží s množstvím a uložte příjemku.
 2. V bloku `Nákupní objednávky` založte dodavatele, vytvořte návrh s alespoň dvěma produkty a zvolte `Objednat`.
 3. Přijměte jen část množství jednoho produktu. Objednávka musí ukázat `Částečně přijato`, vznikne jedna příjemka a stav skladu se zvýší jen o zadané množství. Potom přijměte zbytek a ověřte stav `Přijato`.
-4. Otevřete `Zásoby`. Vpravo je tab `Zrcadlo` — porovnává `Stav má být`, `Realitu` a `Rozdíl`. V detailu řádku uvidíte výpočet (otevření + příjem + storno − prodej − výdej = stav má být).
-5. Spusťte `Inventuru` na konkrétní pobočku: zadejte fyzicky napočítané množství a uložte. `Rozdíl` = realita minus systém, ukazuje se v kusech i v Kč.
-6. V tabu `Pohyby` nastavte období, produkt, typ pohybu a pobočku. Ověřte čitelné názvy, změnu množství, stav po pohybu a zdrojové ID.
-7. Stáhněte `Export CSV`. Počet datových řádků musí odpovídat zobrazenému počtu a soubor nesmí obsahovat pohyby mimo filtry.
+4. U jednoho testovacího produktu v `Sklad` zapněte sledování šarží. Přijměte dvě šarže s různou expirací a ověřte je v `Zásoby → Šarže`. Bez ručního výběru vydejte množství přesahující první šarži — v `Pohyby` musí být nejdřív bližší expirace a potom druhá šarže.
+5. V `Šarže` odepište část první šarže přes `Odepsat expiraci`. Musí se snížit jen vybraná šarže. Na šířce mobilu nesmí stránka vodorovně přetékat.
+6. Otevřete `Zásoby`. Vpravo je tab `Zrcadlo` — porovnává `Stav má být`, `Realitu` a `Rozdíl`. V detailu řádku uvidíte výpočet (otevření + příjem + storno − prodej − výdej = stav má být).
+7. Spusťte `Inventuru` na konkrétní pobočku: zadejte fyzicky napočítané množství a uložte. `Rozdíl` = realita minus systém, ukazuje se v kusech i v Kč.
+8. V tabu `Pohyby` nastavte období, produkt, šarži, typ pohybu a pobočku. Ověřte čitelné názvy, změnu množství, stav po pohybu a zdrojové ID.
+9. Stáhněte `Export CSV`. Počet datových řádků musí odpovídat alokacím šarží a soubor nesmí obsahovat pohyby mimo filtry.
 
 Co ověřit: ruční i objednávková příjemka zvýší stav přes stejný sklad, částečný příjem nepřijme nedodaný zbytek, prodej stav sníží a inventura/korekce se projeví jako rozdíl ve zrcadle. Inventura ani výdej nejdou spustit pro „Všechny pobočky" — vždy pro konkrétní sklad. Skladová karta i CSV respektují období, produkt, typ a pobočku a načtou celou vyfiltrovanou historii, ne jen první stránku.
 
@@ -106,7 +108,7 @@ Tohle je nejdůležitější tabulka pro interní test. **Netvrďte zákazníkov
 | ------------------------------------------------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Gastro POS prodej (hotovost/karta)                                                          | **Ostré**                 | Karta: výsledek potvrzuje obsluha ručně, terminál není propojený.                                                          |
 | Restaurace, stoly, kuchyně (KDS)                                                            | **Ostré**                 | Účty, sloučení, split, bony, historie.                                                                                     |
-| Sklad, naskladnění, inventura, zrcadlo, skladová karta a CSV                                | **Ostré**                 | Odečet surovin přes receptury, per-pobočka; export respektuje zvolené filtry.                                              |
+| Sklad, naskladnění, šarže/expirace/FEFO, inventura, zrcadlo, skladová karta a CSV           | **Ostré**                 | Odečet surovin přes receptury, per-pobočka; přesný odpis šarže a export respektující filtry.                               |
 | Uzávěrka + Z-report + exporty                                                               | **Ostré**                 | Denní i měsíční účetní CSV, předávka.                                                                                      |
 | Akce/ceny, věrnost, audit                                                                   | **Ostré**                 | Serverový výpočet promo a bodů.                                                                                            |
 | Veřejné / QR objednávky                                                                     | **Ostré**                 | Bez přihlášení, ceny ze serveru.                                                                                           |

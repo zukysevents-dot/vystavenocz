@@ -39,6 +39,10 @@ describe('inventory movement export', () => {
       'Hlavní sklad',
       'Příjem',
       3.5,
+      '',
+      '',
+      '',
+      '',
       8,
       'Nákupní příjemka',
       'receipt-1',
@@ -50,8 +54,36 @@ describe('inventory movement export', () => {
     ])
 
     const csv = buildCsv(STOCK_MOVEMENT_COLUMNS, rows)
-    expect(csv).toContain(';3,5;8;Nákupní příjemka;receipt-1;')
+    expect(csv).toContain(';3,5;;;;;8;Nákupní příjemka;receipt-1;')
     expect(csv).not.toContain(";'3,5;")
+  })
+
+  it('rozepíše více šarží do samostatných dohledatelných řádků', () => {
+    const rows = buildStockMovementRows([
+      {
+        ...movement,
+        type: 'Issue',
+        quantity: -5,
+        lotAllocations: [
+          {
+            stockLotId: 'lot-first',
+            lotNumber: 'EXP-07',
+            expiresOn: '2026-07-31',
+            quantity: -2,
+          },
+          {
+            stockLotId: 'lot-second',
+            lotNumber: 'EXP-08',
+            expiresOn: '2026-08-31',
+            quantity: -3,
+          },
+        ],
+      },
+    ])
+
+    expect(rows).toHaveLength(2)
+    expect(rows[0]?.slice(5, 11)).toEqual([-5, 'EXP-07', '2026-07-31', -2, 'lot-first', 8])
+    expect(rows[1]?.slice(5, 11)).toEqual(['', 'EXP-08', '2026-08-31', -3, 'lot-second', 8])
   })
 
   it('určí zdroj podle pevné priority vazeb', () => {

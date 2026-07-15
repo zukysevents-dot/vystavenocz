@@ -14,6 +14,7 @@ import {
   SlidersHorizontal,
   Factory,
   Scaling,
+  Layers3,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -43,6 +44,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useProducts, type ProductInput } from '@/composables/useProducts'
 import { useCategories } from '@/composables/useCategories'
+import { useInventory } from '@/composables/useInventory'
 import { isApiMode } from '@/lib/http'
 import { formatCZK } from '@/lib/invoice'
 import { ALLERGENS, formatAllergenCodes, normalizeAllergens } from '@/lib/allergens'
@@ -51,6 +53,7 @@ import type { Category, Product } from '@/lib/types'
 
 const { products, load, create, update, remove } = useProducts()
 const categoriesApi = useCategories()
+const inventory = useInventory()
 const apiMode = isApiMode()
 const categories = ref<Category[]>([])
 
@@ -69,6 +72,7 @@ const variantsProduct = ref<Product | null>(null)
 const variantsDialogOpen = ref(false)
 const productionProduct = ref<Product | null>(null)
 const productionDialogOpen = ref(false)
+const activatingLotProductId = ref<string | null>(null)
 
 function askDelete(id: string) {
   deleteId.value = id
@@ -153,6 +157,27 @@ function openVariants(p: Product) {
 function openProduction(p: Product) {
   productionProduct.value = p
   productionDialogOpen.value = true
+}
+
+async function enableLotTracking(product: Product) {
+  if (product.lotTrackingEnabled) return
+  if (
+    !window.confirm(
+      `Zapnout sledování šarží pro ${product.name} v celé firmě? Existující zásoba se přiřadí počáteční šarži a funkci už nepůjde vypnout. Prodej, výdej i výroba pak při nedostatku zásoby skončí chybou a nepovolí záporný stav.`,
+    )
+  )
+    return
+  activatingLotProductId.value = product.id
+  try {
+    await inventory.enableLotTracking(product.id)
+    product.lotTrackingEnabled = true
+    toast.success('Sledování šarží bylo zapnuto.')
+  } catch (error) {
+    console.error(error)
+    toast.error('Sledování šarží se nepodařilo zapnout. Zkontrolujte stav skladu.')
+  } finally {
+    activatingLotProductId.value = null
+  }
 }
 
 function toggleAllergen(code: number, checked: boolean | 'indeterminate' | undefined): void {
@@ -310,6 +335,7 @@ async function onDelete() {
                   • Alergeny {{ formatAllergenCodes(p.allergens) }}
                 </span>
                 <span v-if="p.productKind === 'SemiProduct'"> • Polotovar</span>
+                <span v-if="p.lotTrackingEnabled"> • Sledování šarží</span>
               </div>
             </div>
           </div>
@@ -334,6 +360,18 @@ async function onDelete() {
                 @click="openVariants(p)"
               >
                 <Scaling class="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                :title="
+                  p.lotTrackingEnabled ? 'Sledování šarží je zapnuté' : 'Zapnout sledování šarží'
+                "
+                :disabled="p.lotTrackingEnabled || activatingLotProductId === p.id"
+                @click="enableLotTracking(p)"
+              >
+                <Loader2 v-if="activatingLotProductId === p.id" class="h-4 w-4 animate-spin" />
+                <Layers3 v-else class="h-4 w-4" />
               </Button>
               <Button
                 v-if="p.productKind === 'SemiProduct'"
