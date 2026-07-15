@@ -94,11 +94,15 @@ const byLocationColumns = computed(() => byLocation.value?.locations ?? [])
 // Řídké buňky → mapa množství podle sloupce, ať se v tabulce chybějící buňka doplní na 0.
 const byLocationRows = computed(() =>
   (byLocation.value?.products.items ?? []).map((r) => {
-    const q: Record<string, { quantity: number; reserved: number; available: number }> = {}
+    const q: Record<
+      string,
+      { quantity: number; reserved: number; restricted: number; available: number }
+    > = {}
     for (const c of r.cells)
       q[colKey(c.locationId)] = {
         quantity: c.quantity,
         reserved: c.reservedQuantity,
+        restricted: c.restrictedQuantity ?? 0,
         available: c.availableQuantity,
       }
     return { ...r, q }
@@ -125,6 +129,7 @@ interface Row {
   min: number
   qty: number
   reserved: number
+  restricted: number
   available: number
   low: boolean
   lotTrackingEnabled: boolean
@@ -147,6 +152,7 @@ const rows = computed<Row[]>(() => {
       const level = levelMap.value.get(p.id)
       const qty = level?.quantity ?? 0
       const reserved = level?.reservedQuantity ?? 0
+      const restricted = level?.restrictedQuantity ?? 0
       const available = level?.availableQuantity ?? qty
       return {
         id: p.id,
@@ -155,6 +161,7 @@ const rows = computed<Row[]>(() => {
         min: p.minQuantity,
         qty,
         reserved,
+        restricted,
         available,
         low: p.minQuantity > 0 && available < p.minQuantity,
         lotTrackingEnabled: p.lotTrackingEnabled === true,
@@ -345,6 +352,7 @@ async function loadActionLots(row: Row) {
       productId: row.id,
       locationId: actionLocationId.value,
       positiveOnly: true,
+      status: 'Active',
     })
   } catch (e) {
     actionLots.value = []
@@ -423,7 +431,7 @@ async function submitAction() {
       )
   } catch (e) {
     if (e instanceof ApiError && e.status === 409)
-      toast.error('Není dost disponibilní zásoby. Zkontrolujte aktivní rezervace.')
+      toast.error('Není dost disponibilní zásoby. Zkontrolujte rezervace a blokované šarže.')
     else toast.error('Operace selhala.')
     console.error(e)
     return
@@ -466,6 +474,7 @@ async function loadTransferLots() {
       productId: row.id,
       locationId: transferForm.fromLocationId,
       positiveOnly: true,
+      status: 'Active',
     })
   } catch (e) {
     transferLots.value = []
@@ -813,17 +822,31 @@ async function submitStocktake() {
                 </div>
               </div>
               <div class="flex flex-1 flex-wrap items-center justify-end gap-3 sm:flex-none">
-                <div class="grid min-w-[210px] grid-cols-3 gap-3 text-right tabular-nums">
+                <div class="grid min-w-[280px] grid-cols-4 gap-3 text-right tabular-nums">
                   <div>
-                    <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Skladem</div>
+                    <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Skladem
+                    </div>
                     <div class="font-semibold">{{ fmtQty(r.qty) }}</div>
                   </div>
                   <div>
-                    <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Rezervováno</div>
-                    <div class="font-semibold text-amber-700 dark:text-amber-300">{{ fmtQty(r.reserved) }}</div>
+                    <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Rezervováno
+                    </div>
+                    <div class="font-semibold text-amber-700 dark:text-amber-300">
+                      {{ fmtQty(r.reserved) }}
+                    </div>
                   </div>
                   <div>
-                    <div class="text-[10px] uppercase tracking-wide text-muted-foreground">K dispozici</div>
+                    <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Blokováno
+                    </div>
+                    <div class="font-semibold text-destructive">{{ fmtQty(r.restricted) }}</div>
+                  </div>
+                  <div>
+                    <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      K dispozici
+                    </div>
                     <div class="text-lg font-bold" :class="r.low ? 'text-destructive' : ''">
                       {{ fmtQty(r.available) }}
                     </div>
@@ -877,10 +900,7 @@ async function submitStocktake() {
 
       <!-- OCENĚNÍ SKLADU -->
       <template v-else-if="tab === 'valuation'">
-        <StockValuationPanel
-          :locations="locations"
-          :initial-location-id="stockFilterLocationId"
-        />
+        <StockValuationPanel :locations="locations" :initial-location-id="stockFilterLocationId" />
       </template>
 
       <!-- POHYBY -->
@@ -1137,11 +1157,15 @@ async function submitStocktake() {
                     class="px-3 py-2 text-right font-medium"
                   >
                     {{ colLabel(col) }}
-                    <span class="block text-[10px] font-normal normal-case">k dispozici / stav</span>
+                    <span class="block text-[10px] font-normal normal-case"
+                      >k dispozici / stav</span
+                    >
                   </th>
                   <th class="px-3 py-2 text-right font-semibold text-foreground">
                     Celkem
-                    <span class="block text-[10px] font-normal normal-case">k dispozici / stav</span>
+                    <span class="block text-[10px] font-normal normal-case"
+                      >k dispozici / stav</span
+                    >
                   </th>
                 </tr>
               </thead>
@@ -1173,6 +1197,9 @@ async function submitStocktake() {
                       <template v-if="(row.q[colKey(col.locationId)]?.reserved ?? 0) > 0">
                         · rez. {{ fmtQty(row.q[colKey(col.locationId)]?.reserved ?? 0) }}
                       </template>
+                      <template v-if="(row.q[colKey(col.locationId)]?.restricted ?? 0) > 0">
+                        · blok. {{ fmtQty(row.q[colKey(col.locationId)]?.restricted ?? 0) }}
+                      </template>
                     </div>
                   </td>
                   <td class="px-3 py-2 text-right font-semibold tabular-nums text-foreground">
@@ -1181,6 +1208,9 @@ async function submitStocktake() {
                       stav {{ fmtQty(row.totalQuantity) }}
                       <template v-if="row.totalReservedQuantity > 0">
                         · rez. {{ fmtQty(row.totalReservedQuantity) }}
+                      </template>
+                      <template v-if="(row.totalRestrictedQuantity ?? 0) > 0">
+                        · blok. {{ fmtQty(row.totalRestrictedQuantity ?? 0) }}
                       </template>
                     </div>
                   </td>

@@ -39,6 +39,7 @@ const lots = [
     daysToExpiry: 6,
     quantity: 4,
     isUnspecified: false,
+    status: 'Active',
   },
   {
     id: 'lot-august',
@@ -52,6 +53,7 @@ const lots = [
     daysToExpiry: 37,
     quantity: 6,
     isUnspecified: false,
+    status: 'Active',
   },
 ]
 
@@ -92,6 +94,8 @@ test('šarže lze na mobilu zobrazit, přesně odepsat a přijmout', async ({ pa
   const issueBodies: unknown[] = []
   const receiptBodies: unknown[] = []
   const lotQueries: string[] = []
+  const statusBodies: unknown[] = []
+  let julyStatus = 'Active'
 
   await page.route(API, async (route: Route) => {
     const request = route.request()
@@ -120,7 +124,31 @@ test('šarže lze na mobilu zobrazit, přesně odepsat a přijmout', async ({ pa
     }
     if (method === 'GET' && path === '/inventory/stock-lots') {
       lotQueries.push(url.search)
-      return route.fulfill({ json: paged(lots) })
+      return route.fulfill({
+        json: paged(
+          lots.map((lot) => (lot.id === 'lot-july' ? { ...lot, status: julyStatus } : lot)),
+        ),
+      })
+    }
+    if (method === 'POST' && path === '/inventory/stock-lots/lot-july/status') {
+      const body = request.postDataJSON()
+      statusBodies.push(body)
+      julyStatus = body.status
+      return route.fulfill({ json: { ...lots[0], status: julyStatus } })
+    }
+    if (method === 'GET' && path === '/inventory/stock-lots/lot-july/status-history') {
+      return route.fulfill({
+        json: [
+          {
+            id: 'status-event-1',
+            fromStatus: 'Active',
+            toStatus: 'Quarantined',
+            reason: 'Poškozené víčko',
+            changedBy: 'u_e2e',
+            changedAt: '2026-07-14T12:15:00Z',
+          },
+        ],
+      })
     }
     if (method === 'POST' && path === '/inventory/issues') {
       issueBodies.push(request.postDataJSON())
@@ -166,6 +194,22 @@ test('šarže lze na mobilu zobrazit, přesně odepsat a přijmout', async ({ pa
       locationId: location.id,
       stockLotId: 'lot-july',
     })
+
+  const julyCard = page.locator('article').filter({ hasText: 'JUL-2026' })
+  await julyCard.getByRole('button', { name: 'Změnit stav' }).click()
+  await page.getByLabel('Důvod').fill('Poškozené víčko')
+  await page.getByRole('button', { name: 'Uložit stav' }).click()
+  await expect
+    .poll(() => statusBodies.at(-1))
+    .toEqual({
+      status: 'Quarantined',
+      reason: 'Poškozené víčko',
+    })
+  await expect(julyCard.getByText('Karanténa')).toBeVisible()
+  await julyCard.getByRole('button', { name: 'Historie' }).click()
+  await expect(page.getByRole('heading', { name: 'Historie stavu šarže' })).toBeVisible()
+  await expect(page.getByText('Poškozené víčko')).toBeVisible()
+  await page.getByRole('button', { name: 'Zavřít' }).click()
 
   await page.getByRole('button', { name: 'Stav zásob' }).click()
   await page.getByTitle('Příjem').click()

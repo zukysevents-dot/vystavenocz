@@ -35,10 +35,11 @@ Cíl: vidět, že sklad sedí a rozdíly se dají vysvětlit.
 3. Přijměte jen část množství jednoho produktu. Objednávka musí ukázat `Částečně přijato`, vznikne jedna příjemka a stav skladu se zvýší jen o zadané množství. Potom přijměte zbytek a ověřte stav `Přijato`.
 4. U jednoho testovacího produktu v `Sklad` zapněte sledování šarží. Přijměte dvě šarže s různou expirací a ověřte je v `Zásoby → Šarže`. Bez ručního výběru vydejte množství přesahující první šarži — v `Pohyby` musí být nejdřív bližší expirace a potom druhá šarže.
 5. V `Šarže` odepište část první šarže přes `Odepsat expiraci`. Musí se snížit jen vybraná šarže. Na šířce mobilu nesmí stránka vodorovně přetékat.
-6. Otevřete `Zásoby`. Vpravo je tab `Zrcadlo` — porovnává `Stav má být`, `Realitu` a `Rozdíl`. V detailu řádku uvidíte výpočet (otevření + příjem + storno − prodej − výdej = stav má být).
-7. Spusťte `Inventuru` na konkrétní pobočku: zadejte fyzicky napočítané množství a uložte. `Rozdíl` = realita minus systém, ukazuje se v kusech i v Kč.
-8. V tabu `Pohyby` nastavte období, produkt, šarži, typ pohybu a pobočku. Ověřte čitelné názvy, změnu množství, stav po pohybu a zdrojové ID.
-9. Stáhněte `Export CSV`. Počet datových řádků musí odpovídat alokacím šarží a soubor nesmí obsahovat pohyby mimo filtry.
+6. První šarži přepněte do `Karantény` a uveďte důvod. Ověřte, že `Blokováno` vzroste, `K dispozici` klesne a šarži nelze přesně ani automaticky vydat, prodat, rezervovat či přijmout pod stejným číslem. V `Historii` musí být přechod a důvod. Potom ji uvolněte, vydejte jednu jednotku a nakonec přepněte do `Reklamovaná`; tento stav už nesmí jít vrátit.
+7. Otevřete `Zásoby`. Vpravo je tab `Zrcadlo` — porovnává `Stav má být`, `Realitu` a `Rozdíl`. V detailu řádku uvidíte výpočet (otevření + příjem + storno − prodej − výdej = stav má být).
+8. Spusťte `Inventuru` na konkrétní pobočku: zadejte fyzicky napočítané množství a uložte. `Rozdíl` = realita minus systém, ukazuje se v kusech i v Kč.
+9. V tabu `Pohyby` nastavte období, produkt, šarži, typ pohybu a pobočku. Ověřte čitelné názvy, změnu množství, stav po pohybu a zdrojové ID.
+10. Stáhněte `Export CSV`. Počet datových řádků musí odpovídat alokacím šarží a soubor nesmí obsahovat pohyby mimo filtry.
 
 Co ověřit: ruční i objednávková příjemka zvýší stav přes stejný sklad, částečný příjem nepřijme nedodaný zbytek, prodej stav sníží a inventura/korekce se projeví jako rozdíl ve zrcadle. Inventura ani výdej nejdou spustit pro „Všechny pobočky" — vždy pro konkrétní sklad. Skladová karta i CSV respektují období, produkt, typ a pobočku a načtou celou vyfiltrovanou historii, ne jen první stránku.
 

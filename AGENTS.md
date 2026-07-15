@@ -24,6 +24,8 @@ Skladové ocenění INV-16 je mobilní tab `Ocenění` v `ZasobyPage.vue` přes 
 
 Dodavatelský katalog a objednávka z návrhů INV-16 zůstávají v mobilním webovém `PurchaseOrdersPanel.vue` na `/app/naskladneni`. U konkrétního dodavatele spravuj přes `usePurchaseOrders` jeho produkty, SKU/EAN, počet základních jednotek v balení, minimální odběr a obvyklou cenu za základní jednotku. `Z návrhů` pracuje výhradně se serverovými `supplierOptions`, ukáže zaokrouhlené množství/balení a pošle kontext návrhu + vybraná ID, nikdy vlastní cenu nebo množství. Jeden dialog drží stejné UUID `idempotencyKey` i po chybě; úspěšná objednávka zobrazuje serverový snapshot dodavatelského SKU a balení. Používej jen `inventory.read/manage`; role/oprávnění, nativní aplikace a AI/MCP neměň. Kontrakt `docs/backend/supplier-product-reorder-v1.md`, regrese `usePurchaseOrders.spec.ts` a `e2e/purchase-orders.spec.ts`.
 
+Karanténa a stažení šarží INV-16 přidávají stav `Active|Quarantined|Blocked|Recalled` nad existující ledgerové šarže. `StockLotsPanel.vue` zobrazuje stav v mobilních kartách, filtruje jej, mění jej jen s povinným důvodem a ukazuje historii přechodů; `Recalled` je konečný stav. Jen `Active` šarže se smějí nabídnout pro přesný výdej nebo přesun. `ZasobyPage.vue` zobrazuje serverové `restrictedQuantity` jako „Blokováno“ a nikdy jej klientsky neodvozuje; disponibilní stav počítá backend. Chyba 409 může znamenat rezervovanou nebo omezenou zásobu. Používej jen `inventory.read/manage`; role/oprávnění, nativní aplikace a AI/MCP neměň. Kontrakt `docs/backend/stock-lots-expiry-v1.md`, regrese `useInventory.spec.ts` a `e2e/stock-lots-mobile.spec.ts`.
+
 ## Co to je
 
 Vystaveno.cz — fakturační + pokladní (POS) / gastro SaaS pro malé české firmy.

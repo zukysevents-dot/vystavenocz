@@ -449,16 +449,18 @@ Karta Pohyby slouží k dohledání úplné historie. Vyberte období, produkt, 
 
 1. V katalogu produktu zapněte Sledování šarží. Jde o celofiremní jednosměrnou změnu, kterou provádí uživatel bez omezení na jedinou pobočku; stávající zásoba se bezpečně označí jako počáteční šarže.
 2. Při každém dalším příjmu zadejte číslo šarže a volitelnou expiraci.
-3. V Zásoby otevřete kartu Šarže. Filtrujte produkt, pobočku nebo datum expirace a zkontrolujte skutečné množství.
+3. V Zásoby otevřete kartu Šarže. Filtrujte produkt, pobočku, datum expirace nebo stav a zkontrolujte skutečné množství.
 4. Prošlou zásobu odepište akcí Odepsat expiraci. Odečte se jen vybraná šarže.
 5. Ruční výdej a přesun mohou určit konkrétní šarži. Bez výběru systém použije nejbližší expiraci jako první.
 6. V Pohybech a CSV lze dohledat číslo šarže, expiraci a množství každé alokace.
+7. Při podezření na závadu zvolte Změnit stav, vyberte Karanténa nebo Blokovaná a uveďte povinný důvod. Šarže okamžitě zmizí z dostupného množství, FEFO, prodeje, výdeje, rezervací, přesunů, zakázek i výroby.
+8. Po kontrole lze karanténu či blokaci vrátit do stavu Uvolněná. Stav Reklamovaná použijte pro trvalé stažení série; z bezpečnostních důvodů je konečný. Tlačítko Historie ukáže všechny změny, důvody a časy.
 
 Po aktivaci musí být pro prodej, výdej, spotřebu zakázky i výrobu dostatečný zůstatek šarží. Systém nepovolí záporný stav: při nedostatku operaci odmítne a nic částečně neuloží.
 
 ### 10.5 Rezervované a disponibilní množství
 
-U každého produktu vidíte tři hodnoty: **Skladem** je fyzický stav, **Rezervováno** je množství držené pro konkrétní účel a **K dispozici** je množství, které lze skutečně vydat jinému zákazníkovi nebo zakázce.
+U každého produktu vidíte čtyři hodnoty: **Skladem** je fyzický stav, **Rezervováno** je množství držené pro konkrétní účel, **Blokováno** je zásoba v karanténě, blokaci nebo reklamaci a **K dispozici** je množství, které lze skutečně vydat jinému zákazníkovi nebo zakázce.
 
 1. V Zásoby otevřete kartu Rezervace a zvolte Nová rezervace.
 2. Vyberte produkt, konkrétní pobočku, množství a napište, pro koho nebo pro co zásobu držíte, například číslo zakázky či objednávky.

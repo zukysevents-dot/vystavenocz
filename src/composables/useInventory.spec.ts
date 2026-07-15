@@ -186,6 +186,27 @@ describe('useInventory', () => {
     })
   })
 
+  it('stockLots filtruje jen uvolněné šarže pro výdej', async () => {
+    vi.mocked(http.get).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 100 } as never)
+
+    await useInventory().stockLots({ productId: 'prod-1', status: 'Active' })
+
+    expect(http.get).toHaveBeenCalledWith(
+      '/inventory/stock-lots?page=1&pageSize=100&positiveOnly=true&productId=prod-1&status=Active',
+    )
+  })
+
+  it('změna stavu šarže posílá cílový stav a povinný důvod', async () => {
+    vi.mocked(http.post).mockResolvedValue({} as never)
+
+    await useInventory().changeStockLotStatus('lot-1', 'Blocked', 'Poškozený obal')
+
+    expect(http.post).toHaveBeenCalledWith('/inventory/stock-lots/lot-1/status', {
+      status: 'Blocked',
+      reason: 'Poškozený obal',
+    })
+  })
+
   it('correct posílá pobočku do těla korekce', async () => {
     vi.mocked(http.post).mockResolvedValue({} as never)
 
