@@ -979,6 +979,7 @@ export interface Stocktake {
   note: string | null
   createdAt: string
   items: StocktakeItem[]
+  idempotencyKey?: string | null
 }
 
 export interface PurchaseReceiptItem {

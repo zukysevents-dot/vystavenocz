@@ -304,8 +304,14 @@ export function useInventory() {
     items: StocktakeItemInput[],
     note: string | null,
     locationId?: string | null,
+    idempotencyKey?: string | null,
   ): Promise<Stocktake | ApprovalRequest> {
-    return http.post('/inventory/stocktake', { items, note, locationId: locationId || null })
+    return http.post('/inventory/stocktake', {
+      items,
+      note,
+      locationId: locationId || null,
+      ...(idempotencyKey ? { idempotencyKey } : {}),
+    })
   }
   function stockMirror(query: StockMirrorQuery = {}): Promise<StockMirror> {
     const params = new URLSearchParams()

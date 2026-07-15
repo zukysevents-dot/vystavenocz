@@ -237,6 +237,24 @@ describe('useInventory', () => {
     })
   })
 
+  it('stocktake zachová idempotency klíč při retry mobilní inventury', async () => {
+    vi.mocked(http.post).mockResolvedValue({} as never)
+
+    await useInventory().stocktake(
+      [{ productId: 'prod-1', countedQuantity: 3 }],
+      'inventura',
+      'bar-1',
+      '11111111-1111-4111-8111-111111111111',
+    )
+
+    expect(http.post).toHaveBeenCalledWith('/inventory/stocktake', {
+      items: [{ productId: 'prod-1', countedQuantity: 3 }],
+      note: 'inventura',
+      locationId: 'bar-1',
+      idempotencyKey: '11111111-1111-4111-8111-111111111111',
+    })
+  })
+
   it('stockMirror bez filtru volá základní endpoint', async () => {
     vi.mocked(http.get).mockResolvedValue({ items: [] } as never)
 

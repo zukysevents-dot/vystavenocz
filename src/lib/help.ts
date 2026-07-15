@@ -190,6 +190,14 @@ export const HELP_GUIDES: readonly HelpGuide[] = [
       ),
       step('Proveďte inventuru', 'Zadejte fyzicky spočítané množství.'),
       step('Vyřešte rozdíly', 'Ve skladu uvidíte, zda jde o manko nebo přebytek.'),
+      step(
+        'Počítejte naslepo a skenujte',
+        'Na mobilu nebo se čtečkou nejprve napočítejte všechny položky bez nápovědy systémového stavu. Rozpracovaný průběh se na tomto zařízení ukládá automaticky.',
+      ),
+      step(
+        'Přepočítejte jen rozdíly',
+        'Ve druhém kole nezávisle zkontrolujte odlišné položky a po uložení stáhněte inventurní protokol nebo ho vytiskněte do PDF.',
+      ),
     ],
     tip: 'Nesrovnalost nemažte — popište ji. Pohyby zásob jsou důležitá provozní historie.',
     to: '/app/naskladneni',

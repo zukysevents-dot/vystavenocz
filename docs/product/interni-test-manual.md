@@ -40,8 +40,9 @@ Cíl: vidět, že sklad sedí a rozdíly se dají vysvětlit.
 8. Spusťte `Inventuru` na konkrétní pobočku: zadejte fyzicky napočítané množství a uložte. `Rozdíl` = realita minus systém, ukazuje se v kusech i v Kč.
 9. V tabu `Pohyby` nastavte období, produkt, šarži, typ pohybu a pobočku. Ověřte čitelné názvy, změnu množství, stav po pohybu a zdrojové ID.
 10. Stáhněte `Export CSV`. Počet datových řádků musí odpovídat alokacím šarží a soubor nesmí obsahovat pohyby mimo filtry.
+11. Na mobilním viewportu 390 × 844 spusťte novou inventuru. Ověřte, že první kolo je slepé a prázdné, HW EAN/ruční scan přičte jeden kus a kamera je dostupná. Vyplňte alespoň dvě položky, dialog zavřete a znovu otevřete — počty i stabilní průběh musí zůstat. Dokončete první kolo, ve druhém musí být jen rozdílné položky. Po uložení stáhněte protokol CSV a otevřete tisk/PDF. Při simulované chybě POST musí průběh zůstat a opakování nesmí vytvořit druhý doklad/pohyb.
 
-Co ověřit: ruční i objednávková příjemka zvýší stav přes stejný sklad, částečný příjem nepřijme nedodaný zbytek, prodej stav sníží a inventura/korekce se projeví jako rozdíl ve zrcadle. Inventura ani výdej nejdou spustit pro „Všechny pobočky" — vždy pro konkrétní sklad. Skladová karta i CSV respektují období, produkt, typ a pobočku a načtou celou vyfiltrovanou historii, ne jen první stránku.
+Co ověřit: ruční i objednávková příjemka zvýší stav přes stejný sklad, částečný příjem nepřijme nedodaný zbytek, prodej stav sníží a inventura/korekce se projeví jako rozdíl ve zrcadle. Inventura ani výdej nejdou spustit pro „Všechny pobočky" — vždy pro konkrétní sklad. Skladová karta i CSV respektují období, produkt, typ a pobočku a načtou celou vyfiltrovanou historii, ne jen první stránku. Rozpracovaná inventura se obnoví pouze stejnému uživateli, firmě a pobočce na stejném zařízení; není to serverová synchronizace mezi zařízeními.
 
 ## 3. Uzávěrka
 
