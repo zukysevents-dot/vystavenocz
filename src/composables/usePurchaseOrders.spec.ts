@@ -84,4 +84,46 @@ describe('usePurchaseOrders', () => {
     expect(http.del).toHaveBeenCalledWith('/inventory/suppliers/supplier-1')
     expect(http.post).toHaveBeenCalledWith('/inventory/suppliers/supplier-1/restore')
   })
+
+  it('spravuje dodavatelský katalog a vytvoří objednávku z návrhů', async () => {
+    vi.mocked(http.get).mockResolvedValue([] as never)
+    vi.mocked(http.put).mockResolvedValue({} as never)
+    vi.mocked(http.del).mockResolvedValue(undefined as never)
+    vi.mocked(http.post).mockResolvedValue({} as never)
+    const api = usePurchaseOrders()
+    const mapping = {
+      supplierSku: 'SUP-1',
+      supplierEan: '8590001',
+      packageQuantity: 12,
+      minimumOrderQuantity: 24,
+      usualUnitCost: 8.5,
+    }
+    const conversion = {
+      idempotencyKey: '4c350ea3-37a7-4ca8-b8e1-2ef3c535cd37',
+      supplierId: 'supplier-1',
+      locationId: 'loc-1',
+      from: '2026-06-15',
+      to: '2026-07-14',
+      daysAhead: 7,
+      expectedOn: null,
+      note: null,
+      productIds: ['product-1'],
+    }
+
+    await api.supplierProducts('supplier-1')
+    await api.upsertSupplierProduct('supplier-1', 'product-1', mapping)
+    await api.deleteSupplierProduct('supplier-1', 'product-1')
+    await api.createOrderFromSuggestions(conversion)
+
+    expect(http.get).toHaveBeenCalledWith('/inventory/suppliers/supplier-1/products')
+    expect(http.put).toHaveBeenCalledWith(
+      '/inventory/suppliers/supplier-1/products/product-1',
+      mapping,
+    )
+    expect(http.del).toHaveBeenCalledWith('/inventory/suppliers/supplier-1/products/product-1')
+    expect(http.post).toHaveBeenCalledWith(
+      '/inventory/purchase-orders/from-suggestions',
+      conversion,
+    )
+  })
 })

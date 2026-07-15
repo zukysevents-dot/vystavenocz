@@ -31,6 +31,7 @@ Cíl: vidět, že sklad sedí a rozdíly se dají vysvětlit.
 
 1. Otevřete `Naskladnění`, vyberte pobočku skladu (má-li firma víc poboček), vyplňte dodavatele/doklad/datum, přidejte zboží s množstvím a uložte příjemku.
 2. V bloku `Nákupní objednávky` založte dodavatele, vytvořte návrh s alespoň dvěma produkty a zvolte `Objednat`.
+   - U dodavatele přiřaďte jeden produkt, nastavte jiné dodavatelské SKU, balení po 6 a minimální odběr 20. Vraťte se do objednávek, zvolte `Z návrhů` a ověřte, že se doporučení zaokrouhlí nejméně na 24 jednotek / 4 balení. Vytvořený návrh musí ukázat dodavatelské SKU a balení.
 3. Přijměte jen část množství jednoho produktu. Objednávka musí ukázat `Částečně přijato`, vznikne jedna příjemka a stav skladu se zvýší jen o zadané množství. Potom přijměte zbytek a ověřte stav `Přijato`.
 4. U jednoho testovacího produktu v `Sklad` zapněte sledování šarží. Přijměte dvě šarže s různou expirací a ověřte je v `Zásoby → Šarže`. Bez ručního výběru vydejte množství přesahující první šarži — v `Pohyby` musí být nejdřív bližší expirace a potom druhá šarže.
 5. V `Šarže` odepište část první šarže přes `Odepsat expiraci`. Musí se snížit jen vybraná šarže. Na šířce mobilu nesmí stránka vodorovně přetékat.

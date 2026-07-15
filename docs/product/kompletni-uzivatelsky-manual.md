@@ -429,6 +429,16 @@ Pro běžnou dodávku bez předchozí objednávky můžete dál použít přímo
 
 Dodavatele, kterého už nepoužíváte, archivujte. Historické objednávky a příjemky zůstanou zachované. Objednávku lze zrušit jen před prvním příjmem.
 
+Chcete-li využít automatické návrhy v celých baleních:
+
+1. Otevřete Dodavatelé, vyberte konkrétního dodavatele a v části Dodavatelské produkty a balení přiřaďte produkt.
+2. Doplňte SKU nebo EAN používané dodavatelem, počet základních skladových jednotek v jednom balení, minimální odběr a případně obvyklou cenu za jednu základní jednotku.
+3. V Nákupních objednávkách zvolte Z návrhů a vyberte dodavatele. Systém nabídne jen jeho přiřazené produkty, které je podle aktuální spotřeby potřeba objednat.
+4. Zkontrolujte převod doporučeného množství na celé balení a odhad ceny, odškrtněte nechtěné položky a vytvořte návrh objednávky.
+5. Server potřebu před uložením znovu přepočítá. Když spojení selže, akci můžete bezpečně zopakovat; nevznikne tím duplicitní objednávka.
+
+Vytvořený návrh si pamatuje tehdejší dodavatelské SKU, EAN a balení. Pozdější změna katalogu proto nezmění historickou objednávku.
+
 ### 10.3 Stav skladu
 
 Přehled ukazuje očekávané množství, pohyby a případné rozdíly. Zobrazení Všechny pobočky je určeno ke kontrole; příjem, výdej, opravu nebo přesun provádějte vždy pro konkrétní pobočku.

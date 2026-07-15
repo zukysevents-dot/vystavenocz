@@ -22,6 +22,8 @@ Podrobný návod pro restauraci je v [gastro-user-manual.md](gastro-user-manual.
 
 Zboží přijímejte přes **Naskladnění**. Jednoduchou dodávku zapište rovnou příjemkou; plánovaný nákup ve stejné obrazovce veďte přes dodavatele a nákupní objednávku. Objednávku lze přijímat postupně a každý dílčí příjem zvýší stejný sklad jen o skutečně dodané množství. U zboží s expirací jednou celofiremně zapněte sledování šarží a při příjmu zapisujte číslo šarže a datum; výdej pak automaticky používá nejbližší expiraci. Aktivaci nelze vrátit a sledovaný produkt už nesmí do záporného stavu, proto musí být před prodejem či výrobou dostatečně naskladněn. Tab **Šarže** ukazuje zůstatky a umožní přesný odpis. Pravidelně udělejte inventuru a ve **Zrcadle skladu** vyřešte rozdíly mezi očekávaným a skutečným stavem. Každá oprava zanechává auditní stopu.
 
+Při opakovaném nákupu nastavte u dodavatele jeho SKU/EAN, velikost balení, minimální odběr a obvyklou cenu produktu. Akce **Z návrhů** pak aktuální doporučení bezpečně převede do konceptu objednávky, množství zaokrouhlí nahoru na celá balení a uloží tehdejší kódy i balení do historie.
+
 ## Směny a docházka
 
 Vedoucí vytváří plán v **Plánu směn**, pak týden publikuje. Zaměstnanci vidí jen zveřejněné směny a zapisují příchod/odchod v **Docházce**. Vedoucí zde řeší výjimky, opravy a export pro mzdy.
