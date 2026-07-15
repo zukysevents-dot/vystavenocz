@@ -15,6 +15,7 @@ import {
   Building2,
   CalendarClock,
   PackageCheck,
+  ChartNoAxesCombined,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -43,6 +44,7 @@ import { toast } from '@/components/ui/sonner'
 import StockLedgerPanel from '@/components/app/StockLedgerPanel.vue'
 import StockLotsPanel from '@/components/app/StockLotsPanel.vue'
 import StockReservationsPanel from '@/components/app/StockReservationsPanel.vue'
+import StockValuationPanel from '@/components/app/StockValuationPanel.vue'
 import type {
   StockLot,
   StockLevel,
@@ -62,7 +64,9 @@ const AUTO_LOT = '__auto_fefo__'
 
 const loading = ref(true)
 const busy = ref(false)
-const tab = ref<'levels' | 'reservations' | 'movements' | 'lots' | 'mirror' | 'byLocation'>('levels')
+const tab = ref<
+  'levels' | 'reservations' | 'movements' | 'lots' | 'mirror' | 'valuation' | 'byLocation'
+>('levels')
 const search = ref('')
 const levelMap = ref(new Map<string, StockLevel>())
 const mirror = ref<StockMirror | null>(null)
@@ -709,6 +713,18 @@ async function submitStocktake() {
           <Scale class="h-4 w-4" /> Zrcadlo
         </button>
         <button
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+          :class="
+            tab === 'valuation'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted text-muted-foreground hover:bg-muted/70'
+          "
+          @click="tab = 'valuation'"
+        >
+          <ChartNoAxesCombined class="h-4 w-4" /> Ocenění
+        </button>
+        <button
           v-if="locations.length > 1"
           type="button"
           class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
@@ -856,6 +872,14 @@ async function submitStocktake() {
           :locations="locations"
           :initial-location-id="stockFilterLocationId"
           @changed="loadLevels"
+        />
+      </template>
+
+      <!-- OCENĚNÍ SKLADU -->
+      <template v-else-if="tab === 'valuation'">
+        <StockValuationPanel
+          :locations="locations"
+          :initial-location-id="stockFilterLocationId"
         />
       </template>
 

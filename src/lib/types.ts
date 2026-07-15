@@ -1161,6 +1161,64 @@ export interface StockMirror {
   items: StockMirrorItem[]
 }
 
+export type StockCostSource =
+  | 'LocationPurchaseReceipts'
+  | 'CompanyPurchaseReceipts'
+  | 'ProductPurchasePrice'
+  | 'Missing'
+
+export interface StockValuationItem {
+  productId: string
+  productName: string
+  productSku: string
+  unitCost: number | null
+  costSource: StockCostSource
+  isCostComplete: boolean
+  openingQuantity: number
+  openingStockValue: number | null
+  closingQuantity: number
+  closingStockValue: number | null
+  purchaseQuantity: number
+  purchaseValue: number | null
+  cogsQuantity: number
+  cogsValue: number | null
+  consumptionQuantity: number
+  consumptionValue: number | null
+  lossQuantity: number
+  lossValue: number | null
+  inventoryAdjustmentQuantity: number
+  inventoryAdjustmentValue: number | null
+}
+
+export interface StockValuationSummary {
+  openingStockValue: number | null
+  closingStockValue: number | null
+  purchaseValue: number | null
+  cogsValue: number | null
+  consumptionValue: number | null
+  lossValue: number | null
+  inventoryAdjustmentValue: number | null
+  missingCostProductCount: number
+  missingPurchaseCostProductCount: number
+  isComplete: boolean
+}
+
+export interface StockValuationResponse {
+  method: 'PeriodicWeightedAverage'
+  from: string
+  to: string
+  locationId: string | null
+  currency: string
+  dataVersion: string
+  summary: StockValuationSummary
+  products: {
+    items: StockValuationItem[]
+    total: number
+    page: number
+    pageSize: number
+  }
+}
+
 // --- Docházka ---
 
 export type AttendanceStatus = 'Open' | 'Closed'

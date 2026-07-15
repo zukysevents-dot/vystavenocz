@@ -7,6 +7,7 @@ import type {
   StockByLocationResponse,
   StockLevel,
   StockMirror,
+  StockValuationResponse,
   StockMovement,
   StockMovementFilters,
   StockMovementType,
@@ -44,6 +45,16 @@ export interface StockMirrorQuery {
   to?: string
   locationId?: string | null
   search?: string
+}
+
+export interface StockValuationQuery {
+  from?: string
+  to?: string
+  locationId?: string | null
+  search?: string
+  sort?: string
+  page?: number
+  pageSize?: number
 }
 
 export interface StockMovementQuery {
@@ -302,6 +313,44 @@ export function useInventory() {
     const qs = params.toString()
     return http.get(`/inventory/stock-mirror${qs ? `?${qs}` : ''}`)
   }
+  function stockValuation(query: StockValuationQuery = {}): Promise<StockValuationResponse> {
+    const params = new URLSearchParams({
+      page: String(query.page ?? 1),
+      pageSize: String(query.pageSize ?? 25),
+      sort: query.sort || '-stockValue',
+    })
+    if (query.from) params.set('from', query.from)
+    if (query.to) params.set('to', query.to)
+    if (query.locationId) params.set('locationId', query.locationId)
+    if (query.search?.trim()) params.set('search', query.search.trim())
+    return http.get(`/inventory/stock-valuation?${params}`)
+  }
+  async function allStockValuation(
+    query: Omit<StockValuationQuery, 'page' | 'pageSize'> = {},
+  ): Promise<StockValuationResponse> {
+    const first = await stockValuation({ ...query, page: 1, pageSize: 100 })
+    const expectedTotal = first.products.total
+    const expectedVersion = first.dataVersion
+    const items = [...first.products.items]
+    const totalPages = Math.ceil(expectedTotal / 100)
+
+    for (let page = 2; page <= totalPages; page += 1) {
+      const next = await stockValuation({ ...query, page, pageSize: 100 })
+      if (next.products.total !== expectedTotal || next.dataVersion !== expectedVersion)
+        throw new Error('Ocenění skladu se během exportu změnilo. Načtěte výběr znovu.')
+      items.push(...next.products.items)
+    }
+
+    const verification = await stockValuation({ ...query, page: 1, pageSize: 100 })
+    if (
+      verification.products.total !== expectedTotal ||
+      verification.dataVersion !== expectedVersion ||
+      items.length !== expectedTotal
+    )
+      throw new Error('Ocenění skladu se během exportu změnilo. Načtěte výběr znovu.')
+
+    return { ...first, products: { ...first.products, items } }
+  }
   function purchaseSuggestions(
     query: PurchaseSuggestionsQuery = {},
   ): Promise<PurchaseSuggestionsResponse> {
@@ -368,6 +417,8 @@ export function useInventory() {
     transfer,
     stocktake,
     stockMirror,
+    stockValuation,
+    allStockValuation,
     purchaseSuggestions,
     createProductionBatch,
     stockLots,
