@@ -7,6 +7,7 @@ import {
   ClipboardList,
   Loader2,
   PackageCheck,
+  PackageOpen,
   Pencil,
   Plus,
   RotateCcw,
@@ -47,16 +48,24 @@ import type {
   PurchaseOrder,
   PurchaseOrderInput,
   PurchaseOrderStatus,
+  PurchaseSuggestionItem,
+  SupplierProduct,
+  SupplierProductInput,
 } from '@/lib/types'
 
 const props = defineProps<{
   products: Product[]
   locations: Location[]
   locationId: string | null
+  suggestions: PurchaseSuggestionItem[]
+  suggestionFrom: string | null
+  suggestionTo: string | null
+  suggestionDaysAhead: number
 }>()
 
 const emit = defineEmits<{
   received: []
+  catalogChanged: []
 }>()
 
 const api = usePurchaseOrders()
@@ -233,6 +242,33 @@ const supplierForm = reactive<SupplierForm>({
   contactPerson: '',
   note: '',
 })
+const supplierProducts = ref<SupplierProduct[]>([])
+const supplierProductsLoading = ref(false)
+const supplierProductSaving = ref(false)
+const editingSupplierArchived = computed(
+  () =>
+    suppliers.value.find((supplier) => supplier.id === editingSupplierId.value)?.isArchived ??
+    false,
+)
+const supplierProductForm = reactive({
+  productId: '',
+  supplierSku: '',
+  supplierEan: '',
+  packageQuantity: 1 as number | '',
+  minimumOrderQuantity: 0 as number | '',
+  usualUnitCost: '' as number | '',
+})
+
+function resetSupplierProductForm() {
+  Object.assign(supplierProductForm, {
+    productId: '',
+    supplierSku: '',
+    supplierEan: '',
+    packageQuantity: 1,
+    minimumOrderQuantity: 0,
+    usualUnitCost: '',
+  })
+}
 
 function resetSupplierForm() {
   editingSupplierId.value = null
@@ -245,6 +281,8 @@ function resetSupplierForm() {
     contactPerson: '',
     note: '',
   })
+  supplierProducts.value = []
+  resetSupplierProductForm()
 }
 
 async function openSupplierDialog() {
@@ -261,7 +299,7 @@ async function openSupplierDialog() {
   }
 }
 
-function editSupplier(supplier: InventorySupplier) {
+async function editSupplier(supplier: InventorySupplier) {
   editingSupplierId.value = supplier.id
   Object.assign(supplierForm, {
     name: supplier.name,
@@ -272,6 +310,80 @@ function editSupplier(supplier: InventorySupplier) {
     contactPerson: supplier.contactPerson ?? '',
     note: supplier.note ?? '',
   })
+  if (supplier.isArchived) {
+    supplierProducts.value = []
+    return
+  }
+  supplierProductsLoading.value = true
+  try {
+    supplierProducts.value = await api.supplierProducts(supplier.id)
+  } catch (error) {
+    console.error(error)
+    toast.error('Dodavatelský katalog se nepodařilo načíst.')
+  } finally {
+    supplierProductsLoading.value = false
+  }
+}
+
+function editSupplierProduct(mapping: SupplierProduct) {
+  Object.assign(supplierProductForm, {
+    productId: mapping.productId,
+    supplierSku: mapping.supplierSku ?? '',
+    supplierEan: mapping.supplierEan ?? '',
+    packageQuantity: mapping.packageQuantity,
+    minimumOrderQuantity: mapping.minimumOrderQuantity,
+    usualUnitCost: mapping.usualUnitCost ?? '',
+  })
+}
+
+function supplierProductInput(): SupplierProductInput {
+  return {
+    supplierSku: supplierProductForm.supplierSku.trim() || null,
+    supplierEan: supplierProductForm.supplierEan.trim() || null,
+    packageQuantity: Number(supplierProductForm.packageQuantity),
+    minimumOrderQuantity: Number(supplierProductForm.minimumOrderQuantity),
+    usualUnitCost:
+      supplierProductForm.usualUnitCost === '' ? null : Number(supplierProductForm.usualUnitCost),
+  }
+}
+
+async function saveSupplierProduct() {
+  const supplierId = editingSupplierId.value
+  const productId = supplierProductForm.productId
+  if (!supplierId || !productId) return toast.error('Vyberte produkt.')
+  if (!(Number(supplierProductForm.packageQuantity) > 0))
+    return toast.error('Balení musí obsahovat kladné množství.')
+  if (Number(supplierProductForm.minimumOrderQuantity) < 0)
+    return toast.error('Minimální odběr nesmí být záporný.')
+  supplierProductSaving.value = true
+  try {
+    await api.upsertSupplierProduct(supplierId, productId, supplierProductInput())
+    supplierProducts.value = await api.supplierProducts(supplierId)
+    emit('catalogChanged')
+    resetSupplierProductForm()
+    toast.success('Dodavatelský produkt byl uložen.')
+  } catch (error) {
+    console.error(error)
+    toast.error('Dodavatelský produkt se nepodařilo uložit.')
+  } finally {
+    supplierProductSaving.value = false
+  }
+}
+
+async function deleteSupplierProduct(mapping: SupplierProduct) {
+  const supplierId = editingSupplierId.value
+  if (!supplierId || !window.confirm(`Odebrat ${mapping.productName} z katalogu dodavatele?`))
+    return
+  try {
+    await api.deleteSupplierProduct(supplierId, mapping.productId)
+    supplierProducts.value = supplierProducts.value.filter((item) => item.id !== mapping.id)
+    emit('catalogChanged')
+    if (supplierProductForm.productId === mapping.productId) resetSupplierProductForm()
+    toast.success('Dodavatelský produkt byl odebrán.')
+  } catch (error) {
+    console.error(error)
+    toast.error('Dodavatelský produkt se nepodařilo odebrat.')
+  }
 }
 
 function supplierInput(): InventorySupplierInput {
@@ -327,6 +439,98 @@ function closeSupplierDialog(open: boolean) {
   if (!open) {
     resetSupplierForm()
     void loadSuppliers()
+  }
+}
+
+// --- Převod návrhů doobjednání na skutečnou objednávku ---
+const suggestionDialogOpen = ref(false)
+const suggestionSaving = ref(false)
+const suggestionSupplierId = ref('')
+const selectedSuggestionProductIds = ref<string[]>([])
+const suggestionIdempotencyKey = ref('')
+const suggestionExpectedOn = ref('')
+const suggestionNote = ref('Návrh doobjednání')
+
+function supplierOption(
+  suggestion: PurchaseSuggestionItem,
+  supplierId = suggestionSupplierId.value,
+) {
+  return (suggestion.supplierOptions ?? []).find((option) => option.supplierId === supplierId)
+}
+
+const suggestionSuppliers = computed(() =>
+  activeSuppliers.value.filter((supplier) =>
+    props.suggestions.some((suggestion) => supplierOption(suggestion, supplier.id)),
+  ),
+)
+const supplierSuggestions = computed(() =>
+  props.suggestions.filter((suggestion) => supplierOption(suggestion)),
+)
+const selectedSuggestionRows = computed(() =>
+  supplierSuggestions.value.filter((suggestion) =>
+    selectedSuggestionProductIds.value.includes(suggestion.productId),
+  ),
+)
+const suggestionTotal = computed(() => {
+  const values = selectedSuggestionRows.value.map(
+    (suggestion) => supplierOption(suggestion)?.estimatedCost ?? null,
+  )
+  return values.some((value) => value === null)
+    ? null
+    : values.reduce<number>((sum, value) => sum + (value ?? 0), 0)
+})
+
+watch(suggestionSupplierId, () => {
+  selectedSuggestionProductIds.value = supplierSuggestions.value.map((item) => item.productId)
+})
+
+function openSuggestionOrder() {
+  if (suggestionSuppliers.value.length === 0) {
+    toast.error('Nejdřív přiřaďte produkty k dodavateli a nastavte jejich balení.')
+    void openSupplierDialog()
+    return
+  }
+  suggestionSupplierId.value = suggestionSuppliers.value[0]?.id ?? ''
+  selectedSuggestionProductIds.value = supplierSuggestions.value.map((item) => item.productId)
+  suggestionExpectedOn.value = ''
+  suggestionNote.value = 'Návrh doobjednání'
+  suggestionIdempotencyKey.value = crypto.randomUUID()
+  suggestionDialogOpen.value = true
+}
+
+function toggleSuggestion(productId: string) {
+  selectedSuggestionProductIds.value = selectedSuggestionProductIds.value.includes(productId)
+    ? selectedSuggestionProductIds.value.filter((id) => id !== productId)
+    : [...selectedSuggestionProductIds.value, productId]
+}
+
+async function createSuggestionOrder() {
+  if (!suggestionSupplierId.value) return toast.error('Vyberte dodavatele.')
+  if (selectedSuggestionProductIds.value.length === 0)
+    return toast.error('Vyberte alespoň jeden produkt.')
+  suggestionSaving.value = true
+  try {
+    const order = await api.createOrderFromSuggestions({
+      idempotencyKey: suggestionIdempotencyKey.value,
+      supplierId: suggestionSupplierId.value,
+      locationId: props.locationId,
+      from: props.suggestionFrom,
+      to: props.suggestionTo,
+      daysAhead: props.suggestionDaysAhead,
+      expectedOn: suggestionExpectedOn.value || null,
+      note: suggestionNote.value.trim() || null,
+      productIds: selectedSuggestionProductIds.value,
+    })
+    upsertOrder(order)
+    suggestionDialogOpen.value = false
+    suggestionIdempotencyKey.value = ''
+    toast.success(`${order.number} byla vytvořena z návrhů.`)
+    await refreshOrdersAfterMutation()
+  } catch (error) {
+    console.error(error)
+    toast.error('Objednávku z návrhů se nepodařilo vytvořit. Můžete bezpečně zkusit znovu.')
+  } finally {
+    suggestionSaving.value = false
   }
 }
 
@@ -634,6 +838,15 @@ async function receiveOrder() {
         </p>
       </div>
       <div class="grid grid-cols-2 gap-2 sm:flex">
+        <Button
+          variant="outline"
+          class="col-span-2 w-full sm:col-auto"
+          :disabled="suggestions.length === 0"
+          data-testid="purchase-order-from-suggestions"
+          @click="openSuggestionOrder"
+        >
+          <PackageOpen class="h-4 w-4" /> Z návrhů
+        </Button>
         <Button variant="outline" class="w-full" @click="openSupplierDialog">
           <Users class="h-4 w-4" /> Dodavatelé
         </Button>
@@ -700,6 +913,20 @@ async function receiveOrder() {
               {{ fmtQuantity(order.items.reduce((sum, item) => sum + item.receivedQuantity, 0)) }}
               z {{ fmtQuantity(order.items.reduce((sum, item) => sum + item.orderedQuantity, 0)) }}
               jednotek
+            </div>
+            <div v-if="order.items.some((item) => item.supplierSku)" class="mt-2 space-y-1">
+              <div
+                v-for="item in order.items.slice(0, 3)"
+                :key="item.id"
+                class="text-xs text-muted-foreground"
+              >
+                {{ item.productName }}
+                <template v-if="item.supplierSku"> · dod. SKU {{ item.supplierSku }}</template>
+                <template v-if="item.orderedPackageCount != null && item.packageQuantity != null">
+                  · {{ fmtQuantity(item.orderedPackageCount) }} bal. ×
+                  {{ fmtQuantity(item.packageQuantity) }}
+                </template>
+              </div>
             </div>
           </div>
           <div class="grid shrink-0 grid-cols-2 gap-2 sm:flex">
@@ -843,6 +1070,212 @@ async function receiveOrder() {
           </Button>
         </form>
       </div>
+
+      <section
+        v-if="editingSupplierId && !editingSupplierArchived"
+        class="space-y-4 border-t border-border pt-4"
+      >
+        <div>
+          <h3 class="font-semibold">Dodavatelské produkty a balení</h3>
+          <p class="mt-1 text-sm text-muted-foreground">
+            Množství je v základní skladové jednotce. Například karton 12 kusů má balení 12.
+          </p>
+        </div>
+        <div v-if="supplierProductsLoading" class="flex justify-center py-5">
+          <Loader2 class="h-5 w-5 animate-spin text-primary" />
+        </div>
+        <div v-else-if="supplierProducts.length" class="grid gap-2 sm:grid-cols-2">
+          <div
+            v-for="mapping in supplierProducts"
+            :key="mapping.id"
+            class="rounded-xl border border-border p-3"
+          >
+            <div class="flex items-start justify-between gap-2">
+              <button type="button" class="min-w-0 text-left" @click="editSupplierProduct(mapping)">
+                <span class="block truncate text-sm font-semibold">{{ mapping.productName }}</span>
+                <span class="block text-xs text-muted-foreground">
+                  {{ mapping.supplierSku || mapping.productSku }} · balení
+                  {{ fmtQuantity(mapping.packageQuantity) }} · min.
+                  {{ fmtQuantity(mapping.minimumOrderQuantity) }}
+                </span>
+              </button>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                title="Odebrat dodavatelský produkt"
+                @click="deleteSupplierProduct(mapping)"
+              >
+                <Trash2 class="h-4 w-4 text-destructive" />
+              </Button>
+            </div>
+          </div>
+        </div>
+        <p v-else class="text-sm text-muted-foreground">
+          Dodavatel zatím nemá přiřazený žádný produkt.
+        </p>
+
+        <form
+          class="grid gap-3 rounded-xl bg-muted/30 p-3 sm:grid-cols-2"
+          @submit.prevent="saveSupplierProduct"
+        >
+          <div class="space-y-1.5 sm:col-span-2">
+            <Label for="supplier-product">Produkt *</Label>
+            <Select v-model="supplierProductForm.productId">
+              <SelectTrigger id="supplier-product"
+                ><SelectValue placeholder="Vyberte produkt"
+              /></SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="product in products" :key="product.id" :value="product.id">
+                  {{ product.name }} · {{ product.sku }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <label class="space-y-1.5 text-sm font-medium">
+            <span>SKU u dodavatele</span>
+            <Input v-model="supplierProductForm.supplierSku" />
+          </label>
+          <label class="space-y-1.5 text-sm font-medium">
+            <span>EAN u dodavatele</span>
+            <Input v-model="supplierProductForm.supplierEan" inputmode="numeric" />
+          </label>
+          <label class="space-y-1.5 text-sm font-medium">
+            <span>Jednotek v balení *</span>
+            <Input
+              v-model.number="supplierProductForm.packageQuantity"
+              type="number"
+              min="0.001"
+              step="0.001"
+            />
+          </label>
+          <label class="space-y-1.5 text-sm font-medium">
+            <span>Minimální odběr</span>
+            <Input
+              v-model.number="supplierProductForm.minimumOrderQuantity"
+              type="number"
+              min="0"
+              step="0.001"
+            />
+          </label>
+          <label class="space-y-1.5 text-sm font-medium sm:col-span-2">
+            <span>Obvyklá cena za základní jednotku</span>
+            <Input
+              v-model.number="supplierProductForm.usualUnitCost"
+              type="number"
+              min="0"
+              step="0.01"
+            />
+          </label>
+          <div class="flex flex-wrap gap-2 sm:col-span-2">
+            <Button type="submit" :disabled="supplierProductSaving">
+              <Loader2 v-if="supplierProductSaving" class="h-4 w-4 animate-spin" />
+              <Check v-else class="h-4 w-4" /> Uložit produkt
+            </Button>
+            <Button type="button" variant="ghost" @click="resetSupplierProductForm"
+              >Vyčistit</Button
+            >
+          </div>
+        </form>
+      </section>
+    </DialogContent>
+  </Dialog>
+
+  <!-- Převod serverových návrhů do nákupní objednávky -->
+  <Dialog v-model:open="suggestionDialogOpen">
+    <DialogContent class="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
+      <DialogHeader>
+        <DialogTitle>Objednávka z návrhů</DialogTitle>
+        <DialogDescription>
+          Server přepočítá aktuální potřebu a množství zaokrouhlí nahoru na celé balení dodavatele.
+        </DialogDescription>
+      </DialogHeader>
+
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div class="space-y-1.5">
+          <Label for="suggestion-supplier">Dodavatel *</Label>
+          <Select v-model="suggestionSupplierId">
+            <SelectTrigger id="suggestion-supplier"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem
+                v-for="supplier in suggestionSuppliers"
+                :key="supplier.id"
+                :value="supplier.id"
+              >
+                {{ supplier.name }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <label class="space-y-1.5 text-sm font-medium">
+          <span>Očekávané dodání</span>
+          <Input v-model="suggestionExpectedOn" type="date" />
+        </label>
+        <label class="space-y-1.5 text-sm font-medium sm:col-span-2">
+          <span>Poznámka</span>
+          <Input v-model="suggestionNote" />
+        </label>
+      </div>
+
+      <div class="space-y-2">
+        <button
+          v-for="suggestion in supplierSuggestions"
+          :key="suggestion.productId"
+          type="button"
+          class="flex w-full items-start gap-3 rounded-xl border border-border p-3 text-left"
+          :class="
+            selectedSuggestionProductIds.includes(suggestion.productId)
+              ? 'bg-primary/5 ring-1 ring-primary/30'
+              : ''
+          "
+          @click="toggleSuggestion(suggestion.productId)"
+        >
+          <span
+            class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border"
+            :class="
+              selectedSuggestionProductIds.includes(suggestion.productId)
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-input'
+            "
+            aria-hidden="true"
+          >
+            <Check
+              v-if="selectedSuggestionProductIds.includes(suggestion.productId)"
+              class="h-3.5 w-3.5"
+            />
+          </span>
+          <span class="min-w-0 flex-1">
+            <span class="block font-medium">{{ suggestion.productName }}</span>
+            <span class="block text-xs text-muted-foreground">
+              doporučeno {{ fmtQuantity(suggestion.recommendedOrderQuantity) }} →
+              {{ fmtQuantity(supplierOption(suggestion)?.roundedOrderQuantity ?? 0) }} jednotek ·
+              {{ fmtQuantity(supplierOption(suggestion)?.packageCount ?? 0) }} balení
+              <template v-if="supplierOption(suggestion)?.supplierSku">
+                · {{ supplierOption(suggestion)?.supplierSku }}
+              </template>
+            </span>
+          </span>
+          <span class="shrink-0 text-sm font-semibold">
+            {{ fmtMoney(supplierOption(suggestion)?.estimatedCost ?? null) }}
+          </span>
+        </button>
+      </div>
+
+      <div class="flex items-center justify-between rounded-xl bg-muted/40 p-3 text-sm">
+        <span>{{ selectedSuggestionProductIds.length }} položek</span>
+        <strong>{{ fmtMoney(suggestionTotal) }}</strong>
+      </div>
+
+      <DialogFooter>
+        <Button variant="outline" @click="suggestionDialogOpen = false">Zrušit</Button>
+        <Button
+          :disabled="suggestionSaving || selectedSuggestionProductIds.length === 0"
+          @click="createSuggestionOrder"
+        >
+          <Loader2 v-if="suggestionSaving" class="h-4 w-4 animate-spin" />
+          <PackageOpen v-else class="h-4 w-4" /> Vytvořit návrh objednávky
+        </Button>
+      </DialogFooter>
     </DialogContent>
   </Dialog>
 

@@ -317,3 +317,178 @@ test('objednávka projde na mobilu návrhem, objednáním a vícepoložkovým č
     ),
   ).toEqual([])
 })
+
+test('dodavatelský katalog na mobilu převede návrh do objednávky po celých baleních', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await seedApiMode(page)
+  await dismissCookies(page)
+
+  let mappings: Record<string, unknown>[] = []
+  let conversionPayload: Record<string, unknown> | null = null
+  let convertedOrder: Record<string, unknown> | null = null
+  const supplierOption = {
+    supplierId: supplier.id,
+    supplierName: supplier.name,
+    supplierSku: 'MAK-RUM',
+    supplierEan: '8599990001',
+    packageQuantity: 12,
+    minimumOrderQuantity: 12,
+    roundedOrderQuantity: 12,
+    packageCount: 1,
+    unitCost: 110,
+    estimatedCost: 1320,
+  }
+
+  await page.route(API, async (route: Route) => {
+    const request = route.request()
+    const path = new URL(request.url()).pathname.replace('/api/v1', '')
+    const method = request.method()
+    if (method === 'GET' && path === '/company') return route.fulfill({ json: company })
+    if (method === 'GET' && path === '/products') return route.fulfill({ json: paged([product]) })
+    if (method === 'GET' && path === '/locations') return route.fulfill({ json: paged([location]) })
+    if (method === 'GET' && path === '/inventory/stock-levels') {
+      return route.fulfill({ json: paged([]) })
+    }
+    if (method === 'GET' && path === '/inventory/purchase-receipts') {
+      return route.fulfill({ json: paged([]) })
+    }
+    if (method === 'GET' && path === '/inventory/purchase-suggestions') {
+      return route.fulfill({
+        json: {
+          from: '2026-06-15',
+          to: '2026-07-14',
+          daysAhead: 7,
+          locationId: null,
+          items: [
+            {
+              productId: product.id,
+              productName: product.name,
+              productSku: product.sku,
+              currentQuantity: 1,
+              minQuantity: 3,
+              consumedQuantity: 8,
+              averageDailyUsage: 0.267,
+              targetQuantity: 6,
+              recommendedOrderQuantity: 5,
+              purchasePrice: 120,
+              estimatedCost: 600,
+              daysOfStockRemaining: 3.75,
+              supplierOptions: mappings.length ? [supplierOption] : [],
+            },
+          ],
+        },
+      })
+    }
+    if (method === 'GET' && path === '/inventory/suppliers') {
+      return route.fulfill({ json: paged([supplier]) })
+    }
+    if (method === 'GET' && path === `/inventory/suppliers/${supplier.id}/products`) {
+      return route.fulfill({ json: mappings })
+    }
+    if (method === 'PUT' && path === `/inventory/suppliers/${supplier.id}/products/${product.id}`) {
+      const body = request.postDataJSON()
+      mappings = [
+        {
+          id: 'supplier-product-1',
+          supplierId: supplier.id,
+          productId: product.id,
+          productName: product.name,
+          productSku: product.sku,
+          ...body,
+          updatedAt: '2026-07-14T12:00:00Z',
+        },
+      ]
+      return route.fulfill({ json: mappings[0] })
+    }
+    if (method === 'GET' && path === '/inventory/purchase-orders') {
+      return route.fulfill({ json: paged(convertedOrder ? [convertedOrder] : [], 50) })
+    }
+    if (method === 'POST' && path === '/inventory/purchase-orders/from-suggestions') {
+      conversionPayload = request.postDataJSON()
+      convertedOrder = {
+        id: 'order-suggestion-1',
+        number: 'OBJ-2026-0002',
+        status: 'Draft',
+        supplierId: supplier.id,
+        supplierName: supplier.name,
+        locationId: null,
+        orderedOn: '2026-07-14',
+        expectedOn: null,
+        note: 'Návrh doobjednání',
+        totalCost: 1320,
+        placedAt: null,
+        completedAt: null,
+        cancelledAt: null,
+        cancellationReason: null,
+        createdAt: '2026-07-14T12:00:00Z',
+        items: [
+          {
+            id: 'order-item-suggestion-1',
+            productId: product.id,
+            productName: product.name,
+            productSku: product.sku,
+            orderedQuantity: 12,
+            receivedQuantity: 0,
+            remainingQuantity: 12,
+            unitCost: 110,
+            lineCost: 1320,
+            supplierSku: 'MAK-RUM',
+            supplierEan: '8599990001',
+            packageQuantity: 12,
+            orderedPackageCount: 1,
+          },
+        ],
+        receipts: [],
+      }
+      return route.fulfill({ status: 201, json: convertedOrder })
+    }
+    return route.fulfill({ status: 404, json: { title: `Unhandled ${method} ${path}` } })
+  })
+
+  await page.goto('/app/naskladneni')
+  await page.getByRole('button', { name: 'Dodavatelé' }).click()
+  await page.getByRole('button', { name: /Makro/ }).click()
+  await page.getByLabel('Produkt *').click()
+  await page.getByRole('option', { name: /Rum 0,04l/ }).click()
+  await page.getByLabel('SKU u dodavatele').fill('MAK-RUM')
+  await page.getByLabel('EAN u dodavatele').fill('8599990001')
+  await page.getByLabel('Jednotek v balení *').fill('12')
+  await page.getByLabel('Minimální odběr').fill('12')
+  await page.getByLabel('Obvyklá cena za základní jednotku').fill('110')
+  await page.getByRole('button', { name: 'Uložit produkt' }).click()
+  await expect(page.getByText('MAK-RUM · balení 12 · min. 12')).toBeVisible()
+  await page.keyboard.press('Escape')
+
+  await page.getByTestId('purchase-order-from-suggestions').click()
+  await expect(page.getByText('doporučeno 5 → 12 jednotek · 1 balení')).toBeVisible()
+  await page.getByRole('button', { name: 'Vytvořit návrh objednávky' }).click()
+
+  await expect(page.getByTestId('purchase-orders-panel').getByText('OBJ-2026-0002')).toBeVisible()
+  await expect(page.getByText(/dod\. SKU MAK-RUM/)).toBeVisible()
+  await expect(page.getByText(/1 bal\. × 12/)).toBeVisible()
+  expect(conversionPayload).toMatchObject({
+    supplierId: supplier.id,
+    locationId: null,
+    from: '2026-06-15',
+    to: '2026-07-14',
+    daysAhead: 7,
+    productIds: [product.id],
+  })
+  expect(conversionPayload?.idempotencyKey).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+  )
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - window.innerWidth,
+  )
+  expect(overflow).toBeLessThanOrEqual(1)
+  await expect(page.locator('[data-sonner-toast]')).toHaveCount(0, { timeout: 10_000 })
+  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
+  expect(
+    results.violations.filter((violation) =>
+      ['serious', 'critical'].includes(violation.impact ?? ''),
+    ),
+  ).toEqual([])
+})

@@ -3,6 +3,9 @@ import type { PagedResult } from '@/composables/useApi'
 import type {
   InventorySupplier,
   InventorySupplierInput,
+  SupplierProduct,
+  SupplierProductInput,
+  CreatePurchaseOrderFromSuggestionsInput,
   PurchaseOrder,
   PurchaseOrderInput,
   PurchaseOrderStatus,
@@ -50,6 +53,22 @@ export function usePurchaseOrders() {
     return http.post(`/inventory/suppliers/${id}/restore`)
   }
 
+  function supplierProducts(supplierId: string): Promise<SupplierProduct[]> {
+    return http.get(`/inventory/suppliers/${supplierId}/products`)
+  }
+
+  function upsertSupplierProduct(
+    supplierId: string,
+    productId: string,
+    input: SupplierProductInput,
+  ): Promise<SupplierProduct> {
+    return http.put(`/inventory/suppliers/${supplierId}/products/${productId}`, input)
+  }
+
+  function deleteSupplierProduct(supplierId: string, productId: string): Promise<void> {
+    return http.del(`/inventory/suppliers/${supplierId}/products/${productId}`)
+  }
+
   function orders(query: PurchaseOrderQuery = {}): Promise<PagedResult<PurchaseOrder>> {
     const params = new URLSearchParams({
       page: String(query.page ?? 1),
@@ -69,6 +88,12 @@ export function usePurchaseOrders() {
 
   function createOrder(input: PurchaseOrderInput): Promise<PurchaseOrder> {
     return http.post('/inventory/purchase-orders', input)
+  }
+
+  function createOrderFromSuggestions(
+    input: CreatePurchaseOrderFromSuggestionsInput,
+  ): Promise<PurchaseOrder> {
+    return http.post('/inventory/purchase-orders/from-suggestions', input)
   }
 
   function updateOrder(id: string, input: PurchaseOrderInput): Promise<PurchaseOrder> {
@@ -96,9 +121,13 @@ export function usePurchaseOrders() {
     updateSupplier,
     archiveSupplier,
     restoreSupplier,
+    supplierProducts,
+    upsertSupplierProduct,
+    deleteSupplierProduct,
     orders,
     getOrder,
     createOrder,
+    createOrderFromSuggestions,
     updateOrder,
     placeOrder,
     cancelOrder,

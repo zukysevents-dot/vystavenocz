@@ -47,3 +47,7 @@ Mimo V1 zůstává odesílání objednávky e-mailem/PDF, dodavatelská SKU, sch
 - Unit: `src/composables/usePurchaseOrders.spec.ts`
 - Mobilní flow + axe: `e2e/purchase-orders.spec.ts`
 - Backend transakce/souběh/tenant: `PurchaseOrderTests` v `vystaveno-api`
+
+## Navazující rozšíření: dodavatelský katalog
+
+Původní hranici V1 rozšiřuje INV-16 o dodavatelské SKU/EAN, objednací balení, minimální odběr a bezpečný převod serverových nákupních návrhů do konceptu objednávky. Historické objednávky ukazují snapshot kódů a balení; pozdější změna katalogu je nepřepisuje. Úplný kontrakt a regrese jsou v `supplier-product-reorder-v1.md`.

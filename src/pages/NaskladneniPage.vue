@@ -61,6 +61,9 @@ const levelMap = ref(new Map<string, number>())
 const recentReceipts = ref<PurchaseReceipt[]>([])
 const apiSuggestions = ref<PurchaseSuggestionItem[]>([])
 const apiSuggestionsLoaded = ref(false)
+const suggestionFrom = ref<string | null>(null)
+const suggestionTo = ref<string | null>(null)
+const suggestionDaysAhead = ref(7)
 
 const scanEan = ref('')
 const search = ref('')
@@ -108,10 +111,15 @@ async function loadPurchaseSuggestions() {
       locationId: filterLocationId.value,
     })
     apiSuggestions.value = response.items
+    suggestionFrom.value = response.from
+    suggestionTo.value = response.to
+    suggestionDaysAhead.value = response.daysAhead
     apiSuggestionsLoaded.value = true
   } catch (e) {
     console.warn('Načtení nákupních doporučení selhalo:', e)
     apiSuggestions.value = []
+    suggestionFrom.value = null
+    suggestionTo.value = null
     apiSuggestionsLoaded.value = false
   }
 }
@@ -451,6 +459,11 @@ function fmtQuantity(value: number | null): string {
         :products="products"
         :locations="locations"
         :location-id="filterLocationId"
+        :suggestions="apiSuggestions"
+        :suggestion-from="suggestionFrom"
+        :suggestion-to="suggestionTo"
+        :suggestion-days-ahead="suggestionDaysAhead"
+        @catalog-changed="loadPurchaseSuggestions"
         @received="reloadAfterOrderReceipt"
       />
 

@@ -87,6 +87,7 @@ Proveď na testovací firmě / testovacím účtu. Pořadí odpovídá tomu, jak
 6. **Uzávěrka** — otevři dnešní den, zkontroluj tržby/DPH/hotovost/karty. Očekávání: tržby nejsou nulové po testovacím prodeji. **Nezavírej produkční den**, pokud jde o ostrý provoz. Otevřený gastro účet zavření dne zablokuje (409) — to je správně.
 7. **Sklad / inventura / zrcadlo** — v `Zásoby`:
    - v `Naskladnění` založ testovacího dodavatele a objednávku, označ ji `Objednat`, přijmi jen část a potom zbytek. Očekávání: stav projde `Objednáno → Částečně přijato → Přijato`, každý příjem vytvoří právě jednu příjemku a sklad se zvýší jen o skutečně potvrzené množství,
+   - u dodavatele přiřaď testovací produkt, nastav dodavatelské SKU, balení po 6 a minimum 20; přes `Z návrhů` vytvoř koncept. Očekávání: server doporučení znovu přepočítá, množství zaokrouhlí nejméně na 24 jednotek / 4 balení a objednávka ukáže snapshot SKU i balení,
    - u testovacího produktu zapni sledování šarží, přijmi dvě šarže s různou expirací a v `Zásoby → Šarže` odepiš část jedné. Očekávání: zůstatek se změní jen u vybrané šarže; výdej bez výběru bere nejbližší expiraci a `Pohyby`/CSV ukážou rozpad,
    - otevři tab `Zrcadlo`, ověř slovník `Stav má být`, `Realita`, `Rozdíl` a v detailu řádku výpočet,
    - spusť malou `Inventuru` na konkrétní pobočku (ne `Všechny pobočky`): zadej napočítanou realitu, ulož a ověř, že se rozdíl promítne do zrcadla. Očekávání: `Rozdíl` = realita minus systém, v kusech i Kč.

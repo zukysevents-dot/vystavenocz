@@ -1031,6 +1031,28 @@ export interface InventorySupplierInput {
   note: string | null
 }
 
+export interface SupplierProduct {
+  id: string
+  supplierId: string
+  productId: string
+  productName: string
+  productSku: string
+  supplierSku: string | null
+  supplierEan: string | null
+  packageQuantity: number
+  minimumOrderQuantity: number
+  usualUnitCost: number | null
+  updatedAt: string
+}
+
+export interface SupplierProductInput {
+  supplierSku: string | null
+  supplierEan: string | null
+  packageQuantity: number
+  minimumOrderQuantity: number
+  usualUnitCost: number | null
+}
+
 export type PurchaseOrderStatus =
   | 'Draft'
   | 'Ordered'
@@ -1054,6 +1076,10 @@ export interface PurchaseOrderItem {
   remainingQuantity: number
   unitCost: number | null
   lineCost: number | null
+  supplierSku: string | null
+  supplierEan: string | null
+  packageQuantity: number | null
+  orderedPackageCount: number | null
 }
 
 export interface PurchaseOrderReceiptSummary {
@@ -1114,6 +1140,31 @@ export interface ReceivePurchaseOrderResponse {
   receipt: PurchaseReceipt
 }
 
+export interface CreatePurchaseOrderFromSuggestionsInput {
+  idempotencyKey: string
+  supplierId: string
+  locationId: string | null
+  from: string | null
+  to: string | null
+  daysAhead: number
+  expectedOn: string | null
+  note: string | null
+  productIds: string[]
+}
+
+export interface PurchaseSuggestionSupplierOption {
+  supplierId: string
+  supplierName: string
+  supplierSku: string | null
+  supplierEan: string | null
+  packageQuantity: number
+  minimumOrderQuantity: number
+  roundedOrderQuantity: number
+  packageCount: number
+  unitCost: number | null
+  estimatedCost: number | null
+}
+
 export interface PurchaseSuggestionItem {
   productId: string
   productName: string
@@ -1127,6 +1178,7 @@ export interface PurchaseSuggestionItem {
   purchasePrice: number | null
   estimatedCost: number | null
   daysOfStockRemaining: number | null
+  supplierOptions: PurchaseSuggestionSupplierOption[]
 }
 
 export interface PurchaseSuggestionsResponse {
