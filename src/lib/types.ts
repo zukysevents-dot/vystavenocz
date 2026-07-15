@@ -801,6 +801,7 @@ export type StockMovementType =
   | 'JobConsumption'
   | 'StornoJobConsumption'
   | 'LotAssignment'
+  | 'ReservationFulfillment'
 
 export interface StockLevel {
   productId: string
@@ -808,6 +809,8 @@ export interface StockLevel {
   productSku: string
   quantity: number
   locationId: string | null
+  reservedQuantity: number
+  availableQuantity: number
 }
 
 // Centrální sklad: přehled zásob napříč pobočkami (matice produkt × provozovna).
@@ -820,6 +823,8 @@ export interface StockLocationColumn {
 export interface StockByLocationCell {
   locationId: string | null
   quantity: number
+  reservedQuantity: number
+  availableQuantity: number
 }
 
 export interface StockByLocationRow {
@@ -827,6 +832,8 @@ export interface StockByLocationRow {
   productName: string
   productSku: string
   totalQuantity: number
+  totalReservedQuantity: number
+  totalAvailableQuantity: number
   cells: StockByLocationCell[]
 }
 
@@ -855,12 +862,40 @@ export interface StockMovement {
   relatedProductionBatchId?: string | null
   relatedJobId?: string | null
   relatedJobMaterialItemId?: string | null
+  relatedStockReservationId?: string | null
   createdAt: string
   productName?: string | null
   productSku?: string | null
   locationName?: string | null
   createdBy?: string | null
   lotAllocations?: StockMovementLotAllocation[]
+}
+
+export type StockReservationStatus = 'Active' | 'Released' | 'Fulfilled'
+
+export interface StockReservation {
+  id: string
+  productId: string
+  productName: string
+  productSku: string
+  locationId: string | null
+  locationName: string | null
+  quantity: number
+  reservedFor: string
+  note: string | null
+  status: StockReservationStatus
+  createdAt: string
+  releasedAt: string | null
+  fulfilledAt: string | null
+  resolutionNote: string | null
+}
+
+export interface CreateStockReservationRequest {
+  productId: string
+  quantity: number
+  reservedFor: string
+  locationId?: string | null
+  note?: string | null
 }
 
 export interface StockMovementLotAllocation {
