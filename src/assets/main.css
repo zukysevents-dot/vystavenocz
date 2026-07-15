@@ -468,7 +468,9 @@
     visibility: hidden;
   }
   .receipt-printable,
-  .receipt-printable * {
+  .receipt-printable *,
+  .stocktake-protocol-printable,
+  .stocktake-protocol-printable * {
     visibility: visible;
   }
   .receipt-printable {
@@ -477,6 +479,15 @@
     left: 0;
     margin: 0;
     box-shadow: none;
+  }
+  .stocktake-protocol-printable {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 12mm;
+    color: #000;
+    background: #fff;
   }
 }
 

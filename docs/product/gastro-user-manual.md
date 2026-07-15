@@ -195,6 +195,10 @@ Docházka a píchačka (`Docházka`):
 5. U položky ve zrcadle otevřete `Detail zrcadla`, pokud potřebujete vidět výpočet: otevření + příjem + storno - prodej - výdej = stav má být.
 6. Rozdíl vzniká z korekcí a inventur. Prodeje, výdeje a přesuny jsou už započtené ve stavu `Stav má být`.
 7. Rozdíly sledujte v kusech i v Kč.
+8. První kolo inventury je standardně slepé. Počítejte ručně, HW čtečkou nebo kamerou telefonu; každý scan přičte jeden kus a systémový stav se neukazuje.
+9. Dialog můžete zavřít a na stejném zařízení pokračovat. Průběh se ukládá pro konkrétní firmu, uživatele a pobočku; mezi zařízeními se nepřenáší.
+10. Po prvním kole zvolte `Zkontrolovat rozdíly` a nezávisle přepočítejte jen odlišné položky.
+11. Po uložení zkontrolujte inventurní protokol. Lze ho stáhnout do CSV nebo vytisknout / uložit do PDF; při chybě spojení průběh zůstane připravený k bezpečnému opakování.
 
 ## Uzávěrka
 

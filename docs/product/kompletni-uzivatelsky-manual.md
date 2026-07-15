@@ -487,6 +487,14 @@ Akce Export CSV stáhne přesně filtrovaný výkaz včetně kontrolního součt
 4. U významného rozdílu doplňte důvod.
 5. Inventuru potvrďte.
 
+Na mobilu i počítači je první kolo ve výchozím stavu slepé: systémové množství není vidět a žádná položka není předvyplněná. Množství zadejte ručně, HW čtečkou EAN nebo kamerou telefonu; jeden úspěšný sken přičte jeden kus. Neznámý nebo duplicitní EAN systém nezapočítá.
+
+Průběh se automaticky ukládá pro přihlášeného uživatele, firmu a vybranou pobočku v tomto prohlížeči. Dialog můžete zavřít a později na stejném zařízení pokračovat. Nejde o synchronizaci mezi telefony nebo počítači a po sedmi dnech se starý průběh zahodí. Pokud se mezitím změní katalog produktů, systém starý průběh bezpečně nepoužije.
+
+Po dokončení prvního kola zvolte `Zkontrolovat rozdíly`. Druhé kolo zobrazí jen položky, jejichž první počet nesouhlasil se stavem při zahájení. Tyto položky znovu nezávisle napočítejte. Uložit lze až po dokončení všech potřebných přepočtů.
+
+Při finálním potvrzení server znovu ověří aktuální stav. Když spojení selže, průběh zůstane uložený a opakování nevytvoří druhou inventuru ani dvojí pohyb. Po úspěchu se otevře autoritativní inventurní protokol se stavem před zápisem, napočítanou realitou a rozdílem; lze ho stáhnout jako CSV nebo vytisknout / uložit do PDF.
+
 ### 10.8 Přesun a výroba
 
 Přesun snižuje zásobu na výchozí pobočce a zvyšuje ji na cílové; u sledovaného produktu zachová šarži. Výrobní dávka polotovaru spotřebuje suroviny podle receptury a zvýší množství vyrobeného polotovaru. Sledovaný výstup vyžaduje číslo výstupní šarže.

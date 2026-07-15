@@ -178,6 +178,8 @@ Staging demo data: backend `vystaveno-api` má explicitní CLI helper `dotnet Vy
 
 ## Uživatelský jazyk a manuál
 
+**Mobilní inventura INV-16:** `Zásoby → Inventura` začíná slepým prvním počítáním, podporuje HW EAN i kameru, automaticky ukládá draft izolovaný podle firmy/uživatele/pobočky a druhé kolo ukáže jen rozdíly. Draft je pouze pro stejný prohlížeč/zařízení, expiruje za 7 dní a finální request používá stabilní UUID `idempotencyKey`; po chybě se nesmí smazat. Serverový protokol je autoritativní a nabízí CSV i tisk/PDF. Kontrakt: `docs/backend/stocktake-mobile-v1.md`. Oprávnění řeší Standa; nativní Android/iOS a AI/MCP jsou mimo tento řez.
+
 - Koncové rozhraní používá běžnou češtinu. Interní pojmy jako backend, runtime, adapter, credential, scope, mock nebo název proměnné prostředí do UI nepatří.
 - Preferované názvy v navigaci jsou `Stoly a objednávky`, `Kuchyňské objednávky`, `Produkty a menu`, `Stav skladu`, `Příjem zboží`, `Volby k produktům`, `Denní uzávěrka` a `Propojení pro vývojáře`.
 - Technické termíny ponechávej jen v pokročilé části pro vývojáře a hned je vysvětli běžnými slovy.

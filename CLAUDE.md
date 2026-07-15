@@ -122,6 +122,8 @@ Test: Každý změněný řádek by měl jít přímo dohledat k požadavku uži
 
 ## 4. Exekuce podle cíle
 
+**Mobilní inventura INV-16:** `Zásoby → Inventura` používá slepé první kolo, EAN/HW/kamerový sken, lokální draft per firma+uživatel+pobočka, druhý přepočet jen rozdílů a stabilní UUID pro bezpečný retry. Draft je V1 pouze na stejném zařízení, po chybě zůstává a maže se až po 201/202 nebo výslovném zahození. Autoritativní protokol vrací server a lze ho exportovat do CSV nebo vytisknout/PDF. Kontrakt je v `docs/backend/stocktake-mobile-v1.md`; role/oprávnění, nativní appky a AI/MCP jsou mimo řez.
+
 Definuj kritéria úspěchu. Cyklicky ověřuj, dokud nesedí.
 
 Z úkolů udělej ověřitelné cíle. V tomhle projektu (frontend) ověření typicky znamená:

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import {
   Plus,
   Minus,
@@ -16,6 +16,13 @@ import {
   CalendarClock,
   PackageCheck,
   ChartNoAxesCombined,
+  ScanBarcode,
+  Camera,
+  RotateCcw,
+  Download,
+  Printer,
+  ChevronLeft,
+  Trash2,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -45,6 +52,22 @@ import StockLedgerPanel from '@/components/app/StockLedgerPanel.vue'
 import StockLotsPanel from '@/components/app/StockLotsPanel.vue'
 import StockReservationsPanel from '@/components/app/StockReservationsPanel.vue'
 import StockValuationPanel from '@/components/app/StockValuationPanel.vue'
+import CameraScanner from '@/components/app/CameraScanner.vue'
+import { useAuthStore } from '@/stores/auth'
+import { downloadCsv, safeCsvText } from '@/lib/csv-export'
+import { findByEan } from '@/lib/reorder'
+import {
+  createStocktakeDraft,
+  finalStocktakeItems,
+  firstCountComplete,
+  loadStocktakeDraft,
+  recountComplete,
+  recountProductIds,
+  removeStocktakeDraft,
+  saveStocktakeDraft,
+  type StocktakeDraft,
+  type StocktakeDraftScope,
+} from '@/lib/stocktake-draft'
 import type {
   StockLot,
   StockLevel,
@@ -53,11 +76,13 @@ import type {
   StockMirror,
   StockMirrorItem,
   StockMovementType,
+  Stocktake,
 } from '@/lib/types'
 
 const { products, loadAll: loadProducts } = useProducts()
 const { locations, loadAll: loadLocations } = useLocations()
 const inv = useInventory()
+const auth = useAuthStore()
 const apiMode = isApiMode()
 const ALL_LOCATIONS = '__all__'
 const AUTO_LOT = '__auto_fefo__'
@@ -139,8 +164,11 @@ interface StocktakeRow {
   id: string
   name: string
   sku: string
+  ean: string | null
   expectedQuantity: number
-  countedQuantity: number
+  firstCount: number | null
+  recountCount: number | null
+  countedQuantity: number | null
   differenceQuantity: number
 }
 
@@ -180,6 +208,9 @@ const stockLocationLabel = computed(() => {
   if (stockLocationId.value === ALL_LOCATIONS) return 'Všechny pobočky'
   return locationName(stockLocationId.value) ?? 'Vybraná pobočka'
 })
+const stocktakeLocationLabel = computed(
+  () => locationName(actionLocationId.value) ?? 'Nezařazený sklad',
+)
 const mirrorVarianceCount = computed(
   () => mirror.value?.items.filter((i) => Math.abs(i.varianceQuantity) > 0.0001).length ?? 0,
 )
@@ -556,87 +587,307 @@ async function submitTransfer() {
 // --- Inventura ---
 const stocktakeOpen = ref(false)
 const stocktakeSearch = ref('')
-const stocktakeNote = ref('Inventura')
-const counts = ref<Record<string, number | ''>>({})
+const stocktakeDraft = ref<StocktakeDraft | null>(null)
+const stocktakeScanEan = ref('')
+const stocktakeScanInput = ref<InstanceType<typeof Input> | null>(null)
+const stocktakeScannerOpen = ref(false)
+const stocktakeProtocolOpen = ref(false)
+const stocktakeProtocol = ref<Stocktake | null>(null)
+let draftSaveWarned = false
+
+function currentStocktakeScope(): StocktakeDraftScope {
+  return {
+    companyId: auth.companyId,
+    userId: auth.user?.id ?? '_unknown_user',
+    locationId: actionLocationId.value,
+  }
+}
+
+function freshStocktakeDraft(scope: StocktakeDraftScope): StocktakeDraft {
+  return createStocktakeDraft(
+    scope,
+    products.value.map((product) => ({
+      productId: product.id,
+      expectedQuantity: levelMap.value.get(product.id)?.quantity ?? 0,
+    })),
+  )
+}
 
 function openStocktake() {
   if (locations.value.length > 1 && stockLocationId.value === ALL_LOCATIONS) {
     toast.error('Inventuru spusťte pro konkrétní pobočku.')
     return
   }
-  counts.value = Object.fromEntries(
-    products.value.map((p) => [p.id, levelMap.value.get(p.id)?.quantity ?? 0]),
-  )
-  stocktakeSearch.value = ''
-  stocktakeNote.value = 'Inventura'
-  stocktakeOpen.value = true
-}
-
-function normalizeCount(value: number | ''): number {
-  if (value === '') return 0
-  const numeric = Number(value)
-  return Number.isFinite(numeric) ? numeric : 0
-}
-
-const allStocktakeRows = computed<StocktakeRow[]>(() =>
-  products.value.map((p) => {
-    const expectedQuantity = levelMap.value.get(p.id)?.quantity ?? 0
-    const countedQuantity = normalizeCount(counts.value[p.id] ?? expectedQuantity)
-    return {
-      id: p.id,
-      name: p.name,
-      sku: p.sku,
-      expectedQuantity,
-      countedQuantity,
-      differenceQuantity: countedQuantity - expectedQuantity,
+  if (!products.value.length) {
+    toast.error('Žádné produkty k inventuře.')
+    return
+  }
+  const scope = currentStocktakeScope()
+  const restored = loadStocktakeDraft(scope)
+  const knownProductIds = new Set(products.value.map((product) => product.id))
+  if (restored?.productIds.every((productId) => knownProductIds.has(productId))) {
+    stocktakeDraft.value = restored
+    toast.info('Pokračujete v rozpracované inventuře z tohoto zařízení.')
+  } else {
+    if (restored) {
+      removeStocktakeDraft(scope)
+      toast.warning('Katalog se změnil. Rozpracovaná inventura byla bezpečně zahozena.')
     }
-  }),
+    stocktakeDraft.value = freshStocktakeDraft(scope)
+  }
+  stocktakeSearch.value = ''
+  stocktakeScanEan.value = ''
+  stocktakeOpen.value = true
+  nextTick(focusStocktakeScan)
+}
+
+watch(
+  stocktakeDraft,
+  (draft) => {
+    if (!draft) return
+    if (!saveStocktakeDraft(draft) && !draftSaveWarned) {
+      draftSaveWarned = true
+      toast.warning('Průběh inventury se na tomto zařízení nepodařilo uložit.')
+    }
+  },
+  { deep: true },
 )
 
+function normalizeDraftCount(value: string | number | null | undefined): number | null {
+  if (value === '' || value === null || value === undefined) return null
+  const numeric = Number(value)
+  return Number.isFinite(numeric) && numeric >= 0 && numeric <= 1_000_000 ? numeric : null
+}
+
+function setStocktakeCount(productId: string, value: string | number | undefined): void {
+  const draft = stocktakeDraft.value
+  if (!draft) return
+  const count = normalizeDraftCount(value)
+  if (draft.phase === 'first') draft.firstCounts[productId] = count
+  else draft.recountCounts[productId] = count
+}
+
+function incrementStocktakeCount(productId: string): void {
+  const draft = stocktakeDraft.value
+  if (!draft) return
+  const target = draft.phase === 'first' ? draft.firstCounts : draft.recountCounts
+  target[productId] = (target[productId] ?? 0) + 1
+}
+
+function focusStocktakeScan(): void {
+  const element = stocktakeScanInput.value?.$el as HTMLInputElement | undefined
+  element?.focus()
+}
+
+function handleStocktakeCode(raw: string, announce = false): void {
+  const code = raw.trim()
+  const draft = stocktakeDraft.value
+  if (!code || !draft) return
+  const product = findByEan(products.value, code)
+  const matches = products.value.filter((item) => item.ean === code)
+  if (!product) {
+    toast.error(`Čárový kód „${code}“ nebyl v katalogu nalezen.`)
+    return
+  }
+  if (matches.length > 1) {
+    toast.error(`Více produktů má čárový kód „${code}“. Vyberte produkt ručně.`)
+    return
+  }
+  if (!draft.productIds.includes(product.id)) {
+    toast.error('Produkt nepatří do této rozpracované inventury.')
+    return
+  }
+  if (draft.phase === 'recount' && !recountProductIds(draft).includes(product.id)) {
+    toast.info(`${product.name} při prvním počítání souhlasí a druhý přepočet nepotřebuje.`)
+    return
+  }
+  incrementStocktakeCount(product.id)
+  stocktakeSearch.value = product.name
+  if (announce) toast.success(`${product.name}: započten 1 kus.`)
+}
+
+function submitStocktakeScan(): void {
+  handleStocktakeCode(stocktakeScanEan.value)
+  stocktakeScanEan.value = ''
+  nextTick(focusStocktakeScan)
+}
+
+const allStocktakeRows = computed<StocktakeRow[]>(() => {
+  const draft = stocktakeDraft.value
+  if (!draft) return []
+  const recountIds = new Set(recountProductIds(draft))
+  return draft.productIds.flatMap((productId) => {
+    const product = products.value.find((item) => item.id === productId)
+    if (!product) return []
+    const expectedQuantity = draft.expectedQuantities[productId] ?? 0
+    const firstCount = draft.firstCounts[productId] ?? null
+    const recountCount = draft.recountCounts[productId] ?? null
+    const needsRecount = recountIds.has(productId)
+    const countedQuantity = draft.phase === 'recount' && needsRecount ? recountCount : firstCount
+    return [
+      {
+        id: product.id,
+        name: product.name,
+        sku: product.sku,
+        ean: product.ean,
+        expectedQuantity,
+        firstCount,
+        recountCount,
+        countedQuantity,
+        differenceQuantity: countedQuantity === null ? 0 : countedQuantity - expectedQuantity,
+      },
+    ]
+  })
+})
+
 const stocktakeRows = computed<StocktakeRow[]>(() => {
+  const draft = stocktakeDraft.value
+  const recountIds = new Set(draft ? recountProductIds(draft) : [])
   const q = stocktakeSearch.value.toLowerCase().trim()
-  if (!q) return allStocktakeRows.value
-  return allStocktakeRows.value.filter(
-    (r) => r.name.toLowerCase().includes(q) || r.sku.toLowerCase().includes(q),
-  )
+  return allStocktakeRows.value.filter((row) => {
+    if (draft?.phase === 'recount' && !recountIds.has(row.id)) return false
+    return (
+      !q ||
+      row.name.toLowerCase().includes(q) ||
+      row.sku.toLowerCase().includes(q) ||
+      (row.ean ?? '').includes(q)
+    )
+  })
 })
 
 const stocktakeChangedRows = computed(() =>
-  allStocktakeRows.value.filter((r) => Math.abs(r.differenceQuantity) > 0.0001),
+  allStocktakeRows.value.filter(
+    (row) => row.countedQuantity !== null && Math.abs(row.differenceQuantity) > 0.0001,
+  ),
 )
 
 const stocktakeDifferenceTotal = computed(() =>
   stocktakeChangedRows.value.reduce((sum, row) => sum + row.differenceQuantity, 0),
 )
 
+const stocktakeCountedCount = computed(
+  () => allStocktakeRows.value.filter((row) => row.firstCount !== null).length,
+)
+const stocktakeRecountIds = computed(() =>
+  stocktakeDraft.value ? recountProductIds(stocktakeDraft.value) : [],
+)
+const stocktakeRecountRemaining = computed(() => {
+  const draft = stocktakeDraft.value
+  if (!draft) return 0
+  return stocktakeRecountIds.value.filter((productId) => draft.recountCounts[productId] === null)
+    .length
+})
+const showStocktakeExpected = computed(
+  () => stocktakeDraft.value?.phase === 'recount' || stocktakeDraft.value?.blindCount === false,
+)
+
+function startStocktakeRecount(): void {
+  const draft = stocktakeDraft.value
+  if (!draft) return
+  if (!firstCountComplete(draft)) {
+    toast.error(`Nejdřív napočítejte všech ${draft.productIds.length} položek.`)
+    return
+  }
+  draft.phase = 'recount'
+  stocktakeSearch.value = ''
+  if (recountProductIds(draft).length)
+    toast.info('Teď nezávisle přepočítejte pouze položky s rozdílem.')
+  else toast.success('První počítání souhlasí se systémem. Inventuru můžete uzavřít.')
+  nextTick(focusStocktakeScan)
+}
+
+function returnToFirstCount(): void {
+  if (!stocktakeDraft.value) return
+  stocktakeDraft.value.phase = 'first'
+  stocktakeSearch.value = ''
+  nextTick(focusStocktakeScan)
+}
+
+function discardStocktake(): void {
+  const draft = stocktakeDraft.value
+  if (draft) removeStocktakeDraft(draft.scope)
+  stocktakeDraft.value = null
+  stocktakeOpen.value = false
+  toast.success('Rozpracovaná inventura byla zahozena.')
+}
+
 async function submitStocktake() {
-  const items: StocktakeItemInput[] = products.value.map((p) => ({
-    productId: p.id,
-    countedQuantity: normalizeCount(counts.value[p.id] ?? 0),
-  }))
-  if (!items.length) return toast.error('Žádné produkty k inventuře.')
+  const draft = stocktakeDraft.value
+  if (!draft) return
+  const items: StocktakeItemInput[] | null = finalStocktakeItems(draft)
+  if (!items || !recountComplete(draft))
+    return toast.error('Dokončete první počítání i kontrolní přepočet rozdílů.')
   busy.value = true
+  let result: Stocktake | null = null
   try {
-    const result = await inv.stocktake(
+    const response = await inv.stocktake(
       items,
-      stocktakeNote.value.trim() || null,
-      actionLocationId.value,
+      draft.note.trim() || null,
+      draft.scope.locationId,
+      draft.idempotencyKey,
     )
-    if (isApprovalRequest(result)) {
+    if (isApprovalRequest(response)) {
+      removeStocktakeDraft(draft.scope)
+      stocktakeDraft.value = null
       stocktakeOpen.value = false
       toast.success('Inventura čeká na schválení managerem.')
       return
     }
-    await loadLevels()
-    if (mirrorLoaded.value) await loadMirror()
+    result = response
+    removeStocktakeDraft(draft.scope)
+    stocktakeDraft.value = null
     stocktakeOpen.value = false
     toast.success('Inventura uložena — stav srovnán.')
   } catch (e) {
-    toast.error('Inventura selhala.')
+    if (e instanceof ApiError && e.status === 409)
+      toast.error('Tento retry klíč už patří jiné inventuře nebo stav chrání rezervace či blokace.')
+    else toast.error('Inventura selhala. Průběh zůstal uložený pro bezpečný retry.')
     console.error(e)
+    return
   } finally {
     busy.value = false
   }
+  if (!result) return
+  stocktakeProtocol.value = result
+  stocktakeProtocolOpen.value = true
+  try {
+    await loadLevels()
+    if (mirrorLoaded.value) await loadMirror()
+  } catch (e) {
+    console.error(e)
+    toast.warning('Inventura je uložená, ale přehled skladu se nepodařilo obnovit.')
+  }
+}
+
+const stocktakeProtocolRows = computed(() =>
+  (stocktakeProtocol.value?.items ?? []).map((item) => {
+    const product = products.value.find((candidate) => candidate.id === item.productId)
+    return {
+      ...item,
+      productName: product?.name ?? 'Archivovaný produkt',
+      productSku: product?.sku ?? item.productId,
+    }
+  }),
+)
+
+function exportStocktakeProtocol(): void {
+  const protocol = stocktakeProtocol.value
+  if (!protocol) return
+  downloadCsv(
+    `inventurni-protokol-${protocol.createdAt.slice(0, 10)}-${protocol.id}`,
+    ['Produkt', 'SKU', 'Stav před inventurou', 'Napočítáno', 'Rozdíl'],
+    stocktakeProtocolRows.value.map((row) => [
+      safeCsvText(row.productName),
+      safeCsvText(row.productSku),
+      row.systemQuantity,
+      row.countedQuantity,
+      row.difference,
+    ]),
+  )
+}
+
+function printStocktakeProtocol(): void {
+  window.print()
 }
 </script>
 
@@ -1409,118 +1660,320 @@ async function submitStocktake() {
 
     <!-- Dialog inventura -->
     <Dialog v-model:open="stocktakeOpen">
-      <DialogContent class="max-h-[90vh] max-w-3xl overflow-y-auto">
-        <DialogHeader>
+      <DialogContent class="flex max-h-[92dvh] max-w-5xl flex-col overflow-hidden p-0">
+        <DialogHeader class="border-b border-border px-4 pb-4 pt-5 sm:px-6">
           <DialogTitle>Inventura</DialogTitle>
           <DialogDescription>
-            {{ stockLocationLabel }} · zadejte fyzicky napočítané množství. Systém uloží realitu a
-            rozdíl promítne do skladového zrcadla.
+            {{ stocktakeLocationLabel }} · průběh se automaticky ukládá na tomto zařízení. Sklad se
+            změní až po finálním potvrzení.
           </DialogDescription>
         </DialogHeader>
 
-        <div class="grid gap-3 sm:grid-cols-[1fr_220px]">
-          <div class="relative">
-            <Search
-              class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              v-model="stocktakeSearch"
-              class="pl-9"
-              placeholder="Hledat položku pro počítání"
-            />
-          </div>
-          <Input v-model="stocktakeNote" placeholder="Poznámka k inventuře" />
-        </div>
+        <div v-if="stocktakeDraft" class="flex min-h-0 flex-1 flex-col">
+          <div class="space-y-3 border-b border-border px-4 py-3 sm:px-6">
+            <div class="flex flex-wrap items-center gap-2">
+              <Button
+                v-if="stocktakeDraft.phase === 'recount'"
+                type="button"
+                variant="outline"
+                size="sm"
+                @click="returnToFirstCount"
+              >
+                <ChevronLeft class="h-4 w-4" /> První počítání
+              </Button>
+              <Button
+                v-else
+                type="button"
+                variant="outline"
+                size="sm"
+                @click="stocktakeDraft.blindCount = !stocktakeDraft.blindCount"
+              >
+                <RotateCcw class="h-4 w-4" />
+                {{
+                  stocktakeDraft.blindCount ? 'Slepé počítání zapnuto' : 'Zapnout slepé počítání'
+                }}
+              </Button>
+              <span class="rounded-full bg-muted px-3 py-1 text-xs font-semibold">
+                {{ stocktakeDraft.phase === 'first' ? '1. počítání' : '2. kontrolní přepočet' }}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                class="ml-auto text-destructive hover:text-destructive"
+                @click="discardStocktake"
+              >
+                <Trash2 class="h-4 w-4" /> Zahodit průběh
+              </Button>
+            </div>
 
-        <div
-          class="grid gap-2 rounded-lg border border-border bg-muted/30 p-3 text-sm sm:grid-cols-3"
-        >
-          <div>
-            <div class="text-xs text-muted-foreground">Položek</div>
-            <div class="font-semibold tabular-nums">{{ allStocktakeRows.length }}</div>
-          </div>
-          <div>
-            <div class="text-xs text-muted-foreground">Rozdílů</div>
-            <div class="font-semibold tabular-nums">{{ stocktakeChangedRows.length }}</div>
-          </div>
-          <div>
-            <div class="text-xs text-muted-foreground">Rozdíl celkem</div>
+            <div class="rounded-xl border border-border bg-muted/30 p-3">
+              <label
+                class="mb-1.5 flex items-center gap-1.5 text-sm font-medium"
+                for="stocktake-scan"
+              >
+                <ScanBarcode class="h-4 w-4 text-primary" /> Načíst čárový kód
+              </label>
+              <div class="flex gap-2">
+                <Input
+                  id="stocktake-scan"
+                  ref="stocktakeScanInput"
+                  v-model="stocktakeScanEan"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  placeholder="HW čtečka nebo ruční EAN"
+                  class="min-w-0 flex-1"
+                  @keyup.enter="submitStocktakeScan"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  class="shrink-0"
+                  title="Skenovat kamerou"
+                  @click="stocktakeScannerOpen = true"
+                >
+                  <Camera class="h-4 w-4" /> <span class="hidden sm:inline">Kamera</span>
+                </Button>
+              </div>
+            </div>
+
+            <div class="grid gap-3 sm:grid-cols-[1fr_240px]">
+              <div class="relative">
+                <Search
+                  class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                />
+                <Input v-model="stocktakeSearch" class="pl-9" placeholder="Název, SKU nebo EAN" />
+              </div>
+              <Input v-model="stocktakeDraft.note" placeholder="Poznámka k inventuře" />
+            </div>
+
             <div
-              class="font-semibold tabular-nums"
-              :class="
-                stocktakeDifferenceTotal > 0
-                  ? 'text-success'
-                  : stocktakeDifferenceTotal < 0
-                    ? 'text-destructive'
-                    : ''
-              "
+              class="grid gap-2 rounded-lg border border-border bg-background p-3 text-sm sm:grid-cols-3"
             >
-              {{ fmtSigned(stocktakeDifferenceTotal) }}
+              <div>
+                <div class="text-xs text-muted-foreground">První počítání</div>
+                <div class="font-semibold tabular-nums">
+                  {{ stocktakeCountedCount }} / {{ stocktakeDraft.productIds.length }}
+                </div>
+              </div>
+              <div>
+                <div class="text-xs text-muted-foreground">Rozdílů k přepočtu</div>
+                <div class="font-semibold tabular-nums">
+                  {{ showStocktakeExpected ? stocktakeRecountIds.length : 'Skryto' }}
+                </div>
+              </div>
+              <div>
+                <div class="text-xs text-muted-foreground">
+                  {{ stocktakeDraft.phase === 'recount' ? 'Zbývá přepočítat' : 'Rozdíl celkem' }}
+                </div>
+                <div
+                  class="font-semibold tabular-nums"
+                  :class="
+                    stocktakeDifferenceTotal > 0
+                      ? 'text-success'
+                      : stocktakeDifferenceTotal < 0
+                        ? 'text-destructive'
+                        : ''
+                  "
+                >
+                  {{
+                    stocktakeDraft.phase === 'recount'
+                      ? stocktakeRecountRemaining
+                      : showStocktakeExpected
+                        ? fmtSigned(stocktakeDifferenceTotal)
+                        : 'Skryto'
+                  }}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="overflow-hidden rounded-lg border border-border">
-          <div
-            class="hidden grid-cols-[minmax(0,1.4fr)_110px_130px_110px] gap-3 border-b border-border bg-muted/40 px-3 py-2 text-xs font-semibold uppercase text-muted-foreground sm:grid"
-          >
-            <span>Produkt</span>
-            <span class="text-right">Stav má být</span>
-            <span class="text-right">Realita</span>
-            <span class="text-right">Rozdíl</span>
-          </div>
-          <div v-if="!stocktakeRows.length" class="p-8 text-center text-sm text-muted-foreground">
-            Žádná položka neodpovídá hledání.
-          </div>
-          <div
-            v-for="row in stocktakeRows"
-            :key="row.id"
-            class="grid gap-3 border-b border-border px-3 py-3 text-sm last:border-0 sm:grid-cols-[minmax(0,1.4fr)_110px_130px_110px] sm:items-center"
-          >
-            <div class="min-w-0">
-              <div class="truncate font-medium">{{ row.name }}</div>
-              <div class="text-xs text-muted-foreground">{{ row.sku }}</div>
+          <div class="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-6">
+            <div class="overflow-hidden rounded-lg border border-border">
+              <div
+                class="hidden grid-cols-[minmax(0,1.3fr)_100px_120px_120px_100px] gap-3 border-b border-border bg-muted/40 px-3 py-2 text-xs font-semibold uppercase text-muted-foreground sm:grid"
+              >
+                <span>Produkt</span>
+                <span class="text-right">Stav má být</span>
+                <span class="text-right">1. počet</span>
+                <span class="text-right">2. počet</span>
+                <span class="text-right">Rozdíl</span>
+              </div>
+              <div
+                v-if="!stocktakeRows.length"
+                class="p-8 text-center text-sm text-muted-foreground"
+              >
+                {{
+                  stocktakeDraft.phase === 'recount' && stocktakeRecountIds.length === 0
+                    ? 'Všechny položky souhlasí. Inventuru můžete uložit.'
+                    : 'Žádná položka neodpovídá hledání.'
+                }}
+              </div>
+              <div
+                v-for="row in stocktakeRows"
+                :key="row.id"
+                class="grid gap-3 border-b border-border px-3 py-3 text-sm last:border-0 sm:grid-cols-[minmax(0,1.3fr)_100px_120px_120px_100px] sm:items-center"
+              >
+                <div class="min-w-0">
+                  <div class="truncate font-medium">{{ row.name }}</div>
+                  <div class="text-xs text-muted-foreground">
+                    {{ row.sku }}<span v-if="row.ean"> · EAN {{ row.ean }}</span>
+                  </div>
+                </div>
+                <div class="flex items-center justify-between gap-3 sm:block sm:text-right">
+                  <span class="text-xs text-muted-foreground sm:hidden">Stav má být</span>
+                  <span class="font-semibold tabular-nums">
+                    {{ showStocktakeExpected ? fmtQty(row.expectedQuantity) : '•••' }}
+                  </span>
+                </div>
+                <label class="space-y-1 text-xs font-medium text-muted-foreground sm:text-right">
+                  <span class="sm:hidden">1. počet</span>
+                  <Input
+                    v-if="stocktakeDraft.phase === 'first'"
+                    :model-value="row.firstCount ?? ''"
+                    type="number"
+                    step="0.001"
+                    :min="0"
+                    class="text-right"
+                    :aria-label="`První počet: ${row.name}`"
+                    @update:model-value="setStocktakeCount(row.id, $event)"
+                  />
+                  <span v-else class="block py-2 font-semibold tabular-nums text-foreground">
+                    {{ fmtQty(row.firstCount ?? 0) }}
+                  </span>
+                </label>
+                <label class="space-y-1 text-xs font-medium text-muted-foreground sm:text-right">
+                  <span class="sm:hidden">2. počet</span>
+                  <Input
+                    v-if="stocktakeDraft.phase === 'recount'"
+                    :model-value="row.recountCount ?? ''"
+                    type="number"
+                    step="0.001"
+                    :min="0"
+                    class="text-right"
+                    :aria-label="`Kontrolní počet: ${row.name}`"
+                    @update:model-value="setStocktakeCount(row.id, $event)"
+                  />
+                  <span v-else class="block py-2 text-muted-foreground">—</span>
+                </label>
+                <div class="flex items-center justify-between gap-3 sm:block sm:text-right">
+                  <span class="text-xs text-muted-foreground sm:hidden">Rozdíl</span>
+                  <span
+                    class="font-semibold tabular-nums"
+                    :class="
+                      row.differenceQuantity > 0
+                        ? 'text-success'
+                        : row.differenceQuantity < 0
+                          ? 'text-destructive'
+                          : 'text-muted-foreground'
+                    "
+                  >
+                    {{
+                      showStocktakeExpected && row.countedQuantity !== null
+                        ? fmtSigned(row.differenceQuantity)
+                        : '—'
+                    }}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div class="flex items-center justify-between gap-3 sm:block sm:text-right">
-              <span class="text-xs text-muted-foreground sm:hidden">Stav má být</span>
-              <span class="font-semibold tabular-nums">{{ fmtQty(row.expectedQuantity) }}</span>
+          </div>
+
+          <DialogFooter class="border-t border-border px-4 py-3 sm:px-6">
+            <span class="mr-auto text-xs text-muted-foreground">
+              Ukládáno na tomto zařízení · server při uzavření znovu ověří aktuální stav.
+            </span>
+            <Button type="button" variant="ghost" @click="stocktakeOpen = false">Zavřít</Button>
+            <Button
+              v-if="stocktakeDraft.phase === 'first'"
+              type="button"
+              variant="coral"
+              :disabled="busy"
+              @click="startStocktakeRecount"
+            >
+              Zkontrolovat rozdíly
+            </Button>
+            <Button v-else variant="coral" :disabled="busy" @click="submitStocktake">
+              <Loader2 v-if="busy" class="h-4 w-4 animate-spin" /> Uložit inventuru
+            </Button>
+          </DialogFooter>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    <CameraScanner
+      v-model:open="stocktakeScannerOpen"
+      description="Sken přičte jeden kus do právě otevřeného kola inventury. Stejný kód držený před kamerou se krátce deduplikuje."
+      @detected="(code) => handleStocktakeCode(code, true)"
+    />
+
+    <Dialog v-model:open="stocktakeProtocolOpen">
+      <DialogContent class="max-h-[92dvh] max-w-4xl overflow-y-auto">
+        <div v-if="stocktakeProtocol" class="stocktake-protocol-printable space-y-4 bg-background">
+          <DialogHeader>
+            <DialogTitle>Inventurní protokol</DialogTitle>
+            <DialogDescription>
+              Doklad {{ stocktakeProtocol.id }} ·
+              {{ new Date(stocktakeProtocol.createdAt).toLocaleString('cs-CZ') }} ·
+              {{ stocktakeLocationLabel }}
+            </DialogDescription>
+          </DialogHeader>
+          <div class="grid gap-2 rounded-lg border border-border p-3 text-sm sm:grid-cols-3">
+            <div>
+              <div class="text-xs text-muted-foreground">Položek</div>
+              <div class="font-semibold">{{ stocktakeProtocolRows.length }}</div>
             </div>
-            <label class="space-y-1 text-xs font-medium text-muted-foreground sm:text-right">
-              <span class="sm:hidden">Realita</span>
-              <Input
-                v-model.number="counts[row.id]"
-                type="number"
-                step="any"
-                :min="0"
-                class="text-right"
-                aria-label="Napočítaná realita"
-              />
-            </label>
-            <div class="flex items-center justify-between gap-3 sm:block sm:text-right">
-              <span class="text-xs text-muted-foreground sm:hidden">Rozdíl</span>
+            <div>
+              <div class="text-xs text-muted-foreground">Rozdílů</div>
+              <div class="font-semibold">
+                {{
+                  stocktakeProtocolRows.filter((row) => Math.abs(row.difference) > 0.0001).length
+                }}
+              </div>
+            </div>
+            <div>
+              <div class="text-xs text-muted-foreground">Poznámka</div>
+              <div class="font-semibold">{{ stocktakeProtocol.note || '—' }}</div>
+            </div>
+          </div>
+          <div class="overflow-hidden rounded-lg border border-border">
+            <div
+              class="grid grid-cols-[minmax(0,1fr)_90px_90px_90px] gap-3 border-b border-border bg-muted/40 px-3 py-2 text-xs font-semibold uppercase text-muted-foreground"
+            >
+              <span>Produkt</span><span class="text-right">Před</span
+              ><span class="text-right">Napočítáno</span><span class="text-right">Rozdíl</span>
+            </div>
+            <div
+              v-for="row in stocktakeProtocolRows"
+              :key="row.productId"
+              class="grid grid-cols-[minmax(0,1fr)_90px_90px_90px] gap-3 border-b border-border px-3 py-2 text-sm last:border-0"
+            >
+              <div class="min-w-0">
+                <div class="truncate font-medium">{{ row.productName }}</div>
+                <div class="text-xs text-muted-foreground">{{ row.productSku }}</div>
+              </div>
+              <span class="text-right tabular-nums">{{ fmtQty(row.systemQuantity) }}</span>
+              <span class="text-right tabular-nums">{{ fmtQty(row.countedQuantity) }}</span>
               <span
-                class="font-semibold tabular-nums"
+                class="text-right font-semibold tabular-nums"
                 :class="
-                  row.differenceQuantity > 0
-                    ? 'text-success'
-                    : row.differenceQuantity < 0
-                      ? 'text-destructive'
-                      : 'text-muted-foreground'
+                  row.difference > 0 ? 'text-success' : row.difference < 0 ? 'text-destructive' : ''
                 "
               >
-                {{ fmtSigned(row.differenceQuantity) }}
+                {{ fmtSigned(row.difference) }}
               </span>
             </div>
           </div>
         </div>
-
         <DialogFooter>
-          <span class="mr-auto text-xs text-muted-foreground">
-            Uloží se celá inventura, nejen filtrované řádky.
-          </span>
-          <Button type="button" variant="ghost" @click="stocktakeOpen = false">Zrušit</Button>
-          <Button variant="coral" :disabled="busy" @click="submitStocktake">
-            <Loader2 v-if="busy" class="h-4 w-4 animate-spin" /> Uložit inventuru
+          <Button type="button" variant="ghost" @click="stocktakeProtocolOpen = false">
+            Hotovo
+          </Button>
+          <Button type="button" variant="outline" @click="exportStocktakeProtocol">
+            <Download class="h-4 w-4" /> CSV
+          </Button>
+          <Button type="button" variant="coral" @click="printStocktakeProtocol">
+            <Printer class="h-4 w-4" /> Tisk / PDF
           </Button>
         </DialogFooter>
       </DialogContent>
