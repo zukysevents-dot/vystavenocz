@@ -15,6 +15,7 @@ import {
   Factory,
   Scaling,
   Layers3,
+  Download,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -48,6 +49,7 @@ import { useInventory } from '@/composables/useInventory'
 import { isApiMode } from '@/lib/http'
 import { formatCZK } from '@/lib/invoice'
 import { ALLERGENS, formatAllergenCodes, normalizeAllergens } from '@/lib/allergens'
+import { downloadCsv, safeCsvText } from '@/lib/csv-export'
 import { toast } from '@/components/ui/sonner'
 import type { Category, Product } from '@/lib/types'
 
@@ -128,6 +130,37 @@ const filtered = computed(() => {
     return p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)
   })
 })
+
+function exportProducts(): void {
+  downloadCsv(
+    'produkty.csv',
+    [
+      'Název',
+      'Skladový kód',
+      'EAN',
+      'Prodejní cena vč. DPH',
+      'DPH (%)',
+      'Nákupní cena',
+      'Minimální množství',
+      'Alergeny',
+      'Typ produktu',
+      'Sledování šarží',
+    ],
+    filtered.value.map((product) => [
+      safeCsvText(product.name),
+      safeCsvText(product.sku),
+      safeCsvText(product.ean),
+      product.salePrice,
+      product.vatRate,
+      product.purchasePrice,
+      product.minQuantity,
+      safeCsvText(formatAllergenCodes(product.allergens)),
+      product.productKind === 'SemiProduct' ? 'Polotovar' : 'Standardní produkt',
+      product.lotTrackingEnabled ? 'Ano' : 'Ne',
+    ]),
+  )
+  toast.success(`Exportováno ${filtered.value.length} produktů.`)
+}
 
 function openCreate() {
   editing.value = null
@@ -276,6 +309,9 @@ async function onDelete() {
         <p class="mt-1 text-muted-foreground">Názvy, ceny a možnosti všeho, co prodáváte.</p>
       </div>
       <div class="flex gap-2">
+        <Button variant="outline" :disabled="!filtered.length" @click="exportProducts">
+          <Download class="h-4 w-4" /> Export CSV
+        </Button>
         <Button variant="outline" as-child>
           <RouterLink to="/app/import?entity=products"
             ><Upload class="h-4 w-4" /> Importovat</RouterLink
