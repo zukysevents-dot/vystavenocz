@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { BadgeCheck, Check, Clock, Sparkles } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { useSubscriptionStore } from '@/stores/subscription'
 import { PRO_FEATURES as features, PRO_PRICING } from '@/lib/pricing'
 
-const router = useRouter()
 const subStore = useSubscriptionStore()
 const { isPaid, isTrial, trialDaysLeft } = storeToRefs(subStore)
 
@@ -17,12 +16,6 @@ onMounted(() => subStore.init())
 
 function dayWord(n: number): string {
   return n === 1 ? 'den' : n < 5 ? 'dny' : 'dní'
-}
-
-// Fiktivní upgrade — bez platební brány (MVP). Aktivuje Pro a přejde na děkovnou stránku.
-function onActivate(): void {
-  subStore.activatePro()
-  router.push('/app/predplatne/dekujeme')
 }
 </script>
 
@@ -51,7 +44,9 @@ function onActivate(): void {
         <p class="font-semibold text-foreground">
           Zkušební verze — zbývá {{ trialDaysLeft }} {{ dayWord(trialDaysLeft ?? 0) }}
         </p>
-        <p class="text-muted-foreground">Po skončení aktivujte Pro, ať můžete dál fakturovat.</p>
+        <p class="text-muted-foreground">
+          Před koncem si prohlédněte možnosti navazujícího tarifu.
+        </p>
       </div>
     </div>
     <div
@@ -61,7 +56,9 @@ function onActivate(): void {
       <Clock class="h-5 w-5 shrink-0 text-coral" />
       <div class="text-sm">
         <p class="font-semibold text-foreground">Zkušební doba skončila</p>
-        <p class="text-muted-foreground">Aktivujte Vystaveno Pro a pokračujte ve fakturaci.</p>
+        <p class="text-muted-foreground">
+          Zvolte tarif; aktivace proběhne až po potvrzení objednávky.
+        </p>
       </div>
     </div>
 
@@ -71,7 +68,9 @@ function onActivate(): void {
         <div class="flex items-center justify-between">
           <div>
             <h2 class="text-xl font-bold text-foreground">Vystaveno Pro</h2>
-            <p class="text-sm text-muted-foreground">Pro OSVČ i firmy. Vše bez omezení.</p>
+            <p class="text-sm text-muted-foreground">
+              Fakturace, klienti a finance v jednom místě.
+            </p>
           </div>
           <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-coral/10 text-coral">
             <Sparkles class="h-6 w-6" />
@@ -126,14 +125,15 @@ function onActivate(): void {
           }}
         </p>
 
-        <Button v-if="!isPaid" variant="coral" size="lg" class="mt-6 w-full" @click="onActivate">
-          Aktivovat Pro
+        <Button v-if="!isPaid" variant="coral" size="lg" class="mt-6 w-full" as-child>
+          <RouterLink to="/cenik">Prohlédnout možnosti tarifu</RouterLink>
         </Button>
         <p v-else class="mt-6 text-center text-sm font-medium text-success">
           Tarif je aktivní — děkujeme!
         </p>
         <p class="mt-2 text-center text-xs text-muted-foreground">
-          Platební brána není v MVP — aktivace je zatím ukázková.
+          Aktivní tarif se objeví až po serverovém potvrzení objednávky. Tato obrazovka jej sama
+          nemění.
         </p>
 
         <ul class="mt-8 grid gap-3 sm:grid-cols-2">

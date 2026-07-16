@@ -39,6 +39,7 @@ const czk = (n: number) => n.toLocaleString('cs-CZ')
     <button
       v-for="m in PRICING_MODULES"
       :key="m.key"
+      :id="`pricing-${m.key}`"
       type="button"
       :aria-pressed="isOn(m.key)"
       class="group relative flex flex-col rounded-2xl border bg-card p-5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"

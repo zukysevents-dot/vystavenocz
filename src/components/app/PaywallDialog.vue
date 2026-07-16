@@ -33,8 +33,7 @@ const emit = defineEmits<{
         <DialogTitle class="text-center text-xl">Zkušební doba skončila</DialogTitle>
         <DialogDescription class="text-center">
           {{
-            reason ||
-            'Pro vystavení faktury aktivujte tarif Vystaveno Pro. Vaše data zůstávají uložená.'
+            reason || 'Pro vystavení faktury zvolte navazující tarif. Vaše data zůstávají uložená.'
           }}
         </DialogDescription>
       </DialogHeader>
@@ -56,7 +55,7 @@ const emit = defineEmits<{
       <DialogFooter class="flex-col-reverse gap-2 sm:flex-row">
         <Button variant="ghost" @click="emit('update:open', false)">Zatím ne</Button>
         <Button variant="coral" class="sm:flex-1" as-child>
-          <RouterLink to="/app/predplatne">Aktivovat předplatné</RouterLink>
+          <RouterLink to="/app/predplatne">Zobrazit možnosti tarifu</RouterLink>
         </Button>
       </DialogFooter>
     </DialogContent>

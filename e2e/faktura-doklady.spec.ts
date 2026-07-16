@@ -163,3 +163,36 @@ test('editor: výběr typu Zálohová faktura vytvoří proforma doklad', async 
   const pf = (await storedInvoices(page)).find((i) => i.documentType === 'proforma')
   expect(pf).toBeTruthy()
 })
+
+test('editor: rozepsaný nový koncept se po refreshi obnoví jen na výslovnou akci', async ({
+  page,
+}) => {
+  await seedApp(page, { subscription: 'pro' })
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'vystaveno.invoice-editor-draft.v1:c_e2e',
+      JSON.stringify({
+        documentType: 'invoice',
+        selectedClientId: '',
+        adHocClient: { name: 'Obnovený odběratel' },
+        invoiceNumber: 'FA-ROZEPIS',
+        issueDate: '2026-07-16',
+        dueDate: '2026-07-30',
+        variableSymbol: '20260716',
+        paymentMethod: 'bank_transfer',
+        items: [
+          { id: 'draft-line', description: 'Rozepsaná práce', quantity: 2, unit: 'hod', unitPrice: 800, vatRate: 21 },
+        ],
+      }),
+    )
+  })
+
+  await page.goto('/app/faktury/editor')
+  await expect(page.getByText('Máte rozepsaný koncept')).toBeVisible()
+  expect((await storedInvoices(page)).length).toBe(0)
+
+  await page.getByRole('button', { name: 'Obnovit koncept' }).click()
+  await expect(page.getByDisplayValue('Rozepsaná práce')).toBeVisible()
+  await expect(page.getByText('Rozepsaný koncept obnoven.')).toBeVisible()
+  expect((await storedInvoices(page)).length).toBe(0)
+})

@@ -11,6 +11,7 @@ import {
   FileText,
   Building2,
   Plus,
+  Download,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,6 +32,7 @@ import { useLocations } from '@/composables/useLocations'
 import { isApiMode } from '@/lib/http'
 import { toast } from '@/components/ui/sonner'
 import { reorderSuggestions, findByEan } from '@/lib/reorder'
+import { downloadCsv, safeCsvText } from '@/lib/csv-export'
 import type { Product, PurchaseReceipt, PurchaseSuggestionItem } from '@/lib/types'
 
 const { products, loadAll: loadProducts } = useProducts()
@@ -64,6 +66,10 @@ const apiSuggestionsLoaded = ref(false)
 const suggestionFrom = ref<string | null>(null)
 const suggestionTo = ref<string | null>(null)
 const suggestionDaysAhead = ref(7)
+const receiptExportFrom = ref(startOfMonthInputValue())
+const receiptExportTo = ref(todayInputValue())
+const receiptExportSearch = ref('')
+const receiptExporting = ref(false)
 
 const scanEan = ref('')
 const search = ref('')
@@ -93,6 +99,11 @@ function todayInputValue(): string {
   const month = String(now.getMonth() + 1).padStart(2, '0')
   const day = String(now.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
+}
+
+function startOfMonthInputValue(): string {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
 }
 
 async function loadLevels() {
@@ -145,6 +156,62 @@ async function reloadAfterOrderReceipt() {
   } catch (e) {
     console.error(e)
     toast.error('Objednávka byla přijata, ale přehled skladu se nepodařilo obnovit.')
+  }
+}
+
+async function exportPurchaseReceipts(): Promise<void> {
+  if (receiptExportFrom.value && receiptExportTo.value && receiptExportFrom.value > receiptExportTo.value) {
+    toast.error('Datum od nemůže být po datu do.')
+    return
+  }
+  receiptExporting.value = true
+  try {
+    const receipts = await inv.allPurchaseReceipts({
+      from: receiptExportFrom.value || null,
+      to: receiptExportTo.value || null,
+      search: receiptExportSearch.value,
+      locationId: filterLocationId.value,
+    })
+    const rows = receipts.flatMap((receipt) =>
+      receipt.items.map((item) => [
+        receipt.receivedOn,
+        safeCsvText(receipt.documentNumber),
+        safeCsvText(receipt.supplierName),
+        safeCsvText(locationName(receipt.locationId)),
+        safeCsvText(item.productName),
+        safeCsvText(item.productSku),
+        item.quantity,
+        item.unitCost,
+        item.lineCost,
+        safeCsvText(item.lotNumber),
+        item.expiresOn ?? '',
+        safeCsvText(receipt.note),
+      ]),
+    )
+    downloadCsv(
+      `prijemky-${receiptExportFrom.value || 'od-zacatku'}-${receiptExportTo.value || 'dosud'}`,
+      [
+        'Datum příjmu',
+        'Číslo dokladu',
+        'Dodavatel',
+        'Pobočka',
+        'Produkt',
+        'SKU',
+        'Množství',
+        'Jednotková cena',
+        'Cena řádku',
+        'Šarže',
+        'Expirace',
+        'Poznámka',
+      ],
+      rows,
+    )
+    toast.success(`Vyexportováno ${receipts.length} příjemek a ${rows.length} řádků.`)
+  } catch (e) {
+    console.error(e)
+    toast.error(e instanceof Error ? e.message : 'Příjemky se nepodařilo exportovat.')
+  } finally {
+    receiptExporting.value = false
   }
 }
 
@@ -678,6 +745,34 @@ function fmtQuantity(value: number | null): string {
                 </div>
               </div>
             </div>
+          </div>
+
+          <div class="rounded-2xl border border-border bg-card p-4">
+            <h2 class="flex items-center gap-1.5 font-semibold">
+              <Download class="h-4 w-4 text-primary" /> Export příjemek
+            </h2>
+            <p class="mt-1 text-xs text-muted-foreground">
+              Stáhne přesně vybraný rozsah včetně dodavatele, položek, cen, šarží a pobočky.
+            </p>
+            <div class="mt-3 grid gap-2 sm:grid-cols-2">
+              <label class="space-y-1 text-xs font-medium">
+                <span>Datum od</span>
+                <Input v-model="receiptExportFrom" type="date" />
+              </label>
+              <label class="space-y-1 text-xs font-medium">
+                <span>Datum do</span>
+                <Input v-model="receiptExportTo" type="date" />
+              </label>
+            </div>
+            <label class="mt-2 block space-y-1 text-xs font-medium">
+              <span>Dodavatel nebo číslo dokladu</span>
+              <Input v-model="receiptExportSearch" placeholder="Např. Makro nebo 2026-001" />
+            </label>
+            <Button class="mt-3 w-full" variant="outline" :disabled="receiptExporting" @click="exportPurchaseReceipts">
+              <Loader2 v-if="receiptExporting" class="h-4 w-4 animate-spin" />
+              <Download v-else class="h-4 w-4" />
+              {{ receiptExporting ? 'Připravuji export…' : 'Exportovat vybraný CSV' }}
+            </Button>
           </div>
 
           <!-- Poslední příjemky -->

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { Loader2 } from 'lucide-vue-next'
+import { Check, Loader2 } from 'lucide-vue-next'
 import SiteLogo from '@/components/SiteLogo.vue'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -55,6 +55,23 @@ async function onSubmit() {
       <div class="rounded-2xl border border-border bg-card p-8 shadow-card">
         <h1 class="text-2xl font-bold tracking-tight">Začněte zdarma</h1>
         <p class="mt-1 text-sm text-muted-foreground">14 dní bez karty. Plné funkce.</p>
+
+        <div class="mt-5 rounded-xl border border-border bg-muted/30 p-4">
+          <div class="text-sm font-semibold">Po registraci nastavíte firmu ve třech krocích</div>
+          <ol class="mt-3 space-y-2 text-sm text-muted-foreground">
+            <li class="flex gap-2">
+              <Check class="mt-0.5 h-4 w-4 shrink-0 text-primary" />Vyberete typ provozu.
+            </li>
+            <li class="flex gap-2">
+              <Check class="mt-0.5 h-4 w-4 shrink-0 text-primary" />Zadáte IČO a načtete údaje z
+              ARES.
+            </li>
+            <li class="flex gap-2">
+              <Check class="mt-0.5 h-4 w-4 shrink-0 text-primary" />Zapnete jen části systému, které
+              využijete.
+            </li>
+          </ol>
+        </div>
 
         <form class="mt-6 space-y-4" @submit.prevent="onSubmit">
           <div class="space-y-2">

@@ -3,7 +3,7 @@ import { useInventory } from '@/composables/useInventory'
 import { http } from '@/lib/http'
 
 vi.mock('@/lib/http', () => ({
-  http: { get: vi.fn(), post: vi.fn() },
+  http: { get: vi.fn(), post: vi.fn(), put: vi.fn(), del: vi.fn() },
 }))
 
 beforeEach(() => {
@@ -11,6 +11,39 @@ beforeEach(() => {
 })
 
 describe('useInventory', () => {
+  it('sdílený koncept inventury posílá expected stav, průběh a umí jej odstranit', async () => {
+    vi.mocked(http.post).mockResolvedValue({} as never)
+    vi.mocked(http.put).mockResolvedValue({} as never)
+    vi.mocked(http.del).mockResolvedValue(undefined as never)
+    const inventory = useInventory()
+
+    await inventory.createStocktakeDraft({
+      locationId: 'loc-1',
+      rangeKind: 'cycle',
+      note: '  Regál A  ',
+      items: [{ productId: 'prod-1', expectedQuantity: 4 }],
+    })
+    await inventory.saveStocktakeDraftProgress('draft-1', {
+      revision: 3,
+      note: '  Regál A  ',
+      items: [{ productId: 'prod-1', firstCount: 3, recountCount: null }],
+    })
+    await inventory.deleteStocktakeDraft('draft-1')
+
+    expect(http.post).toHaveBeenCalledWith('/inventory/stocktake-drafts', {
+      locationId: 'loc-1',
+      rangeKind: 'cycle',
+      note: 'Regál A',
+      items: [{ productId: 'prod-1', expectedQuantity: 4 }],
+    })
+    expect(http.put).toHaveBeenCalledWith('/inventory/stocktake-drafts/draft-1/progress', {
+      revision: 3,
+      note: 'Regál A',
+      items: [{ productId: 'prod-1', firstCount: 3, recountCount: null }],
+    })
+    expect(http.del).toHaveBeenCalledWith('/inventory/stocktake-drafts/draft-1')
+  })
+
   it('movements načte všechny stránky a po dokončení ověří stabilní ledger', async () => {
     const firstPage = Array.from({ length: 100 }, (_, index) => ({
       id: `move-${String(102 - index).padStart(3, '0')}`,
@@ -429,7 +462,9 @@ describe('useInventory', () => {
 
     await useInventory().purchaseReceipts()
 
-    expect(http.get).toHaveBeenCalledWith('/inventory/purchase-receipts?pageSize=50')
+    expect(http.get).toHaveBeenCalledWith(
+      '/inventory/purchase-receipts?page=1&pageSize=50&sort=-receivedOn',
+    )
   })
 
   it('purchaseReceipts posílá pobočku jako query', async () => {
@@ -438,7 +473,33 @@ describe('useInventory', () => {
     await useInventory().purchaseReceipts({ locationId: 'bar-1' })
 
     expect(http.get).toHaveBeenCalledWith(
-      '/inventory/purchase-receipts?pageSize=50&locationId=bar-1',
+      '/inventory/purchase-receipts?page=1&pageSize=50&sort=-receivedOn&locationId=bar-1',
+    )
+  })
+
+  it('allPurchaseReceipts stáhne přesný filtrovaný export ze všech stránek', async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({ id: `receipt-${index + 1}` }))
+    const secondPage = [{ id: 'receipt-101' }]
+    vi.mocked(http.get)
+      .mockResolvedValueOnce({ items: firstPage, total: 101, page: 1, pageSize: 100 } as never)
+      .mockResolvedValueOnce({ items: secondPage, total: 101, page: 2, pageSize: 100 } as never)
+      .mockResolvedValueOnce({ items: firstPage, total: 101, page: 1, pageSize: 100 } as never)
+
+    const result = await useInventory().allPurchaseReceipts({
+      from: '2026-07-01',
+      to: '2026-07-31',
+      search: ' Makro ',
+      locationId: 'bar-1',
+    })
+
+    expect(result).toHaveLength(101)
+    expect(http.get).toHaveBeenNthCalledWith(
+      1,
+      '/inventory/purchase-receipts?page=1&pageSize=100&sort=-receivedOn&from=2026-07-01&to=2026-07-31&search=Makro&locationId=bar-1',
+    )
+    expect(http.get).toHaveBeenNthCalledWith(
+      2,
+      '/inventory/purchase-receipts?page=2&pageSize=100&sort=-receivedOn&from=2026-07-01&to=2026-07-31&search=Makro&locationId=bar-1',
     )
   })
 
