@@ -31,6 +31,7 @@ Cíl: vidět, že sklad sedí a rozdíly se dají vysvětlit.
 1. Otevřete `Naskladnění`, vyberte pobočku skladu (má-li firma víc poboček), vyplňte dodavatele/doklad/datum, přidejte zboží s množstvím a uložte příjemku.
 2. Otevřete `Zásoby`. Vpravo je tab `Zrcadlo` — porovnává `Stav má být`, `Realitu` a `Rozdíl`. V detailu řádku uvidíte výpočet (otevření + příjem + storno − prodej − výdej = stav má být).
 3. Spusťte `Inventuru` na konkrétní pobočku: zadejte fyzicky napočítané množství a uložte. `Rozdíl` = realita minus systém, ukazuje se v kusech i v Kč.
+4. Pro mobilní průběh vyberte rozsah (úplná, částečná, cyklická nebo namátková), počítejte nejprve naslepo přes EAN/HW čtečku nebo kameru a rozdíly nezávisle přepočítejte. Po zavření a znovuotevření můžete pokračovat z tohoto zařízení; v API režimu se v dialogu nové inventury objeví i kompatibilní rozpracovaný průběh z jiného zařízení. Pokud oba lidé upraví stejný průběh, systém finální uzavření zablokuje a nabídne načíst novější serverový stav.
 
 Co ověřit: příjemka zvýší stav, prodej ho sníží, inventura/korekce se projeví jako rozdíl ve zrcadle. Inventura ani výdej nejdou spustit pro „Všechny pobočky" — vždy pro konkrétní sklad.
 
