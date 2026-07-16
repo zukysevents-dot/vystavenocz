@@ -863,3 +863,9 @@ Závislosti nebo další bezpečný krok:
 **Výsledek:** Vznikl aktuálně zdrojovaný rozhodovací podklad. Viva je vhodná pro technický discovery a případný první adapter hostovaného Smart Checkout pro platbu jednotlivé faktury nebo objednávky, nikoli zatím pro ostré platby ani marketplace/split-funds model. Podklad pokrývá ČR/CZK, ceník, onboarding/KYC, OAuth/demo, webhookové potvrzení, refund, terminál/SoftPOS a PCI hranici.
 
 **Rozhodnutí:** pokračovat může pouze serverový spike s provider-neutral vaultem, hostovaným checkoutem a idempotentním webhookem. Ostré spuštění čeká na obchodní podmínky pro český partner/ISV model, ověřený onboarding obchodníka, právní audit, test skutečné platby, zamítnutí, refundu a duplicitního webhooku.
+
+### 2026-07-16 | Codex | INV-15 | licence, certifikace a tříletý TCO | `docs/product/compliance-certification-tco.md`
+
+**Výsledek:** Vznikla rozhodovací matice, která odděluje zákonné povinnosti od smluvních očekávání a dobrovolných certifikací. Prioritou je GDPR/security/retention základ a průkazný provoz, ne nákup obecného certifikátu. Podpisy jsou rozdělené podle jejich právního významu, platební PCI scope podle hostovaného checkoutu a ochranná známka má jasný veřejný nákladový orientační bod.
+
+**Rozhodnutí:** ISO 27001 ani kvalifikovaný podpis nejsou univerzální blokátor. Spustit se má GDPR/DPA a retention gap audit; Viva a podpisy pokračují až s konkrétním obchodním/provider rozhodnutím. TCO se schvaluje z nabídek podle vzorce zavedení + provoz + audit + objemové poplatky, ne odhadem bez rozsahu.
