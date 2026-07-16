@@ -929,3 +929,9 @@ Závislosti nebo další bezpečný krok:
 **Ověření:** frontendový `npm run lint`, produkční `npm run build`, `git diff --check` a vizuální kontrola aktualizovaného uživatelského manuálu v PDF prošly bez chyby. Během PDF kontroly bylo zachyceno osamocené zalomené znaménko, text se zkrátil a finální náhled je bez ořezu či sirotků.
 
 **Závislosti nebo další bezpečný krok:** online úhrada faktury v klientské zóně není vydávána za hotovou; vyžaduje serverový payment tok z `docs/backend/online-platba-faktur.md` a providerové rozhodnutí `INV-14`.
+
+### 2026-07-16 | Codex | INV-06 | sjednocení ceníku a billingové pravdy | `docs/product/pricing-reconciliation.md`
+
+**Výsledek:** Podklad přesně odděluje současný orientační modulární ceník od ukázkového jednotného Pro tarifu v aplikaci. Definuje cílový serverový katalog plánů a entitlementů, společný zdroj pro web i appku, idempotentní payment event a napojení claim/referral benefitů.
+
+**Externí rozhodnutí:** konkrétní snížení nebo změna ceny vyžaduje schválit prodejní plány, ceny, DPH, limity a migraci. Bez něj se nic nepřecenilo ani nevydává za ostré placené předplatné.
