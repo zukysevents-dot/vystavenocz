@@ -21,5 +21,6 @@ jakmile endpoint existuje, FE se přepne bez dalšího zásahu.
 | 7   | [`uzaverka.md`](./uzaverka.md)                               | větší    | „Zavřít den" (Z-report + zámek), historie, per-číšník, hotovost |
 | 8   | [`import-historie-prodeju.md`](./import-historie-prodeju.md) | větší    | historie prodejů z konkurenčního POS do analytiky (od dne 0)    |
 | 9   | [`subscription-claims-referrals-v1.md`](./subscription-claims-referrals-v1.md) | větší | chráněné kampaně, referral a měřitelný akviziční funnel |
+| 10  | [`crm-mvp-v1.md`](./crm-mvp-v1.md) | větší | klientská timeline, další krok a obchodní přehled bez duplikace klientů |
 
 U každého jsou i **otázky/rozhodnutí**, na které potřebuju od tebe odpověď, ať doladím FE.

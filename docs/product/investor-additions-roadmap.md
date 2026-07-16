@@ -913,3 +913,11 @@ Závislosti nebo další bezpečný krok:
 **Ověření:** frontendový `npm run lint`, produkční `npm run build`, `git diff --check` a vizuální kontrola aktualizované stránky uživatelského manuálu v generovaném PDF prošly bez chyby.
 
 **Kontrakty/dokumentace:** frontend pouze seskupuje serverové subtotal/DPH/total v aktuálním výběru; nevzniká nový účetní výpočet, endpoint ani klientský zdroj pravdy.
+
+### 2026-07-16 | Codex | INV-08 | CRM MVP nad existujícími klienty | `docs/backend/crm-mvp-v1.md`
+
+**Výsledek:** Vznikl implementační kontrakt CRM, který nestaví nový adresář ani nový deal systém. Rozšiřuje současný `Client` o interní poznámky a úkoly a na jedné časové ose serverově skládá existující nabídky, zakázky, faktury a pohledávky. Definuje mobilní tok „co se stalo / co je další krok“, cursor stránkování, filtry, tenantové hranice, audit a bezpečnost interních poznámek.
+
+**Rozhodnutí:** CRM V1 neposílá e-maily, nedělá automatizace, scoring ani paralelní pipeline. Pohledávky zůstávají autoritativní ve fakturační doméně a více měn se nikdy nesčítá do jednoho čísla. Role/oprávnění nepřidává; využije model, který dodá Standa.
+
+**Další bezpečný krok:** backend dodá model a endpointy z kontraktu; poté frontend přidá detail klienta, timeline a frontu úkolů použitelnou na mobilním webu/PWA.
