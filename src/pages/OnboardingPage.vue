@@ -1,19 +1,21 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { CheckCircle2, Loader2 } from 'lucide-vue-next'
+import { CheckCircle2, Loader2, Search } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from '@/components/ui/sonner'
 import { useCompanyStore } from '@/stores/company'
 import { useAuthStore } from '@/stores/auth'
+import { useAres } from '@/composables/useAres'
 import type { Company } from '@/lib/types'
 import { BUSINESS_PROFILES, type BusinessProfileId } from '@/lib/modules'
 
 const companyStore = useCompanyStore()
 const auth = useAuthStore()
 const router = useRouter()
+const ares = useAres()
 
 const submitting = ref(false)
 
@@ -49,6 +51,17 @@ onMounted(async () => {
     form.invoice_number_prefix = c.invoiceNumberPrefix ?? 'FA'
   }
 })
+
+async function fillFromAres(): Promise<void> {
+  const result = await ares.lookup(form.ico)
+  if (!result) return
+  form.company_name = result.companyName ?? form.company_name
+  form.ico = result.ico
+  form.dic = result.dic ?? form.dic
+  form.street = result.street ?? form.street
+  form.city = result.city ?? form.city
+  form.zip = result.zip ?? form.zip
+}
 
 async function onSubmit() {
   submitting.value = true
@@ -154,8 +167,22 @@ async function onSubmit() {
           </div>
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="space-y-2">
-              <Label for="ico">IČO</Label>
-              <Input id="ico" v-model="form.ico" required />
+              <div class="flex items-center justify-between gap-3">
+                <Label for="ico">IČO</Label>
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  class="h-auto px-0 text-xs"
+                  :disabled="ares.loading"
+                  @click="fillFromAres"
+                >
+                  <Loader2 v-if="ares.loading" class="h-3.5 w-3.5 animate-spin" />
+                  <Search v-else class="h-3.5 w-3.5" />
+                  Načíst z ARES
+                </Button>
+              </div>
+              <Input id="ico" v-model="form.ico" required inputmode="numeric" autocomplete="off" />
             </div>
             <div class="space-y-2">
               <Label for="dic">DIČ</Label>

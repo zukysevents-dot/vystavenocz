@@ -49,7 +49,7 @@ Pro restaurace, kavárny, bary, obchody, služby a zakázkový provoz
 1. Otevřete přihlašovací stránku.
 2. Zadejte e-mail a heslo.
 3. Po prvním přihlášení vyberte typ provozu: Gastro, Služby, Řemesla a zakázky nebo Obchod.
-4. Doplňte údaje firmy a alespoň jednu pobočku.
+4. Doplňte údaje firmy a alespoň jednu pobočku. U české firmy zadejte IČO a zvolte `Načíst z ARES`; systém předvyplní název, DIČ a sídlo. Údaje před uložením zkontrolujte.
 5. Zapněte části systému, které budete používat.
 
 Profil firmy pouze předvybere vhodné části aplikace. Později je lze změnit v Nastavení.
