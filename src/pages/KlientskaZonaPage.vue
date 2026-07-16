@@ -57,6 +57,18 @@ function quoteMeta(s: string) {
   return quoteStatus[s] ?? { label: s, variant: 'outline' as const }
 }
 
+function formatMoney(value: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat('cs-CZ', {
+      style: 'currency',
+      currency: currency || 'CZK',
+      maximumFractionDigits: 2,
+    }).format(value)
+  } catch {
+    return `${new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 2 }).format(value)} ${currency}`
+  }
+}
+
 async function respond(q: PortalQuote, action: 'approve' | 'reject') {
   if (respondingId.value) return
   respondingId.value = q.id
@@ -165,38 +177,70 @@ async function respond(q: PortalQuote, action: 'approve' | 'reject') {
           Zatím tu nemáte žádné faktury.
         </div>
 
-        <div v-else class="mt-3 overflow-x-auto rounded-xl border border-border bg-card">
-          <table class="w-full min-w-[520px] text-sm">
-            <thead
-              class="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground"
+        <template v-else>
+          <div class="mt-3 space-y-3 sm:hidden">
+            <div
+              v-for="(inv, i) in data.invoices"
+              :key="i"
+              class="rounded-xl border border-border bg-card p-4"
             >
-              <tr>
-                <th class="px-4 py-3 text-left">Číslo</th>
-                <th class="px-4 py-3 text-left">Vystaveno</th>
-                <th class="px-4 py-3 text-left">Splatnost</th>
-                <th class="px-4 py-3 text-right">Částka</th>
-                <th class="px-4 py-3 text-center">Stav</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="(inv, i) in data.invoices"
-                :key="i"
-                class="border-b border-border last:border-0"
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <div class="font-semibold">{{ inv.invoiceNumber || '—' }}</div>
+                  <div class="mt-1 text-sm text-muted-foreground">
+                    Vystaveno {{ formatDate(inv.issueDate) }}
+                  </div>
+                </div>
+                <Badge :variant="invMeta(inv.status).variant">{{
+                  invMeta(inv.status).label
+                }}</Badge>
+              </div>
+              <div class="mt-3 flex items-end justify-between gap-3 border-t border-border pt-3">
+                <div class="text-sm text-muted-foreground">
+                  Splatnost {{ formatDate(inv.dueDate) }}
+                </div>
+                <div class="font-semibold tabular-nums">
+                  {{ formatMoney(inv.total, inv.currency) }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3 hidden overflow-x-auto rounded-xl border border-border bg-card sm:block">
+            <table class="w-full min-w-[520px] text-sm">
+              <thead
+                class="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground"
               >
-                <td class="px-4 py-3 font-medium">{{ inv.invoiceNumber || '—' }}</td>
-                <td class="px-4 py-3 text-muted-foreground">{{ formatDate(inv.issueDate) }}</td>
-                <td class="px-4 py-3 text-muted-foreground">{{ formatDate(inv.dueDate) }}</td>
-                <td class="px-4 py-3 text-right font-semibold">{{ formatCZK(inv.total) }}</td>
-                <td class="px-4 py-3 text-center">
-                  <Badge :variant="invMeta(inv.status).variant">{{
-                    invMeta(inv.status).label
-                  }}</Badge>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                <tr>
+                  <th class="px-4 py-3 text-left">Číslo</th>
+                  <th class="px-4 py-3 text-left">Vystaveno</th>
+                  <th class="px-4 py-3 text-left">Splatnost</th>
+                  <th class="px-4 py-3 text-right">Částka</th>
+                  <th class="px-4 py-3 text-center">Stav</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(inv, i) in data.invoices"
+                  :key="i"
+                  class="border-b border-border last:border-0"
+                >
+                  <td class="px-4 py-3 font-medium">{{ inv.invoiceNumber || '—' }}</td>
+                  <td class="px-4 py-3 text-muted-foreground">{{ formatDate(inv.issueDate) }}</td>
+                  <td class="px-4 py-3 text-muted-foreground">{{ formatDate(inv.dueDate) }}</td>
+                  <td class="px-4 py-3 text-right font-semibold">
+                    {{ formatMoney(inv.total, inv.currency) }}
+                  </td>
+                  <td class="px-4 py-3 text-center">
+                    <Badge :variant="invMeta(inv.status).variant">{{
+                      invMeta(inv.status).label
+                    }}</Badge>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
       </section>
 
       <p class="mt-8 text-center text-xs text-muted-foreground">Vystaveno.cz · klientský portál</p>
