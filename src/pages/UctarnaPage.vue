@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Calculator, Download, FileCode2, Loader2 } from 'lucide-vue-next'
+import { Calculator, Download, FileCode2, Loader2, Search } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useInvoices } from '@/composables/useInvoices'
@@ -15,6 +15,9 @@ const isApi = isApiMode()
 const { invoices, loadError, load, get } = useInvoices()
 const loading = ref(true)
 const period = ref<string>('all')
+const documentType = ref<'all' | 'invoice' | 'credit_note'>('all')
+const status = ref<'all' | 'issued' | 'paid' | 'overdue'>('all')
+const search = ref('')
 // ISDOC se generuje z konkrétní faktury; v API režimu k ní nejdřív dotáhneme řádky.
 const exportingId = ref<string | null>(null)
 
@@ -43,11 +46,21 @@ const periods = computed(() => {
   return [...set].sort().reverse()
 })
 
-const filtered = computed(() =>
-  period.value === 'all'
-    ? documents.value
-    : documents.value.filter((i) => (i.issueDate || '').startsWith(period.value)),
-)
+const filtered = computed(() => {
+  const query = search.value.trim().toLocaleLowerCase('cs-CZ')
+  return documents.value.filter((invoice) => {
+    if (period.value !== 'all' && !(invoice.issueDate || '').startsWith(period.value)) return false
+    if (documentType.value !== 'all' && invoice.documentType !== documentType.value) return false
+    if (status.value !== 'all' && invoice.status !== status.value) return false
+    if (!query) return true
+    return [
+      invoice.invoiceNumber,
+      invoice.clientSnapshot?.name,
+      invoice.clientSnapshot?.ico,
+      invoice.clientSnapshot?.dic,
+    ].some((value) => value?.toLocaleLowerCase('cs-CZ').includes(query))
+  })
+})
 
 function periodLabel(p: string): string {
   const [y, m] = p.split('-')
@@ -68,7 +81,7 @@ const statusMeta: Record<
 function exportCsv() {
   // CSV je hlavičkový přehled (číslo/datumy/odběratel/součty/stav) — list-summary nese
   // subtotal/vatTotal, takže dotahovat řádky netřeba.
-  const name = period.value === 'all' ? 'faktury-vse' : `faktury-${period.value}`
+  const name = period.value === 'all' ? 'faktury-vyber' : `faktury-${period.value}-vyber`
   downloadInvoicesCsv(filtered.value, `${name}.csv`)
 }
 
@@ -112,22 +125,70 @@ async function exportIsdoc(inv: Invoice) {
       <div>
         <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Export pro účetní</h1>
         <p class="mt-1 text-muted-foreground">
-          Export podkladů pro účetní — ISDOC i CSV jedním kliknutím.
+          Vyberte přesně doklady, které chcete předat účetní — CSV i ISDOC jedním kliknutím.
         </p>
       </div>
-      <div class="flex shrink-0 items-center gap-2">
-        <label class="sr-only" for="period">Období</label>
+      <Button class="shrink-0" variant="coral" :disabled="filtered.length === 0" @click="exportCsv">
+        <Download class="h-4 w-4" /> Export CSV ({{ filtered.length }})
+      </Button>
+    </div>
+
+    <div
+      class="mt-5 grid gap-3 rounded-xl border border-border bg-card p-3 sm:grid-cols-2 lg:grid-cols-4"
+    >
+      <div class="space-y-1.5">
+        <label class="text-xs font-medium text-muted-foreground" for="period">Období</label>
         <select
           id="period"
           v-model="period"
-          class="h-9 rounded-lg border border-border bg-card px-3 text-sm"
+          class="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm"
         >
           <option value="all">Všechna období</option>
           <option v-for="p in periods" :key="p" :value="p">{{ periodLabel(p) }}</option>
         </select>
-        <Button variant="coral" :disabled="filtered.length === 0" @click="exportCsv">
-          <Download class="h-4 w-4" /> Export CSV
-        </Button>
+      </div>
+      <div class="space-y-1.5">
+        <label class="text-xs font-medium text-muted-foreground" for="document-type"
+          >Typ dokladu</label
+        >
+        <select
+          id="document-type"
+          v-model="documentType"
+          class="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm"
+        >
+          <option value="all">Faktury i dobropisy</option>
+          <option value="invoice">Pouze faktury</option>
+          <option value="credit_note">Pouze dobropisy</option>
+        </select>
+      </div>
+      <div class="space-y-1.5">
+        <label class="text-xs font-medium text-muted-foreground" for="status">Stav</label>
+        <select
+          id="status"
+          v-model="status"
+          class="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm"
+        >
+          <option value="all">Všechny stavy</option>
+          <option value="issued">Vystavené</option>
+          <option value="paid">Zaplacené</option>
+          <option value="overdue">Po splatnosti</option>
+        </select>
+      </div>
+      <div class="space-y-1.5">
+        <label class="text-xs font-medium text-muted-foreground" for="accounting-search"
+          >Odběratel nebo číslo</label
+        >
+        <div class="relative">
+          <Search
+            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            id="accounting-search"
+            v-model="search"
+            class="h-9 pl-9"
+            placeholder="Jméno, IČO, číslo…"
+          />
+        </div>
       </div>
     </div>
 
@@ -144,7 +205,7 @@ async function exportIsdoc(inv: Invoice) {
       <Calculator class="mx-auto h-12 w-12 text-muted-foreground" />
       <h2 class="mt-4 text-lg font-semibold">Žádné doklady k exportu</h2>
       <p class="mt-1 text-sm text-muted-foreground">
-        Pro vybrané období tu nejsou žádné vystavené faktury.
+        Změňte výběr období, typu dokladu, stavu nebo hledání.
       </p>
     </div>
 
