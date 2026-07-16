@@ -921,3 +921,11 @@ Závislosti nebo další bezpečný krok:
 **Rozhodnutí:** CRM V1 neposílá e-maily, nedělá automatizace, scoring ani paralelní pipeline. Pohledávky zůstávají autoritativní ve fakturační doméně a více měn se nikdy nesčítá do jednoho čísla. Role/oprávnění nepřidává; využije model, který dodá Standa.
 
 **Další bezpečný krok:** backend dodá model a endpointy z kontraktu; poté frontend přidá detail klienta, timeline a frontu úkolů použitelnou na mobilním webu/PWA.
+
+### 2026-07-16 | Codex | INV-09 | mobilní klientská zóna | frontend commit `2c2be41`
+
+**Výsledek:** Existující veřejná klientská zóna s tokenovým přístupem nyní na telefonu nezobrazuje faktury v široké tabulce, ale jako samostatné karty s číslem, stavem, vystavením, splatností a částkou. Částka faktury se formátuje její skutečnou měnou i na desktopu. Nabídky zůstávají ve stávajícím bezpečném toku přijetí/odmítnutí přes public endpoint bez přenášení přihlášeného JWT.
+
+**Ověření:** frontendový `npm run lint`, produkční `npm run build`, `git diff --check` a vizuální kontrola aktualizovaného uživatelského manuálu v PDF prošly bez chyby. Během PDF kontroly bylo zachyceno osamocené zalomené znaménko, text se zkrátil a finální náhled je bez ořezu či sirotků.
+
+**Závislosti nebo další bezpečný krok:** online úhrada faktury v klientské zóně není vydávána za hotovou; vyžaduje serverový payment tok z `docs/backend/online-platba-faktur.md` a providerové rozhodnutí `INV-14`.
