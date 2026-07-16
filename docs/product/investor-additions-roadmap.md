@@ -875,3 +875,9 @@ Závislosti nebo další bezpečný krok:
 **Výsledek:** Analýza veřejně ověřila hodnotové benchmarky iDokladu, KiloMayo a ePML a mapuje je na skutečný stav Vystaveno. Doporučuje nezdvojovat hotovou fakturaci, nabídky, sklad, POS ani provozní moduly; soustředit se na jednoduchý start, jednotný ceník, multi-company kontext, přesný export se statistikou a následný chráněný partnerský růst.
 
 **Rozhodnutí:** Vystaveno staví obecný základ pro živnostníky a volitelné oborové moduly. Kompletní sklad je produktová síla, ale regulovaný PML režim zůstává oddělený až do právního rozhodnutí. Nativní aplikace a AI nejsou součástí tohoto backlogu.
+
+### 2026-07-16 | Codex | INV-03 | export aktuálně vyfiltrovaných produktů | frontend commit `e43505e`
+
+**Výsledek:** `Produkty a menu` nově exportuje přesně aktuální výběr podle vyhledávání do CSV. Výstup obsahuje název, SKU, EAN, prodejní i nákupní cenu, DPH, minimální množství, alergeny, typ produktu a stav sledování šarží. Textová pole jsou chráněna před formula injection; prázdný výběr nelze exportovat.
+
+**Ověření:** `npm run lint` a produkční `npm run build` proběhly bez chyby. Export používá sdílený český CSV renderer se stávajícím BOM, oddělovačem a formátováním čísel; nevzniká nový backendový endpoint ani klientský skladový stav.
