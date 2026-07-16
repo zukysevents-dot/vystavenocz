@@ -905,3 +905,11 @@ Závislosti nebo další bezpečný krok:
 **Rozhodnutí:** současný lokální 14denní trial není billingová autorita. Proto se nezačíná falešným frontendovým zadáním kódu ani vlastním prodlužováním trialu; server smí nárok uložit jako `Pending`, ale skutečné dva měsíce zdarma nebo benefit doporučujícího se uplatní až po reálné, idempotentně potvrzené platbě.
 
 **Další bezpečný krok:** backend může dodat model, claim endpoint, audit, rate limit a konfiguraci kampaní nad tímto kontraktem. Po jeho dostupnosti frontend přidá zobrazení a zadání kódu do registrace/onboardingu; skutečný billing callback zůstává explicitní závislostí.
+
+### 2026-07-16 | Codex | INV-03 | statistiky přesného účetního exportu | frontend commit `9b3695c`
+
+**Výsledek:** Nad přesně vybranými fakturami a dobropisy je vidět počet dokladů, rozdělení podle typu a součty základu, DPH i celku. Souhrny se vytvářejí samostatně pro každou měnu, takže aplikace nikdy nesčte například Kč a EUR do falešného celku. Stejné skutečné měny se zobrazují také u jednotlivých dokladů na mobilu i desktopu.
+
+**Ověření:** frontendový `npm run lint`, produkční `npm run build`, `git diff --check` a vizuální kontrola aktualizované stránky uživatelského manuálu v generovaném PDF prošly bez chyby.
+
+**Kontrakty/dokumentace:** frontend pouze seskupuje serverové subtotal/DPH/total v aktuálním výběru; nevzniká nový účetní výpočet, endpoint ani klientský zdroj pravdy.
