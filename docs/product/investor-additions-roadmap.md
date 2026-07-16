@@ -889,3 +889,11 @@ Závislosti nebo další bezpečný krok:
 **Ověření:** frontendový `npm run lint` a produkční `npm run build` prošly bez chyby. Kompletní uživatelský manuál byl přegenerován do PDF a krok prvního přihlášení byl vizuálně ověřen bez ořezu nebo překryvu.
 
 **Kontrakty/dokumentace:** využívá se existující composable `useAres` a backendový ARES proxy endpoint; nevzniká nový backendový endpoint, nový model ani externí pověření. OAuth přihlášení, multi-company kontext, role/oprávnění, nativní Android/iOS a AI/MCP nejsou součástí tohoto řezu.
+
+### 2026-07-16 | Codex | INV-03 | přesný účetní export faktur a dobropisů | frontend commit `3b9950e`
+
+**Výsledek:** `Export pro účetní` nyní vybírá přesný výřez podle období, typu dokladu (faktura/dobropis), stavu a hledání podle odběratele, IČO, DIČ nebo čísla. Počet řádků u tlačítka odpovídá výsledku a CSV stahuje právě zobrazené doklady; samostatný ISDOC zůstává dostupný u konkrétní české faktury. To rozšiřuje hotový export, nikoli účetní pravidla nebo data dokladů.
+
+**Ověření:** frontendový `npm run lint`, produkční `npm run build` a `git diff --check` prošly bez chyby. Uživatelský manuál byl přegenerován do PDF a účetní kapitola byla vizuálně ověřena bez ořezu nebo překryvu.
+
+**Kontrakty/dokumentace:** filtry běží nad stávajícím autoritativním seznamem faktur a používají existující CSV/ISDOC renderer. Nevzniká endpoint, účetní výpočet, nový model, nový permission claim ani klientský zdroj pravdy.
