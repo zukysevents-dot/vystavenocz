@@ -935,3 +935,9 @@ Závislosti nebo další bezpečný krok:
 **Výsledek:** Podklad přesně odděluje současný orientační modulární ceník od ukázkového jednotného Pro tarifu v aplikaci. Definuje cílový serverový katalog plánů a entitlementů, společný zdroj pro web i appku, idempotentní payment event a napojení claim/referral benefitů.
 
 **Externí rozhodnutí:** konkrétní snížení nebo změna ceny vyžaduje schválit prodejní plány, ceny, DPH, limity a migraci. Bez něj se nic nepřecenilo ani nevydává za ostré placené předplatné.
+
+### 2026-07-16 | Codex | předání Standovi | `docs/backend/standa-nova-roadmapa.md`
+
+**Výsledek:** Nová roadmapa má samostatný backendový předávací seznam A–F: autorizační a multi-company kontrakt, Google/Apple web identity, CRM, billingový katalog, chráněné claim/referral kampaně a online úhradu klientské faktury. U každého bodu jsou výstupy, bezpečnostní hranice, akceptace a odkaz na detailní kontrakt.
+
+**Pořadí:** nejdřív scope více firem a autorita identity, potom samostatně realizovatelné CRM; billing/referral následuje až nad serverovým ledgerem a platby až po providerovém rozhodnutí. Role a oprávnění zůstávají výhradně Standovou implementací.

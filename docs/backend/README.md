@@ -7,6 +7,10 @@ nic neposílat přes chat, stačí `git pull`.
 Frontend je frontend-only MVP; datová vrstva teče jedním swap-pointem (`useApi` / `http`), takže
 jakmile endpoint existuje, FE se přepne bez dalšího zásahu.
 
+## Nová investorská roadmapa
+
+Začni souhrnem [`standa-nova-roadmapa.md`](./standa-nova-roadmapa.md). Obsahuje pořadí A–F, závislosti a odkazy na detailní kontrakty pro multi-company, OAuth, CRM, billing, referral a klientskou zónu.
+
 ## Pořadí (návrh — od nejlevnějšího a nejvíc odemykajícího)
 
 | #   | Úkol                                                         | Velikost | Co odemkne                                                      |
