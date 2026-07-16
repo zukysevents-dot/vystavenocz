@@ -30,6 +30,13 @@ export interface StocktakeDraft {
   phase: StocktakePhase
   blindCount: boolean
   updatedAt: string
+  // Vazba na serverový koncept je jen synchronizační metadata. Finální zápis stále používá
+  // idempotentní POST /inventory/stocktake, takže koncept nikdy nemění skladový ledger.
+  sharedDraft?: {
+    id: string
+    revision: number
+    syncBlocked?: boolean
+  }
 }
 
 export interface FinalStocktakeItem {

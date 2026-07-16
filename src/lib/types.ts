@@ -982,6 +982,27 @@ export interface Stocktake {
   idempotencyKey?: string | null
 }
 
+export type StocktakeDraftRangeKind = 'full' | 'partial' | 'cycle' | 'spot'
+
+export interface StocktakeDraftItem {
+  productId: string
+  expectedQuantity: number
+  firstCount: number | null
+  recountCount: number | null
+}
+
+export interface StocktakeDraft {
+  id: string
+  locationId: string | null
+  createdByUserId: string
+  rangeKind: StocktakeDraftRangeKind
+  note: string | null
+  revision: number
+  createdAt: string
+  updatedAt: string
+  items: StocktakeDraftItem[]
+}
+
 export interface PurchaseReceiptItem {
   productId: string
   productName: string

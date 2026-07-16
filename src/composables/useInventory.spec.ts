@@ -3,7 +3,7 @@ import { useInventory } from '@/composables/useInventory'
 import { http } from '@/lib/http'
 
 vi.mock('@/lib/http', () => ({
-  http: { get: vi.fn(), post: vi.fn() },
+  http: { get: vi.fn(), post: vi.fn(), put: vi.fn(), del: vi.fn() },
 }))
 
 beforeEach(() => {
@@ -11,6 +11,39 @@ beforeEach(() => {
 })
 
 describe('useInventory', () => {
+  it('sdílený koncept inventury posílá expected stav, průběh a umí jej odstranit', async () => {
+    vi.mocked(http.post).mockResolvedValue({} as never)
+    vi.mocked(http.put).mockResolvedValue({} as never)
+    vi.mocked(http.del).mockResolvedValue(undefined as never)
+    const inventory = useInventory()
+
+    await inventory.createStocktakeDraft({
+      locationId: 'loc-1',
+      rangeKind: 'cycle',
+      note: '  Regál A  ',
+      items: [{ productId: 'prod-1', expectedQuantity: 4 }],
+    })
+    await inventory.saveStocktakeDraftProgress('draft-1', {
+      revision: 3,
+      note: '  Regál A  ',
+      items: [{ productId: 'prod-1', firstCount: 3, recountCount: null }],
+    })
+    await inventory.deleteStocktakeDraft('draft-1')
+
+    expect(http.post).toHaveBeenCalledWith('/inventory/stocktake-drafts', {
+      locationId: 'loc-1',
+      rangeKind: 'cycle',
+      note: 'Regál A',
+      items: [{ productId: 'prod-1', expectedQuantity: 4 }],
+    })
+    expect(http.put).toHaveBeenCalledWith('/inventory/stocktake-drafts/draft-1/progress', {
+      revision: 3,
+      note: 'Regál A',
+      items: [{ productId: 'prod-1', firstCount: 3, recountCount: null }],
+    })
+    expect(http.del).toHaveBeenCalledWith('/inventory/stocktake-drafts/draft-1')
+  })
+
   it('movements načte všechny stránky a po dokončení ověří stabilní ledger', async () => {
     const firstPage = Array.from({ length: 100 }, (_, index) => ({
       id: `move-${String(102 - index).padStart(3, '0')}`,

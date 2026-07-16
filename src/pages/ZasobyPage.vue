@@ -22,6 +22,7 @@ import {
   Download,
   Printer,
   ChevronLeft,
+  ChevronRight,
   Trash2,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -85,6 +86,7 @@ import type {
   StockMirrorItem,
   StockMovementType,
   Stocktake,
+  StocktakeDraft as SharedStocktakeDraft,
 } from '@/lib/types'
 
 const { products, loadAll: loadProducts } = useProducts()
@@ -617,7 +619,17 @@ const stocktakeScanInput = ref<InstanceType<typeof Input> | null>(null)
 const stocktakeScannerOpen = ref(false)
 const stocktakeProtocolOpen = ref(false)
 const stocktakeProtocol = ref<Stocktake | null>(null)
+const sharedStocktakeDrafts = ref<SharedStocktakeDraft[]>([])
+const sharedStocktakeDraftsLoading = ref(false)
 let draftSaveWarned = false
+let sharedDraftSaveTimer: ReturnType<typeof setTimeout> | undefined
+let sharedDraftSaving = false
+let sharedDraftLastSignature = ''
+
+function cancelSharedDraftSave(): void {
+  if (sharedDraftSaveTimer) clearTimeout(sharedDraftSaveTimer)
+  sharedDraftSaveTimer = undefined
+}
 
 function currentStocktakeScope(): StocktakeDraftScope {
   return {
@@ -683,7 +695,66 @@ function toggleStocktakeProduct(productId: string): void {
   stocktakeSelectedProductIds.value = [...selected]
 }
 
-function beginStocktake(): void {
+function sharedDraftSignature(draft: StocktakeDraft): string {
+  return JSON.stringify({
+    note: draft.note,
+    items: draft.productIds.map((productId) => ({
+      productId,
+      firstCount: draft.firstCounts[productId] ?? null,
+      recountCount: draft.recountCounts[productId] ?? null,
+    })),
+  })
+}
+
+function toSharedDraftProgress(draft: StocktakeDraft) {
+  return {
+    revision: draft.sharedDraft!.revision,
+    note: draft.note,
+    items: draft.productIds.map((productId) => ({
+      productId,
+      firstCount: draft.firstCounts[productId] ?? null,
+      recountCount: draft.recountCounts[productId] ?? null,
+    })),
+  }
+}
+
+function localDraftFromShared(shared: SharedStocktakeDraft): StocktakeDraft {
+  const scope = currentStocktakeScope()
+  const range = shared.rangeKind as StocktakeRangeKind
+  const draft = createStocktakeDraft(
+    scope,
+    shared.items.map((item) => ({
+      productId: item.productId,
+      expectedQuantity: item.expectedQuantity,
+    })),
+    undefined,
+    new Date(shared.updatedAt),
+    { kind: range, label: stocktakeRangeLabel(range) },
+  )
+  draft.note = shared.note?.trim() || draft.range.label
+  draft.firstCounts = Object.fromEntries(shared.items.map((item) => [item.productId, item.firstCount]))
+  draft.recountCounts = Object.fromEntries(shared.items.map((item) => [item.productId, item.recountCount]))
+  draft.phase = shared.items.some((item) => item.recountCount !== null) ? 'recount' : 'first'
+  draft.sharedDraft = { id: shared.id, revision: shared.revision }
+  return draft
+}
+
+async function createSharedDraft(draft: StocktakeDraft): Promise<void> {
+  if (!apiMode) return
+  const shared = await inv.createStocktakeDraft({
+    locationId: draft.scope.locationId,
+    rangeKind: draft.range.kind,
+    note: draft.note,
+    items: draft.productIds.map((productId) => ({
+      productId,
+      expectedQuantity: draft.expectedQuantities[productId] ?? 0,
+    })),
+  })
+  draft.sharedDraft = { id: shared.id, revision: shared.revision }
+  sharedDraftLastSignature = sharedDraftSignature(draft)
+}
+
+async function beginStocktake(): Promise<void> {
   const productIds = stocktakeScopeProductIds.value
   if (!productIds.length) {
     toast.error('Vyberte alespoň jednu položku nebo kategorii pro inventuru.')
@@ -691,6 +762,12 @@ function beginStocktake(): void {
   }
   const draft = freshStocktakeDraft(currentStocktakeScope(), productIds, stocktakeRangeKind.value)
   if (draft.range.kind !== 'full') draft.note = draft.range.label
+  try {
+    await createSharedDraft(draft)
+  } catch (e) {
+    console.error(e)
+    toast.warning('Sdílený průběh se nepodařilo založit. Inventuru bezpečně ukládám na tomto zařízení.')
+  }
   stocktakeDraft.value = draft
   stocktakeSetupOpen.value = false
   stocktakeSearch.value = ''
@@ -699,7 +776,49 @@ function beginStocktake(): void {
   nextTick(focusStocktakeScan)
 }
 
-function openStocktake() {
+async function loadSharedStocktakeDrafts(): Promise<void> {
+  sharedStocktakeDrafts.value = []
+  if (!apiMode) return
+  sharedStocktakeDraftsLoading.value = true
+  try {
+    const response = await inv.stocktakeDrafts(actionLocationId.value)
+    const knownProductIds = new Set(products.value.map((product) => product.id))
+    sharedStocktakeDrafts.value = response.items.filter((draft) =>
+      draft.items.every((item) => knownProductIds.has(item.productId)),
+    )
+  } catch (e) {
+    console.error(e)
+    toast.warning('Sdílené rozpracované inventury se nepodařilo načíst.')
+  } finally {
+    sharedStocktakeDraftsLoading.value = false
+  }
+}
+
+async function continueSharedStocktake(id: string): Promise<void> {
+  try {
+    cancelSharedDraftSave()
+    const shared = await inv.getStocktakeDraft(id)
+    const knownProductIds = new Set(products.value.map((product) => product.id))
+    if (!shared.items.every((item) => knownProductIds.has(item.productId))) {
+      toast.error('Katalog se změnil. Tuto rozpracovanou inventuru už nelze bezpečně obnovit.')
+      return
+    }
+    const draft = localDraftFromShared(shared)
+    sharedDraftLastSignature = sharedDraftSignature(draft)
+    stocktakeDraft.value = draft
+    stocktakeSetupOpen.value = false
+    stocktakeSearch.value = ''
+    stocktakeScanEan.value = ''
+    stocktakeOpen.value = true
+    nextTick(focusStocktakeScan)
+    toast.info('Pokračujete ve sdílené inventuře ze serveru.')
+  } catch (e) {
+    console.error(e)
+    toast.error('Rozpracovanou inventuru se nepodařilo otevřít.')
+  }
+}
+
+async function openStocktake() {
   if (locations.value.length > 1 && stockLocationId.value === ALL_LOCATIONS) {
     toast.error('Inventuru spusťte pro konkrétní pobočku.')
     return
@@ -713,6 +832,7 @@ function openStocktake() {
   const knownProductIds = new Set(products.value.map((product) => product.id))
   if (restored?.productIds.every((productId) => knownProductIds.has(productId))) {
     stocktakeDraft.value = restored
+    sharedDraftLastSignature = sharedDraftSignature(restored)
     toast.info('Pokračujete v rozpracované inventuře z tohoto zařízení.')
     stocktakeOpen.value = true
     nextTick(focusStocktakeScan)
@@ -723,6 +843,7 @@ function openStocktake() {
     }
     stocktakeDraft.value = null
     resetStocktakeScope()
+    await loadSharedStocktakeDrafts()
     stocktakeSetupOpen.value = true
   }
 }
@@ -735,9 +856,47 @@ watch(
       draftSaveWarned = true
       toast.warning('Průběh inventury se na tomto zařízení nepodařilo uložit.')
     }
+    scheduleSharedDraftSave(draft)
   },
   { deep: true },
 )
+
+function scheduleSharedDraftSave(draft: StocktakeDraft): void {
+  if (!apiMode || !draft.sharedDraft || draft.sharedDraft.syncBlocked || sharedDraftSaving) return
+  const signature = sharedDraftSignature(draft)
+  if (signature === sharedDraftLastSignature) return
+  cancelSharedDraftSave()
+  sharedDraftSaveTimer = setTimeout(() => void saveSharedDraftProgress(), 500)
+}
+
+async function saveSharedDraftProgress(): Promise<void> {
+  const draft = stocktakeDraft.value
+  if (!draft?.sharedDraft || draft.sharedDraft.syncBlocked || sharedDraftSaving || busy.value) return
+  const signature = sharedDraftSignature(draft)
+  if (signature === sharedDraftLastSignature) return
+  sharedDraftSaving = true
+  try {
+    const shared = await inv.saveStocktakeDraftProgress(draft.sharedDraft.id, toSharedDraftProgress(draft))
+    draft.sharedDraft.revision = shared.revision
+    sharedDraftLastSignature = signature
+  } catch (e) {
+    console.error(e)
+    if (e instanceof ApiError && e.status === 409) {
+      draft.sharedDraft.syncBlocked = true
+      toast.error('Průběh se mezitím změnil na jiném zařízení. Nejdřív načtěte aktuální serverový stav.')
+    } else {
+      toast.warning('Serverový průběh se teď nepodařilo uložit. Zůstává bezpečně uložený na tomto zařízení.')
+    }
+  } finally {
+    sharedDraftSaving = false
+  }
+}
+
+async function refreshSharedStocktake(): Promise<void> {
+  const sharedId = stocktakeDraft.value?.sharedDraft?.id
+  if (!sharedId) return
+  await continueSharedStocktake(sharedId)
+}
 
 function normalizeDraftCount(value: string | number | null | undefined): number | null {
   if (value === '' || value === null || value === undefined) return null
@@ -889,8 +1048,22 @@ function returnToFirstCount(): void {
   nextTick(focusStocktakeScan)
 }
 
-function discardStocktake(): void {
+async function deleteSharedDraft(draft: StocktakeDraft): Promise<boolean> {
+  if (!apiMode || !draft.sharedDraft) return true
+  try {
+    await inv.deleteStocktakeDraft(draft.sharedDraft.id)
+    return true
+  } catch (e) {
+    console.error(e)
+    toast.error('Serverový průběh se nepodařilo odstranit. Zkuste akci znovu.')
+    return false
+  }
+}
+
+async function discardStocktake(): Promise<void> {
   const draft = stocktakeDraft.value
+  cancelSharedDraftSave()
+  if (draft && !(await deleteSharedDraft(draft))) return
   if (draft) removeStocktakeDraft(draft.scope)
   stocktakeDraft.value = null
   stocktakeOpen.value = false
@@ -900,9 +1073,14 @@ function discardStocktake(): void {
 async function submitStocktake() {
   const draft = stocktakeDraft.value
   if (!draft) return
+  if (draft.sharedDraft?.syncBlocked) {
+    toast.error('Nejdřív načtěte aktuální serverový průběh, aby se inventura neuzavřela se zastaralými počty.')
+    return
+  }
   const items: StocktakeItemInput[] | null = finalStocktakeItems(draft)
   if (!items || !recountComplete(draft))
     return toast.error('Dokončete první počítání i kontrolní přepočet rozdílů.')
+  cancelSharedDraftSave()
   busy.value = true
   let result: Stocktake | null = null
   try {
@@ -913,6 +1091,7 @@ async function submitStocktake() {
       draft.idempotencyKey,
     )
     if (isApprovalRequest(response)) {
+      await deleteSharedDraft(draft)
       removeStocktakeDraft(draft.scope)
       stocktakeDraft.value = null
       stocktakeOpen.value = false
@@ -920,6 +1099,7 @@ async function submitStocktake() {
       return
     }
     result = response
+    await deleteSharedDraft(draft)
     removeStocktakeDraft(draft.scope)
     stocktakeDraft.value = null
     stocktakeOpen.value = false
@@ -1840,6 +2020,34 @@ function printStocktakeProtocol(): void {
           </div>
         </div>
 
+        <div v-if="apiMode" class="space-y-2 rounded-xl border border-dashed border-border p-3">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <div class="text-sm font-medium">Pokračovat ve sdílené inventuře</div>
+              <p class="text-xs text-muted-foreground">Průběh založený na jiném zařízení této firmy.</p>
+            </div>
+            <Loader2 v-if="sharedStocktakeDraftsLoading" class="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+          <div v-if="sharedStocktakeDrafts.length" class="space-y-2">
+            <button
+              v-for="shared in sharedStocktakeDrafts"
+              :key="shared.id"
+              type="button"
+              class="flex w-full items-center justify-between gap-3 rounded-lg bg-muted/60 px-3 py-2 text-left text-sm hover:bg-muted"
+              @click="continueSharedStocktake(shared.id)"
+            >
+              <span>
+                <span class="block font-medium">{{ stocktakeRangeLabel(shared.rangeKind) }}</span>
+                <span class="block text-xs text-muted-foreground">{{ shared.items.length }} položek · naposledy {{ new Date(shared.updatedAt).toLocaleString('cs-CZ') }}</span>
+              </span>
+              <ChevronRight class="h-4 w-4 shrink-0" />
+            </button>
+          </div>
+          <p v-else-if="!sharedStocktakeDraftsLoading" class="text-xs text-muted-foreground">
+            Žádná kompatibilní rozpracovaná inventura na serveru není.
+          </p>
+        </div>
+
         <DialogFooter>
           <span class="mr-auto text-xs text-muted-foreground">
             Vybráno {{ stocktakeScopeProductIds.length }} položek
@@ -1863,8 +2071,7 @@ function printStocktakeProtocol(): void {
         <DialogHeader class="border-b border-border px-4 pb-4 pt-5 sm:px-6">
           <DialogTitle>Inventura</DialogTitle>
           <DialogDescription>
-            {{ stocktakeLocationLabel }} · průběh se automaticky ukládá na tomto zařízení. Sklad se
-            změní až po finálním potvrzení.
+            {{ stocktakeLocationLabel }} · průběh se automaticky ukládá na tomto zařízení<span v-if="stocktakeDraft?.sharedDraft"> i na serveru</span>. Sklad se změní až po finálním potvrzení.
           </DialogDescription>
         </DialogHeader>
 
@@ -1906,6 +2113,16 @@ function printStocktakeProtocol(): void {
                 @click="discardStocktake"
               >
                 <Trash2 class="h-4 w-4" /> Zahodit průběh
+              </Button>
+            </div>
+
+            <div
+              v-if="stocktakeDraft.sharedDraft?.syncBlocked"
+              class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm"
+            >
+              <span>Na jiném zařízení vznikla novější změna. Pro bezpečné dokončení načtěte její stav.</span>
+              <Button type="button" variant="outline" size="sm" @click="refreshSharedStocktake">
+                Načíst serverový stav
               </Button>
             </div>
 

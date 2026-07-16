@@ -19,6 +19,8 @@ import type {
   CreateStockReservationRequest,
   EnableLotTrackingResponse,
   Stocktake,
+  StocktakeDraft,
+  StocktakeDraftRangeKind,
   ProductionBatch,
 } from '@/lib/types'
 import type { PagedResult } from '@/composables/useApi'
@@ -26,6 +28,24 @@ import type { PagedResult } from '@/composables/useApi'
 export interface StocktakeItemInput {
   productId: string
   countedQuantity: number
+}
+
+export interface StocktakeDraftItemInput {
+  productId: string
+  expectedQuantity: number
+}
+
+export interface CreateStocktakeDraftRequest {
+  locationId?: string | null
+  rangeKind: StocktakeDraftRangeKind
+  note?: string | null
+  items: StocktakeDraftItemInput[]
+}
+
+export interface SaveStocktakeDraftProgressRequest {
+  revision: number
+  note?: string | null
+  items: Array<{ productId: string; firstCount: number | null; recountCount: number | null }>
 }
 
 export interface StockLevelQuery {
@@ -313,6 +333,33 @@ export function useInventory() {
       ...(idempotencyKey ? { idempotencyKey } : {}),
     })
   }
+  function stocktakeDrafts(locationId?: string | null): Promise<PagedResult<StocktakeDraft>> {
+    const params = new URLSearchParams({ pageSize: '100' })
+    if (locationId) params.set('locationId', locationId)
+    return http.get(`/inventory/stocktake-drafts?${params}`)
+  }
+  function getStocktakeDraft(id: string): Promise<StocktakeDraft> {
+    return http.get(`/inventory/stocktake-drafts/${id}`)
+  }
+  function createStocktakeDraft(request: CreateStocktakeDraftRequest): Promise<StocktakeDraft> {
+    return http.post('/inventory/stocktake-drafts', {
+      ...request,
+      locationId: request.locationId || null,
+      note: request.note?.trim() || null,
+    })
+  }
+  function saveStocktakeDraftProgress(
+    id: string,
+    request: SaveStocktakeDraftProgressRequest,
+  ): Promise<StocktakeDraft> {
+    return http.put(`/inventory/stocktake-drafts/${id}/progress`, {
+      ...request,
+      note: request.note?.trim() || null,
+    })
+  }
+  function deleteStocktakeDraft(id: string): Promise<void> {
+    return http.del(`/inventory/stocktake-drafts/${id}`)
+  }
   function stockMirror(query: StockMirrorQuery = {}): Promise<StockMirror> {
     const params = new URLSearchParams()
     if (query.from) params.set('from', query.from)
@@ -436,6 +483,11 @@ export function useInventory() {
     correct,
     transfer,
     stocktake,
+    stocktakeDrafts,
+    getStocktakeDraft,
+    createStocktakeDraft,
+    saveStocktakeDraftProgress,
+    deleteStocktakeDraft,
     stockMirror,
     stockValuation,
     allStockValuation,
