@@ -84,7 +84,13 @@ const vatModes: { value: VatMode; label: string }[] = [
   { value: 'non_payer', label: 'Neplátce DPH' },
 ]
 
-const moduleOptions: { id: AppModuleId; label: string; description: string; locked?: boolean }[] = [
+const moduleOptions: {
+  id: AppModuleId
+  label: string
+  description: string
+  pricingTarget?: string
+  locked?: boolean
+}[] = [
   {
     id: 'core',
     label: 'Jádro',
@@ -95,17 +101,44 @@ const moduleOptions: { id: AppModuleId; label: string; description: string; lock
     id: 'invoicing',
     label: 'Fakturace',
     description: 'Faktury, nabídky, DPH, cashflow a účetní výstupy.',
+    pricingTarget: 'invoicing',
   },
-  { id: 'pos', label: 'Pokladna', description: 'Prodej, platby, účtenky, uzávěrky a Z-reporty.' },
-  { id: 'gastro', label: 'Gastro', description: 'Restaurace, stoly, kuchyně a gastro provoz.' },
-  { id: 'stock', label: 'Sklad', description: 'Zásoby, naskladnění, inventury a skladové pohyby.' },
+  {
+    id: 'pos',
+    label: 'Pokladna',
+    description: 'Prodej, platby, účtenky, uzávěrky a Z-reporty.',
+    pricingTarget: 'pos',
+  },
+  {
+    id: 'gastro',
+    label: 'Gastro',
+    description: 'Restaurace, stoly, kuchyně a gastro provoz.',
+    pricingTarget: 'restaurant',
+  },
+  {
+    id: 'stock',
+    label: 'Sklad',
+    description: 'Zásoby, naskladnění, inventury a skladové pohyby.',
+    pricingTarget: 'inventory',
+  },
   {
     id: 'attendance',
     label: 'Docházka',
     description: 'Zaměstnanci, směny, příchody, odchody a pauzy.',
+    pricingTarget: 'attendance',
   },
-  { id: 'booking', label: 'Rezervace', description: 'Služby, zdroje a veřejné rezervace.' },
-  { id: 'jobs', label: 'Zakázky', description: 'Výjezdy, práce v terénu a zakázkový provoz.' },
+  {
+    id: 'booking',
+    label: 'Rezervace',
+    description: 'Služby, zdroje a veřejné rezervace.',
+    pricingTarget: 'booking',
+  },
+  {
+    id: 'jobs',
+    label: 'Zakázky',
+    description: 'Výjezdy, práce v terénu a zakázkový provoz.',
+    pricingTarget: 'jobs',
+  },
   {
     id: 'reporting',
     label: 'Reporty',
@@ -115,6 +148,7 @@ const moduleOptions: { id: AppModuleId; label: string; description: string; lock
     id: 'loyalty',
     label: 'Věrnost',
     description: 'Věrnostní programy, návraty zákazníků a marketing.',
+    pricingTarget: 'loyalty',
   },
   {
     id: 'ai',
@@ -973,6 +1007,14 @@ async function onSubmit(): Promise<void> {
             <span>
               <span class="block text-sm font-semibold">{{ module.label }}</span>
               <span class="mt-1 block text-xs text-muted-foreground">{{ module.description }}</span>
+              <RouterLink
+                v-if="module.pricingTarget"
+                :to="`/cenik#pricing-${module.pricingTarget}`"
+                class="mt-2 inline-block text-xs font-semibold text-coral underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                @click.stop
+              >
+                Zobrazit v ceníku
+              </RouterLink>
             </span>
           </label>
         </div>

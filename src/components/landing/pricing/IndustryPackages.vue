@@ -89,6 +89,7 @@ const isHighlighted = (key: string) => props.highlight.includes(key)
       <div
         v-for="a in visible"
         :key="a.key"
+        :id="`pricing-${a.key}`"
         class="flex flex-col rounded-2xl border bg-card p-5 transition-colors"
         :class="isHighlighted(a.key) ? 'border-coral/50 ring-1 ring-coral/30' : 'border-border'"
       >
