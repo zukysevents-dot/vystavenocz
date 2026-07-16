@@ -7,7 +7,7 @@ import { useInvoices } from '@/composables/useInvoices'
 import LoadError from '@/components/app/LoadError.vue'
 import { isApiMode } from '@/lib/http'
 import { toast } from '@/components/ui/sonner'
-import { formatCZK, formatDate } from '@/lib/invoice'
+import { formatDate } from '@/lib/invoice'
 import { downloadIsdoc, downloadInvoicesCsv, canExportIsdoc } from '@/lib/accounting-export'
 import type { Invoice, InvoiceStatus } from '@/lib/types'
 
@@ -61,6 +61,50 @@ const filtered = computed(() => {
     ].some((value) => value?.toLocaleLowerCase('cs-CZ').includes(query))
   })
 })
+
+const selectedInvoiceCount = computed(
+  () => filtered.value.filter((invoice) => invoice.documentType === 'invoice').length,
+)
+const selectedCreditNoteCount = computed(
+  () => filtered.value.filter((invoice) => invoice.documentType === 'credit_note').length,
+)
+
+// Částky už spočítal server. Tady je jen seskupujeme podle stejného výběru jako CSV — různé měny
+// se proto nikdy nesečtou do zavádějícího jednoho čísla.
+const exportStats = computed(() => {
+  const byCurrency = new Map<
+    string,
+    { currency: string; documentCount: number; subtotal: number; vatTotal: number; total: number }
+  >()
+  for (const invoice of filtered.value) {
+    const currency = invoice.currency || 'CZK'
+    const current = byCurrency.get(currency) ?? {
+      currency,
+      documentCount: 0,
+      subtotal: 0,
+      vatTotal: 0,
+      total: 0,
+    }
+    current.documentCount += 1
+    current.subtotal += invoice.subtotal
+    current.vatTotal += invoice.vatTotal
+    current.total += invoice.total
+    byCurrency.set(currency, current)
+  }
+  return [...byCurrency.values()].sort((a, b) => a.currency.localeCompare(b.currency, 'cs-CZ'))
+})
+
+function formatMoney(value: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat('cs-CZ', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 2,
+    }).format(value)
+  } catch {
+    return `${new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 2 }).format(value)} ${currency}`
+  }
+}
 
 function periodLabel(p: string): string {
   const [y, m] = p.split('-')
@@ -192,6 +236,36 @@ async function exportIsdoc(inv: Invoice) {
       </div>
     </div>
 
+    <div
+      v-if="!loading && exportStats.length"
+      class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+    >
+      <div class="rounded-xl border border-border bg-muted/30 p-4">
+        <div class="text-sm text-muted-foreground">Vybrané doklady</div>
+        <div class="mt-1 text-2xl font-bold tabular-nums">{{ filtered.length }}</div>
+        <div class="mt-1 text-xs text-muted-foreground">
+          Faktury {{ selectedInvoiceCount }} · Dobropisy {{ selectedCreditNoteCount }}
+        </div>
+      </div>
+      <div
+        v-for="stat in exportStats"
+        :key="stat.currency"
+        class="rounded-xl border border-border bg-card p-4"
+      >
+        <div class="flex items-center justify-between gap-2 text-sm text-muted-foreground">
+          <span>Celkem v {{ stat.currency }}</span>
+          <span>{{ stat.documentCount }} dokladů</span>
+        </div>
+        <div class="mt-1 text-xl font-bold tabular-nums">
+          {{ formatMoney(stat.total, stat.currency) }}
+        </div>
+        <div class="mt-1 text-xs text-muted-foreground">
+          Základ {{ formatMoney(stat.subtotal, stat.currency) }} · DPH
+          {{ formatMoney(stat.vatTotal, stat.currency) }}
+        </div>
+      </div>
+    </div>
+
     <div v-if="loading" class="mt-12 flex justify-center">
       <Loader2 class="h-6 w-6 animate-spin text-primary" />
     </div>
@@ -230,7 +304,7 @@ async function exportIsdoc(inv: Invoice) {
           </div>
           <div class="mt-3 flex items-center justify-between">
             <span class="text-sm text-muted-foreground">{{ formatDate(inv.issueDate) }}</span>
-            <span class="font-semibold">{{ formatCZK(inv.total) }}</span>
+            <span class="font-semibold">{{ formatMoney(inv.total, inv.currency) }}</span>
           </div>
           <div class="mt-3 flex justify-end border-t border-border pt-2">
             <Button
@@ -271,7 +345,9 @@ async function exportIsdoc(inv: Invoice) {
               <td class="px-4 py-3 font-medium">{{ inv.invoiceNumber || 'Koncept' }}</td>
               <td class="px-4 py-3 text-muted-foreground">{{ inv.clientSnapshot?.name || '—' }}</td>
               <td class="px-4 py-3 text-muted-foreground">{{ formatDate(inv.issueDate) }}</td>
-              <td class="px-4 py-3 text-right font-semibold">{{ formatCZK(inv.total) }}</td>
+              <td class="px-4 py-3 text-right font-semibold">
+                {{ formatMoney(inv.total, inv.currency) }}
+              </td>
               <td class="px-4 py-3 text-center">
                 <Badge :variant="statusMeta[inv.status].variant">
                   {{ statusMeta[inv.status].label }}
