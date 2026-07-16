@@ -79,6 +79,7 @@ test('mobilní inventura obnoví slepý sken, přepočítá rozdíl a odešle st
     if (method === 'GET' && path === '/company')
       return route.fulfill({ json: { id: 'c_e2e', name: 'E2E obchod', ico: '12345678' } })
     if (method === 'GET' && path === '/products') return route.fulfill({ json: paged(products) })
+    if (method === 'GET' && path === '/categories') return route.fulfill({ json: paged([], 100) })
     if (method === 'GET' && path === '/locations')
       return route.fulfill({ json: paged([location], 100) })
     if (method === 'GET' && path === '/inventory/stock-levels') {
@@ -131,6 +132,9 @@ test('mobilní inventura obnoví slepý sken, přepočítá rozdíl a odešle st
 
   await page.goto('/app/zasoby')
   await page.getByRole('button', { name: 'Inventura' }).click()
+  await expect(page.getByRole('heading', { name: 'Nová inventura' })).toBeVisible()
+  await expect(page.getByText('Vybráno 2 položek')).toBeVisible()
+  await page.getByRole('button', { name: 'Zahájit počítání' }).click()
   await expect(page.getByRole('heading', { name: 'Inventura' })).toBeVisible()
   await expect(page.getByText('Slepé počítání zapnuto')).toBeVisible()
   await expect(page.getByText('•••').first()).toBeVisible()

@@ -1,4 +1,10 @@
 export type StocktakePhase = 'first' | 'recount'
+export type StocktakeRangeKind = 'full' | 'partial' | 'cycle' | 'spot'
+
+export interface StocktakeRange {
+  kind: StocktakeRangeKind
+  label: string
+}
 
 export interface StocktakeDraftScope {
   companyId: string | null
@@ -15,6 +21,7 @@ export interface StocktakeDraft {
   version: 1
   idempotencyKey: string
   scope: StocktakeDraftScope
+  range: StocktakeRange
   productIds: string[]
   expectedQuantities: Record<string, number>
   firstCounts: Record<string, number | null>
@@ -32,6 +39,7 @@ export interface FinalStocktakeItem {
 
 const PREFIX = 'vystaveno:stocktake-draft:v1'
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
+const FULL_RANGE: StocktakeRange = { kind: 'full', label: 'Úplná inventura' }
 
 function scopePart(value: string | null): string {
   return encodeURIComponent(value || '_')
@@ -51,12 +59,14 @@ export function createStocktakeDraft(
   products: StocktakeDraftProduct[],
   idempotencyKey = crypto.randomUUID(),
   now = new Date(),
+  range: StocktakeRange = FULL_RANGE,
 ): StocktakeDraft {
   const productIds = products.map((product) => product.productId)
   return {
     version: 1,
     idempotencyKey,
     scope,
+    range,
     productIds,
     expectedQuantities: Object.fromEntries(
       products.map((product) => [product.productId, product.expectedQuantity]),
@@ -100,7 +110,12 @@ export function loadStocktakeDraft(
       localStorage.removeItem(key)
       return null
     }
-    return draft
+    return {
+      ...draft,
+      // Draft V1 před výběrem rozsahu znamenal úplnou inventuru. Zachováme jej, aby se
+      // už rozpracované počítání neztratilo jen kvůli rozšíření workflow.
+      range: validRange(draft.range) ? draft.range : FULL_RANGE,
+    }
   } catch {
     localStorage.removeItem(key)
     return null
@@ -183,5 +198,19 @@ function isStocktakeDraft(value: unknown): value is StocktakeDraft {
       validExpected(draft.expectedQuantities?.[productId]) &&
       (draft.firstCounts?.[productId] === null || validCount(draft.firstCounts?.[productId])) &&
       (draft.recountCounts?.[productId] === null || validCount(draft.recountCounts?.[productId])),
+  )
+}
+
+function validRange(value: unknown): value is StocktakeRange {
+  if (!value || typeof value !== 'object') return false
+  const range = value as Partial<StocktakeRange>
+  return (
+    (range.kind === 'full' ||
+      range.kind === 'partial' ||
+      range.kind === 'cycle' ||
+      range.kind === 'spot') &&
+    typeof range.label === 'string' &&
+    range.label.length > 0 &&
+    range.label.length <= 120
   )
 }
