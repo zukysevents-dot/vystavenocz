@@ -941,3 +941,11 @@ Závislosti nebo další bezpečný krok:
 **Výsledek:** Nová roadmapa má samostatný backendový předávací seznam A–F: autorizační a multi-company kontrakt, Google/Apple web identity, CRM, billingový katalog, chráněné claim/referral kampaně a online úhradu klientské faktury. U každého bodu jsou výstupy, bezpečnostní hranice, akceptace a odkaz na detailní kontrakt.
 
 **Pořadí:** nejdřív scope více firem a autorita identity, potom samostatně realizovatelné CRM; billing/referral následuje až nad serverovým ledgerem a platby až po providerovém rozhodnutí. Role a oprávnění zůstávají výhradně Standovou implementací.
+
+### 2026-07-16 | Codex | INV-01 | pevná mobilní akce v editoru faktury | frontend commit `0a4ca26`
+
+**Výsledek:** Editor faktury má na telefonu pevný spodní panel s aktuálním součtem a akcí `Uložit koncept`. Akce zůstává dostupná i při dlouhém seznamu položek, respektuje safe-area PWA a obsah má spodní odsazení, aby jej panel nezakryl. Desktopový tok zůstává se stejnou akcí v hlavičce.
+
+**Ověření:** frontendový `npm run lint`, produkční `npm run build`, `git diff --check` a vizuální kontrola aktualizované fakturační kapitoly uživatelského manuálu v PDF prošly bez chyby.
+
+**Další bezpečný krok:** automatické bezpečné obnovení rozepsaného, dosud neuloženého konceptu po refreshi je samostatný řez; nesmí vytvářet duplicitní doklady ani přepsat serverový koncept.
