@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Wallet, AlertTriangle, FileText, Mail, Loader2, Download } from 'lucide-vue-next'
+import { Wallet, AlertTriangle, FileText, Mail, Loader2, Download, Search } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { useInvoices } from '@/composables/useInvoices'
 import LoadError from '@/components/app/LoadError.vue'
 import { downloadCsv } from '@/lib/csv-export'
@@ -20,6 +21,7 @@ import type { Invoice } from '@/lib/types'
 
 const { invoices, loadError, load } = useInvoices()
 const loading = ref(true)
+const search = ref('')
 
 // Referenční „dnešek" — jednou při mountu, ať se výpočty během renderu neměmí.
 const today = new Date()
@@ -35,6 +37,18 @@ const outstanding = computed(() => buildOutstanding(invoices.value, today))
 const summary = computed(() => summarize(outstanding.value))
 const buckets = computed(() => agingBuckets(outstanding.value))
 const topDebtors = computed(() => debtors(outstanding.value))
+const filteredOutstanding = computed(() => {
+  const query = search.value.trim().toLocaleLowerCase('cs-CZ')
+  if (!query) return outstanding.value
+  return outstanding.value.filter((entry) =>
+    [
+      entry.invoice.invoiceNumber,
+      entry.invoice.clientSnapshot?.name,
+      entry.invoice.clientSnapshot?.email,
+    ].some((value) => value?.toLocaleLowerCase('cs-CZ').includes(query)),
+  )
+})
+const filteredDebtors = computed(() => debtors(filteredOutstanding.value))
 // Faktury v cizí měně se do CZK přehledu nesčítají — jen na ně upozorníme.
 const otherCurrency = computed(() => otherCurrencyCount(invoices.value))
 
@@ -46,7 +60,7 @@ function exportDebtors() {
   downloadCsv(
     'dluznici.csv',
     ['Klient', 'E-mail', 'Dlužná částka', 'Faktur', 'Dní po splatnosti'],
-    topDebtors.value.map((d) => [d.name, d.email ?? '', d.amount, d.count, d.maxDaysOverdue]),
+    filteredDebtors.value.map((d) => [d.name, d.email ?? '', d.amount, d.count, d.maxDaysOverdue]),
   )
 }
 </script>
@@ -60,8 +74,8 @@ function exportDebtors() {
           Kdo ti dluží, co je po splatnosti a komu připomenout.
         </p>
       </div>
-      <Button variant="outline" :disabled="!topDebtors.length" @click="exportDebtors">
-        <Download class="h-4 w-4" /> Export dlužníků
+      <Button variant="outline" :disabled="!filteredDebtors.length" @click="exportDebtors">
+        <Download class="h-4 w-4" /> Export dlužníků ({{ filteredDebtors.length }})
       </Button>
     </div>
 
@@ -138,11 +152,25 @@ function exportDebtors() {
 
       <!-- Otevřené faktury + připomenout -->
       <h2 class="mt-8 text-lg font-semibold">Otevřené faktury</h2>
+      <div class="relative mt-3 max-w-md">
+        <Search
+          class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+        />
+        <Input
+          v-model="search"
+          class="pl-9"
+          placeholder="Hledat klienta, e-mail nebo číslo faktury…"
+        />
+      </div>
+      <p v-if="search" class="mt-2 text-sm text-muted-foreground">
+        Zobrazeno {{ filteredOutstanding.length }} z {{ outstanding.length }} otevřených faktur.
+        Export odpovídá tomuto výběru.
+      </p>
 
       <!-- Mobil: karty -->
       <div class="mt-3 space-y-3 sm:hidden">
         <div
-          v-for="o in outstanding"
+          v-for="o in filteredOutstanding"
           :key="o.invoice.id"
           class="rounded-xl border border-border bg-card p-4"
         >
@@ -196,7 +224,7 @@ function exportDebtors() {
           </thead>
           <tbody>
             <tr
-              v-for="o in outstanding"
+              v-for="o in filteredOutstanding"
               :key="o.invoice.id"
               class="border-b border-border last:border-0 hover:bg-muted/30"
             >
@@ -233,7 +261,7 @@ function exportDebtors() {
       <h2 class="mt-8 text-lg font-semibold">Dlužníci</h2>
       <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div
-          v-for="d in topDebtors"
+          v-for="d in filteredDebtors"
           :key="d.name"
           class="rounded-xl border border-border bg-card p-4"
         >
