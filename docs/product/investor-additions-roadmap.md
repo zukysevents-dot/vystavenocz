@@ -857,3 +857,9 @@ Závislosti nebo další bezpečný krok:
 **Kontrakty/dokumentace:** využívá existující serverové `GET /api/v1/inventory/purchase-receipts` s parametry `from`, `to`, `search`, `sort` a `locationId`; nevzniká nový backendový endpoint ani účetní doménový model.
 
 **Závislosti nebo další bezpečný krok:** stejný vzor lze navázat na další existující datové sady vyžadované `INV-03` (produkty, klienti, POS doklady a Z-reporty), vždy jako samostatný ověřený řez nad autoritativním API.
+
+### 2026-07-16 | Codex | INV-14 | Viva Payments research a go/no-go | `docs/product/viva-payments-research.md`
+
+**Výsledek:** Vznikl aktuálně zdrojovaný rozhodovací podklad. Viva je vhodná pro technický discovery a případný první adapter hostovaného Smart Checkout pro platbu jednotlivé faktury nebo objednávky, nikoli zatím pro ostré platby ani marketplace/split-funds model. Podklad pokrývá ČR/CZK, ceník, onboarding/KYC, OAuth/demo, webhookové potvrzení, refund, terminál/SoftPOS a PCI hranici.
+
+**Rozhodnutí:** pokračovat může pouze serverový spike s provider-neutral vaultem, hostovaným checkoutem a idempotentním webhookem. Ostré spuštění čeká na obchodní podmínky pro český partner/ISV model, ověřený onboarding obchodníka, právní audit, test skutečné platby, zamítnutí, refundu a duplicitního webhooku.
