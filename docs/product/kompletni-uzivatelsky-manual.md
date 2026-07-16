@@ -543,6 +543,8 @@ U klienta evidujte název, IČO, adresu, kontakt, platební podmínky a poznámk
 6. Vystavte doklad až po kontrole.
 7. Stáhněte PDF nebo účetní formát.
 
+Na telefonu zůstává součet a akce Uložit koncept dole na obrazovce i při dlouhém seznamu položek. Koncept uložte před návratem nebo odesláním.
+
 Odeslání e-mailem není v každém prostředí aktivní. Pokud aplikace uvádí, že odeslání není dostupné, stáhněte PDF a odešlete je ze svého e-mailu.
 
 ### 12.4 Proforma, dobropis a opakování

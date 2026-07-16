@@ -447,7 +447,7 @@ async function onCancel() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-4xl p-4 sm:p-6 md:p-8">
+  <div class="mx-auto max-w-4xl p-4 pb-24 sm:p-6 md:p-8">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-3">
         <Button variant="ghost" size="icon" title="Zpět" @click="router.push('/app/faktury')">
@@ -505,7 +505,12 @@ async function onCancel() {
           <CheckCircle2 class="h-4 w-4 text-success" />
           <span class="hidden sm:inline">Uhrazeno</span>
         </Button>
-        <Button variant="coral" :disabled="saving || loading" @click="onSave">
+        <Button
+          class="hidden sm:inline-flex"
+          variant="coral"
+          :disabled="saving || loading"
+          @click="onSave"
+        >
           <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
           <Save v-else class="h-4 w-4" />
           Uložit koncept
@@ -739,6 +744,23 @@ async function onCancel() {
           :variable-symbol="variableSymbol"
           :payment-method="paymentMethod"
         />
+      </div>
+    </div>
+
+    <div
+      v-if="!loading"
+      class="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur sm:hidden"
+    >
+      <div class="mx-auto flex max-w-4xl items-center justify-between gap-3">
+        <div class="min-w-0">
+          <div class="text-xs text-muted-foreground">Celkem k úhradě</div>
+          <div class="truncate text-lg font-bold text-primary">{{ formatCZK(totals.total) }}</div>
+        </div>
+        <Button variant="coral" :disabled="saving" @click="onSave">
+          <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
+          <Save v-else class="h-4 w-4" />
+          Uložit koncept
+        </Button>
       </div>
     </div>
 
