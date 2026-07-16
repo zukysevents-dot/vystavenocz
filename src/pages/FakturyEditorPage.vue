@@ -87,6 +87,8 @@ const showPreview = ref(true)
 const downloadingPdf = ref(false)
 const sendOpen = ref(false)
 const paywallOpen = ref(false)
+const localDraftAvailable = ref(false)
+const localDraftSavingEnabled = ref(false)
 // Skrytý off-screen render dokumentu pro zachycení do PDF.
 const pdfDocEl = ref<HTMLElement | null>(null)
 
@@ -131,6 +133,101 @@ function newItem(): ItemDraft {
 }
 
 const items = ref<ItemDraft[]>([newItem()])
+
+type LocalInvoiceDraft = {
+  documentType: DocumentType
+  selectedClientId: string
+  adHocClient: ClientSnapshot | null
+  invoiceNumber: string
+  issueDate: string
+  dueDate: string
+  variableSymbol: string
+  paymentMethod: string
+  items: ItemDraft[]
+}
+
+function localDraftKey(): string {
+  return `vystaveno.invoice-editor-draft.v1:${companyStore.company?.id ?? 'unknown'}`
+}
+
+function clearLocalDraft(): void {
+  try {
+    localStorage.removeItem(localDraftKey())
+  } catch {
+    /* soukromý režim nebo zakázané úložiště — editor funguje bez obnovy */
+  }
+  localDraftAvailable.value = false
+}
+
+function saveLocalDraft(): void {
+  if (!localDraftSavingEnabled.value || editingId.value) return
+  const meaningful =
+    selectedClientId.value ||
+    adHocClient.value?.name ||
+    items.value.some(
+      (item) => item.description.trim() || Number(item.unitPrice) || Number(item.quantity) !== 1,
+    )
+  if (!meaningful) return
+  const draft: LocalInvoiceDraft = {
+    documentType: documentType.value,
+    selectedClientId: selectedClientId.value,
+    adHocClient: adHocClient.value,
+    invoiceNumber: invoiceNumber.value,
+    issueDate: issueDate.value,
+    dueDate: dueDate.value,
+    variableSymbol: variableSymbol.value,
+    paymentMethod: paymentMethod.value,
+    items: items.value,
+  }
+  try {
+    localStorage.setItem(localDraftKey(), JSON.stringify(draft))
+  } catch {
+    /* plné nebo nedostupné úložiště nesmí blokovat práci s fakturou */
+  }
+}
+
+function loadLocalDraft(): LocalInvoiceDraft | null {
+  try {
+    const raw = localStorage.getItem(localDraftKey())
+    if (!raw) return null
+    const draft = JSON.parse(raw) as Partial<LocalInvoiceDraft>
+    if (!Array.isArray(draft.items) || !draft.items.length) return null
+    return {
+      documentType: draft.documentType === 'proforma' ? 'proforma' : 'invoice',
+      selectedClientId: typeof draft.selectedClientId === 'string' ? draft.selectedClientId : '',
+      adHocClient: draft.adHocClient?.name ? draft.adHocClient : null,
+      invoiceNumber: typeof draft.invoiceNumber === 'string' ? draft.invoiceNumber : '',
+      issueDate: typeof draft.issueDate === 'string' ? draft.issueDate : todayISO(),
+      dueDate: typeof draft.dueDate === 'string' ? draft.dueDate : addDaysISO(14),
+      variableSymbol: typeof draft.variableSymbol === 'string' ? draft.variableSymbol : '',
+      paymentMethod:
+        typeof draft.paymentMethod === 'string' ? draft.paymentMethod : 'bank_transfer',
+      items: draft.items.map((item) => ({
+        ...newItem(),
+        ...item,
+        id: item.id || crypto.randomUUID(),
+      })),
+    }
+  } catch {
+    return null
+  }
+}
+
+function restoreLocalDraft(): void {
+  const draft = loadLocalDraft()
+  if (!draft) return clearLocalDraft()
+  documentType.value = draft.documentType
+  selectedClientId.value = draft.selectedClientId
+  adHocClient.value = draft.adHocClient
+  invoiceNumber.value = draft.invoiceNumber
+  issueDate.value = draft.issueDate
+  dueDate.value = draft.dueDate
+  variableSymbol.value = draft.variableSymbol
+  paymentMethod.value = draft.paymentMethod
+  items.value = draft.items
+  localDraftAvailable.value = false
+  toast.success('Rozepsaný koncept obnoven.')
+}
 
 // Číselné inputy můžou být dočasně prázdné — pro výpočty je sjednotíme na čísla.
 function num(n: number): number {
@@ -224,10 +321,28 @@ onMounted(async () => {
     if (clientIdQ) selectedClientId.value = clientIdQ
     // Nová faktura bez aktivního tarifu — paywall hned při otevření (i přímou URL).
     if (!hasAccess.value) paywallOpen.value = true
+    localDraftAvailable.value = Boolean(loadLocalDraft())
   }
 
   loading.value = false
+  localDraftSavingEnabled.value = true
 })
+
+watch(
+  [
+    documentType,
+    selectedClientId,
+    adHocClient,
+    invoiceNumber,
+    issueDate,
+    dueDate,
+    variableSymbol,
+    paymentMethod,
+    items,
+  ],
+  saveLocalDraft,
+  { deep: true },
+)
 
 // Změna klienta ze seznamu: zruš ad-hoc odběratele a u nové faktury dotáhni splatnost.
 watch(selectedClientId, (id) => {
@@ -375,6 +490,7 @@ async function onSave() {
   saving.value = true
   try {
     await persist()
+    clearLocalDraft()
     toast.success('Koncept uložen.')
   } catch (e) {
     if (e instanceof DuplicateInvoiceNumberError) {
@@ -421,9 +537,11 @@ async function onMarkPaid() {
     // Uhradit lze jen vystavenou — koncept nejdřív ulož a vystav (přidělí číslo).
     if (status.value === 'draft') {
       await persist()
+      clearLocalDraft()
       syncFromSaved(await issue(editingId.value))
     }
     syncFromSaved(await pay(editingId.value))
+    clearLocalDraft()
     toast.success('Faktura označena jako uhrazená.')
   } catch (e) {
     handleLifecycleError(e, 'Uhradit lze jen vystavenou fakturu.')
@@ -523,6 +641,20 @@ async function onCancel() {
     </div>
 
     <div v-else class="mt-6 space-y-6">
+      <div
+        v-if="localDraftAvailable && !editingId"
+        class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-mint/30 bg-mint/10 p-4"
+      >
+        <div class="text-sm">
+          <div class="font-semibold">Máte rozepsaný koncept</div>
+          <div class="text-muted-foreground">Obnovte ho, nebo jej bezpečně zahoďte.</div>
+        </div>
+        <div class="flex gap-2">
+          <Button size="sm" variant="outline" @click="clearLocalDraft">Zahodit</Button>
+          <Button size="sm" variant="coral" @click="restoreLocalDraft">Obnovit koncept</Button>
+        </div>
+      </div>
+
       <!-- Odběratel -->
       <div class="rounded-xl border border-border bg-card p-6">
         <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">

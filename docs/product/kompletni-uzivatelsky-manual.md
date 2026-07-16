@@ -545,6 +545,8 @@ U klienta evidujte název, IČO, adresu, kontakt, platební podmínky a poznámk
 
 Na telefonu zůstává součet a akce Uložit koncept dole na obrazovce i při dlouhém seznamu položek. Koncept uložte před návratem nebo odesláním.
 
+Pokud nový dosud neuložený doklad obnovíte v tomtéž prohlížeči, nabídne se rozepsaný koncept k výslovnému obnovení nebo zahození. Obnova sama nevytváří fakturu; vytvoří se až akcí Uložit koncept.
+
 Odeslání e-mailem není v každém prostředí aktivní. Pokud aplikace uvádí, že odeslání není dostupné, stáhněte PDF a odešlete je ze svého e-mailu.
 
 ### 12.4 Proforma, dobropis a opakování
