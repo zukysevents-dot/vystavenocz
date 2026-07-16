@@ -869,3 +869,9 @@ Závislosti nebo další bezpečný krok:
 **Výsledek:** Vznikla rozhodovací matice, která odděluje zákonné povinnosti od smluvních očekávání a dobrovolných certifikací. Prioritou je GDPR/security/retention základ a průkazný provoz, ne nákup obecného certifikátu. Podpisy jsou rozdělené podle jejich právního významu, platební PCI scope podle hostovaného checkoutu a ochranná známka má jasný veřejný nákladový orientační bod.
 
 **Rozhodnutí:** ISO 27001 ani kvalifikovaný podpis nejsou univerzální blokátor. Spustit se má GDPR/DPA a retention gap audit; Viva a podpisy pokračují až s konkrétním obchodním/provider rozhodnutím. TCO se schvaluje z nabídek podle vzorce zavedení + provoz + audit + objemové poplatky, ne odhadem bez rozsahu.
+
+### 2026-07-16 | Codex | INV-13 | konkurenční gap analýza | `docs/product/competitive-gap-analysis.md`
+
+**Výsledek:** Analýza veřejně ověřila hodnotové benchmarky iDokladu, KiloMayo a ePML a mapuje je na skutečný stav Vystaveno. Doporučuje nezdvojovat hotovou fakturaci, nabídky, sklad, POS ani provozní moduly; soustředit se na jednoduchý start, jednotný ceník, multi-company kontext, přesný export se statistikou a následný chráněný partnerský růst.
+
+**Rozhodnutí:** Vystaveno staví obecný základ pro živnostníky a volitelné oborové moduly. Kompletní sklad je produktová síla, ale regulovaný PML režim zůstává oddělený až do právního rozhodnutí. Nativní aplikace a AI nejsou součástí tohoto backlogu.
