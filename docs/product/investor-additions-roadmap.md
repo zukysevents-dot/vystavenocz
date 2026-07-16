@@ -837,3 +837,23 @@ Závislosti nebo další bezpečný krok:
 **Kontrakty/dokumentace:** `POST /api/v1/inventory/stocktake` přijímá volitelný UUID `idempotencyKey`, odpověď ho vrací a aditivní migrace `AddStocktakeIdempotency` přidává tenantový unikátní index a SHA-256 fingerprint normalizovaného požadavku. Transakční PostgreSQL advisory lock serializuje souběžné retry. Lokální draft V1 expiruje za sedm dní, při neplatném obsahu nebo změně katalogu se zahodí fail-closed a maže se až po 201/202 nebo výslovném zahození. Nejde o serverovou ani mezizařízení synchronizaci. Synchronizovány oba repozitářové kontexty pro Codex/Claude, shodný backendový kontrakt, nápověda, uživatelské návody, interní test, deploy smoke a verzované PDF. Backendová větev `feat/inv-16-mobile-stocktake-scanner` je pushnutá; draft PR zatím nelze založit, protože GitHub aplikace nemá k backend repozitáři přístup a místní `gh` token vyžaduje obnovení.
 
 **Závislosti nebo další bezpečný krok:** `INV-16` zůstává otevřený pro serverově uloženou inventurní relaci napříč zařízeními, částečnou/cyklickou/namátkovou inventuru podle skladu, kategorie a produktů a pro hlubší skladové reporty. Nejbližší bezpečný řez má rozšířit inventurní relaci a výběr rozsahu nad stejný stocktake a ledger, nikoli vytvořit paralelní skladový stav. Role a oprávnění řeší Standa; nativní Android/iOS a AI/MCP zůstávají mimo tuto roadmapu.
+
+### 2026-07-16 | Codex | INV-16 | sdílená mobilní inventura a rozsahy | frontend commit `927b5f9` / backend commits `7534e13`, `8eaac60`
+
+**Výsledek:** Inventura nyní podporuje úplný, částečný, cyklický a namátkový rozsah. Rozpracovaný koncept se v API režimu ukládá tenantově na server vedle lokální offline zálohy, takže jej lze bezpečně otevřít na jiném zařízení. Serverový koncept je pouze synchronizační vrstva: nikdy nemění sklad ani ledger. Každé uložení průběhu nese revision; souběžná změna z jiného zařízení vrátí konflikt, klient zastaví finální uzavření a nabídne načíst aktuální serverový stav. Dokončení nebo výslovné zahození koncept odstraní; finální zápis stále probíhá jen atomickým idempotentním `POST /inventory/stocktake`.
+
+**Ověření:** frontend `npm run lint`, produkční build a 33 cílených unit testů; backend `dotnet format --verify-no-changes` a cílené PostgreSQL integrační testy `StocktakeTests` v Dockeru. Nový test potvrzuje, že odstranění serverového konceptu nemění fyzický stav zásoby.
+
+**Kontrakty/dokumentace:** přidány tenantově a pobočkově scoped endpointy `GET/POST /api/v1/inventory/stocktake-drafts`, detail, revision-protected `PUT .../progress` a `DELETE`. Používají stávající `inventory.read/manage`, nevzniká nový permission model. Kontext v modulární roadmapě a interním test manuálu byl doplněn aditivně.
+
+**Závislosti nebo další bezpečný krok:** draft PR nelze dosud založit, protože místní GitHub CLI token je neplatný; lokální commity jsou připravené. Další práce může pokračovat ve skladových reportech nebo dalším konkrétním datovém řezu `INV-03`; multi-company kontext, role/oprávnění, nativní Android/iOS a AI/MCP zůstávají mimo tento řez.
+
+### 2026-07-16 | Codex | INV-03 | přesný export nákupních příjemek | frontend pracovní větev `feat/inv-16-shared-stocktake-ui`
+
+**Výsledek:** `Naskladnění` dostává mobilní export existujících nákupních příjemek podle data od/do, dodavatele nebo čísla dokladu a aktuálně vybrané pobočky. CSV obsahuje každý řádek dokladu: dodavatele, doklad, produkt, SKU, množství, jednotkovou i řádkovou cenu, šarži, expiraci a poznámku. Export načítá všechny stránky a před stažením ověří nezměněný počet řádků, takže při souběžné změně raději selže než aby tiše vynechal doklad. Uživatelský text je chráněn před formula injection.
+
+**Ověření:** frontend `npm run lint`, produkční build a 34 cílených unit testů composable; test pokrývá stránkování 101 příjemek, přesné query parametry a ověřovací první stránku.
+
+**Kontrakty/dokumentace:** využívá existující serverové `GET /api/v1/inventory/purchase-receipts` s parametry `from`, `to`, `search`, `sort` a `locationId`; nevzniká nový backendový endpoint ani účetní doménový model.
+
+**Závislosti nebo další bezpečný krok:** stejný vzor lze navázat na další existující datové sady vyžadované `INV-03` (produkty, klienti, POS doklady a Z-reporty), vždy jako samostatný ověřený řez nad autoritativním API.
