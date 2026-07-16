@@ -52,6 +52,16 @@ export interface StockLevelQuery {
   locationId?: string | null
 }
 
+export interface PurchaseReceiptQuery {
+  from?: string | null
+  to?: string | null
+  search?: string
+  sort?: string
+  locationId?: string | null
+  page?: number
+  pageSize?: number
+}
+
 export interface StockLotQuery {
   productId?: string | null
   locationId?: string | null
@@ -261,12 +271,42 @@ export function useInventory() {
       expiresOn: expiresOn || null,
     })
   }
-  function purchaseReceipts(query: StockLevelQuery = {}): Promise<PurchaseReceipt[]> {
-    const params = new URLSearchParams({ pageSize: '50' })
+  function purchaseReceiptPage(
+    query: PurchaseReceiptQuery = {},
+  ): Promise<PagedResult<PurchaseReceipt>> {
+    const params = new URLSearchParams({
+      page: String(query.page ?? 1),
+      pageSize: String(query.pageSize ?? 50),
+      sort: query.sort ?? '-receivedOn',
+    })
+    if (query.from) params.set('from', query.from)
+    if (query.to) params.set('to', query.to)
+    if (query.search?.trim()) params.set('search', query.search.trim())
     if (query.locationId) params.set('locationId', query.locationId)
-    return http
-      .get<PagedResult<PurchaseReceipt>>(`/inventory/purchase-receipts?${params}`)
-      .then((r) => r.items)
+    return http.get(`/inventory/purchase-receipts?${params}`)
+  }
+  function purchaseReceipts(query: PurchaseReceiptQuery = {}): Promise<PurchaseReceipt[]> {
+    return purchaseReceiptPage(query).then((response) => response.items)
+  }
+  async function allPurchaseReceipts(
+    query: Omit<PurchaseReceiptQuery, 'page' | 'pageSize'> = {},
+  ): Promise<PurchaseReceipt[]> {
+    const first = await purchaseReceiptPage({ ...query, page: 1, pageSize: 100 })
+    const expectedTotal = first.total
+    const rows = new Map(first.items.map((receipt) => [receipt.id, receipt]))
+    const totalPages = Math.ceil(expectedTotal / 100)
+
+    for (let page = 2; page <= totalPages; page += 1) {
+      const next = await purchaseReceiptPage({ ...query, page, pageSize: 100 })
+      if (next.total !== expectedTotal)
+        throw new Error('Příjemky se během exportu změnily. Načtěte výběr znovu.')
+      for (const receipt of next.items) rows.set(receipt.id, receipt)
+    }
+
+    const verification = await purchaseReceiptPage({ ...query, page: 1, pageSize: 100 })
+    if (verification.total !== expectedTotal || rows.size !== expectedTotal)
+      throw new Error('Příjemky se během exportu změnily. Načtěte výběr znovu.')
+    return [...rows.values()]
   }
   function createPurchaseReceipt(request: CreatePurchaseReceiptRequest): Promise<PurchaseReceipt> {
     return http.post('/inventory/purchase-receipts', request)
@@ -478,6 +518,8 @@ export function useInventory() {
     fulfillStockReservation,
     receive,
     purchaseReceipts,
+    purchaseReceiptPage,
+    allPurchaseReceipts,
     createPurchaseReceipt,
     issue,
     correct,
