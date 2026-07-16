@@ -45,6 +45,7 @@ import {
 import { useProducts } from '@/composables/useProducts'
 import { useInventory, type StocktakeItemInput } from '@/composables/useInventory'
 import { useLocations } from '@/composables/useLocations'
+import { useCategories } from '@/composables/useCategories'
 import { isApiMode, ApiError } from '@/lib/http'
 import { isApprovalRequest } from '@/lib/types'
 import { toast } from '@/components/ui/sonner'
@@ -66,9 +67,16 @@ import {
   removeStocktakeDraft,
   saveStocktakeDraft,
   type StocktakeDraft,
+  type StocktakeRangeKind,
   type StocktakeDraftScope,
 } from '@/lib/stocktake-draft'
+import {
+  resolveStocktakeScopeProductIds,
+  stocktakeRangeDescription,
+  stocktakeRangeLabel,
+} from '@/lib/stocktake-scope'
 import type {
+  Category,
   StockLot,
   StockLevel,
   StockByLocationResponse,
@@ -81,6 +89,7 @@ import type {
 
 const { products, loadAll: loadProducts } = useProducts()
 const { locations, loadAll: loadLocations } = useLocations()
+const categoriesApi = useCategories()
 const inv = useInventory()
 const auth = useAuthStore()
 const apiMode = isApiMode()
@@ -297,7 +306,7 @@ onMounted(async () => {
     return
   }
   try {
-    await Promise.all([loadProducts(), loadLocations()])
+    await Promise.all([loadProducts(), loadLocations(), loadStocktakeCategories()])
     await loadLevels()
   } catch (e) {
     console.error(e)
@@ -305,6 +314,15 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+async function loadStocktakeCategories(): Promise<void> {
+  try {
+    stocktakeCategories.value = await categoriesApi.list()
+  } catch (e) {
+    // Kategorie jsou pouze pomůcka pro rychlý výběr. Inventuru lze vždy spustit položkami.
+    console.error(e)
+  }
+}
 
 async function loadMirror() {
   mirrorLoading.value = true
@@ -586,8 +604,14 @@ async function submitTransfer() {
 
 // --- Inventura ---
 const stocktakeOpen = ref(false)
+const stocktakeSetupOpen = ref(false)
 const stocktakeSearch = ref('')
+const stocktakeScopeSearch = ref('')
 const stocktakeDraft = ref<StocktakeDraft | null>(null)
+const stocktakeRangeKind = ref<StocktakeRangeKind>('full')
+const stocktakeSelectedCategoryIds = ref<string[]>([])
+const stocktakeSelectedProductIds = ref<string[]>([])
+const stocktakeCategories = ref<Category[]>([])
 const stocktakeScanEan = ref('')
 const stocktakeScanInput = ref<InstanceType<typeof Input> | null>(null)
 const stocktakeScannerOpen = ref(false)
@@ -603,14 +627,76 @@ function currentStocktakeScope(): StocktakeDraftScope {
   }
 }
 
-function freshStocktakeDraft(scope: StocktakeDraftScope): StocktakeDraft {
+function freshStocktakeDraft(
+  scope: StocktakeDraftScope,
+  productIds: string[],
+  range: StocktakeRangeKind,
+): StocktakeDraft {
   return createStocktakeDraft(
     scope,
-    products.value.map((product) => ({
+    products.value.filter((product) => productIds.includes(product.id)).map((product) => ({
       productId: product.id,
       expectedQuantity: levelMap.value.get(product.id)?.quantity ?? 0,
     })),
+    undefined,
+    undefined,
+    { kind: range, label: stocktakeRangeLabel(range) },
   )
+}
+
+const stocktakeScopeProductIds = computed(() =>
+  resolveStocktakeScopeProductIds(
+    products.value,
+    stocktakeRangeKind.value,
+    stocktakeSelectedCategoryIds.value,
+    stocktakeSelectedProductIds.value,
+  ),
+)
+const stocktakeScopeProducts = computed(() => {
+  const needle = stocktakeScopeSearch.value.trim().toLocaleLowerCase('cs-CZ')
+  if (!needle) return products.value
+  return products.value.filter((product) =>
+    [product.name, product.sku, product.ean ?? ''].some((value) =>
+      value.toLocaleLowerCase('cs-CZ').includes(needle),
+    ),
+  )
+})
+
+function resetStocktakeScope(): void {
+  stocktakeRangeKind.value = 'full'
+  stocktakeSelectedCategoryIds.value = []
+  stocktakeSelectedProductIds.value = []
+  stocktakeScopeSearch.value = ''
+}
+
+function toggleStocktakeCategory(categoryId: string): void {
+  const selected = new Set(stocktakeSelectedCategoryIds.value)
+  if (selected.has(categoryId)) selected.delete(categoryId)
+  else selected.add(categoryId)
+  stocktakeSelectedCategoryIds.value = [...selected]
+}
+
+function toggleStocktakeProduct(productId: string): void {
+  const selected = new Set(stocktakeSelectedProductIds.value)
+  if (selected.has(productId)) selected.delete(productId)
+  else selected.add(productId)
+  stocktakeSelectedProductIds.value = [...selected]
+}
+
+function beginStocktake(): void {
+  const productIds = stocktakeScopeProductIds.value
+  if (!productIds.length) {
+    toast.error('Vyberte alespoň jednu položku nebo kategorii pro inventuru.')
+    return
+  }
+  const draft = freshStocktakeDraft(currentStocktakeScope(), productIds, stocktakeRangeKind.value)
+  if (draft.range.kind !== 'full') draft.note = draft.range.label
+  stocktakeDraft.value = draft
+  stocktakeSetupOpen.value = false
+  stocktakeSearch.value = ''
+  stocktakeScanEan.value = ''
+  stocktakeOpen.value = true
+  nextTick(focusStocktakeScan)
 }
 
 function openStocktake() {
@@ -628,17 +714,17 @@ function openStocktake() {
   if (restored?.productIds.every((productId) => knownProductIds.has(productId))) {
     stocktakeDraft.value = restored
     toast.info('Pokračujete v rozpracované inventuře z tohoto zařízení.')
+    stocktakeOpen.value = true
+    nextTick(focusStocktakeScan)
   } else {
     if (restored) {
       removeStocktakeDraft(scope)
       toast.warning('Katalog se změnil. Rozpracovaná inventura byla bezpečně zahozena.')
     }
-    stocktakeDraft.value = freshStocktakeDraft(scope)
+    stocktakeDraft.value = null
+    resetStocktakeScope()
+    stocktakeSetupOpen.value = true
   }
-  stocktakeSearch.value = ''
-  stocktakeScanEan.value = ''
-  stocktakeOpen.value = true
-  nextTick(focusStocktakeScan)
 }
 
 watch(
@@ -1658,6 +1744,119 @@ function printStocktakeProtocol(): void {
       </DialogContent>
     </Dialog>
 
+    <!-- Výběr rozsahu inventury -->
+    <Dialog v-model:open="stocktakeSetupOpen">
+      <DialogContent class="max-h-[92dvh] max-w-2xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Nová inventura</DialogTitle>
+          <DialogDescription>
+            {{ stocktakeLocationLabel }} · vyberte, co dnes skutečně počítáte. Sklad se změní až po
+            dokončení a potvrzení inventury.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="grid gap-2 sm:grid-cols-2">
+          <button
+            v-for="range in (['full', 'partial', 'cycle', 'spot'] as StocktakeRangeKind[])"
+            :key="range"
+            type="button"
+            class="rounded-xl border p-3 text-left transition-colors"
+            :class="
+              stocktakeRangeKind === range
+                ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                : 'border-border hover:bg-muted/50'
+            "
+            @click="stocktakeRangeKind = range"
+          >
+            <div class="font-semibold">{{ stocktakeRangeLabel(range) }}</div>
+            <div class="mt-1 text-xs leading-relaxed text-muted-foreground">
+              {{ stocktakeRangeDescription(range) }}
+            </div>
+          </button>
+        </div>
+
+        <div v-if="stocktakeRangeKind !== 'full'" class="space-y-4">
+          <div
+            v-if="stocktakeRangeKind === 'partial' || stocktakeRangeKind === 'cycle'"
+            class="space-y-2"
+          >
+            <div class="text-sm font-medium">Kategorie</div>
+            <p class="text-xs text-muted-foreground">
+              Vybrané kategorie automaticky zahrnou všechny své produkty.
+            </p>
+            <div
+              v-if="stocktakeCategories.length"
+              class="grid gap-2 rounded-lg border border-border p-3 sm:grid-cols-2"
+            >
+              <label
+                v-for="category in stocktakeCategories"
+                :key="category.id"
+                class="flex cursor-pointer items-center gap-2 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  class="size-4 accent-primary"
+                  :checked="stocktakeSelectedCategoryIds.includes(category.id)"
+                  @change="toggleStocktakeCategory(category.id)"
+                />
+                <span class="min-w-0 truncate">{{ category.name }}</span>
+              </label>
+            </div>
+            <p v-else class="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+              Kategorie nejsou k dispozici. Vyberte konkrétní položky níže.
+            </p>
+          </div>
+
+          <div class="space-y-2">
+            <Label for="stocktake-scope-search">Konkrétní položky</Label>
+            <Input
+              id="stocktake-scope-search"
+              v-model="stocktakeScopeSearch"
+              placeholder="Název, SKU nebo EAN"
+            />
+            <div class="max-h-56 space-y-1 overflow-y-auto rounded-lg border border-border p-2">
+              <label
+                v-for="product in stocktakeScopeProducts"
+                :key="product.id"
+                class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-muted/50"
+              >
+                <input
+                  type="checkbox"
+                  class="size-4 shrink-0 accent-primary"
+                  :checked="stocktakeSelectedProductIds.includes(product.id)"
+                  @change="toggleStocktakeProduct(product.id)"
+                />
+                <span class="min-w-0">
+                  <span class="block truncate font-medium">{{ product.name }}</span>
+                  <span class="block truncate text-xs text-muted-foreground">
+                    {{ product.sku }}<span v-if="product.ean"> · EAN {{ product.ean }}</span>
+                  </span>
+                </span>
+              </label>
+              <p v-if="!stocktakeScopeProducts.length" class="p-3 text-center text-sm text-muted-foreground">
+                Žádná položka neodpovídá hledání.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <span class="mr-auto text-xs text-muted-foreground">
+            Vybráno {{ stocktakeScopeProductIds.length }} položek
+          </span>
+          <Button type="button" variant="ghost" @click="stocktakeSetupOpen = false">Zrušit</Button>
+          <Button
+            type="button"
+            variant="coral"
+            :disabled="stocktakeScopeProductIds.length === 0"
+            @click="beginStocktake"
+          >
+            Zahájit počítání
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
     <!-- Dialog inventura -->
     <Dialog v-model:open="stocktakeOpen">
       <DialogContent class="flex max-h-[92dvh] max-w-5xl flex-col overflow-hidden p-0">
@@ -1672,6 +1871,9 @@ function printStocktakeProtocol(): void {
         <div v-if="stocktakeDraft" class="flex min-h-0 flex-1 flex-col">
           <div class="space-y-3 border-b border-border px-4 py-3 sm:px-6">
             <div class="flex flex-wrap items-center gap-2">
+              <span class="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                {{ stocktakeDraft.range.label }} · {{ stocktakeDraft.productIds.length }} položek
+              </span>
               <Button
                 v-if="stocktakeDraft.phase === 'recount'"
                 type="button"

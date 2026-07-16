@@ -48,6 +48,23 @@ describe('stocktake draft', () => {
     expect(restored?.idempotencyKey).toBe('11111111-1111-4111-8111-111111111111')
   })
 
+  it('uchová zvolený rozsah inventury a starší koncept doplní jako úplný', () => {
+    const draft = createStocktakeDraft(
+      scope,
+      [products[0]],
+      undefined,
+      new Date('2026-07-15T10:00:00Z'),
+      { kind: 'spot', label: 'Namátková kontrola' },
+    )
+    expect(saveStocktakeDraft(draft)).toBe(true)
+    expect(loadStocktakeDraft(scope)?.range).toEqual({ kind: 'spot', label: 'Namátková kontrola' })
+
+    const legacy = { ...draft }
+    delete (legacy as Partial<typeof draft>).range
+    localStorage.setItem(stocktakeDraftKey(scope), JSON.stringify(legacy))
+    expect(loadStocktakeDraft(scope)?.range).toEqual({ kind: 'full', label: 'Úplná inventura' })
+  })
+
   it('zahodí poškozený nebo starší než sedmidenní průběh', () => {
     localStorage.setItem(stocktakeDraftKey(scope), '{broken')
     expect(loadStocktakeDraft(scope)).toBeNull()
