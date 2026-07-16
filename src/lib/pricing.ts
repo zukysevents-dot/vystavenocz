@@ -8,11 +8,10 @@ export const PRO_FEATURES = [
   'Neomezený počet faktur',
   'Neomezený počet klientů',
   'QR platba na každé faktuře',
-  'AI asistent v češtině',
   'Opakované faktury',
   'Vlastní logo a šablony',
   'Cizí měny + kurz ČNB',
-  'Automatické upomínky',
+  'Pohledávky, cashflow a připravené upomínky',
   'Export do účetnictví (ISDOC, XML)',
   'Česká podpora e-mailem (odpověď do 24 h)',
 ] as const

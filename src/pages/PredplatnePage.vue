@@ -68,7 +68,9 @@ function dayWord(n: number): string {
         <div class="flex items-center justify-between">
           <div>
             <h2 class="text-xl font-bold text-foreground">Vystaveno Pro</h2>
-            <p class="text-sm text-muted-foreground">Pro OSVČ i firmy. Vše bez omezení.</p>
+            <p class="text-sm text-muted-foreground">
+              Fakturace, klienti a finance v jednom místě.
+            </p>
           </div>
           <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-coral/10 text-coral">
             <Sparkles class="h-6 w-6" />
