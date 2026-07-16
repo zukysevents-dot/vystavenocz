@@ -949,3 +949,9 @@ Závislosti nebo další bezpečný krok:
 **Ověření:** frontendový `npm run lint`, produkční `npm run build`, `git diff --check` a vizuální kontrola aktualizované fakturační kapitoly uživatelského manuálu v PDF prošly bez chyby.
 
 **Další bezpečný krok:** automatické bezpečné obnovení rozepsaného, dosud neuloženého konceptu po refreshi je samostatný řez; nesmí vytvářet duplicitní doklady ani přepsat serverový koncept.
+
+### 2026-07-16 | Codex | INV-01 | explicitní obnova rozepsaného nového dokladu | frontend commits `948e9a9`, `ed8d633`
+
+**Výsledek:** Dosud neuložená nová faktura se v tomtéž prohlížeči a firmě uloží jako lokální záchranný koncept. Po návratu uživatel výslovně zvolí obnovení nebo zahození; obnova nikdy sama nevytváří fakturu a úspěšné uložení koncept vymaže. Nejde o synchronizaci mezi zařízeními ani o náhradu autoritativního serverového konceptu.
+
+**Ověření:** `npm run lint`, produkční `npm run build`, vizuální kontrola PDF manuálu a cílený Playwright `e2e/faktura-doklady.spec.ts` (5 scénářů) prošly bez selhání. Nový test potvrzuje obnovu položky i to, že před akcí Uložit nevznikne žádná faktura.
