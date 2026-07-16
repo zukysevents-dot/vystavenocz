@@ -881,3 +881,11 @@ Závislosti nebo další bezpečný krok:
 **Výsledek:** `Produkty a menu` nově exportuje přesně aktuální výběr podle vyhledávání do CSV. Výstup obsahuje název, SKU, EAN, prodejní i nákupní cenu, DPH, minimální množství, alergeny, typ produktu a stav sledování šarží. Textová pole jsou chráněna před formula injection; prázdný výběr nelze exportovat.
 
 **Ověření:** `npm run lint` a produkční `npm run build` proběhly bez chyby. Export používá sdílený český CSV renderer se stávajícím BOM, oddělovačem a formátováním čísel; nevzniká nový backendový endpoint ani klientský skladový stav.
+
+### 2026-07-16 | Codex | INV-05 | snadné založení firmy přes ARES | frontend commit `4a74747`
+
+**Výsledek:** První nastavení firmy nyní umí z IČO načíst veřejné údaje z ARES. Tlačítko `Načíst z ARES` použije existující serverový proxy kontrakt, předvyplní název, DIČ a sídlo a uživatel data před uložením stále vidí a potvrzuje. Zůstává funkční i ruční zadání, takže krok neblokuje zahraniční subjekt ani neúplný záznam ve veřejném registru.
+
+**Ověření:** frontendový `npm run lint` a produkční `npm run build` prošly bez chyby. Kompletní uživatelský manuál byl přegenerován do PDF a krok prvního přihlášení byl vizuálně ověřen bez ořezu nebo překryvu.
+
+**Kontrakty/dokumentace:** využívá se existující composable `useAres` a backendový ARES proxy endpoint; nevzniká nový backendový endpoint, nový model ani externí pověření. OAuth přihlášení, multi-company kontext, role/oprávnění, nativní Android/iOS a AI/MCP nejsou součástí tohoto řezu.
