@@ -897,3 +897,11 @@ Závislosti nebo další bezpečný krok:
 **Ověření:** frontendový `npm run lint`, produkční `npm run build` a `git diff --check` prošly bez chyby. Uživatelský manuál byl přegenerován do PDF a účetní kapitola byla vizuálně ověřena bez ořezu nebo překryvu.
 
 **Kontrakty/dokumentace:** filtry běží nad stávajícím autoritativním seznamem faktur a používají existující CSV/ISDOC renderer. Nevzniká endpoint, účetní výpočet, nový model, nový permission claim ani klientský zdroj pravdy.
+
+### 2026-07-16 | Codex | INV-07/10/11/12 | chráněný claim, referral a měřitelný funnel | `docs/backend/subscription-claims-referrals-v1.md`
+
+**Výsledek:** Vznikl společný backendový kontrakt pro kampaně, subscription claim kódy, referral a ambasadory. Odděluje tyto nároky od pokladních slev a věrnostních bodů, zavádí neměnnou atribuci a append-only ledger benefitů a vyžaduje idempotentní kvalifikační billingovou událost pro automatickou odměnu. Zahrnuje anti-abuse pravidla, neprozrazení kódů, reversal, agregovanou funnel analytiku a mobilní webové hranice.
+
+**Rozhodnutí:** současný lokální 14denní trial není billingová autorita. Proto se nezačíná falešným frontendovým zadáním kódu ani vlastním prodlužováním trialu; server smí nárok uložit jako `Pending`, ale skutečné dva měsíce zdarma nebo benefit doporučujícího se uplatní až po reálné, idempotentně potvrzené platbě.
+
+**Další bezpečný krok:** backend může dodat model, claim endpoint, audit, rate limit a konfiguraci kampaní nad tímto kontraktem. Po jeho dostupnosti frontend přidá zobrazení a zadání kódu do registrace/onboardingu; skutečný billing callback zůstává explicitní závislostí.
