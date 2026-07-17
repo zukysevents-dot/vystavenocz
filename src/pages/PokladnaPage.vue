@@ -14,6 +14,7 @@ import {
   Package,
   ReceiptText,
   RotateCcw,
+  RefreshCw,
   FileClock,
   Gift,
   UserRound,
@@ -53,12 +54,13 @@ import ProductVariantSelectDialog, {
 import { useProducts } from '@/composables/useProducts'
 import { useCategories } from '@/composables/useCategories'
 import { useLocations } from '@/composables/useLocations'
-import { useSales } from '@/composables/useSales'
+import { useSales, type SaleListOptions } from '@/composables/useSales'
 import { usePromotions } from '@/composables/usePromotions'
 import { useCustomers, type LoyaltyCustomer } from '@/composables/useCustomers'
 import { useLoyalty, type LoyaltySettings } from '@/composables/useLoyalty'
 import { useProductVariants } from '@/composables/useProductVariants'
 import { formatCZK, round2 } from '@/lib/invoice'
+import { downloadCsv, safeCsvText } from '@/lib/csv-export'
 import { findByEan } from '@/lib/reorder'
 import { buildReceipt, type ReceiptInfo } from '@/lib/receipt'
 import { calcPosTotals, clampAmount, clampPercent } from '@/lib/posCalc'
@@ -544,6 +546,18 @@ const summary = ref<DailySalesSummary | null>(null)
 const stornoId = ref<string | null>(null)
 const stornoOpen = ref(false)
 const storning = ref(false)
+const salesFrom = ref('')
+const salesTo = ref('')
+const salesPaymentMethod = ref<'all' | PaymentMethod>('all')
+const salesExporting = ref(false)
+
+function salesListOptions(): SaleListOptions {
+  return {
+    from: salesFrom.value || null,
+    to: salesTo.value || null,
+    paymentMethod: salesPaymentMethod.value === 'all' ? null : salesPaymentMethod.value,
+  }
+}
 
 function askStorno(id: string) {
   stornoId.value = id
@@ -551,7 +565,7 @@ function askStorno(id: string) {
 }
 
 async function loadSales() {
-  const [s, l] = await Promise.all([sales.summaryToday(), sales.list()])
+  const [s, l] = await Promise.all([sales.summaryToday(), sales.list(salesListOptions())])
   summary.value = s
   salesList.value = l
 }
@@ -566,6 +580,68 @@ async function openSales() {
     console.error(e)
   } finally {
     loadingSales.value = false
+  }
+}
+
+function salesExportFilename(): string {
+  const from = salesFrom.value || 'od-zacatku'
+  const to = salesTo.value || 'dosud'
+  return `pokladni-uctenky-${from}-${to}.csv`
+}
+
+function paymentMethodLabel(method: PaymentMethod): string {
+  return method === 'Cash' ? 'Hotově' : 'Kartou'
+}
+
+function saleStatusLabel(status: Sale['status']): string {
+  return status === 'Cancelled' ? 'Stornováno' : 'Dokončeno'
+}
+
+async function exportSales(): Promise<void> {
+  if (salesExporting.value) return
+  salesExporting.value = true
+  try {
+    const selection = await sales.listAll(salesListOptions())
+    if (selection.length === 0) {
+      toast.info('Pro zvolený výběr nejsou žádné účtenky k exportu.')
+      return
+    }
+    downloadCsv(
+      salesExportFilename(),
+      [
+        'Čas prodeje',
+        'Způsob platby',
+        'Stav',
+        'Základ DPH',
+        'DPH',
+        'Celkem',
+        'Spropitné',
+        'Sleva na účet (%)',
+      ],
+      selection.map((sale) => [
+        sale.soldAt,
+        safeCsvText(paymentMethodLabel(sale.paymentMethod)),
+        safeCsvText(saleStatusLabel(sale.status)),
+        sale.totalNet,
+        sale.totalVat,
+        sale.total,
+        sale.tipAmount,
+        sale.discountPercent,
+      ]),
+    )
+    toast.success(
+      `Exportováno ${selection.length} ${selection.length === 1 ? 'účtenka' : 'účtenek'}.`,
+    )
+  } catch (e) {
+    const message = e instanceof Error ? e.message : ''
+    toast.error(
+      message.includes('příliš mnoho') || message.includes('během exportu')
+        ? message
+        : 'Export účtenek se nepodařil. Zkuste to znovu.',
+    )
+    console.error(e)
+  } finally {
+    salesExporting.value = false
   }
 }
 
@@ -1056,6 +1132,43 @@ function saleTime(iso: string): string {
           <p v-if="summary" class="mt-1 text-center text-xs text-muted-foreground">
             {{ summary.count }} prodejů · DPH {{ formatCZK(summary.totalVat) }}
           </p>
+
+          <div class="mt-4 rounded-xl border border-border bg-muted/20 p-3">
+            <div class="grid gap-2 sm:grid-cols-3">
+              <label class="space-y-1 text-xs font-medium text-muted-foreground" for="sales-from">
+                Od
+                <Input id="sales-from" v-model="salesFrom" type="date" class="h-9" />
+              </label>
+              <label class="space-y-1 text-xs font-medium text-muted-foreground" for="sales-to">
+                Do
+                <Input id="sales-to" v-model="salesTo" type="date" class="h-9" />
+              </label>
+              <label
+                class="space-y-1 text-xs font-medium text-muted-foreground"
+                for="sales-payment"
+              >
+                Platba
+                <select
+                  id="sales-payment"
+                  v-model="salesPaymentMethod"
+                  class="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground"
+                >
+                  <option value="all">Všechny způsoby</option>
+                  <option value="Cash">Hotově</option>
+                  <option value="Card">Kartou</option>
+                </select>
+              </label>
+            </div>
+            <div class="mt-3 flex flex-wrap justify-end gap-2">
+              <Button variant="outline" size="sm" :disabled="loadingSales" @click="openSales">
+                <RefreshCw class="h-3.5 w-3.5" /> Použít filtr
+              </Button>
+              <Button variant="outline" size="sm" :disabled="salesExporting" @click="exportSales">
+                <Loader2 v-if="salesExporting" class="h-3.5 w-3.5 animate-spin" />
+                <Download v-else class="h-3.5 w-3.5" /> Export CSV
+              </Button>
+            </div>
+          </div>
 
           <div
             class="mt-3 max-h-[45vh] divide-y divide-border overflow-y-auto rounded-xl border border-border"

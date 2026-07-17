@@ -305,6 +305,10 @@ Pokud není platební terminál přímo propojen, Vystaveno samo peníze nestrhn
 
 Před platbou upravte košík. Po dokončení prodeje postupujte podle pravidel firmy pro storno nebo opravu; nevytvářejte duplicitní prodej jen kvůli opravě účtenky.
 
+### 6.4 Výpis a export účtenek
+
+Vpravo nahoře otevřete `Tržby`. Vidíte dnešní souhrn a historii účtenek. Pro kontrolu nebo předání účetní vyberte datum od/do a způsob platby, zvolte `Použít filtr` a pak `Export CSV`. Soubor obsahuje právě vybraný výřez včetně stornovaných účtenek, základu DPH, DPH, celku, spropitného a slevy na účet. Pokud je výběr příliš velký nebo se historie během exportu změní, soubor se raději nevytvoří — upravte období nebo export zopakujte.
+
 ## 7. Stoly a objednávky
 
 Tato obrazovka je hlavní dotykové pracoviště obsluhy.

@@ -158,6 +158,49 @@ describe('useSales — kontrakt volání', () => {
     expect(r).toEqual([{ id: 's1' }])
   })
 
+  it('list předá filtry historie prodejů serveru', async () => {
+    vi.mocked(http.get).mockResolvedValue({ items: [{ id: 's1' }], total: 1 } as never)
+    await useSales().list({ from: '2026-07-01', to: '2026-07-10', paymentMethod: 'Card' })
+    expect(http.get).toHaveBeenCalledWith(
+      '/sales?pageSize=50&from=2026-07-01&to=2026-07-10&paymentMethod=Card',
+    )
+  })
+
+  it('listAll pro export načte všechny stránky přesného výběru', async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({ id: `s${index + 1}` }))
+    vi.mocked(http.get)
+      .mockResolvedValueOnce({
+        items: firstPage,
+        total: 101,
+        page: 1,
+        pageSize: 100,
+      } as never)
+      .mockResolvedValueOnce({
+        items: [{ id: 's101' }],
+        total: 101,
+        page: 2,
+        pageSize: 100,
+      } as never)
+
+    const result = await useSales().listAll({ from: '2026-07-01', paymentMethod: 'Cash' })
+
+    expect(http.get).toHaveBeenNthCalledWith(
+      1,
+      '/sales?page=1&pageSize=100&from=2026-07-01&paymentMethod=Cash',
+    )
+    expect(http.get).toHaveBeenNthCalledWith(
+      2,
+      '/sales?page=2&pageSize=100&from=2026-07-01&paymentMethod=Cash',
+    )
+    expect(result).toHaveLength(101)
+    expect(result.at(-1)).toEqual({ id: 's101' })
+  })
+
+  it('listAll odmítne neúplný export nad bezpečným limitem', async () => {
+    vi.mocked(http.get).mockResolvedValue({ items: [], total: 5001 } as never)
+    await expect(useSales().listAll()).rejects.toThrow('příliš mnoho účtenek')
+  })
+
   it('storno volá POST /sales/{id}/storno', async () => {
     vi.mocked(http.post).mockResolvedValue({} as never)
     await useSales().storno('s1')

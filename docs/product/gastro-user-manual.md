@@ -25,6 +25,7 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 6. U hotovosti zadejte, kolik host dal (nebo použijte rychlou volbu bankovky) — systém hned ukáže, kolik vrátit.
 7. U karty zadejte částku na platebním terminálu a po dokončení potvrďte `Platba prošla`. Terminál zatím není propojený, výsledek potvrzuje obsluha.
 8. Po zaplacení vznikne prodej, DPH rozpad a skladový pohyb. Produkt s recepturou odečítá suroviny, produkt bez receptury odečítá sám sebe. Účtenka u hotovosti ukazuje `Přijato` a `Vráceno`.
+9. Pro kontrolu směny otevřete nahoře `Tržby`. Můžete vybrat období a hotovost/kartu; `Export CSV` stáhne přesně tento výběr účtenek včetně storen a rozpisu DPH.
 
 ## Restaurace a stoly
 

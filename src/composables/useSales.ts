@@ -3,6 +3,9 @@ import { http } from '@/lib/http'
 import type { ApprovalRequest, DailySalesSummary, PaymentMethod, Sale } from '@/lib/types'
 import type { PagedResult } from '@/composables/useApi'
 
+const SALES_EXPORT_PAGE_SIZE = 100
+const SALES_EXPORT_MAX = 5000
+
 // Pokladní prodej není prostý CRUD (má /summary, /storno, /receipt) → vlastní composable nad http.
 // Funguje jen v API módu (POS dává smysl jen proti reálnému backendu).
 export interface SaleLineInput {
@@ -28,6 +31,22 @@ export interface SaleOptions {
   // Věrnostní zákazník + počet uplatněných bodů. Backend počítá slevu i earn ledger.
   customerId?: string | null
   redeemPoints?: number
+}
+
+export interface SaleListOptions {
+  from?: string | null
+  to?: string | null
+  paymentMethod?: PaymentMethod | null
+}
+
+function saleListQuery(options: SaleListOptions = {}, pageSize = 50, page?: number): string {
+  const params = new URLSearchParams()
+  if (page) params.set('page', String(page))
+  params.set('pageSize', String(pageSize))
+  if (options.from) params.set('from', options.from)
+  if (options.to) params.set('to', options.to)
+  if (options.paymentMethod) params.set('paymentMethod', options.paymentMethod)
+  return `/sales?${params.toString()}`
 }
 
 export function useSales() {
@@ -58,8 +77,36 @@ export function useSales() {
   }
 
   // Historie prodejů (nejnovější první — řazení řeší backend defaultně).
-  function list(): Promise<Sale[]> {
-    return http.get<PagedResult<Sale>>('/sales?pageSize=50').then((r) => r.items)
+  function list(options?: SaleListOptions): Promise<Sale[]> {
+    return http.get<PagedResult<Sale>>(saleListQuery(options)).then((r) => r.items)
+  }
+
+  /**
+   * Přesný export nikdy nesmí tiše skončit na první stránce. Pro neobvykle velký
+   * výběr raději skončí chybou než aby stáhl neúplný soubor.
+   */
+  async function listAll(options?: SaleListOptions): Promise<Sale[]> {
+    const first = await http.get<PagedResult<Sale>>(
+      saleListQuery(options, SALES_EXPORT_PAGE_SIZE, 1),
+    )
+    if (first.total > SALES_EXPORT_MAX) {
+      throw new RangeError(`Pro export je vybráno příliš mnoho účtenek (${first.total}).`)
+    }
+
+    const sales = [...first.items]
+    const totalPages = Math.ceil(first.total / SALES_EXPORT_PAGE_SIZE)
+    for (let page = 2; page <= totalPages; page++) {
+      const next = await http.get<PagedResult<Sale>>(
+        saleListQuery(options, SALES_EXPORT_PAGE_SIZE, page),
+      )
+      sales.push(...next.items)
+    }
+
+    const unique = [...new Map(sales.map((sale) => [sale.id, sale])).values()]
+    if (unique.length !== first.total) {
+      throw new Error('Historie účtenek se během exportu změnila. Zkuste export zopakovat.')
+    }
+    return unique
   }
 
   function get(id: string): Promise<Sale> {
@@ -71,5 +118,5 @@ export function useSales() {
     return http.post<Sale | ApprovalRequest>(`/sales/${id}/storno`)
   }
 
-  return { lastSale, create, summaryToday, list, get, storno }
+  return { lastSale, create, summaryToday, list, listAll, get, storno }
 }
