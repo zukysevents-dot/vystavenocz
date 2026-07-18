@@ -295,4 +295,6 @@ export const http = {
   // Neautorizované volání (bez Authorization a bez refresh/retry) — veřejné endpointy.
   getPublic: <T>(path: string) => request<T>('GET', path, undefined, false, true),
   postPublic: <T>(path: string, body?: unknown) => request<T>('POST', path, body, false, true),
+  // URL pro veřejný odkaz (např. PDF klientského portálu) — nikdy nepřidává Authorization.
+  publicUrl: (path: string) => `${apiUrl() ?? ''}${path}`,
 }

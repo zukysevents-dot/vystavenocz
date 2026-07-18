@@ -5,10 +5,11 @@ import { http } from '@/lib/http'
  * přihlášení vidí své faktury a schvaluje/odmítá nabídky. Volá veřejné endpointy
  * klíčované tokenem klienta přes http.getPublic/postPublic — striktně BEZ Authorization
  * (aby na public endpoint neunikl JWT náhodně přihlášeného operátora).
- * Online platba faktur je pozdější fáze (platební brána = backend).
+ * Online platba vždy jen přesměruje na hostovaný checkout; návrat do portálu není potvrzením úhrady.
  */
 
 export interface PortalInvoice {
+  id: string
   invoiceNumber: string | null
   issueDate: string
   dueDate: string
@@ -47,5 +48,17 @@ export function useClientPortal() {
     )
   }
 
-  return { load, respondQuote }
+  async function checkout(token: string, invoiceId: string): Promise<{ redirectUrl: string }> {
+    return http.postPublic<{ redirectUrl: string }>(
+      `/public/client/${encodeURIComponent(token)}/invoices/${encodeURIComponent(invoiceId)}/checkout`,
+    )
+  }
+
+  function invoicePdfUrl(token: string, invoiceId: string): string {
+    return http.publicUrl(
+      `/public/client/${encodeURIComponent(token)}/invoices/${encodeURIComponent(invoiceId)}/pdf`,
+    )
+  }
+
+  return { load, respondQuote, checkout, invoicePdfUrl }
 }

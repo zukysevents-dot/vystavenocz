@@ -49,7 +49,7 @@ Pro restaurace, kavárny, bary, obchody, služby a zakázkový provoz
 1. Otevřete přihlašovací stránku.
 2. Zadejte e-mail a heslo.
 3. Po prvním přihlášení vyberte typ provozu: Gastro, Služby, Řemesla a zakázky nebo Obchod.
-4. Doplňte údaje firmy a alespoň jednu pobočku.
+4. Doplňte údaje firmy a alespoň jednu pobočku. U české firmy zadejte IČO a zvolte `Načíst z ARES`; systém předvyplní název, DIČ a sídlo. Údaje před uložením zkontrolujte.
 5. Zapněte části systému, které budete používat.
 
 Profil firmy pouze předvybere vhodné části aplikace. Později je lze změnit v Nastavení.
@@ -305,6 +305,10 @@ Pokud není platební terminál přímo propojen, Vystaveno samo peníze nestrhn
 
 Před platbou upravte košík. Po dokončení prodeje postupujte podle pravidel firmy pro storno nebo opravu; nevytvářejte duplicitní prodej jen kvůli opravě účtenky.
 
+### 6.4 Výpis a export účtenek
+
+Vpravo nahoře otevřete `Tržby`. Vidíte dnešní souhrn a historii účtenek. Pro kontrolu nebo předání účetní vyberte datum od/do a způsob platby, zvolte `Použít filtr` a pak `Export CSV`. Soubor obsahuje právě vybraný výřez včetně stornovaných účtenek, základu DPH, DPH, celku, spropitného a slevy na účet. Pokud je výběr příliš velký nebo se historie během exportu změní, soubor se raději nevytvoří — upravte období nebo export zopakujte.
+
 ## 7. Stoly a objednávky
 
 Tato obrazovka je hlavní dotykové pracoviště obsluhy.
@@ -412,14 +416,74 @@ Před vytištěním QR kódů ověřte:
 1. Vyberte konkrétní pobočku.
 2. Vytvořte nový příjem.
 3. Načtěte čárový kód nebo vyhledejte produkt.
-4. Zadejte skutečné množství a nákupní cenu.
+4. Zadejte skutečné množství a nákupní cenu. U sledovaného produktu doplňte číslo šarže a expiraci; jednu položku lze rozdělit do více šarží.
 5. Zkontrolujte všechny řádky a příjem potvrďte.
 
-### 10.2 Stav skladu
+### 10.2 Nákupní objednávky a dodavatelé
+
+Pro běžnou dodávku bez předchozí objednávky můžete dál použít přímou příjemku. Když chcete hlídat, co bylo objednáno a co skutečně dorazilo:
+
+1. V části Nákupní objednávky otevřete Dodavatelé a založte dodavatele. Uložte název a podle potřeby IČO, DIČ, kontaktní osobu, telefon a e-mail.
+2. Zvolte Nová objednávka, vyberte dodavatele a konkrétní pobočku, přidejte produkty, množství a známé nákupní ceny.
+3. Uložte návrh. Dokud je ve stavu Návrh, můžete ho upravovat.
+4. Po skutečném odeslání dodavateli zvolte Objednat. Objednávka už se nepřepisuje.
+5. Při dodávce zvolte Přijmout, doplňte číslo dodacího listu nebo faktury a u každého řádku zadejte skutečně přijaté množství.
+6. Když dorazí jen část, objednávka zůstane Částečně přijato. Další dodávku zapište novou příjemkou ze stejné objednávky.
+7. Po přijetí posledního zbytku se objednávka označí Přijato. Každá dílčí dodávka vytvoří samostatnou dohledatelnou příjemku a skladový pohyb.
+
+Dodavatele, kterého už nepoužíváte, archivujte. Historické objednávky a příjemky zůstanou zachované. Objednávku lze zrušit jen před prvním příjmem.
+
+Chcete-li využít automatické návrhy v celých baleních:
+
+1. Otevřete Dodavatelé, vyberte konkrétního dodavatele a v části Dodavatelské produkty a balení přiřaďte produkt.
+2. Doplňte SKU nebo EAN používané dodavatelem, počet základních skladových jednotek v jednom balení, minimální odběr a případně obvyklou cenu za jednu základní jednotku.
+3. V Nákupních objednávkách zvolte Z návrhů a vyberte dodavatele. Systém nabídne jen jeho přiřazené produkty, které je podle aktuální spotřeby potřeba objednat.
+4. Zkontrolujte převod doporučeného množství na celé balení a odhad ceny, odškrtněte nechtěné položky a vytvořte návrh objednávky.
+5. Server potřebu před uložením znovu přepočítá. Když spojení selže, akci můžete bezpečně zopakovat; nevznikne tím duplicitní objednávka.
+
+Vytvořený návrh si pamatuje tehdejší dodavatelské SKU, EAN a balení. Pozdější změna katalogu proto nezmění historickou objednávku.
+
+### 10.3 Stav skladu
 
 Přehled ukazuje očekávané množství, pohyby a případné rozdíly. Zobrazení Všechny pobočky je určeno ke kontrole; příjem, výdej, opravu nebo přesun provádějte vždy pro konkrétní pobočku.
 
-### 10.3 Inventura
+Karta Pohyby slouží k dohledání úplné historie. Vyberte období, produkt, typ pohybu a pobočku. Řádek ukazuje změnu množství, stav po pohybu, poznámku a vazbu na zdrojový prodej, příjemku, inventuru, výrobu nebo zakázku. Export CSV stáhne přesně zvolený výřez. Pokud se sklad během načítání změnil, spusťte export znovu, aby byl soubor úplný.
+
+### 10.4 Šarže a expirace
+
+1. V katalogu produktu zapněte Sledování šarží. Jde o celofiremní jednosměrnou změnu, kterou provádí uživatel bez omezení na jedinou pobočku; stávající zásoba se bezpečně označí jako počáteční šarže.
+2. Při každém dalším příjmu zadejte číslo šarže a volitelnou expiraci.
+3. V Zásoby otevřete kartu Šarže. Filtrujte produkt, pobočku, datum expirace nebo stav a zkontrolujte skutečné množství.
+4. Prošlou zásobu odepište akcí Odepsat expiraci. Odečte se jen vybraná šarže.
+5. Ruční výdej a přesun mohou určit konkrétní šarži. Bez výběru systém použije nejbližší expiraci jako první.
+6. V Pohybech a CSV lze dohledat číslo šarže, expiraci a množství každé alokace.
+7. Při podezření na závadu zvolte Změnit stav, vyberte Karanténa nebo Blokovaná a uveďte povinný důvod. Šarže okamžitě zmizí z dostupného množství, FEFO, prodeje, výdeje, rezervací, přesunů, zakázek i výroby.
+8. Po kontrole lze karanténu či blokaci vrátit do stavu Uvolněná. Stav Reklamovaná použijte pro trvalé stažení série; z bezpečnostních důvodů je konečný. Tlačítko Historie ukáže všechny změny, důvody a časy.
+
+Po aktivaci musí být pro prodej, výdej, spotřebu zakázky i výrobu dostatečný zůstatek šarží. Systém nepovolí záporný stav: při nedostatku operaci odmítne a nic částečně neuloží.
+
+### 10.5 Rezervované a disponibilní množství
+
+U každého produktu vidíte čtyři hodnoty: **Skladem** je fyzický stav, **Rezervováno** je množství držené pro konkrétní účel, **Blokováno** je zásoba v karanténě, blokaci nebo reklamaci a **K dispozici** je množství, které lze skutečně vydat jinému zákazníkovi nebo zakázce.
+
+1. V Zásoby otevřete kartu Rezervace a zvolte Nová rezervace.
+2. Vyberte produkt, konkrétní pobočku, množství a napište, pro koho nebo pro co zásobu držíte, například číslo zakázky či objednávky.
+3. Akcí Uvolnit vrátíte celé množství mezi dostupnou zásobu, aniž se změní fyzický stav.
+4. Akcí Vyskladnit celé rezervované množství skutečně odečtete ze skladu. U produktu se šaržemi systém použije nejbližší expiraci jako první.
+
+Aktivní rezervace chrání zásobu také před ručním výdejem, odpisem, korekcí dolů, přesunem, prodejem, spotřebou na zakázce, výrobou a příliš nízkou inventurou. Pokud operace narazí na rezervované množství, nejprve rezervaci uvolněte nebo snižte požadovaný výdej.
+
+### 10.6 Ocenění skladu
+
+V Zásoby otevřete kartu Ocenění. Vyberte období, pobočku nebo všechny pobočky a podle potřeby vyhledejte produkt či změňte řazení. Přehled ukáže počáteční a konečnou hodnotu zásob, nákupy, náklady prodaného zboží (COGS), ostatní spotřebu, ztráty a inventurní rozdíl.
+
+Systém používá periodický vážený průměr nákupních cen do konce období. Pro pobočku nejprve použije její příjemky, potom celofiremní nákupní historii a nakonec nákupní cenu z katalogu produktu. Zdroj ceny je vidět u každé položky.
+
+Pokud se objeví stav Neúplné ocenění, alespoň jedné relevantní příjemce nebo produktu chybí cena. Známý dílčí průměr je pouze orientační a neúplné finanční hodnoty systém nezobrazuje jako nulu. Doplňte nákupní ceny na příjemkách nebo v katalogu a výkaz načtěte znovu.
+
+Akce Export CSV stáhne přesně filtrovaný výkaz včetně kontrolního součtu. Při změně skladu během vícestránkového exportu se soubor nevytvoří a je potřeba export zopakovat. Ocenění V1 je provozní manažerský výkaz; nenahrazuje účetní uzávěrku ani účetní potvrzení zvolené metody.
+
+### 10.7 Inventura
 
 1. Vyberte pobočku.
 2. Zadejte fyzicky spočítané množství.
@@ -427,9 +491,17 @@ Přehled ukazuje očekávané množství, pohyby a případné rozdíly. Zobraze
 4. U významného rozdílu doplňte důvod.
 5. Inventuru potvrďte.
 
-### 10.4 Přesun a výroba
+Na mobilu i počítači je první kolo ve výchozím stavu slepé: systémové množství není vidět a žádná položka není předvyplněná. Množství zadejte ručně, HW čtečkou EAN nebo kamerou telefonu; jeden úspěšný sken přičte jeden kus. Neznámý nebo duplicitní EAN systém nezapočítá.
 
-Přesun snižuje zásobu na výchozí pobočce a zvyšuje ji na cílové. Výrobní dávka polotovaru spotřebuje suroviny podle receptury a zvýší množství vyrobeného polotovaru.
+Průběh se automaticky ukládá pro přihlášeného uživatele, firmu a vybranou pobočku v tomto prohlížeči. Dialog můžete zavřít a později na stejném zařízení pokračovat. Nejde o synchronizaci mezi telefony nebo počítači a po sedmi dnech se starý průběh zahodí. Pokud se mezitím změní katalog produktů, systém starý průběh bezpečně nepoužije.
+
+Po dokončení prvního kola zvolte `Zkontrolovat rozdíly`. Druhé kolo zobrazí jen položky, jejichž první počet nesouhlasil se stavem při zahájení. Tyto položky znovu nezávisle napočítejte. Uložit lze až po dokončení všech potřebných přepočtů.
+
+Při finálním potvrzení server znovu ověří aktuální stav. Když spojení selže, průběh zůstane uložený a opakování nevytvoří druhou inventuru ani dvojí pohyb. Po úspěchu se otevře autoritativní inventurní protokol se stavem před zápisem, napočítanou realitou a rozdílem; lze ho stáhnout jako CSV nebo vytisknout / uložit do PDF.
+
+### 10.8 Přesun a výroba
+
+Přesun snižuje zásobu na výchozí pobočce a zvyšuje ji na cílové; u sledovaného produktu zachová šarži. Výrobní dávka polotovaru spotřebuje suroviny podle receptury a zvýší množství vyrobeného polotovaru. Sledovaný výstup vyžaduje číslo výstupní šarže.
 
 ## 11. Denní uzávěrka a výsledky provozu
 
@@ -457,7 +529,21 @@ Porovnání poboček dává smysl jen pro stejné období. Výrazný rozdíl nej
 
 U klienta evidujte název, IČO, adresu, kontakt, platební podmínky a poznámku. Před vystavením dokladu údaje zkontrolujte.
 
-### 12.2 Nabídka
+### 12.2 CRM — pohlídejte si navazující práci
+
+CRM je jednoduché interní místo pro dohledání, co se s klientem řešilo a co je potřeba udělat dál. Nenahrazuje faktury, nabídky ani klientskou zónu; pouze je spojuje s poznámkami a úkoly vašeho týmu.
+
+1. Otevřete Finance → CRM.
+2. V levém seznamu vyberte klienta. Uvidíte počet otevřených úkolů a nejbližší termín.
+3. Do časové osy přidejte poznámku, telefonát, e-mail nebo schůzku. Pište stručně: co se stalo a jaký je další krok.
+4. Když je potřeba něco udělat, založte úkol, zadejte název, termín a prioritu.
+5. Po vyřízení úkol označte jako Hotovo. Pokud odpadl, zvolte Zrušit. Systém obě změny zapíše do časové osy.
+
+Poznámky v CRM jsou **pouze interní**. Klient je nevidí v klientské zóně a aplikace je sama neposílá e-mailem. Přístup má vlastník, správce a vedoucí; běžná obsluha a účetní CRM nevidí. Klienta s historií CRM nemažte — použijte archivaci v adresáři klientů, aby zůstal dohledatelný souvislý příběh spolupráce.
+
+> Praktický příklad: Po telefonátu se zákazníkem přidejte aktivitu „Domluven cenový návrh“ a úkol „Poslat nabídku do pátku“. Kdokoliv z oprávněného týmu pak vidí další krok bez hledání ve zprávách.
+
+### 12.3 Nabídka
 
 1. Vyberte klienta.
 2. Přidejte položky, ceny a platnost.
@@ -465,7 +551,7 @@ U klienta evidujte název, IČO, adresu, kontakt, platební podmínky a poznámk
 4. Odešlete nabídku klientovi podle dostupného způsobu.
 5. Po přijetí ji převeďte na zakázku nebo fakturu.
 
-### 12.3 Faktura
+### 12.4 Faktura
 
 1. Zvolte Nová faktura.
 2. Vyberte klienta.
@@ -475,19 +561,37 @@ U klienta evidujte název, IČO, adresu, kontakt, platební podmínky a poznámk
 6. Vystavte doklad až po kontrole.
 7. Stáhněte PDF nebo účetní formát.
 
+Na telefonu zůstává součet a akce Uložit koncept dole na obrazovce i při dlouhém seznamu položek. Koncept uložte před návratem nebo odesláním.
+
+Pokud nový dosud neuložený doklad obnovíte v tomtéž prohlížeči, nabídne se rozepsaný koncept k výslovnému obnovení nebo zahození. Obnova sama nevytváří fakturu; vytvoří se až akcí Uložit koncept.
+
 Odeslání e-mailem není v každém prostředí aktivní. Pokud aplikace uvádí, že odeslání není dostupné, stáhněte PDF a odešlete je ze svého e-mailu.
 
-### 12.4 Proforma, dobropis a opakování
+### 12.5 Proforma, dobropis a opakování
 
 - Proforma je výzva k platbě a lze ji převést na běžnou fakturu.
 - Dobropis opravuje již vystavený doklad a nelze jej upravovat jako běžný koncept.
 - Opakované faktury vytvářejí měsíční doklady podle šablony. Automatické odesílání a inkaso nejsou součástí samotné šablony.
 
-### 12.5 Pohledávky a podklady pro účetní
+### 12.6 Pohledávky a podklady pro účetní
 
 Pohledávky ukazují nezaplacené doklady. Připravená upomínka se otevře ve vašem e-mailovém programu; aplikace sama nespouští automatickou sérii zpráv.
 
-Export pro účetní nabízí soubory CSV, ISDOC nebo Pohoda XML podle dostupné části systému. ISDOC je formát pro české účetní programy. CSV je tabulkový soubor.
+V otevřených fakturách můžete hledat klienta, e-mail nebo číslo dokladu. Export dlužníků vždy stáhne právě tento vybraný výřez.
+
+V Exportu pro účetní nejprve vyberte období, typ dokladu, stav a případně dohledáte odběratele, IČO nebo číslo dokladu. Nad výběrem vidíte počet dokladů a součty základu, DPH a celku po měnách. Tlačítko Export CSV stáhne tento výběr. ISDOC stáhnete u faktury v Kč; Pohoda XML je dostupné podle zapnuté části systému. ISDOC je formát pro české účetní programy, CSV je tabulkový soubor.
+
+Klientská zóna funguje přes platný odkaz bez běžného přihlášení. Klient v ní vidí své faktury a nabídky, nabídku může přijmout nebo odmítnout. Na telefonu se faktury zobrazují jako samostatné karty se stavem, splatností a skutečnou měnou.
+
+### 12.7 Jak klient zaplatí fakturu online
+
+1. Klient otevře odkaz do klientské zóny od vystavitele faktury.
+2. Pro kopii dokladu zvolí **Stáhnout PDF**. Stažení je možné jen pro faktury z tohoto odkazu.
+3. U faktury ve stavu Vystaveno, Odesláno nebo Po splatnosti zvolí **Zaplatit online**.
+4. Otevře se zabezpečená platební stránka Viva. Klient zde dokončí platbu podle nabízených možností.
+5. Po návratu do klientské zóny může chvíli trvat, než se stav změní na Zaplaceno. Rozhodující je potvrzení platební služby, ne samotný návrat na stránku.
+
+Pokud tlačítko oznámí, že online platba není dostupná, faktura se nezaplatila a klient má použít údaje uvedené na dokladu nebo kontaktovat jeho vystavitele. Nikdy nevkládejte číslo karty do e-mailu ani do poznámky k faktuře.
 
 ## 13. Rezervace
 
@@ -541,6 +645,12 @@ Cenová hladina je například běžná, zaměstnanecká nebo rozvozová cena. S
 ## 17. Firma, pobočky a nastavení
 
 ### 17.1 Firma
+
+#### Přepnutí mezi firmami
+
+Pokud jste členem více firem, v levém panelu se zobrazí pole **Aktivní firma**. Vyberte požadovanou firmu; aplikace bezpečně přepne pracovní kontext, načte její profil a vrátí vás na přehled. Role, zapnuté moduly, doklady, sklad i nastavení se vždy týkají právě aktivní firmy.
+
+Přepnutí je možné jen do firmy, kde máte aktivní přístup. Odhlášení nebo obnovení přihlášení tento výběr nezamění za jinou firmu. Pokud se přepnutí nezdaří, zůstanete v původní firmě a akci lze opakovat.
 
 Vyplňte obchodní údaje, adresu, IČO, DIČ, bankovní účet, logo, splatnost a číslování faktur. Náhled dalšího čísla faktury musí odpovídat firemním pravidlům.
 
