@@ -189,3 +189,4 @@ Staging demo data: backend `vystaveno-api` má explicitní CLI helper `dotnet Vy
 - Technické termíny ponechávej jen v pokročilé části pro vývojáře a hned je vysvětli běžnými slovy.
 - Falešné úspěchy jsou zakázané: ukázková akce nesmí tvrdit, že odeslala e-mail, strhla platbu nebo provedla právní podpis.
 - Zdroj kompletní příručky je `docs/product/kompletni-uzivatelsky-manual.md`. PDF generuje `scripts/generate-user-manual-pdf.py`; po změně zásadního workflow aktualizuj zdroj i PDF.
+- **Návody jsou součástí Definition of Done:** každý nový uživatelský blok musí mít technický kontrakt v `docs/backend/`, krokový návod pro laika v `docs/product/kompletni-uzivatelsky-manual.md` a srozumitelný investor context v `docs/product/investor-product-brief.md` (problém, přínos, ovládání, hranice, metriky). Neoznačuj roadmapu jako hotovou bez těchto tří vrstev.

@@ -529,7 +529,21 @@ Porovnání poboček dává smysl jen pro stejné období. Výrazný rozdíl nej
 
 U klienta evidujte název, IČO, adresu, kontakt, platební podmínky a poznámku. Před vystavením dokladu údaje zkontrolujte.
 
-### 12.2 Nabídka
+### 12.2 CRM — pohlídejte si navazující práci
+
+CRM je jednoduché interní místo pro dohledání, co se s klientem řešilo a co je potřeba udělat dál. Nenahrazuje faktury, nabídky ani klientskou zónu; pouze je spojuje s poznámkami a úkoly vašeho týmu.
+
+1. Otevřete Finance → CRM.
+2. V levém seznamu vyberte klienta. Uvidíte počet otevřených úkolů a nejbližší termín.
+3. Do časové osy přidejte poznámku, telefonát, e-mail nebo schůzku. Pište stručně: co se stalo a jaký je další krok.
+4. Když je potřeba něco udělat, založte úkol, zadejte název, termín a prioritu.
+5. Po vyřízení úkol označte jako Hotovo. Pokud odpadl, zvolte Zrušit. Systém obě změny zapíše do časové osy.
+
+Poznámky v CRM jsou **pouze interní**. Klient je nevidí v klientské zóně a aplikace je sama neposílá e-mailem. Přístup má vlastník, správce a vedoucí; běžná obsluha a účetní CRM nevidí. Klienta s historií CRM nemažte — použijte archivaci v adresáři klientů, aby zůstal dohledatelný souvislý příběh spolupráce.
+
+> Praktický příklad: Po telefonátu se zákazníkem přidejte aktivitu „Domluven cenový návrh“ a úkol „Poslat nabídku do pátku“. Kdokoliv z oprávněného týmu pak vidí další krok bez hledání ve zprávách.
+
+### 12.3 Nabídka
 
 1. Vyberte klienta.
 2. Přidejte položky, ceny a platnost.
@@ -537,7 +551,7 @@ U klienta evidujte název, IČO, adresu, kontakt, platební podmínky a poznámk
 4. Odešlete nabídku klientovi podle dostupného způsobu.
 5. Po přijetí ji převeďte na zakázku nebo fakturu.
 
-### 12.3 Faktura
+### 12.4 Faktura
 
 1. Zvolte Nová faktura.
 2. Vyberte klienta.
@@ -553,13 +567,13 @@ Pokud nový dosud neuložený doklad obnovíte v tomtéž prohlížeči, nabídn
 
 Odeslání e-mailem není v každém prostředí aktivní. Pokud aplikace uvádí, že odeslání není dostupné, stáhněte PDF a odešlete je ze svého e-mailu.
 
-### 12.4 Proforma, dobropis a opakování
+### 12.5 Proforma, dobropis a opakování
 
 - Proforma je výzva k platbě a lze ji převést na běžnou fakturu.
 - Dobropis opravuje již vystavený doklad a nelze jej upravovat jako běžný koncept.
 - Opakované faktury vytvářejí měsíční doklady podle šablony. Automatické odesílání a inkaso nejsou součástí samotné šablony.
 
-### 12.5 Pohledávky a podklady pro účetní
+### 12.6 Pohledávky a podklady pro účetní
 
 Pohledávky ukazují nezaplacené doklady. Připravená upomínka se otevře ve vašem e-mailovém programu; aplikace sama nespouští automatickou sérii zpráv.
 
