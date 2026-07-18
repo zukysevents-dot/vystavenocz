@@ -2,6 +2,8 @@
 
 Tradeoff: Tato pravidla preferují opatrnost před rychlostí. U triviálních úkolů použij selský rozum.
 
+**Akviziční/claim kódy (INV-07, V1):** `SubscriptionClaimSettings.vue` je v Nastavení firmy a v API režimu volá `GET /subscription-claims/me` a idempotentní `POST /subscription-claims/redeem`. Uživatel vidí jen stav nároku, nikdy kód po odeslání; UI musí pravdivě říkat, že kód sám neaktivuje tarif ani platbu. Přístup má Owner/Admin/Manager; technický kontrakt `docs/backend/subscription-claims-v1.md`, manuál a investor brief jsou povinná součást změn.
+
 ## 0. O projektu
 
 **Vystaveno.cz** — migrace ze staré React appky na **Vue 3**, zatím frontend-only MVP.

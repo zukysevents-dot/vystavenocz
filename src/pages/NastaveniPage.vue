@@ -66,6 +66,7 @@ import {
 } from '@/lib/integration-readiness'
 import type { AppModuleId } from '@/lib/modules'
 import type { Company, VatMode } from '@/lib/types'
+import SubscriptionClaimSettings from '@/components/app/SubscriptionClaimSettings.vue'
 
 const companyStore = useCompanyStore()
 const auth = useAuthStore()
@@ -862,6 +863,8 @@ async function onSubmit(): Promise<void> {
     <p class="mt-1 text-muted-foreground">
       Tyto údaje se použijí na nových fakturách (dodavatel, logo, číslování, splatnost).
     </p>
+
+    <SubscriptionClaimSettings class="mt-6" />
 
     <form class="mt-8 space-y-6" @submit.prevent="onSubmit">
       <!-- Firma -->
