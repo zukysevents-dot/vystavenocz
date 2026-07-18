@@ -126,6 +126,8 @@ Datový kontrakt: `src/lib/types.ts` (FE) musí sedět s DTO na backendu; sdíle
 
 Skladová karta INV-16: `Zásoby` → `Pohyby` používá serverově stránkované `useInventory.movementPage()`, úplný export `movements()` a filtrační katalog `/inventory/movement-filters`; kontrakt je v `docs/backend/inventory-ledger-export.md`. Klient musí pro přesný CSV export načíst všechny stránky, zachovat `related*Id` a při změně `total` během načítání skončit bezpečně bez souboru. `productName`, `productSku` a `locationName` jsou aktuální popisky; autoritativní jsou stabilní ID. Nativní mobilní aplikace a oprávnění nejsou součástí tohoto řezu.
 
+Viva úhrada faktury (INV-14): klientský portál (`/klient/:token`) volá `useClientPortal().checkout()` jen pro neuhrazené faktury a pouze přesměruje na hostovaný checkout. Návrat do aplikace nikdy neoznačuje fakturu jako zaplacenou; autoritativní je ověřený backendový webhook. Kontrakt, konfigurační proměnné a produkční checklist: `docs/backend/viva-smart-checkout.md`. Frontend nesmí zobrazit názvy secrets ani předstírat úspěch, pokud backend vrátí nedostupnou konfiguraci.
+
 ## Dva režimy (důležité)
 
 `src/composables/useApi.ts` je swap-point mezi daty:

@@ -3,6 +3,28 @@
 Tento dokument vysvětluje hotové produktové části bez technického žargonu. U každé nové oblasti držíme stejnou strukturu: **problém, přínos, způsob použití, kontrolní hranice a měřitelnost**.
 
 Aktuální rozhodovací srovnání trhu je v [gap analýze iDoklad a KiloMayo](./investor-competitive-gap-analysis.md).
+Rozhodnutí k Viva Payments je v [ověřeném go/no-go podkladu](./viva-payments-go-no-go.md).
+
+## Online úhrada faktur přes Viva
+
+### Jaký problém řeší
+
+Odběratel faktury často musí ručně přepisovat platební údaje a vystavitel pak sleduje platbu mimo systém. To prodlužuje inkaso a zvyšuje riziko chybného ručního označení faktury.
+
+### Co je hotové
+
+Klientský portál u každé vlastní viditelné faktury nabídne bezpečné PDF a u neuhrazené faktury platbu na hostované stránce Viva Smart Checkout. Vystaveno nepracuje s číslem platební karty. Po oznámení platby si backend údaje ještě ověří přímo u Viva a teprve pak idempotentně zaeviduje úhradu faktury.
+
+### Kontrolní hranice
+
+Redirect není platba. Bez sandboxových nebo produkčních přístupů Viva je funkce bezpečně vypnutá a neukazuje falešný úspěch. Produkční spuštění vyžaduje ověřit Viva účet, zdroj plateb, callback a úspěšný i neúspěšný test.
+
+### Co lze měřit po nasazení
+
+- podíl faktur zaplacených online;
+- čas od vystavení k úhradě;
+- úspěšnost založení checkoutu a ověření plateb;
+- podíl neúspěšných či opakovaných platebních oznámení.
 
 ## Akviziční nabídky a partnerské kódy
 

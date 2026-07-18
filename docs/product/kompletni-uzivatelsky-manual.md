@@ -581,7 +581,17 @@ V otevřených fakturách můžete hledat klienta, e-mail nebo číslo dokladu. 
 
 V Exportu pro účetní nejprve vyberte období, typ dokladu, stav a případně dohledáte odběratele, IČO nebo číslo dokladu. Nad výběrem vidíte počet dokladů a součty základu, DPH a celku po měnách. Tlačítko Export CSV stáhne tento výběr. ISDOC stáhnete u faktury v Kč; Pohoda XML je dostupné podle zapnuté části systému. ISDOC je formát pro české účetní programy, CSV je tabulkový soubor.
 
-Klientská zóna funguje přes platný odkaz bez běžného přihlášení. Klient v ní vidí své faktury a nabídky, nabídku může přijmout nebo odmítnout. Na telefonu se faktury zobrazují jako samostatné karty se stavem, splatností a skutečnou měnou; online úhrada faktury zatím součástí zóny není.
+Klientská zóna funguje přes platný odkaz bez běžného přihlášení. Klient v ní vidí své faktury a nabídky, nabídku může přijmout nebo odmítnout. Na telefonu se faktury zobrazují jako samostatné karty se stavem, splatností a skutečnou měnou.
+
+### 12.7 Jak klient zaplatí fakturu online
+
+1. Klient otevře odkaz do klientské zóny od vystavitele faktury.
+2. Pro kopii dokladu zvolí **Stáhnout PDF**. Stažení je možné jen pro faktury z tohoto odkazu.
+3. U faktury ve stavu Vystaveno, Odesláno nebo Po splatnosti zvolí **Zaplatit online**.
+4. Otevře se zabezpečená platební stránka Viva. Klient zde dokončí platbu podle nabízených možností.
+5. Po návratu do klientské zóny může chvíli trvat, než se stav změní na Zaplaceno. Rozhodující je potvrzení platební služby, ne samotný návrat na stránku.
+
+Pokud tlačítko oznámí, že online platba není dostupná, faktura se nezaplatila a klient má použít údaje uvedené na dokladu nebo kontaktovat jeho vystavitele. Nikdy nevkládejte číslo karty do e-mailu ani do poznámky k faktuře.
 
 ## 13. Rezervace
 

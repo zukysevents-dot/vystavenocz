@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { UserCircle, FileText, FileCheck, Loader2, Check, X } from 'lucide-vue-next'
+import {
+  UserCircle,
+  FileText,
+  FileCheck,
+  Loader2,
+  Check,
+  X,
+  CreditCard,
+  Download,
+} from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/components/ui/sonner'
@@ -20,6 +29,7 @@ const loading = ref(true)
 const loadError = ref(false)
 const data = ref<ClientPortalData | null>(null)
 const respondingId = ref<string | null>(null)
+const payingId = ref<string | null>(null)
 
 onMounted(async () => {
   try {
@@ -86,6 +96,29 @@ async function respond(q: PortalQuote, action: 'approve' | 'reject') {
     }
   } finally {
     respondingId.value = null
+  }
+}
+
+function canPay(status: string) {
+  return ['issued', 'sent', 'overdue'].includes(status)
+}
+
+function pdfUrl(invoiceId: string) {
+  return portal.invoicePdfUrl(token, invoiceId)
+}
+
+async function pay(invoiceId: string) {
+  if (payingId.value) return
+  payingId.value = invoiceId
+  try {
+    const checkout = await portal.checkout(token, invoiceId)
+    window.location.assign(checkout.redirectUrl)
+  } catch {
+    toast.error(
+      'Online platba zatím není dostupná. Zkuste to později nebo kontaktujte vystavitele faktury.',
+    )
+  } finally {
+    payingId.value = null
   }
 }
 </script>
@@ -203,6 +236,21 @@ async function respond(q: PortalQuote, action: 'approve' | 'reject') {
                   {{ formatMoney(inv.total, inv.currency) }}
                 </div>
               </div>
+              <Button
+                v-if="canPay(inv.status)"
+                class="mt-3 w-full"
+                size="sm"
+                variant="coral"
+                :disabled="payingId === inv.id"
+                @click="pay(inv.id)"
+              >
+                <CreditCard class="h-4 w-4" /> Zaplatit online
+              </Button>
+              <Button as-child class="mt-2 w-full" size="sm" variant="outline">
+                <a :href="pdfUrl(inv.id)" target="_blank" rel="noopener">
+                  <Download class="h-4 w-4" /> Stáhnout PDF
+                </a>
+              </Button>
             </div>
           </div>
 
@@ -217,6 +265,7 @@ async function respond(q: PortalQuote, action: 'approve' | 'reject') {
                   <th class="px-4 py-3 text-left">Splatnost</th>
                   <th class="px-4 py-3 text-right">Částka</th>
                   <th class="px-4 py-3 text-center">Stav</th>
+                  <th class="px-4 py-3 text-right"><span class="sr-only">Akce</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -235,6 +284,29 @@ async function respond(q: PortalQuote, action: 'approve' | 'reject') {
                     <Badge :variant="invMeta(inv.status).variant">{{
                       invMeta(inv.status).label
                     }}</Badge>
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <div class="flex justify-end gap-2">
+                      <Button as-child size="sm" variant="outline">
+                        <a
+                          :href="pdfUrl(inv.id)"
+                          target="_blank"
+                          rel="noopener"
+                          aria-label="Stáhnout PDF faktury"
+                        >
+                          <Download class="h-4 w-4" /> PDF
+                        </a>
+                      </Button>
+                      <Button
+                        v-if="canPay(inv.status)"
+                        size="sm"
+                        variant="coral"
+                        :disabled="payingId === inv.id"
+                        @click="pay(inv.id)"
+                      >
+                        <CreditCard class="h-4 w-4" /> Zaplatit
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               </tbody>
