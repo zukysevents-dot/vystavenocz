@@ -40,6 +40,11 @@ interface CreateCompanyResponse {
   company: { id: string; name: string }
   tokens: Tokens
 }
+export interface AvailableCompany {
+  id: string
+  name: string
+  role: string
+}
 interface CompanyModulesResponse {
   modules: string[]
 }
@@ -110,6 +115,7 @@ function toUpdateRequest(c: Company) {
 
 export const useCompanyStore = defineStore('company', () => {
   const company = ref<Company | null>(null)
+  const availableCompanies = ref<AvailableCompany[]>([])
   const initialized = ref(false)
   const loaded = ref(false) // API: profil už načten ze serveru (zabrání opakovanému fetchi)
 
@@ -135,9 +141,9 @@ export const useCompanyStore = defineStore('company', () => {
   }
 
   // API režim: načti profil ze serveru (jednou) a slož s lokálním overlayem; mock režim = jen cache.
-  async function load(): Promise<void> {
+  async function load(force = false): Promise<void> {
     init()
-    if (!isApiMode() || loaded.value) return
+    if (!isApiMode() || (loaded.value && !force)) return
     const auth = useAuthStore()
     if (!auth.companyId) return // uživatel ještě nemá firmu (před onboardingem)
     try {
@@ -167,6 +173,7 @@ export const useCompanyStore = defineStore('company', () => {
         setTokens(res.tokens)
         await auth.reloadMe()
         merged.id = res.company.id
+        await loadCompanies()
       }
       const r = await http.put<CompanySettingsResponse>('/company', toUpdateRequest(merged))
       company.value = { ...merged, ...fromResponse(r) }
@@ -175,6 +182,37 @@ export const useCompanyStore = defineStore('company', () => {
       company.value = merged
     }
     persist()
+  }
+
+  // Vypíše jen firmy, kde má přihlášený uživatel aktivní membership. Backend vrací role jako UX kontext,
+  // ale autorizaci stále vynucuje JWT/API, ne tento seznam.
+  async function loadCompanies(): Promise<AvailableCompany[]> {
+    if (!isApiMode()) {
+      availableCompanies.value = []
+      return availableCompanies.value
+    }
+    try {
+      availableCompanies.value = await http.get<AvailableCompany[]>('/companies')
+    } catch {
+      availableCompanies.value = []
+    }
+    return availableCompanies.value
+  }
+
+  // Tokeny po přepnutí jsou tenantově vázané i pro refresh. Lokální profil se nesmí přenášet mezi firmami:
+  // obsahuje frontendový overlay, který backend ještě nezná, a jinak by se mohl krátce zobrazit cizí profil.
+  async function switchCompany(companyId: string): Promise<void> {
+    const auth = useAuthStore()
+    if (!isApiMode() || companyId === auth.companyId) return
+
+    const tokens = await http.post<Tokens>(`/companies/${companyId}/switch`)
+    setTokens(tokens)
+    company.value = null
+    loaded.value = false
+    localStorage.removeItem(STORAGE_KEY)
+    await auth.reloadMe()
+    await load(true)
+    await loadCompanies()
   }
 
   async function loadModules(): Promise<AppModuleId[]> {
@@ -204,5 +242,16 @@ export const useCompanyStore = defineStore('company', () => {
     return normalized
   }
 
-  return { company, initialized, init, load, save, loadModules, saveModules }
+  return {
+    company,
+    availableCompanies,
+    initialized,
+    init,
+    load,
+    save,
+    loadCompanies,
+    switchCompany,
+    loadModules,
+    saveModules,
+  }
 })

@@ -622,6 +622,12 @@ Cenová hladina je například běžná, zaměstnanecká nebo rozvozová cena. S
 
 ### 17.1 Firma
 
+#### Přepnutí mezi firmami
+
+Pokud jste členem více firem, v levém panelu se zobrazí pole **Aktivní firma**. Vyberte požadovanou firmu; aplikace bezpečně přepne pracovní kontext, načte její profil a vrátí vás na přehled. Role, zapnuté moduly, doklady, sklad i nastavení se vždy týkají právě aktivní firmy.
+
+Přepnutí je možné jen do firmy, kde máte aktivní přístup. Odhlášení nebo obnovení přihlášení tento výběr nezamění za jinou firmu. Pokud se přepnutí nezdaří, zůstanete v původní firmě a akci lze opakovat.
+
 Vyplňte obchodní údaje, adresu, IČO, DIČ, bankovní účet, logo, splatnost a číslování faktur. Náhled dalšího čísla faktury musí odpovídat firemním pravidlům.
 
 ### 17.2 Pobočky

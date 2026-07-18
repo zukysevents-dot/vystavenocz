@@ -10,7 +10,9 @@ import { useCompanyStore } from '@/stores/company'
 useSubscriptionStore().init()
 // Profil firmy: API režim ho natáhne ze serveru (jednou), mock z localStorage. Fire-and-forget —
 // stránky čtou companyStore.company reaktivně, takže se po načtení samy překreslí.
-void useCompanyStore().load()
+const companyStore = useCompanyStore()
+void companyStore.load()
+void companyStore.loadCompanies()
 
 const route = useRoute()
 const operationalMode = computed(() => route.meta.operational === true)

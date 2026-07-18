@@ -40,8 +40,16 @@ import {
 } from 'lucide-vue-next'
 import SiteLogo from '@/components/SiteLogo.vue'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useCompanyStore } from '@/stores/company'
 import { APP_NAV_DEFINITIONS, isModuleEnabled, type AppNavDefinition } from '@/lib/modules'
 
 const navIcons = {
@@ -82,6 +90,7 @@ const navIcons = {
 } as const
 
 const auth = useAuthStore()
+const companyStore = useCompanyStore()
 
 type SidebarNavItem = AppNavDefinition & { icon: (typeof navIcons)[keyof typeof navIcons] }
 
@@ -152,6 +161,12 @@ const groupedNav = computed(() =>
 const route = useRoute()
 const router = useRouter()
 const mobileOpen = ref(false)
+const switchingCompany = ref(false)
+const switchError = ref<string | null>(null)
+const activeCompanyId = computed({
+  get: () => auth.companyId ?? '',
+  set: (companyId: string) => void switchCompany(companyId),
+})
 
 function isActive(item: SidebarNavItem): boolean {
   return item.exact ? route.path === item.to : route.path.startsWith(item.to)
@@ -160,6 +175,20 @@ function isActive(item: SidebarNavItem): boolean {
 async function signOut() {
   await auth.logout()
   router.push('/')
+}
+
+async function switchCompany(companyId: string): Promise<void> {
+  if (!companyId || companyId === auth.companyId || switchingCompany.value) return
+  switchingCompany.value = true
+  switchError.value = null
+  try {
+    await companyStore.switchCompany(companyId)
+    await router.replace('/app')
+  } catch {
+    switchError.value = 'Firmu se nepodařilo přepnout. Zkuste to znovu.'
+  } finally {
+    switchingCompany.value = false
+  }
 }
 
 // Zavřít mobilní menu při změně cesty
@@ -215,6 +244,29 @@ watch(
     </nav>
 
     <div class="border-t border-border p-3">
+      <div v-if="companyStore.availableCompanies.length > 1" class="mb-3 space-y-1">
+        <label
+          for="sidebar-company"
+          class="px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+        >
+          Aktivní firma
+        </label>
+        <Select v-model="activeCompanyId" :disabled="switchingCompany">
+          <SelectTrigger id="sidebar-company" class="w-full">
+            <SelectValue placeholder="Vyberte firmu" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem
+              v-for="item in companyStore.availableCompanies"
+              :key="item.id"
+              :value="item.id"
+            >
+              {{ item.name }} · {{ item.role }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <p v-if="switchError" class="px-1 text-xs text-destructive">{{ switchError }}</p>
+      </div>
       <Button
         variant="ghost"
         class="mb-2 w-full justify-start gap-2"
@@ -283,6 +335,29 @@ watch(
     </nav>
 
     <div class="border-t border-border p-3">
+      <div v-if="companyStore.availableCompanies.length > 1" class="mb-3 space-y-1">
+        <label
+          for="mobile-sidebar-company"
+          class="px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+        >
+          Aktivní firma
+        </label>
+        <Select v-model="activeCompanyId" :disabled="switchingCompany">
+          <SelectTrigger id="mobile-sidebar-company" class="w-full">
+            <SelectValue placeholder="Vyberte firmu" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem
+              v-for="item in companyStore.availableCompanies"
+              :key="item.id"
+              :value="item.id"
+            >
+              {{ item.name }} · {{ item.role }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <p v-if="switchError" class="px-1 text-xs text-destructive">{{ switchError }}</p>
+      </div>
       <Button
         variant="ghost"
         class="mb-2 w-full justify-start gap-2"
