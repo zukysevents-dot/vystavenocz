@@ -26,6 +26,53 @@ export interface Client {
   updatedAt: string
 }
 
+export type CrmActivityKind =
+  | 'Note'
+  | 'Call'
+  | 'Email'
+  | 'Meeting'
+  | 'TaskCreated'
+  | 'TaskCompleted'
+  | 'TaskCancelled'
+export type CrmTaskPriority = 'Low' | 'Normal' | 'High'
+export type CrmTaskStatus = 'Open' | 'Completed' | 'Cancelled'
+
+export interface CrmActivity {
+  id: string
+  clientId: string
+  kind: CrmActivityKind
+  body: string | null
+  occurredAt: string
+  taskId: string | null
+  createdAt: string
+}
+
+export interface CrmTask {
+  id: string
+  clientId: string
+  title: string
+  description: string | null
+  dueAt: string | null
+  priority: CrmTaskPriority
+  status: CrmTaskStatus
+  completedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CrmClientSummary {
+  clientId: string
+  clientName: string
+  openTaskCount: number
+  nextTaskDueAt: string | null
+  lastActivityAt: string | null
+}
+
+export interface CrmClientDetail {
+  summary: CrmClientSummary
+  openTasks: CrmTask[]
+}
+
 export interface Company {
   id: string
   companyName: string | null
