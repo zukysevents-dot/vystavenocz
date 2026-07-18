@@ -2,6 +2,8 @@
 
 Tento dokument vysvětluje hotové produktové části bez technického žargonu. U každé nové oblasti držíme stejnou strukturu: **problém, přínos, způsob použití, kontrolní hranice a měřitelnost**.
 
+Aktuální rozhodovací srovnání trhu je v [gap analýze iDoklad a KiloMayo](./investor-competitive-gap-analysis.md).
+
 ## CRM MVP — od kontaktu k dalšímu kroku
 
 ### Jaký problém řeší
