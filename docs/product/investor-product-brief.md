@@ -4,6 +4,7 @@ Tento dokument vysvětluje hotové produktové části bez technického žargonu
 
 Aktuální rozhodovací srovnání trhu je v [gap analýze iDoklad a KiloMayo](./investor-competitive-gap-analysis.md).
 Rozhodnutí k Viva Payments je v [ověřeném go/no-go podkladu](./viva-payments-go-no-go.md).
+Schválená provozní pravidla referralů, partnerů a měření jsou v [playbooku V1](./referral-partner-analytics-v1.md).
 
 ## Online úhrada faktur přes Viva
 
