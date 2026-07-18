@@ -4,6 +4,27 @@ Tento dokument vysvětluje hotové produktové části bez technického žargonu
 
 Aktuální rozhodovací srovnání trhu je v [gap analýze iDoklad a KiloMayo](./investor-competitive-gap-analysis.md).
 
+## Akviziční nabídky a partnerské kódy
+
+### Jaký problém řeší
+
+Partnerský kanál a cílené nabídky potřebují dohledatelně spojit nový účet s konkrétní kampaní, aniž by obchodník ručně přepisoval tabulky nebo aplikace předčasně slibovala aktivní tarif.
+
+### Co je hotové
+
+Majitel firmy vloží kód v Nastavení. Systém zaznamená jednorázový nárok, kampaň, variantu a verzi podmínek. Kód se neukládá v čitelné podobě a opakovaný požadavek nevytvoří druhý nárok.
+
+### Kontrolní hranice
+
+Jde o bezpečnou evidenci nároku, ne o billing. Tarif, kredit nebo bezplatné období se nezapne bez skutečného ověření v systému předplatného. To chrání důvěru zákazníka i finanční pravdivost reportingu.
+
+### Co lze měřit po napojení billingové vrstvy
+
+- počet uplatnění podle kampaně a varianty;
+- podíl ověřených a skutečně aktivovaných nároků;
+- konverze partnera či kanálu na aktivní předplatné;
+- výše a doba čerpaných benefitů.
+
 ## CRM MVP — od kontaktu k dalšímu kroku
 
 ### Jaký problém řeší

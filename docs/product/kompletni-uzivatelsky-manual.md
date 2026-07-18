@@ -714,6 +714,12 @@ Přístupové klíče neposílejte e-mailem ani je nevkládejte do poznámek. Zt
 - platební aktivace předplatného;
 - některé importy historických tržeb nebo faktur podle nasazeného prostředí.
 
+### Uplatnění akčního kódu
+
+Pokud jste získali akční nebo partnerský kód, otevřete **Nastavení firmy → Nabídka a doporučení**, zadejte kód a potvrďte jej. Kód může uplatnit majitel, administrátor nebo vedoucí firmy. Po úspěchu systém ukáže, že nárok zaznamenal.
+
+> Uplatnění kódu samo nezmění tarif, nezpůsobí platbu ani nezlevní účtenky. Je to bezpečné potvrzení nároku; skutečné použití nabídky se potvrdí až v předplatném.
+
 > Označení „Připraveno k napojení“ neznamená „Aktivní“. Před ostrým použitím vždy proveďte skutečný test celé cesty.
 
 ## 20. Řešení problémů a slovník
