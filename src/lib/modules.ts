@@ -278,6 +278,7 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
     hiddenForRoles: ['Employee'],
   },
   { to: '/app/klienti', label: 'Klienti', module: 'invoicing', hiddenForRoles: ['Employee'] },
+  { to: '/app/crm', label: 'CRM', module: 'invoicing', hiddenForRoles: ['Employee', 'Accountant'] },
   { to: '/app/import', label: 'Nahrát data', module: 'integrations', hiddenForRoles: ['Employee'] },
   { to: '/app/vernost', label: 'Věrnost', module: 'loyalty', hiddenForRoles: ['Employee'] },
   { to: '/app/akce-ceny', label: 'Akce a ceny', module: 'loyalty', hiddenForRoles: ['Employee'] },

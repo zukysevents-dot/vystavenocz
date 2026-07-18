@@ -14,6 +14,7 @@ jakmile endpoint existuje, FE se přepne bez dalšího zásahu.
 | 1   | [`role-a-opravneni.md`](./role-a-opravneni.md)               | malé     | reálné vynucení rolí (dnes jen UX na FE)                        |
 | 2   | [`import-faktur.md`](./import-faktur.md)                     | malé     | dokončení F9 importu (historické faktury do produkce)           |
 | 2b  | [`import-klienti-produkty.md`](./import-klienti-produkty.md) | malé     | F9 import klientů/produktů (jen potvrdit CRUD pole)             |
+| CRM | [`crm-mvp-v1.md`](./crm-mvp-v1.md)                           | střední  | interní aktivity a úkoly nad existujícím klientem               |
 | 3   | [`provize-z-trzeb.md`](./provize-z-trzeb.md)                 | malé     | provize u Směn (`Sale.employeeId`)                              |
 | 4   | [`objednavkovy-kanal.md`](./objednavkovy-kanal.md)           | střední  | vlastní objednávky bez provizí (2 public endpointy)             |
 | 5   | [`rezervace-pripominky.md`](./rezervace-pripominky.md)       | střední  | připomínky rezervací (scheduler + SMS/e-mail)                   |

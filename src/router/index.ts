@@ -304,6 +304,18 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Klienti', layout: 'app', requiresAuth: true, requiresModule: 'invoicing' },
   },
   {
+    path: '/app/crm',
+    name: 'app-crm',
+    component: () => import('@/pages/CrmPage.vue'),
+    meta: {
+      title: 'CRM',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'invoicing',
+      requiresRole: ['Owner', 'Admin', 'Manager'],
+    },
+  },
+  {
     path: '/app/import',
     name: 'app-import',
     component: () => import('@/pages/ImportPage.vue'),
