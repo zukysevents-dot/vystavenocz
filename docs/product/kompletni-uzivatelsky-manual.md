@@ -564,7 +564,7 @@ Poznámky v CRM jsou **pouze interní**. Klient je nevidí v klientské zóně a
 1. Vyberte klienta.
 2. Přidejte položky, ceny a platnost.
 3. Uložte koncept.
-4. U klienta si předem zkontrolujte e-mailovou adresu. U konceptu zvolte **Odeslat e-mailem**. Nabídka se odešle na uložený e-mail klienta a její stav se změní na Odesláno. Stejným tlačítkem ji můžete poslat znovu.
+4. U konceptu zvolte **Odeslat e-mailem**. Otevře se malé okno s adresou příjemce: je-li u klienta uložená, předvyplní se; jinak ji jednoduše napište nebo upravte. Nabídka se odešle na jednu zadanou adresu a její stav se změní na Odesláno. Jednorázová změna nepřepíše kartu klienta. Stejným tlačítkem ji můžete poslat znovu.
 5. Po přijetí ji převeďte na zakázku nebo fakturu.
 
 > E-mailová brána je společná pro celou firmu: stejným způsobem se posílají nabídky, vystavené faktury i nákupní objednávky. Odesílat lze vždy jednu konkrétní adresu, aby se doklady neposlaly omylem více lidem. Pokud klient e-mail nemá, nejdříve jej doplňte v kartě klienta.
