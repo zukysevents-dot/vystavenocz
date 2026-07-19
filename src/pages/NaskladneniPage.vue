@@ -62,7 +62,7 @@ const apiSuggestionsLoaded = ref(false)
 
 const scanEan = ref('')
 const search = ref('')
-const scanInput = ref<HTMLInputElement | null>(null)
+const scanInput = ref<InstanceType<typeof Input> | null>(null)
 const scannerOpen = ref(false)
 
 interface ReceiveLine {
@@ -147,7 +147,10 @@ onMounted(() => {
 })
 
 function focusScan() {
-  nextTick(() => scanInput.value?.focus())
+  nextTick(() => {
+    const input = scanInput.value?.$el as HTMLInputElement | undefined
+    input?.focus()
+  })
 }
 
 function addProduct(p: Product, qty = 1) {
