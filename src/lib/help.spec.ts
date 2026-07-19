@@ -5,6 +5,7 @@ describe('visibleHelpGuides', () => {
   it('shows only guides for enabled modules', () => {
     expect(visibleHelpGuides(['core', 'gastro'], 'Owner').map((guide) => guide.id)).toEqual([
       'first-steps',
+      'growth-referral-partner',
       'restaurant',
       'modifiers',
     ])

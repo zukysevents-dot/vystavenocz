@@ -28,6 +28,8 @@ services:
       Jwt__Secret: ${JWT_SECRET:?nastav JWT_SECRET (min. 32 znaků)}
       Stripe__SecretKey: ${STRIPE_SECRET_KEY:?nastav STRIPE_SECRET_KEY}
       Integrations__SecretEncryptionKey: ${INTEGRATIONS_SECRET_ENCRYPTION_KEY:?nastav INTEGRATIONS_SECRET_ENCRYPTION_KEY (openssl rand -base64 32)}
+      # Jen pro interní billing/backoffice adaptér: bez klíče kvalifikace referralů i investor metriky fail-closed vrátí 503.
+      Growth__OperatorKey: ${GROWTH_OPERATOR_KEY:-}
       BlobStorage__LocalRootPath: /var/lib/vystaveno/files
       Payments__PortalBaseUrl: ${PAYMENTS_PORTAL_BASE_URL:-http://localhost:8080}
       # Web je same-origin přes nginx; desktop (Tauri) volá cross-origin → povol jeho originy (ops).

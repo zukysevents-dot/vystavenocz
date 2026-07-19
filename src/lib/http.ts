@@ -110,6 +110,7 @@ async function request<T>(
   body?: unknown,
   retry = true,
   isPublic = false,
+  extraHeaders?: Record<string, string>,
 ): Promise<T> {
   const baseUrl = apiUrl()
   if (!baseUrl) throw new ApiError(0, 'API URL není nastavené.')
@@ -120,6 +121,7 @@ async function request<T>(
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   if (tokens?.accessToken) headers.Authorization = `Bearer ${tokens.accessToken}`
+  Object.assign(headers, extraHeaders)
 
   const res = await fetch(`${baseUrl}${path}`, {
     method,
@@ -130,7 +132,7 @@ async function request<T>(
   // Access token expiroval → zkus refresh a request jednou zopakuj (jen u auth volání).
   if (!isPublic && res.status === 401 && retry && getTokens()?.refreshToken) {
     const refreshed = await refreshTokens()
-    if (refreshed) return request<T>(method, path, body, false)
+    if (refreshed) return request<T>(method, path, body, false, isPublic, extraHeaders)
   }
 
   if (!res.ok) {
@@ -287,6 +289,8 @@ function parseContentDispositionFileName(value: string | null): string | null {
 export const http = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
+  postWithHeaders: <T>(path: string, body: unknown, headers: Record<string, string>) =>
+    request<T>('POST', path, body, true, false, headers),
   put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
   del: <T = void>(path: string) => request<T>('DELETE', path),

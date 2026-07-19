@@ -8,6 +8,8 @@ Podrobná pravidla stylu a způsobu práce jsou v **[CLAUDE.md](CLAUDE.md)** —
 `AGENTS.md` je hlavní společný kontext pro Codex a ostatní AI coding agenty. `CLAUDE.md` je Claude Code vstup se stejnými závaznými pravidly pro práci.
 Při každé smysluplné změně projektu aktualizuj **oba soubory**, aby se při přepínání mezi Codexem a Claude Code neztratil kontext.
 
+**Growth V1 (doporučení a partneři):** `GrowthSettings.vue` v Nastavení firmy bezpečně vytváří referral kód, přijímá kód s idempotency hlavičkou a umožní partnerovi poslat žádost. Průvodce obsahuje laický návod `growth-referral-partner`; UI nesmí slibovat aktivaci tarifu, výplatu provize ani potvrzenou platbu. Kvalifikace nároku nastává až po důvěryhodném billing eventu na backendu. Kontrakt: `docs/backend/growth-referral-partner-v1.md`.
+
 Za smysluplnou změnu se bere hlavně: architektura, doménový model, modulový systém, API kontrakty, deploy postup, bezpečnostní pravidla, workflow vývoje, testovací brány a důležitá produktová rozhodnutí.
 
 Veřejný ceník (`src/lib/pricing.ts` + `IndustryPackages.vue`) prodává jen ověřené workflow, která v aplikaci už běží, a označuje je štítkem „V aplikaci". Nezaměňuj připravený integrační cíl za ostrý provoz: klientská zóna umí faktury a přijetí nabídek, ne online platbu bez runtime provideru; cashflow připraví e-mailovou upomínku, neposílá automatickou sekvenci; BankID a platební provideri zůstávají „Připraveno k napojení", dokud nejsou aktivní adaptéry a credentials.
