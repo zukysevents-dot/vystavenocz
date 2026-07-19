@@ -17,10 +17,13 @@ export default defineConfig({
       manifest: false,
       workbox: {
         globPatterns: ['**/*.{js,css,html}', 'favicon.ico', 'icon-192.png', 'icon-512.png'],
-        navigateFallback: '/index.html',
+        // Navigace musí vždy nejdřív zkusit síť. Precache fallback vracel starý
+        // index.html přednostně, takže otevřená PWA mohla držet minulý release
+        // i po nasazení nových hashovaných assetů.
+        navigateFallback: null,
         cleanupOutdatedCaches: true,
-        // Vite 8 může zavolat PWA closeBundle ještě před zapsáním precache assetů. Runtime fallback
-        // zároveň udrží navigaci funkční a zabrání tomu, aby Workbox odmítl celý produkční build.
+        // Vite 8 může zavolat PWA closeBundle ještě před zapsáním precache assetů. Síťový fallback
+        // udrží SPA navigaci funkční a současně při novém releasu stáhne aktuální index.html.
         runtimeCaching: [
           {
             urlPattern: ({ request }) => request.mode === 'navigate',
