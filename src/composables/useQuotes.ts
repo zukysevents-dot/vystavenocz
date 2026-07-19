@@ -110,6 +110,12 @@ export function useQuotes() {
     return updated
   }
 
+  async function sendEmail(id: string, input: { to?: string | null; message?: string | null } = {}): Promise<Quote> {
+    if (isApiMode()) return http.post<Quote>(`/quotes/${id}/send-email`, input)
+    // Náhled nemá SMTP. Stav se proto nesmí změnit na „odesláno“ jen kvůli demonstraci.
+    throw new ApiError(503, 'Odesílání e-mailů je dostupné až v připojené aplikaci se SMTP nastavením.')
+  }
+
   /**
    * Převede nabídku na zakázku. API: server namapuje položky a vrátí Job (idempotence dle sourceQuoteId).
    * Mock: sestaví zakázku přes useJobs (položky nabídky → práce), idempotentně dle `sourceQuoteId`.
@@ -158,5 +164,5 @@ export function useQuotes() {
     return jobs.get(job.id)
   }
 
-  return { list, get, create, update, remove, setStatus, convertToJob }
+  return { list, get, create, update, remove, setStatus, sendEmail, convertToJob }
 }

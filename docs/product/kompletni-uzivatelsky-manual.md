@@ -564,8 +564,10 @@ Poznámky v CRM jsou **pouze interní**. Klient je nevidí v klientské zóně a
 1. Vyberte klienta.
 2. Přidejte položky, ceny a platnost.
 3. Uložte koncept.
-4. Odešlete nabídku klientovi podle dostupného způsobu.
+4. U klienta si předem zkontrolujte e-mailovou adresu. U konceptu zvolte **Odeslat e-mailem**. Nabídka se odešle na uložený e-mail klienta a její stav se změní na Odesláno. Stejným tlačítkem ji můžete poslat znovu.
 5. Po přijetí ji převeďte na zakázku nebo fakturu.
+
+> E-mailová brána je společná pro celou firmu: stejným způsobem se posílají nabídky, vystavené faktury i nákupní objednávky. Odesílat lze vždy jednu konkrétní adresu, aby se doklady neposlaly omylem více lidem. Pokud klient e-mail nemá, nejdříve jej doplňte v kartě klienta.
 
 ### 12.4 Faktura
 
@@ -575,13 +577,14 @@ Poznámky v CRM jsou **pouze interní**. Klient je nevidí v klientské zóně a
 4. Nastavte datum vystavení, splatnost a případně datum zdanitelného plnění.
 5. Uložte koncept.
 6. Vystavte doklad až po kontrole.
-7. Stáhněte PDF nebo účetní formát.
+7. Pro zákazníka zvolte **Odeslat**. Systém pošle vystavenou fakturu na jeho e-mail včetně PDF přílohy. Před odesláním zkontrolujte adresu; můžete ji jednorázově změnit, aniž byste přepisovali kartu klienta.
+8. Stáhněte PDF nebo účetní formát podle potřeby.
 
 Na telefonu zůstává součet a akce Uložit koncept dole na obrazovce i při dlouhém seznamu položek. Koncept uložte před návratem nebo odesláním.
 
 Pokud nový dosud neuložený doklad obnovíte v tomtéž prohlížeči, nabídne se rozepsaný koncept k výslovnému obnovení nebo zahození. Obnova sama nevytváří fakturu; vytvoří se až akcí Uložit koncept.
 
-Odeslání e-mailem není v každém prostředí aktivní. Pokud aplikace uvádí, že odeslání není dostupné, stáhněte PDF a odešlete je ze svého e-mailu.
+Když se při odeslání zobrazí informace o nedostupném e-mailu, jde o nastavení serveru, ne o smazání dokladu. Doklad zůstane uložený; správce musí doplnit SMTP údaje. Do té doby stáhněte PDF a odešlete jej ze svého e-mailu.
 
 ### 12.5 Proforma, dobropis a opakování
 

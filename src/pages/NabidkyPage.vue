@@ -287,6 +287,21 @@ async function changeStatus(q: Quote, status: QuoteStatus) {
   }
 }
 
+async function sendEmail(q: Quote) {
+  if (busyId.value) return
+  if (!window.confirm(`Odeslat nabídku ${q.number} e-mailem odběrateli?`)) return
+  busyId.value = q.id
+  try {
+    await quotesApi.sendEmail(q.id)
+    toast.success('Nabídka byla odeslána e-mailem.')
+    await reload()
+  } catch {
+    toast.error('Nabídku se nepodařilo odeslat. Zkontrolujte e-mail u odběratele a SMTP nastavení.')
+  } finally {
+    busyId.value = null
+  }
+}
+
 // --- převod na zakázku ---
 async function toJob(q: Quote) {
   if (busyId.value) return
@@ -483,10 +498,20 @@ async function convertToInvoice(q: Quote) {
                     variant="ghost"
                     size="sm"
                     :disabled="busyId === q.id"
-                    title="Odeslat nabídku"
-                    @click="changeStatus(q, 'sent')"
+                    title="Odeslat nabídku e-mailem"
+                    @click="sendEmail(q)"
                   >
-                    <Send class="h-4 w-4" /> Odeslat
+                    <Send class="h-4 w-4" /> E-mailem
+                  </Button>
+                  <Button
+                    v-if="q.status === 'sent'"
+                    variant="ghost"
+                    size="sm"
+                    :disabled="busyId === q.id"
+                    title="Poslat nabídku znovu e-mailem"
+                    @click="sendEmail(q)"
+                  >
+                    <Send class="h-4 w-4" /> E-mailem
                   </Button>
                   <Button
                     v-if="q.status === 'sent'"

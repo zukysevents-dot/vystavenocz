@@ -24,6 +24,7 @@ Tento checklist je rychlá brána pro ruční deploy na VPS. Produkce je pull-ba
 8. Credential trezor pro **ověřené podpisy** (modul `verified_signing`) používá stejný serverový šifrovací klíč jako platební vault: `INTEGRATIONS_SECRET_ENCRYPTION_KEY` v `~/vystavenocz/.env` → `Integrations__SecretEncryptionKey` v API. Bez něj ukládání secretů podpisů bezpečně vrací 503 (opět chyba deploye, ne UI).
 9. Přílohy zakázek ukládá API do named volume `api_files` připojeného na `/var/lib/vystaveno/files` (`BlobStorage__LocalRootPath`). Před deployem ověř, že volume nemaže žádný úklidový skript a že je zahrnutý v provozní záloze spolu s PostgreSQL.
 10. Nginx musí mít pro `/api/` `client_max_body_size 12m`, aby povolený 10 MiB soubor prošel i s multipart obálkou. HTTP 413 už pod tímto limitem musí pocházet z aplikační validace, ne z proxy.
+11. Pro skutečné odesílání dokladů musí `.env` obsahovat `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_FROM`, `EMAIL_USERNAME` a `EMAIL_PASSWORD`. Odesílací adresa/doména v `EMAIL_FROM` musí být ověřená u SMTP poskytovatele. Bez těchto hodnot aplikace doklad nemaže ani nepředstírá doručení — pouze vrátí chybu konfigurace.
 
 ## 2. Deploy příkazy na VPS
 
@@ -100,6 +101,7 @@ Proveď na testovací firmě / testovacím účtu. Pořadí odpovídá tomu, jak
 12. **Veřejné / QR menu** (pokud je slug a menu dostupné) — v `Nastavení firmy` ověř veřejný slug, pak otevři `/objednavka/<slug>` (anonymně, bez přihlášení). Očekávání: menu se načte, u položek se ukážou alergeny, host přidá do košíku a projde k odeslání; ceny počítá server. QR ke stolu (`?table=<id>&name=<název>`) skryje výdej/rozvoz a připíše se do účtu stolu.
 13. **Zakázka — dokumenty a soubory** (modul `jobs`) — otevři detail testovací zakázky, nahraj malé PDF a JPEG/PNG/WebP, stáhni je a jeden po potvrzení smaž. Očekávání: metadata ukážou název, velikost, datum a autora; soubor nad 10 MB se odmítne ještě před odesláním; účet s `jobs.read` bez `jobs.manage` vidí seznam a stáhne soubor, ale nevidí upload ani smazání. Po restartu API zůstane nahraný soubor dostupný v named volume `api_files`.
 14. **Audit** — v `Audit` ověř, že citlivé akce (storno, sleva, uzávěrka, změna ceny) vznikají v logu s časem, aktérem a entitou.
+15. **E-mail dokladů** — jen na testovacím klientovi s bezpečnou adresou: vytvoř koncept nabídky, zvol **Odeslat e-mailem** a ověř doručení i změnu stavu na Odesláno. U vystavené faktury zvol **Odeslat** a ověř, že dorazila s PDF přílohou. Do ostrého zákaznického provozu neposílej test bez souhlasu adresáta.
 
 ## 6. Aktuální hranice funkcí (co je ostré vs. připravené)
 
