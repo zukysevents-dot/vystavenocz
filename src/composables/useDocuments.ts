@@ -29,11 +29,13 @@ function normalizeDocument(dto: DocumentDto): EntityDocument {
   }
 }
 
-export function useDocuments(jobId: string) {
+// Sdílený souborový panel. Backendové endpointy mají stejný kontrakt pro zakázky i skladové doklady;
+// `entitySegment` je vždy interně daný volajícím, nikdy nevychází z uživatelského vstupu.
+export function useDocuments(entityId: string, entitySegment: 'jobs' | 'stock-documents' = 'jobs') {
   async function list(): Promise<EntityDocument[]> {
     if (!isApiMode()) return []
     const response = await http.get<DocumentDto[] | { items: DocumentDto[] }>(
-      `/jobs/${jobId}/files?pageSize=100`,
+      `/${entitySegment}/${entityId}/files?pageSize=100`,
     )
     const items = Array.isArray(response) ? response : response.items
     return items.map(normalizeDocument)
@@ -45,18 +47,18 @@ export function useDocuments(jobId: string) {
   ): Promise<EntityDocument> {
     const formData = new FormData()
     formData.append('file', file)
-    const document = await http.upload<DocumentDto>(`/jobs/${jobId}/files`, formData, {
+    const document = await http.upload<DocumentDto>(`/${entitySegment}/${entityId}/files`, formData, {
       onProgress,
     })
     return normalizeDocument(document)
   }
 
   async function download(fileId: string) {
-    return http.download(`/jobs/${jobId}/files/${fileId}/content`)
+    return http.download(`/${entitySegment}/${entityId}/files/${fileId}/content`)
   }
 
   async function remove(fileId: string): Promise<void> {
-    await http.del(`/jobs/${jobId}/files/${fileId}`)
+    await http.del(`/${entitySegment}/${entityId}/files/${fileId}`)
   }
 
   return { list, upload, download, remove }

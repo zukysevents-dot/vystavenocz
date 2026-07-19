@@ -897,6 +897,64 @@ export interface CreatePurchaseReceiptRequest {
   items: PurchaseReceiptItemInput[]
 }
 
+// Obecné skladové doklady. Koncept zásobu nemění; potvrzení ji zapíše atomicky do ledgeru.
+export type StockDocumentType =
+  | 'PurchaseReceipt'
+  | 'IssueNote'
+  | 'TransferNote'
+  | 'ReturnToSupplier'
+  | 'CustomerReturn'
+  | 'DeliveryNote'
+
+export type StockDocumentStatus = 'Draft' | 'Confirmed' | 'Cancelled'
+
+export interface StockDocumentItemInput {
+  productId: string
+  quantity: number
+  unitCost?: number | null
+}
+
+export interface CreateStockDocumentRequest {
+  type: StockDocumentType
+  documentDate?: string | null
+  sourceLocationId?: string | null
+  destinationLocationId?: string | null
+  counterpartyName?: string | null
+  externalReference?: string | null
+  note?: string | null
+  items: StockDocumentItemInput[]
+  supplierId?: string | null
+  purchaseOrderId?: string | null
+}
+
+export interface StockDocumentItem {
+  productId: string
+  productName: string
+  productSku: string
+  quantity: number
+  unitCost: number | null
+  lineCost: number | null
+}
+
+export interface StockDocument {
+  id: string
+  type: StockDocumentType
+  status: StockDocumentStatus
+  number: string | null
+  documentDate: string
+  sourceLocationId: string | null
+  destinationLocationId: string | null
+  counterpartyName: string | null
+  externalReference: string | null
+  note: string | null
+  totalCost: number | null
+  confirmedAt: string | null
+  createdAt: string
+  items: StockDocumentItem[]
+  supplierId: string | null
+  purchaseOrderId: string | null
+}
+
 export interface PurchaseSuggestionItem {
   productId: string
   productName: string

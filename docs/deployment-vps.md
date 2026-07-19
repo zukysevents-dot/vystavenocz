@@ -43,9 +43,15 @@ DB_PASSWORD=<silné heslo DB>
 STRIPE_SECRET_KEY=<produkční Stripe secret>
 INTEGRATIONS_SECRET_ENCRYPTION_KEY=<32B base64> # vygeneruj: openssl rand -base64 32
 PAYMENTS_PORTAL_BASE_URL=https://fakturace.example.com
+# SMTP: použij údaje svého poskytovatele (např. Resend, Postmark, Mailgun nebo vlastní doménový SMTP).
+EMAIL_HOST=smtp.example.com
+EMAIL_PORT=587
+EMAIL_FROM=Vystaveno <noreply@example.com>
+EMAIL_USERNAME=<SMTP uživatel>
+EMAIL_PASSWORD=<SMTP heslo nebo API klíč>
 ```
 
-`JWT_SECRET`, `DB_PASSWORD`, `STRIPE_SECRET_KEY` a `INTEGRATIONS_SECRET_ENCRYPTION_KEY` jsou **server-only secrety** — nikdy do gitu ani do frontend buildu.
+`JWT_SECRET`, `DB_PASSWORD`, `STRIPE_SECRET_KEY`, `INTEGRATIONS_SECRET_ENCRYPTION_KEY` a `EMAIL_PASSWORD` jsou **server-only secrety** — nikdy do gitu ani do frontend buildu. `EMAIL_FROM` musí být odesílací adresa/doména ověřená u daného e-mailového poskytovatele.
 `INTEGRATIONS_SECRET_ENCRYPTION_KEY` šifruje credential vault pro platební providery i ověřené podpisy; v API se mapuje na `Integrations__SecretEncryptionKey`. Bez něj backend bezpečně odmítne ukládání credentialů (`503`).
 `PAYMENTS_PORTAL_BASE_URL` je veřejná HTTPS adresa aplikace bez lomítka na konci; API ji používá pro návrat zákazníka z online platby faktury. Na běžném VPS nasazení nastav stejnou hodnotu jako `https://$DOMAIN`.
 

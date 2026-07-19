@@ -335,13 +335,13 @@ const routes: RouteRecordRaw[] = [
     path: '/app/sklad',
     name: 'app-sklad',
     component: () => import('@/pages/SkladPage.vue'),
-    meta: { title: 'Produkty a menu', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
+    meta: { title: 'Produkty', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
   },
   {
     path: '/app/kategorie',
     name: 'app-kategorie',
     component: () => import('@/pages/KategoriePage.vue'),
-    meta: { title: 'Kategorie', layout: 'app', requiresAuth: true, requiresModule: 'core' },
+    meta: { title: 'Kategorie produktů', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
   },
   {
     path: '/app/modifikatory',
@@ -351,7 +351,7 @@ const routes: RouteRecordRaw[] = [
       title: 'Volby k produktům',
       layout: 'app',
       requiresAuth: true,
-      requiresModule: 'stock',
+      requiresModule: 'gastro',
     },
   },
   {
@@ -365,6 +365,24 @@ const routes: RouteRecordRaw[] = [
     name: 'app-naskladneni',
     component: () => import('@/pages/NaskladneniPage.vue'),
     meta: { title: 'Příjem zboží', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
+  },
+  {
+    path: '/app/skladove-doklady',
+    name: 'app-skladove-doklady',
+    component: () => import('@/pages/SkladoveDokladyPage.vue'),
+    meta: { title: 'Skladové doklady', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
+  },
+  {
+    path: '/app/dodavatele',
+    name: 'app-dodavatele',
+    component: () => import('@/pages/DodavatelePage.vue'),
+    meta: { title: 'Dodavatelé', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
+  },
+  {
+    path: '/app/nakupni-objednavky',
+    name: 'app-nakupni-objednavky',
+    component: () => import('@/pages/NakupniObjednavkyPage.vue'),
+    meta: { title: 'Nákupní objednávky', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
   },
   {
     path: '/app/dochazka',

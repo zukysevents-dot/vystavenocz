@@ -18,7 +18,7 @@ const router = useRouter()
 const submitting = ref(false)
 
 const form = reactive({
-  business_profile: 'gastro' as BusinessProfileId,
+  business_profile: 'warehouse' as BusinessProfileId,
   company_name: '',
   ico: '',
   dic: '',

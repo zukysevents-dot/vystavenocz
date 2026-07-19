@@ -34,12 +34,16 @@ describe('module capabilities', () => {
   it('business profiles always include core and keep vertical modules scoped', () => {
     const gastro = BUSINESS_PROFILES.find((profile) => profile.id === 'gastro')!
     const crafts = BUSINESS_PROFILES.find((profile) => profile.id === 'crafts')!
+    const warehouse = BUSINESS_PROFILES.find((profile) => profile.id === 'warehouse')!
 
     expect(BUSINESS_PROFILES.every((profile) => profile.modules.includes('core'))).toBe(true)
     expect(gastro.modules).toContain('gastro')
     expect(gastro.modules).toContain('pos')
     expect(crafts.modules).toContain('jobs')
     expect(crafts.modules).not.toContain('gastro')
+    expect(warehouse.modules).toContain('stock')
+    expect(warehouse.modules).not.toContain('pos')
+    expect(warehouse.modules).not.toContain('gastro')
   })
 
   it('hides the shift planner nav from staff and accountant (wage privacy)', () => {
@@ -59,6 +63,7 @@ describe('module capabilities', () => {
 
   it('business profiles define actionable onboarding setup steps', () => {
     const gastro = BUSINESS_PROFILES.find((profile) => profile.id === 'gastro')!
+    const warehouse = BUSINESS_PROFILES.find((profile) => profile.id === 'warehouse')!
 
     expect(BUSINESS_PROFILES.every((profile) => profile.setupSteps.length > 0)).toBe(true)
     expect(gastro.setupSteps[0]).toMatchObject({
@@ -67,5 +72,17 @@ describe('module capabilities', () => {
     })
     expect(gastro.setupSteps.map((step) => step.to)).toContain('/app/mapa-stolu')
     expect(gastro.setupSteps.map((step) => step.to)).toContain('/app/uzaverka')
+    expect(warehouse.setupSteps.map((step) => step.to)).toContain('/app/sklad')
+    expect(warehouse.setupSteps.map((step) => step.to)).not.toContain('/app/pokladna')
+  })
+
+  it('keeps operational stock documents visible without a POS or gastro module', () => {
+    const documents = APP_NAV_DEFINITIONS.find((item) => item.to === '/app/skladove-doklady')!
+    const purchaseOrders = APP_NAV_DEFINITIONS.find((item) => item.to === '/app/nakupni-objednavky')!
+    const modifiers = APP_NAV_DEFINITIONS.find((item) => item.to === '/app/modifikatory')!
+
+    expect(documents.module).toBe('stock')
+    expect(purchaseOrders.module).toBe('stock')
+    expect(modifiers.module).toBe('gastro')
   })
 })

@@ -19,6 +19,9 @@ import { useDocuments, type EntityDocument } from '@/composables/useDocuments'
 const props = defineProps<{
   entityId: string
   canManage: boolean
+  entitySegment?: 'jobs' | 'stock-documents'
+  heading?: string
+  emptyText?: string
 }>()
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
@@ -28,7 +31,7 @@ const ACCEPTED_EXTENSION = /\.(pdf|jpe?g|png|webp)$/i
 const ACCEPT = 'application/pdf,image/jpeg,image/png,image/webp'
 
 const apiMode = isApiMode()
-const documentsApi = useDocuments(props.entityId)
+const documentsApi = useDocuments(props.entityId, props.entitySegment ?? 'jobs')
 const documents = ref<EntityDocument[]>([])
 const loading = ref(apiMode)
 const loadError = ref(false)
@@ -175,7 +178,7 @@ onMounted(load)
     >
       <div>
         <h2 id="attachments-heading" class="flex items-center gap-1.5 font-semibold">
-          <Paperclip class="h-4 w-4 text-primary" /> Dokumenty a soubory
+          <Paperclip class="h-4 w-4 text-primary" /> {{ props.heading ?? 'Dokumenty a soubory' }}
         </h2>
         <p v-if="apiMode" class="mt-0.5 text-xs text-muted-foreground">
           PDF nebo obrázky, každý nejvýše 10 MB
@@ -220,7 +223,7 @@ onMounted(load)
         <Button variant="outline" size="sm" @click="load">Zkusit znovu</Button>
       </div>
       <div v-else-if="!documents.length" class="min-h-24 p-4 text-sm text-muted-foreground">
-        K zakázce zatím nejsou přiložené žádné soubory.
+        {{ props.emptyText ?? 'K zakázce zatím nejsou přiložené žádné soubory.' }}
       </div>
       <ul v-else class="divide-y divide-border">
         <li

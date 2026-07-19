@@ -20,7 +20,7 @@ export type AppModuleId = (typeof APP_MODULES)[number]
 
 export const DEFAULT_ENABLED_MODULES: AppModuleId[] = [...APP_MODULES]
 
-export type BusinessProfileId = 'gastro' | 'services' | 'crafts' | 'shop'
+export type BusinessProfileId = 'warehouse' | 'gastro' | 'services' | 'crafts' | 'shop'
 
 export interface BusinessProfile {
   id: BusinessProfileId
@@ -37,6 +37,34 @@ export interface BusinessProfileSetupStep {
 }
 
 export const BUSINESS_PROFILES: BusinessProfile[] = [
+  {
+    id: 'warehouse',
+    label: 'Samostatný sklad',
+    description: 'Příjem, výdej, převody, inventury a minima zásob — bez pokladny a gastro.',
+    modules: ['core', 'stock', 'reporting', 'ai', 'integrations'],
+    setupSteps: [
+      {
+        label: 'Založit sklad nebo provozovnu',
+        description: 'Jedno místo stačí pro začátek. U více skladů pak systém hlídá, odkud a kam se zboží pohybuje.',
+        to: '/app/pobocky',
+      },
+      {
+        label: 'Nahrát katalog položek',
+        description: 'Zadejte název, skladový kód a případně čárový kód. Prodejní cenu ani pokladnu nepotřebujete.',
+        to: '/app/sklad',
+      },
+      {
+        label: 'Založit první příjemku',
+        description: 'Příjemka zvýší zásobu a uchová dodavatele, datum i nákupní cenu.',
+        to: '/app/naskladneni',
+      },
+      {
+        label: 'Ověřit pohyby a minimum',
+        description: 'Ve stavu skladu uvidíte zásoby, historii, inventuru a upozornění na položky pod minimem.',
+        to: '/app/zasoby',
+      },
+    ],
+  },
   {
     id: 'gastro',
     label: 'Gastro',
@@ -174,7 +202,7 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
   },
   {
     to: '/app/sklad',
-    label: 'Produkty a menu',
+    label: 'Produkty',
     module: 'stock',
     hiddenForRoles: ['Employee', 'Accountant'],
   },
@@ -186,14 +214,32 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
   },
   {
     to: '/app/naskladneni',
-    label: 'Příjem zboží',
+    label: 'Příjemky',
+    module: 'stock',
+    hiddenForRoles: ['Employee', 'Accountant'],
+  },
+  {
+    to: '/app/skladove-doklady',
+    label: 'Skladové doklady',
+    module: 'stock',
+    hiddenForRoles: ['Employee', 'Accountant'],
+  },
+  {
+    to: '/app/dodavatele',
+    label: 'Dodavatelé',
+    module: 'stock',
+    hiddenForRoles: ['Employee', 'Accountant'],
+  },
+  {
+    to: '/app/nakupni-objednavky',
+    label: 'Nákupní objednávky',
     module: 'stock',
     hiddenForRoles: ['Employee', 'Accountant'],
   },
   {
     to: '/app/modifikatory',
     label: 'Volby k produktům',
-    module: 'stock',
+    module: 'gastro',
     hiddenForRoles: ['Employee', 'Accountant'],
   },
   { to: '/app/dochazka', label: 'Docházka', module: 'attendance' },
@@ -242,8 +288,8 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
   { to: '/app/rezervace', label: 'Rezervace', module: 'booking' },
   {
     to: '/app/kategorie',
-    label: 'Kategorie menu',
-    module: 'core',
+    label: 'Kategorie produktů',
+    module: 'stock',
     hiddenForRoles: ['Employee', 'Accountant'],
   },
   {

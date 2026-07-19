@@ -37,6 +37,7 @@ import {
   Repeat,
   CircleHelp,
   SlidersHorizontal,
+  ClipboardList,
 } from 'lucide-vue-next'
 import SiteLogo from '@/components/SiteLogo.vue'
 import { Button } from '@/components/ui/button'
@@ -53,6 +54,9 @@ const navIcons = {
   '/app/sklad': Package,
   '/app/zasoby': Boxes,
   '/app/naskladneni': ScanBarcode,
+  '/app/skladove-doklady': FileText,
+  '/app/dodavatele': Building2,
+  '/app/nakupni-objednavky': ClipboardList,
   '/app/modifikatory': SlidersHorizontal,
   '/app/dochazka': Clock,
   '/app/smeny': CalendarClock,
@@ -113,6 +117,9 @@ function sectionForPath(path: string): SidebarSectionId {
       '/app/sklad',
       '/app/zasoby',
       '/app/naskladneni',
+      '/app/skladove-doklady',
+      '/app/dodavatele',
+      '/app/nakupni-objednavky',
       '/app/modifikatory',
       '/app/kategorie',
     ].includes(path)

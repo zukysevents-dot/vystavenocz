@@ -32,6 +32,13 @@ services:
       Growth__OperatorKey: ${GROWTH_OPERATOR_KEY:-}
       BlobStorage__LocalRootPath: /var/lib/vystaveno/files
       Payments__PortalBaseUrl: ${PAYMENTS_PORTAL_BASE_URL:-http://localhost:8080}
+      # SMTP pro odeslání faktur, pozvánek a nákupních objednávek. Bez EMAIL_HOST je v dev/testu
+      # použit bezpečný logging sender; produkce pak nesmí tvrdit, že e-mail došel.
+      Email__Host: ${EMAIL_HOST:-}
+      Email__Port: ${EMAIL_PORT:-587}
+      Email__From: ${EMAIL_FROM:-}
+      Email__Username: ${EMAIL_USERNAME:-}
+      Email__Password: ${EMAIL_PASSWORD:-}
       # Web je same-origin přes nginx; desktop (Tauri) volá cross-origin → povol jeho originy (ops).
       Cors__AllowedOrigins__0: 'tauri://localhost'
       Cors__AllowedOrigins__1: 'http://tauri.localhost'

@@ -3,7 +3,7 @@
 ## Kompletní uživatelský manuál
 
 Verze příručky: červenec 2026
-Pro restaurace, kavárny, bary, obchody, služby a zakázkový provoz
+Pro restaurace, kavárny, bary, obchody, samostatné sklady, služby a zakázkový provoz
 
 > Tato příručka používá stejné jednoduché názvy jako aplikace. Když je některá funkce pokročilá nebo ještě vyžaduje samostatné propojení, říká to otevřeně.
 
@@ -14,7 +14,7 @@ Pro restaurace, kavárny, bary, obchody, služby a zakázkový provoz
 1. Začínáme
 2. Role a přístup
 3. Navigace a společné ovládání
-4. Produkty a menu
+4. Produkty
 5. Volby k produktům — podrobný návod
 6. Pokladna
 7. Stoly a objednávky
@@ -48,7 +48,7 @@ Pro restaurace, kavárny, bary, obchody, služby a zakázkový provoz
 
 1. Otevřete přihlašovací stránku.
 2. Zadejte e-mail a heslo.
-3. Po prvním přihlášení vyberte typ provozu: Gastro, Služby, Řemesla a zakázky nebo Obchod.
+3. Po prvním přihlášení vyberte typ provozu: Samostatný sklad, Gastro, Služby, Řemesla a zakázky nebo Obchod.
 4. Doplňte údaje firmy a alespoň jednu pobočku. U české firmy zadejte IČO a zvolte `Načíst z ARES`; systém předvyplní název, DIČ a sídlo. Údaje před uložením zkontrolujte.
 5. Zapněte části systému, které budete používat.
 
@@ -113,11 +113,35 @@ Přístup může být omezen také na konkrétní pobočku. Vedoucí jedné rest
 
 <!-- pagebreak -->
 
-## 4. Produkty a menu
+## 4. Produkty
 
-Otevřete Produkty a sklad → Produkty a menu.
+Otevřete Produkty a sklad → Produkty.
 
-### 4.1 Nový produkt
+### 4.1 Samostatný sklad bez pokladny
+
+Pokud zboží jen přijímáte, vydáváte nebo převádíte, nepotřebujete pokladnu, menu ani prodejní cenu. U každé položky vyplňte hlavně název a jedinečný skladový kód; čárový kód a nákupní cenu doplňte, pokud je používáte. Prodejní cenu nastavte až ve chvíli, kdy položku prodáváte.
+
+Postup pro první den skladu:
+
+1. V `Pobočky` založte sklad; při jednom skladu jej systém používá automaticky. Bez pobočky lze používat nezařazený sklad.
+2. V `Produkty` založte položky se skladovým kódem.
+3. V `Dodavatelé` si uložte kontakty, IČO/DIČ a adresy firem, od kterých pravidelně nakupujete. Nejde o vaše odběratele ani o vystavenou fakturu.
+4. U pravidelného dodavatele otevřete `Dodavatelé` → `Balení a ceny`. Vyberte položku a zapište například balení `24 ks`, minimum `48 ks` a případně nákupní cenu. To je podklad pro správné objednávky po kartonech.
+5. Chcete-li mít pod kontrolou objednané a skutečně dodané množství, otevřete `Nákupní objednávky`: vyberte dodavatele a sklad příjmu, zvolte `Návrh podle skladu`, zkontrolujte řádky, uložte koncept a pak zvolte `Odeslat`.
+6. U odeslané objednávky použijte `E-mailem`; systém ji pošle na e-mail uložený u dodavatele.
+7. Po dodávce na objednávce zvolte `Zapsat příjem`. Zadejte skutečné množství; může být i menší než objednané. Tím vznikne koncept příjemky.
+8. Ve `Skladové doklady` koncept příjemky zkontrolujte. Až `Potvrdit` změní skutečnou zásobu, přidělí číslo dokladu a automaticky označí objednávku jako částečně nebo úplně přijatou.
+9. Po potvrzení příjmu zvolte na objednávce `Přijatá faktura`. Zapište její číslo a celkovou částku; aplikace ji připojí k objednávce a upozorní, pokud se částka liší od potvrzených příjemek.
+10. Pro příjem bez předchozí objednávky vytvořte rovnou `Příjemku` ve `Skladové doklady`. Stejná stránka umí i výdejku, převodku, vratku a dodací list.
+11. Tlačítkem `PDF` stáhnete tisknutelnou kopii. U konceptu je v PDF výslovně napsáno, že zásoba se nemění; potvrzený doklad je provozní evidence pohybu.
+12. Tlačítkem `Přílohy` připojte dodací list, přijatou fakturu nebo fotodokumentaci. Lze přidat PDF/JPEG/PNG/WebP, každý soubor nejvýše 10 MB. Příloha nemění zásobu ani sama nevystavuje fakturu.
+13. Ve `Stav skladu` zkontrolujte historii, minima a případně proveďte inventuru.
+
+> Příjemka, výdejka ani dodací list nejsou faktura. Za prodej nebo službu vystavte samostatnou fakturu v části Finance.
+
+> **Praktický postup pro laiky:** příjemka a vratka od zákazníka zásobu zvyšují; výdejka, vratka dodavateli a dodací list ji snižují; převodka ji odečte ze zdrojového a přidá do cílového skladu. Pokud si nejste jistí, uložte nejdřív koncept — jeho zrušení zásobu nezmění.
+
+### 4.2 Nový produkt
 
 1. Zvolte Nový produkt.
 2. Vyplňte název, například „Svíčková“.
@@ -423,25 +447,17 @@ Před vytištěním QR kódů ověřte:
 
 Pro běžnou dodávku bez předchozí objednávky můžete dál použít přímou příjemku. Když chcete hlídat, co bylo objednáno a co skutečně dorazilo:
 
-1. V části Nákupní objednávky otevřete Dodavatelé a založte dodavatele. Uložte název a podle potřeby IČO, DIČ, kontaktní osobu, telefon a e-mail.
-2. Zvolte Nová objednávka, vyberte dodavatele a konkrétní pobočku, přidejte produkty, množství a známé nákupní ceny.
-3. Uložte návrh. Dokud je ve stavu Návrh, můžete ho upravovat.
-4. Po skutečném odeslání dodavateli zvolte Objednat. Objednávka už se nepřepisuje.
-5. Při dodávce zvolte Přijmout, doplňte číslo dodacího listu nebo faktury a u každého řádku zadejte skutečně přijaté množství.
-6. Když dorazí jen část, objednávka zůstane Částečně přijato. Další dodávku zapište novou příjemkou ze stejné objednávky.
-7. Po přijetí posledního zbytku se objednávka označí Přijato. Každá dílčí dodávka vytvoří samostatnou dohledatelnou příjemku a skladový pohyb.
+1. V `Dodavatelé` založte dodavatele. Uložte název a podle potřeby IČO, DIČ, adresu, telefon a e-mail.
+2. Pro pravidelný nákup klikněte u dodavatele na `Balení a ceny`. Přidejte produkt, velikost balení (například karton po 24 kusech), minimální objednávku, dodavatelský kód a případně cenu. Údaj je vždy v kusech základní skladové jednotky.
+3. V `Nákupní objednávky` zvolte `Nová objednávka`, vyberte dodavatele a sklad příjmu. `Návrh podle skladu` předvyplní jen produkty nastavené u daného dodavatele; minimum a kartonové balení zaokrouhlí nahoru. Řádky vždy před uložením zkontrolujte a můžete je ručně upravit.
+4. `Uložit koncept` nic neobjedná ani nemění sklad. Po kontrole zvolte `Odeslat`, čímž vznikne číslo objednávky. Tlačítko `E-mailem` ji pošle dodavateli na uloženou adresu; pro skutečné doručení musí být na serveru nastaven SMTP e-mail.
+5. Při dodávce zvolte `Zapsat příjem`. U každého řádku zadejte skutečně přijaté množství; nevyplněná nebo nulová položka se nepřevezme.
+6. Vznikne samostatný koncept příjemky. Na stránce `Skladové doklady` ho můžete před potvrzením zkontrolovat, vytisknout nebo zrušit. Teprve `Potvrdit` zapíše skladový pohyb.
+7. Když dorazí jen část, objednávka zůstane `Částečně přijato`. Další dodávku zapište novou příjemkou ze stejné objednávky.
+8. Po přijetí posledního zbytku se objednávka označí `Přijato`. Systém nedovolí potvrdit více, než na objednávce zbývá; kontrola platí i když pracují dva lidé současně.
+9. Na částečně nebo úplně přijaté objednávce zvolte `Přijatá faktura`. Zapište číslo, částku, datum přijetí a splatnost. Faktura se spojí s objednávkou a řádek ukáže, zda její částka souhlasí se součtem potvrzených příjemek.
 
-Dodavatele, kterého už nepoužíváte, archivujte. Historické objednávky a příjemky zůstanou zachované. Objednávku lze zrušit jen před prvním příjmem.
-
-Chcete-li využít automatické návrhy v celých baleních:
-
-1. Otevřete Dodavatelé, vyberte konkrétního dodavatele a v části Dodavatelské produkty a balení přiřaďte produkt.
-2. Doplňte SKU nebo EAN používané dodavatelem, počet základních skladových jednotek v jednom balení, minimální odběr a případně obvyklou cenu za jednu základní jednotku.
-3. V Nákupních objednávkách zvolte Z návrhů a vyberte dodavatele. Systém nabídne jen jeho přiřazené produkty, které je podle aktuální spotřeby potřeba objednat.
-4. Zkontrolujte převod doporučeného množství na celé balení a odhad ceny, odškrtněte nechtěné položky a vytvořte návrh objednávky.
-5. Server potřebu před uložením znovu přepočítá. Když spojení selže, akci můžete bezpečně zopakovat; nevznikne tím duplicitní objednávka.
-
-Vytvořený návrh si pamatuje tehdejší dodavatelské SKU, EAN a balení. Pozdější změna katalogu proto nezmění historickou objednávku.
+Dodavatele, kterého už nepoužíváte, archivujte. Historické objednávky, příjemky a připojené faktury zůstanou zachované. Objednávku lze zrušit jen před prvním potvrzeným příjmem. Přijatá faktura je provozní záznam a kontrola částky; sama ji nezaplatí, nezaúčtuje DPH ani nenahrazuje účetní program.
 
 ### 10.3 Stav skladu
 

@@ -43,6 +43,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useProducts, type ProductInput } from '@/composables/useProducts'
 import { useCategories } from '@/composables/useCategories'
+import { useAuthStore } from '@/stores/auth'
 import { isApiMode } from '@/lib/http'
 import { formatCZK } from '@/lib/invoice'
 import { ALLERGENS, formatAllergenCodes, normalizeAllergens } from '@/lib/allergens'
@@ -51,7 +52,10 @@ import type { Category, Product } from '@/lib/types'
 
 const { products, load, create, update, remove } = useProducts()
 const categoriesApi = useCategories()
+const auth = useAuthStore()
 const apiMode = isApiMode()
+const hasSalesWorkflow = computed(() => auth.hasModule('pos') || auth.hasModule('gastro'))
+const hasGastroWorkflow = computed(() => auth.hasModule('gastro'))
 const categories = ref<Category[]>([])
 
 const loading = ref(true)
@@ -247,8 +251,10 @@ async function onDelete() {
   <div class="mx-auto max-w-6xl p-4 sm:p-6 md:p-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Produkty a menu</h1>
-        <p class="mt-1 text-muted-foreground">Názvy, ceny a možnosti všeho, co prodáváte.</p>
+        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Produkty</h1>
+        <p class="mt-1 text-muted-foreground">
+          Katalog položek pro sklad; prodejní údaje doplníte jen pokud prodáváte přes pokladnu.
+        </p>
       </div>
       <div class="flex gap-2">
         <Button variant="outline" as-child>
@@ -282,7 +288,7 @@ async function onDelete() {
         <p class="mt-1 text-sm text-muted-foreground">
           {{
             products.length === 0
-              ? 'Přidejte první produkt, který budete prodávat na pokladně.'
+              ? 'Přidejte první skladovou položku. Pokladnu k tomu nepotřebujete.'
               : 'Zkuste jiný hledaný výraz.'
           }}
         </p>
@@ -314,12 +320,21 @@ async function onDelete() {
             </div>
           </div>
           <div class="flex items-center gap-3">
-            <div class="font-semibold tabular-nums">{{ formatCZK(p.salePrice) }}</div>
+            <div v-if="hasSalesWorkflow" class="font-semibold tabular-nums">
+              {{ formatCZK(p.salePrice) }}
+            </div>
             <div class="flex items-center gap-1">
-              <Button variant="ghost" size="icon" title="Receptura" @click="openRecipe(p)">
+              <Button
+                v-if="hasGastroWorkflow"
+                variant="ghost"
+                size="icon"
+                title="Receptura"
+                @click="openRecipe(p)"
+              >
                 <ClipboardList class="h-4 w-4" />
               </Button>
               <Button
+                v-if="hasGastroWorkflow"
                 variant="ghost"
                 size="icon"
                 title="Volby k produktu"
@@ -328,6 +343,7 @@ async function onDelete() {
                 <SlidersHorizontal class="h-4 w-4" />
               </Button>
               <Button
+                v-if="hasGastroWorkflow"
                 variant="ghost"
                 size="icon"
                 title="Porce a velikosti"
@@ -361,7 +377,9 @@ async function onDelete() {
       <DialogContent class="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{{ editing ? 'Upravit produkt' : 'Nový produkt' }}</DialogTitle>
-          <DialogDescription>Cena je uvedená včetně DPH (jako na pokladně).</DialogDescription>
+          <DialogDescription>
+            Skladový kód je povinný. Prodejní cenu nastavte jen pokud produkt prodáváte.
+          </DialogDescription>
         </DialogHeader>
 
         <form class="space-y-5" @submit.prevent="onSubmit">
@@ -372,14 +390,14 @@ async function onDelete() {
 
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="space-y-2">
-              <Label for="p-price">Cena vč. DPH (Kč) *</Label>
+              <Label for="p-price">Cena vč. DPH (Kč) {{ hasSalesWorkflow ? '*' : '(volitelné)' }}</Label>
               <Input
                 id="p-price"
                 v-model.number="form.salePrice"
                 type="number"
                 :min="0"
                 step="0.01"
-                required
+                :required="hasSalesWorkflow"
               />
             </div>
             <div class="space-y-2">
@@ -461,7 +479,7 @@ async function onDelete() {
             </p>
           </div>
 
-          <div class="space-y-3">
+          <div v-if="hasGastroWorkflow" class="space-y-3">
             <div>
               <Label>Alergeny</Label>
               <p class="mt-1 text-xs text-muted-foreground">
