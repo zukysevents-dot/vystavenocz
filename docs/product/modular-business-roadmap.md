@@ -1,6 +1,6 @@
 # Vystaveno modular business roadmap
 
-Last updated: 2026-07-08
+Last updated: 2026-07-19
 
 ## Implementation status
 
@@ -214,15 +214,73 @@ Vystaveno should win through:
 - legal/compliance wording must be reviewed before public launch; the UI must not overstate legal effect beyond the selected provider contract
 - **frontend foundation shipped:** module `verified_signing`, page `/app/podpisy` (list of signing envelopes with Draft/Ready/Sent/Signed/Rejected/Cancelled/Expired states, status filter, "Nová obálka", detail with document name, external reference, signer + contact, provider/channel, evidence hash, created/sent/signed timestamps, and evidence trail), composable `useVerifiedSigning` prepared against the `/api/v1/verified-signing/*` contract; provider-neutral (BankID is one channel), runs on demo data in mock mode. Backend provider contract is being built in parallel; live signing turns on only once a real provider adapter + contract exists — the UI must not claim live BankID signing is done.
 
+## Oborová funkční mapa a skladové doklady
+
+Tato kapitola je závazný seznam toho, co má Vystaveno umět pro jednotlivé typy firem. Není to obchodní slib: funkci lze označit jako „V aplikaci“ až po dokončení celého uživatelského toku, oprávnění, testů a laického návodu. Pokud obor nepotřebuje pokladnu, POS se mu nesmí nabízet ani zobrazovat.
+
+### Společný základ skladu
+
+`core + stock` je samostatná platná konfigurace. Nevyžaduje `pos`, `gastro`, `invoicing` ani `jobs`. Čistý sklad dnes umí katalog položek se SKU/EAN, stav zásob, víceskladové stavy, příjem na sklad, ruční výdej/korekci/odpis, inventuru, pohyby, převod jednotlivé položky mezi lokacemi, minima zásob a nákupní doporučení.
+
+Nejbližší horizontální milník je **Skladové doklady V1**. Z něj musí těžit každý obor, ne jen gastro:
+
+| Doklad nebo proces | Cíl V1 | Současný stav |
+|---|---|---|
+| Nákupní objednávka | návrh, schválení, dodavatel, částečné dodání a vazba na příjemku | plán |
+| Příjemka | více položek, vlastní číselná řada, dodavatel, zdrojový doklad, náklady, PDF/tisk, příloha a audit | základ hotový; chybí číselná řada, PDF/tisk a příloha |
+| Výdejka | více položek, cílové středisko/zakázka/odběratel, potvrzení a PDF/tisk | plán; dnes je jen pohyb jedné položky |
+| Převodka | více položek, zdrojový a cílový sklad, stav odesláno/přijato a potvrzení příjmu | plán; dnes je okamžitý přesun jedné položky |
+| Inventurní soupis | rozhodný den, metoda, odpovědné osoby, ocenění, rozdíly, archiv a export | základ počítání hotový; chybí účetně použitelný soupis |
+| Odpis/manko/přebytek | důvod, schválení podle limitu, doklad a audit | pohyb + schvalování limitu jsou hotové; doklad chybí |
+| Vratka dodavateli / od zákazníka | vazba na původní doklad, fyzický pohyb, dobropis/faktura dle potřeby | plán |
+| Dodací list | výdej pro odběratele, potvrzení převzetí, návaznost na fakturu | plán |
+
+Každý skladový doklad musí mít stav `koncept → potvrzeno → uzavřeno`; po potvrzení se nemění, oprava vzniká navazujícím stornem či opravným dokladem. Musí nést číslo, sklad, datum, odpovědnou osobu, položky a audit. Příloha dodavatelské faktury nebo dodacího listu se ukládá k dokladu, nikoli přepisuje do něj.
+
+### Povinnosti podle typu firmy
+
+| Typ firmy | Zapnuté moduly jako výchozí konfigurace | Minimum, aby mohl reálně pracovat | Další stupeň, až když jej firma potřebuje |
+|---|---|---|---|
+| Samostatný sklad | `core + stock` | katalog, SKU/EAN, příjemky, výdejky, převodky, inventury, minima, dodavatelé, pohyby a tisk dokladů | regály/pozice, šarže, expirace, picking, mobilní skener |
+| Maloobchod / prodejna | `core + stock + pos`; fakturace volitelně | katalog, ceny, EAN, příjemky, výdejky, vratky, cenovky, pokladna a uzávěrka | cenové hladiny, věrnost, objednávky dodavatelům, e-shop sync |
+| E-shop | `core + stock + integrations`; fakturace podle obchodního modelu | objednávky, rezervace zásob, picking, balení, dodací list, vratky, export/synchronizace skladu | dopravci, marketplace, automatické objednávky, více fulfillment skladů |
+| Velkoobchod / distribuce | `core + stock + invoicing`; `integrations` volitelně | dodavatelé a odběratelé, nákupní objednávky, příjemky, rezervace, výdejky, dodací listy, faktury a více skladů | schvalování, cenové podmínky, trasy, částečné dodávky, EDI |
+| Výroba | `core + stock`; `invoicing` podle potřeby | materiál, příjem/výdej, kusovník, výroba polotovaru, výrobní příkaz a inventura | rozpracovanost, plánování kapacit, šarže, kvalita a normy spotřeby |
+| Řemesla a servis | `core + jobs + stock + invoicing` | zakázka, pracovní list, výdej materiálu na zakázku, fotky, předání a faktura | sklad v autě, objednávky materiálu, podpis, servisní smlouvy |
+| Služby / salon / wellness | `core + booking + invoicing + attendance`; sklad volitelně | služby, klienti, kalendář, zdroje, platby/faktury a docházka | balíčky, zálohy, no-show, spotřební materiál přes jednoduchý sklad |
+| Gastro | `core + pos + gastro + stock + attendance`; další moduly volitelně | menu, stoly, kuchyň, pokladna, receptury, příjemky, odpisy, inventury a uzávěrka | QR objednávky, rozvoz, věrnost, food cost, pokročilá výroba |
+| Regulované zásoby (potraviny, kosmetika, zdravotnictví) | podle oboru + `stock` | vše ze samostatného skladu, navíc dohledatelný pohyb | šarže, expirace, karanténa, stažení šarže a povinné oborové kontroly; neprodávat dříve jako hotové |
+| Půjčovna / evidence majetku | samostatný budoucí profil, ne běžný sklad | položka, předání, návrat, stav a odpovědnost | sériová čísla, kauce, rezervace, servis a škody |
+
+### Co nesmí být oborově vynucené
+
+- Sklad nesmí vyžadovat prodejní cenu, pokladnu, menu, alergeny, recepturu ani fakturu.
+- Gastro položky (alergeny, porce, receptury, modifikátory) se ukazují až při zapnutém gastro workflow.
+- Maloobchodní položky (prodejní cena, DPH pro prodej, cenovky a POS) se ukazují až při zapnutém prodeji.
+- Výroba používá kusovník a výrobní příkaz, ne gastro terminologii „receptura“ jako jediný možný model.
+- `Location` je obecný pojem: podle profilu se v UI přeloží jako sklad, pobočka, provozovna, auto technika nebo výdejní místo.
+
+### Pořadí dodávky mimo gastro
+
+1. **Skladový základ bez POS:** profil „Samostatný sklad“, neutrální názvy, správný první vstup zaměstnance, explicitní `core + stock` oprávnění a testovací matice bez gastro/POS.
+2. **Skladové doklady V1:** příjemky dokončit, dodat výdejky, převodky, inventurní soupisy, vratky, dodací listy, číselné řady, PDF/tisk, přílohy a audit.
+3. **Nákup a dodavatelé:** adresář dodavatelů, objednávky, částečné dodávky, nákladové ceny a skladová hodnota.
+4. **Oborové balíčky:** obchod, e-shop, velkoobchod, výroba, řemesla, služby a regulované zásoby; každý s vlastním onboardingem, navigací, manuálem a testovacími scénáři.
+5. **Pokročilý WMS až poté:** regálové pozice, šarže/expirace, picking, balení, dopravci, EDI a marketplace. Dokud nejsou hotové, Vystaveno se neoznačuje jako plnohodnotný distribuční WMS.
+
+### Právní a provozní hranice
+
+Příjemka, výdejka, převodka a dodací list nejsou automaticky daňové doklady. Pokud tvoří podklad pro účetnictví, musí být průkazným účetním záznamem; inventura musí být doložitelná. Faktura a dobropis zůstávají oddělené daňové doklady. Před veřejným spuštěním Skladových dokladů V1 musí datový model, PDF podoba, archivace a účetní export projít kontrolou účetní/právníka pro konkrétní cílový obor.
+
 ## Implementation order
 
 1. Stabilize module capability resolver, permissions, navigation rules, and module settings.
 2. Make Gastro MVP reliable: POS, tables, kitchen, receipts, shifts, day close.
 3. Add stock movements from sales and protect financial/POS audit integrity.
 4. Extend recipes with portions, variants, and semi-products on top of the existing ingredient stock deduction and waste/yield foundation (complete: production batches, catalog, POS/table/public variant selection, and immutable sale-time stock snapshots).
-5. Build purchase receipts, enrich inventory counts, and extend stock mirror with warehouses/CZK variance.
+5. Deliver Skladové doklady V1 for every vertical: finish purchase receipts and add issue notes, transfer notes, inventory records, returns, delivery notes, numbering, print/PDF, attachments, and audit.
 6. Add food cost, margin, variance, and manager reports.
-7. Add modular onboarding and templates per business type (foundation: profile-specific onboarding checklist and first-step routing).
+7. Add modular onboarding and templates per business type, starting with a standalone warehouse profile that does not enable POS or gastro (foundation: profile-specific onboarding checklist and first-step routing).
 8. Add services and jobs as the next non-gastro verticals.
 9. Add accounting and payment integrations.
 10. Add verified document signing as a standalone module after the document model and provider contract are designed.
