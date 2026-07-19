@@ -40,6 +40,34 @@ export const HELP_GUIDES: readonly HelpGuide[] = [
     action: 'Otevřít nastavení',
   },
   {
+    id: 'growth-referral-partner',
+    title: 'Doporučte Vystaveno nebo se staňte partnerem',
+    module: 'core',
+    audience: 'manager',
+    description: 'Jednorázový doporučovací kód, partnerská přihláška a přehled o stavu nároku.',
+    whatItMeans:
+      'Doporučení bezpečně spojí vaši firmu s novou firmou. Partner může po schválení přivádět zákazníky vlastním kódem. Ani kód, ani návrat z platební stránky samy o sobě nevytvoří slevu nebo provizi.',
+    whenToUse:
+      'Když chcete doporučit Vystaveno jiné firmě, obdrželi jste kód, nebo chcete podat partnerskou přihlášku.',
+    steps: [
+      step(
+        'Vytvořte a hned zkopírujte kód',
+        'V Nastavení firmy otevřete Doporučení a partnerství. Kód platí 90 dní a zobrazí se jen při vytvoření.',
+      ),
+      step(
+        'Nová firma kód uplatní',
+        'Majitel, administrátor nebo vedoucí ho zadá ve stejném místě. Systém pak ukáže, že vztah čeká na ověření.',
+      ),
+      step(
+        'Sledujte kvalifikaci',
+        'Jeden měsíc zdarma se zpřístupní až po první ověřené platbě nové firmy. Partner může před schválením jen odeslat přihlášku; po schválení uvidí získané a kvalifikované firmy.',
+      ),
+    ],
+    tip: 'Kód neposílejte veřejně ani ho neukládejte do sdíleného dokumentu. Pokud ho ztratíte, vytvořte nový; starý nelze znovu zobrazit.',
+    to: '/app/nastaveni',
+    action: 'Otevřít doporučení a partnerství',
+  },
+  {
     id: 'catalog',
     title: '2. Připravte nabídku produktů',
     module: 'pos',
