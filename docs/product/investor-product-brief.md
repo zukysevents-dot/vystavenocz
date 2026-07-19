@@ -5,6 +5,7 @@ Tento dokument vysvětluje hotové produktové části bez technického žargonu
 Aktuální rozhodovací srovnání trhu je v [gap analýze iDoklad a KiloMayo](./investor-competitive-gap-analysis.md).
 Rozhodnutí k Viva Payments je v [ověřeném go/no-go podkladu](./viva-payments-go-no-go.md).
 Schválená provozní pravidla referralů, partnerů a měření jsou v [playbooku V1](./referral-partner-analytics-v1.md).
+Výhradně externí kroky k ostrému dokončení jsou v [závěrečném checklistu](./roadmap-external-finalization.md).
 
 ## Online úhrada faktur přes Viva
 
@@ -80,3 +81,7 @@ Nejde o marketingový automat ani o složitý obchodní systém: MVP neobsahuje 
 ## Pravidlo pro další produktové bloky
 
 Každá další položka roadmapy dostane před dokončením obdobnou kapitolu do tohoto dokumentu i krokový návod do kompletního uživatelského manuálu. Technický kontrakt zůstává oddělený v `docs/backend/`, aby běžný uživatel nemusel číst implementační detaily.
+
+## Growth a měřitelnost akvizice
+
+Produkt eviduje referral vazbu mezi doporučující a novou firmou, partnera od přihlášky přes interní schválení po kód a návrh provize a minimální první-stranové akviziční události. Investorské API vrací jen agregované počty bez PII. Nárok se kvalifikuje výhradně z budoucího ověřeného billing eventu; návrat z platební stránky ani klientský požadavek nárok neaktivují. Kontrakt a go-live postup: [growth-referral-partner-v1.md](../backend/growth-referral-partner-v1.md).

@@ -732,6 +732,14 @@ Pokud jste získali akční nebo partnerský kód, otevřete **Nastavení firmy 
 
 > Označení „Připraveno k napojení“ neznamená „Aktivní“. Před ostrým použitím vždy proveďte skutečný test celé cesty.
 
+### Doporučení firmy a partnerský program
+
+V části **Nastavení firmy → Doporučení a partnerství** můžete vytvořit jednorázový referral kód. Zkopírujte jej hned po vytvoření: z bezpečnostních důvodů ho aplikace znovu neukáže. Kód platí 90 dní a nová firma ho uplatní ve stejném místě.
+
+Po uplatnění systém pouze zaznamená vazbu. Nová firma i doporučující firma získají po jednom měsíci zdarma až tehdy, když předplatné potvrdí první skutečně zaplacené období nové firmy. Tím se předchází zneužití zkušebních účtů. V přehledu proto uvidíte stav „čeká na platbu“ nebo „kvalifikováno“, nikoliv neověřený příslib slevy.
+
+Chcete-li být partnerem, vyplňte název firmy a kontaktní e-mail. Přihlášku nejprve posoudí provoz Vystaveno. Po schválení lze vytvářet partnerské kódy a vidíte počet získaných i kvalifikovaných zákazníků. Návrh provize je 20 % čistého předplatného po prvních 12 měsíců zákazníka; kontroluje se po 30 dnech a vyplácí čtvrtletně až po spuštění fakturačního systému. Nejde o automatickou platbu ani právně závazné vyúčtování.
+
 ## 20. Řešení problémů a slovník
 
 ### 20.1 Nejčastější situace

@@ -67,6 +67,7 @@ import {
 import type { AppModuleId } from '@/lib/modules'
 import type { Company, VatMode } from '@/lib/types'
 import SubscriptionClaimSettings from '@/components/app/SubscriptionClaimSettings.vue'
+import GrowthSettings from '@/components/app/GrowthSettings.vue'
 
 const companyStore = useCompanyStore()
 const auth = useAuthStore()
@@ -899,6 +900,7 @@ async function onSubmit(): Promise<void> {
     </p>
 
     <SubscriptionClaimSettings class="mt-6" />
+    <GrowthSettings class="mt-6" />
 
     <form class="mt-8 space-y-6" @submit.prevent="onSubmit">
       <!-- Firma -->
