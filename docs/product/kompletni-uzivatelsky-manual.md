@@ -569,6 +569,10 @@ Poznámky v CRM jsou **pouze interní**. Klient je nevidí v klientské zóně a
 
 > E-mailová brána je společná pro celou firmu: stejným způsobem se posílají nabídky, vystavené faktury i nákupní objednávky. Odesílat lze vždy jednu konkrétní adresu, aby se doklady neposlaly omylem více lidem. Pokud klient e-mail nemá, nejdříve jej doplňte v kartě klienta.
 
+#### Jak e-mail vypadá pro zákazníka
+
+Každý odeslaný doklad má stejný přehledný vzhled Vystaveno.cz: název, obsah v samostatné kartě a malou značku Vystaveno.cz v patičce. Nabídka vždy ukáže zprávu pro zákazníka, položky, cenu a platnost — vlastní text tedy nepřepíše důležité údaje. U faktury zákazník najde navíc PDF jako přílohu. Před odesláním proto zkontrolujte hlavně adresu, položky a cenu; vzhled e-mailu řeší systém automaticky.
+
 ### 12.4 Faktura
 
 1. Zvolte Nová faktura.
