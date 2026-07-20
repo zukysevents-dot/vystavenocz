@@ -10,6 +10,12 @@ export const API_TOKEN_SCOPES = [
   { value: 'invoices.read', label: 'Faktury (čtení)' },
   { value: 'sales.read', label: 'Prodeje (čtení)' },
   { value: 'stock.read', label: 'Skladové stavy (čtení)' },
+  { value: 'clients.read', label: 'Klienti (čtení)' },
+  // Zápisové scopes (V2): oddělené od čtení — read-only token nikdy nemůže měnit data.
+  { value: 'clients.write', label: 'Klienti (zápis)' },
+  { value: 'customers.write', label: 'Zákazníci (zápis)' },
+  { value: 'products.write', label: 'Produkty (zápis)' },
+  { value: 'invoices.write', label: 'Faktury (zápis — koncept a vystavení)' },
 ] as const
 
 export type ApiTokenScope = (typeof API_TOKEN_SCOPES)[number]['value']

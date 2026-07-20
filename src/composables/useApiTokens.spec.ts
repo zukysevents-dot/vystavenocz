@@ -43,13 +43,18 @@ describe('useApiTokens - kontrakt volání', () => {
     expect(http.del).toHaveBeenCalledWith('/api-tokens/t1')
   })
 
-  it('katalog scopes odpovídá backend ApiScopes (read-only V1)', () => {
+  it('katalog scopes odpovídá backend ApiScopes (V1 read + V2 write)', () => {
     expect(API_TOKEN_SCOPES.map((s) => s.value)).toEqual([
       'products.read',
       'customers.read',
       'invoices.read',
       'sales.read',
       'stock.read',
+      'clients.read',
+      'clients.write',
+      'customers.write',
+      'products.write',
+      'invoices.write',
     ])
   })
 })
