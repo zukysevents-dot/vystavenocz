@@ -77,6 +77,10 @@ const matchingConnections = computed<SigningProviderConnection[]>(() => {
 
 const createOpen = ref(false)
 const creating = ref(false)
+// Dokument k podpisu: soubor zůstává lokálně, do evidence jde jen jeho SHA-256 otisk (backend ho vyžaduje).
+const documentFile = ref<File | null>(null)
+const documentHash = ref<string | null>(null)
+const hashing = ref(false)
 const emptyForm = () => ({
   documentName: '',
   documentType: 'contract',
@@ -245,12 +249,39 @@ async function doCancel(envelope: SignatureEnvelope): Promise<void> {
 
 function openCreate(): void {
   Object.assign(form, emptyForm())
+  documentFile.value = null
+  documentHash.value = null
   createOpen.value = true
+}
+
+async function onDocumentSelected(event: Event): Promise<void> {
+  const file = (event.target as HTMLInputElement).files?.[0] ?? null
+  documentFile.value = file
+  documentHash.value = null
+  if (!file) return
+  hashing.value = true
+  try {
+    const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer())
+    documentHash.value = [...new Uint8Array(digest)]
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('')
+    // Předvyplň název dokumentu z názvu souboru, když je pole prázdné.
+    if (!form.documentName.trim()) form.documentName = file.name.replace(/\.[^.]+$/, '')
+  } catch {
+    toast.error('Otisk dokumentu se nepodařilo spočítat. Zkuste soubor vybrat znovu.')
+    documentFile.value = null
+  } finally {
+    hashing.value = false
+  }
 }
 
 async function submitCreate(): Promise<void> {
   const documentName = form.documentName.trim()
   const signerName = form.signerName.trim()
+  if (isApiMode() && !documentHash.value) {
+    toast.error('Vyberte dokument k podpisu.')
+    return
+  }
   if (!documentName) {
     toast.error('Zadejte název dokumentu.')
     return
@@ -263,6 +294,7 @@ async function submitCreate(): Promise<void> {
   try {
     const created = await signing.createEnvelope({
       documentName,
+      documentHash: documentHash.value,
       documentType: form.documentType || null,
       externalReference: form.externalReference.trim() || null,
       provider: form.provider,
@@ -562,6 +594,18 @@ async function submitCreate(): Promise<void> {
 
         <div class="space-y-3">
           <div class="space-y-1.5">
+            <Label for="sig-doc-file">Dokument k podpisu</Label>
+            <Input
+              id="sig-doc-file"
+              type="file"
+              accept="application/pdf,.pdf,image/jpeg,image/png"
+              @change="onDocumentSelected"
+            />
+            <p class="text-xs text-muted-foreground">
+              Z dokumentu se spočítá otisk pro evidenci podpisu. Samotný soubor se nikam neodesílá.
+            </p>
+          </div>
+          <div class="space-y-1.5">
             <Label for="sig-doc-name">Název dokumentu</Label>
             <Input
               id="sig-doc-name"
@@ -623,8 +667,13 @@ async function submitCreate(): Promise<void> {
 
         <DialogFooter>
           <Button type="button" variant="ghost" @click="createOpen = false">Zrušit</Button>
-          <Button type="button" variant="coral" :disabled="creating" @click="submitCreate">
-            <Loader2 v-if="creating" class="h-4 w-4 animate-spin" />
+          <Button
+            type="button"
+            variant="coral"
+            :disabled="creating || hashing"
+            @click="submitCreate"
+          >
+            <Loader2 v-if="creating || hashing" class="h-4 w-4 animate-spin" />
             <Plus v-else class="h-4 w-4" />
             Vytvořit obálku
           </Button>

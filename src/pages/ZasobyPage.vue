@@ -568,7 +568,8 @@ async function submitStocktake() {
     </div>
 
     <template v-else>
-      <div class="mt-6 flex items-center gap-2">
+      <!-- flex-wrap: na 320px se přepínače záložek zalomí místo horizontálního overflow -->
+      <div class="mt-6 flex flex-wrap items-center gap-2">
         <button
           type="button"
           class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"

@@ -11,9 +11,13 @@ import { CONSENT_RESET_EVENT, getCookieConsent, saveCookieConsent } from '@/lib/
 const visible = ref(false)
 const analyticsOn = ref(false)
 const route = useRoute()
+// Provozní obrazovky (POS/KDS): banner překrýval ovládání (filtry sekcí v Kuchyni, horní lištu
+// Pokladny) a blokoval obsluhu. Souhlas se odloží na první neprovozní obrazovku — do rozhodnutí
+// zůstává analytika vypnutá (opt-in default), takže odklad je z pohledu soukromí bezpečný.
 const isPosScreen = computed(() =>
   ['/app/pokladna', '/app/restaurace', '/app/kuchyne'].some((path) => route.path.startsWith(path)),
 )
+const shown = computed(() => visible.value && !isPosScreen.value)
 
 function check() {
   const existing = getCookieConsent()
@@ -52,12 +56,11 @@ function handleNecessaryOnly() {
 
 <template>
   <div
-    v-if="visible"
+    v-if="shown"
     role="dialog"
     aria-labelledby="cookie-banner-title"
     aria-describedby="cookie-banner-desc"
-    class="fixed inset-x-3 z-50 sm:inset-x-auto sm:right-4 sm:max-w-md"
-    :class="isPosScreen ? 'top-3 sm:top-4' : 'bottom-3 sm:bottom-4'"
+    class="fixed inset-x-3 bottom-3 z-50 sm:inset-x-auto sm:bottom-4 sm:right-4 sm:max-w-md"
   >
     <div class="rounded-2xl border border-border bg-card p-5 shadow-glow">
       <div class="flex items-start gap-3">

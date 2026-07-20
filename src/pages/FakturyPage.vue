@@ -171,7 +171,8 @@ async function onDelete() {
         <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Faktury</h1>
         <p class="mt-1 text-muted-foreground">Spravujte své faktury a sledujte platby.</p>
       </div>
-      <div class="flex shrink-0 gap-2">
+      <!-- flex-wrap: na 320px se akce zalomí pod sebe místo horizontálního overflow celé stránky -->
+      <div class="flex flex-wrap gap-2">
         <Button variant="outline" @click="router.push('/app/import/faktury')">
           <Upload class="h-4 w-4" /> Import z Fakturoidu
         </Button>
