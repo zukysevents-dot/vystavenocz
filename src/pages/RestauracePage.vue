@@ -250,11 +250,14 @@ async function loadInitialData() {
     connectionState.value = 'online'
     initialLoadError.value = false
   } catch (e) {
+    // Odchod ze stránky uprostřed načítání není chyba provozu — nešumět do konzole.
+    if (disposed) return
     connectionState.value = 'offline'
     initialLoadError.value = true
     console.error(e)
   } finally {
-    if (!accountRefreshTimer) {
+    // Po unmountu polling nestartovat — jinak by 5s interval běžel navždy bez vlastníka.
+    if (!disposed && !accountRefreshTimer) {
       accountRefreshTimer = setInterval(() => void refreshOperationalState(), 5000)
     }
     loading.value = false
@@ -479,7 +482,9 @@ function cancelPendingDiscountUpdate() {
   }
 }
 // Odchod z routy (jiná stránka) uprostřed rozpracované změny — timery by běžely dál na pozadí.
+let disposed = false
 onBeforeUnmount(() => {
+  disposed = true
   cancelPendingDiscountUpdate()
   if (accountRefreshTimer) clearInterval(accountRefreshTimer)
 })

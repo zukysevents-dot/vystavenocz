@@ -606,7 +606,8 @@ function saleTime(iso: string): string {
   <div class="p-4 sm:p-6">
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold tracking-tight">Pokladna</h1>
-      <div v-if="apiMode" class="flex items-center gap-2">
+      <!-- flex-wrap: s výběrem provozovny se akce na mobilu zalomí místo overflow celé stránky -->
+      <div v-if="apiMode" class="flex flex-wrap items-center gap-2">
         <!-- Výběr provozovny (jen když jich má klient víc) — určuje, kam prodej spadne v uzávěrce. -->
         <Select v-if="locations.length > 1" v-model="currentLocationId">
           <SelectTrigger class="h-9 w-48" aria-label="Provozovna">

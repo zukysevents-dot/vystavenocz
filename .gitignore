@@ -16,6 +16,8 @@ dist-ssr
 coverage
 playwright-report
 test-results
+# E2E audit: uložená session (JWT tokeny) — nikdy necommitovat
+e2e/audit/.auth
 
 # Editor directories and files
 .vscode/*

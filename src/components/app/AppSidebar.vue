@@ -254,10 +254,12 @@ watch(
     @click="mobileOpen = false"
   />
 
-  <!-- Mobilní drawer -->
+  <!-- Mobilní drawer: zavřený je jen odsunutý transformem, proto inert — jinak by odkazy
+       mimo obrazovku zůstaly fokusovatelné klávesnicí a viditelné pro čtečky. -->
   <aside
     class="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-border bg-card shadow-xl transition-transform duration-200 md:hidden"
     :class="mobileOpen ? 'translate-x-0' : '-translate-x-full'"
+    :inert="!mobileOpen"
   >
     <div class="flex h-14 items-center justify-between border-b border-border px-4">
       <SiteLogo />

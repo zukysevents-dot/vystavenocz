@@ -114,6 +114,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/PodminkyPage.vue'),
     meta: { title: 'Podmínky', layout: 'public' },
   },
+  {
+    path: '/smazani-uctu',
+    name: 'smazani-uctu',
+    component: () => import('@/pages/SmazaniUctuPage.vue'),
+    meta: { title: 'Smazání účtu', layout: 'public' },
+  },
 
   // --- Auth (AuthLayout — fullscreen, bez navbaru/footeru) ---
   {
@@ -341,7 +347,12 @@ const routes: RouteRecordRaw[] = [
     path: '/app/kategorie',
     name: 'app-kategorie',
     component: () => import('@/pages/KategoriePage.vue'),
-    meta: { title: 'Kategorie produktů', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
+    meta: {
+      title: 'Kategorie produktů',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'stock',
+    },
   },
   {
     path: '/app/modifikatory',
@@ -382,7 +393,12 @@ const routes: RouteRecordRaw[] = [
     path: '/app/nakupni-objednavky',
     name: 'app-nakupni-objednavky',
     component: () => import('@/pages/NakupniObjednavkyPage.vue'),
-    meta: { title: 'Nákupní objednávky', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
+    meta: {
+      title: 'Nákupní objednávky',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'stock',
+    },
   },
   {
     path: '/app/dochazka',

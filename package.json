@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:audit": "playwright test --config playwright.audit.config.ts",
     "prepare": "husky"
   },
   "lint-staged": {
