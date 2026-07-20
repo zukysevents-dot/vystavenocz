@@ -114,6 +114,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/PodminkyPage.vue'),
     meta: { title: 'Podmínky', layout: 'public' },
   },
+  {
+    path: '/smazani-uctu',
+    name: 'smazani-uctu',
+    component: () => import('@/pages/SmazaniUctuPage.vue'),
+    meta: { title: 'Smazání účtu', layout: 'public' },
+  },
 
   // --- Auth (AuthLayout — fullscreen, bez navbaru/footeru) ---
   {
@@ -304,6 +310,13 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Klienti', layout: 'app', requiresAuth: true, requiresModule: 'invoicing' },
   },
   {
+    path: '/app/crm',
+    name: 'app-crm',
+    component: () => import('@/pages/CrmPage.vue'),
+    // CRM je „Růst" add-on — backend /crm gatuje modulem crm (Permissions.Crm.* → ProductModules.Crm).
+    meta: { title: 'CRM', layout: 'app', requiresAuth: true, requiresModule: 'crm' },
+  },
+  {
     path: '/app/import',
     name: 'app-import',
     component: () => import('@/pages/ImportPage.vue'),
@@ -341,7 +354,12 @@ const routes: RouteRecordRaw[] = [
     path: '/app/kategorie',
     name: 'app-kategorie',
     component: () => import('@/pages/KategoriePage.vue'),
-    meta: { title: 'Kategorie produktů', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
+    meta: {
+      title: 'Kategorie produktů',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'stock',
+    },
   },
   {
     path: '/app/modifikatory',
@@ -382,7 +400,12 @@ const routes: RouteRecordRaw[] = [
     path: '/app/nakupni-objednavky',
     name: 'app-nakupni-objednavky',
     component: () => import('@/pages/NakupniObjednavkyPage.vue'),
-    meta: { title: 'Nákupní objednávky', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
+    meta: {
+      title: 'Nákupní objednávky',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'stock',
+    },
   },
   {
     path: '/app/dochazka',

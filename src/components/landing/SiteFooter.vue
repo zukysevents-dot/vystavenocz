@@ -62,6 +62,11 @@ const year = computed(() => new Date().getFullYear())
               </RouterLink>
             </li>
             <li>
+              <RouterLink to="/smazani-uctu" class="hover:text-foreground">
+                Smazání účtu
+              </RouterLink>
+            </li>
+            <li>
               <button type="button" class="hover:text-foreground" @click="openCookieSettings">
                 Nastavení cookies
               </button>
