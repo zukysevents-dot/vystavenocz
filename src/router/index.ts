@@ -310,13 +310,6 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Klienti', layout: 'app', requiresAuth: true, requiresModule: 'invoicing' },
   },
   {
-    path: '/app/crm',
-    name: 'app-crm',
-    component: () => import('@/pages/CrmPage.vue'),
-    // CRM je „Růst" add-on — backend /crm gatuje modulem crm (Permissions.Crm.* → ProductModules.Crm).
-    meta: { title: 'CRM', layout: 'app', requiresAuth: true, requiresModule: 'crm' },
-  },
-  {
     path: '/app/import',
     name: 'app-import',
     component: () => import('@/pages/ImportPage.vue'),
