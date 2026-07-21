@@ -104,6 +104,28 @@ export const HELP_GUIDES: readonly HelpGuide[] = [
     action: 'Otevřít faktury',
   },
   {
+    id: 'crm',
+    title: 'Sledujte klienty v CRM',
+    module: 'crm',
+    audience: 'manager',
+    description: 'Poznámky, úkoly a historie dokladů u každého klienta na jednom místě.',
+    whatItMeans:
+      'CRM ukáže u klienta jeho nezaplacené doklady, poznámky z jednání a úkoly s termínem, ať vám nezapadne další krok.',
+    whenToUse: 'Když si u klienta potřebujete pohlídat domluvu, hovor nebo termín.',
+    steps: [
+      step('Otevřete CRM', 'Vyberte klienta ze seznamu; vpravo se načte jeho detail a časová osa.'),
+      step('Přidejte poznámku', 'Zapište, co jste s klientem domluvili nebo probrali po telefonu.'),
+      step(
+        'Založte úkol s termínem',
+        'Zadejte další krok, termín a prioritu, ať víte, kdy ho řešit.',
+      ),
+      step('Dokončete hotový úkol', 'Splněný úkol označte jako dokončený; zůstane v časové ose.'),
+    ],
+    tip: 'Klienty zakládáte v sekci Klienti — v CRM s nimi pak dál pracujete.',
+    to: '/app/crm',
+    action: 'Otevřít CRM',
+  },
+  {
     id: 'recurring',
     title: 'Nastavte opakovanou fakturu',
     module: 'invoicing',
@@ -200,9 +222,18 @@ export const HELP_GUIDES: readonly HelpGuide[] = [
       'Příjemka zvýší zásobu. Výdejka ji sníží, převodka ji přesune a inventura porovná skutečné množství s evidencí.',
     whenToUse: 'Při dodávce, výdeji materiálu, přesunu mezi sklady nebo pravidelné kontrole.',
     steps: [
-      step('Založte koncept dokladu', 'Vyberte příjemku, výdejku, převodku, vratku nebo dodací list a přidejte položky.'),
-      step('Zkontrolujte a potvrďte', 'Až potvrzení změní zásobu a přidělí dokladu číslo. Koncept můžete předtím zrušit.'),
-      step('Uložte tisknutelnou kopii', 'Tlačítko PDF stáhne provozní doklad. Koncept je v něm zřetelně označený a není to faktura.'),
+      step(
+        'Založte koncept dokladu',
+        'Vyberte příjemku, výdejku, převodku, vratku nebo dodací list a přidejte položky.',
+      ),
+      step(
+        'Zkontrolujte a potvrďte',
+        'Až potvrzení změní zásobu a přidělí dokladu číslo. Koncept můžete předtím zrušit.',
+      ),
+      step(
+        'Uložte tisknutelnou kopii',
+        'Tlačítko PDF stáhne provozní doklad. Koncept je v něm zřetelně označený a není to faktura.',
+      ),
       step('Proveďte inventuru', 'Zadejte fyzicky spočítané množství.'),
       step('Vyřešte rozdíly', 'Ve skladu uvidíte, zda jde o manko nebo přebytek.'),
     ],
@@ -220,11 +251,26 @@ export const HELP_GUIDES: readonly HelpGuide[] = [
       'Objednávka říká, co chcete koupit. Příjemka říká, co skutečně dorazilo. Sklad mění až potvrzená příjemka, ne objednávka.',
     whenToUse: 'Když chcete hlídat nedodané nebo jen částečně dodané zboží.',
     steps: [
-      step('Založte dodavatele', 'V Dodavatelé vyplňte název a podle potřeby kontakt, IČO, DIČ a adresu.'),
-      step('Uložte objednávku', 'Vyberte dodavatele, položky a sklad příjmu. Koncept nic neobjedná ani nezmění ve skladu.'),
-      step('Odešlete objednávku', 'Až ji skutečně odešlete dodavateli, použijte Odeslat. Objednávka dostane číslo.'),
-      step('Zapište skutečný příjem', 'Po dodávce zadejte pouze skutečně doručené množství. Může být menší než objednané.'),
-      step('Potvrďte příjemku', 'Otevře se koncept příjemky ve Skladových dokladech. Teprve jeho potvrzení změní zásobu.'),
+      step(
+        'Založte dodavatele',
+        'V Dodavatelé vyplňte název a podle potřeby kontakt, IČO, DIČ a adresu.',
+      ),
+      step(
+        'Uložte objednávku',
+        'Vyberte dodavatele, položky a sklad příjmu. Koncept nic neobjedná ani nezmění ve skladu.',
+      ),
+      step(
+        'Odešlete objednávku',
+        'Až ji skutečně odešlete dodavateli, použijte Odeslat. Objednávka dostane číslo.',
+      ),
+      step(
+        'Zapište skutečný příjem',
+        'Po dodávce zadejte pouze skutečně doručené množství. Může být menší než objednané.',
+      ),
+      step(
+        'Potvrďte příjemku',
+        'Otevře se koncept příjemky ve Skladových dokladech. Teprve jeho potvrzení změní zásobu.',
+      ),
     ],
     tip: 'Částečná dodávka není chyba: objednávka zůstane označená jako Částečně přijato. Nikdy nemažte starý doklad kvůli opravě skladu.',
     to: '/app/nakupni-objednavky',

@@ -14,6 +14,8 @@ export const APP_MODULES = [
   // Samostatný placený add-on: ověřené podpisy dokumentů přes připojeného poskytovatele (BankID = jeden kanál).
   // Není součást gastro/pokladny — zapíná se zvlášť; backend provider kontrakt se dodělává paralelně.
   'verified_signing',
+  // „Růst" balíček: CRM (poznámky, úkoly, timeline dokladů nad klientem). Backend gatuje modulem `crm`.
+  'crm',
 ] as const
 
 export type AppModuleId = (typeof APP_MODULES)[number]
@@ -45,12 +47,14 @@ export const BUSINESS_PROFILES: BusinessProfile[] = [
     setupSteps: [
       {
         label: 'Založit sklad nebo provozovnu',
-        description: 'Jedno místo stačí pro začátek. U více skladů pak systém hlídá, odkud a kam se zboží pohybuje.',
+        description:
+          'Jedno místo stačí pro začátek. U více skladů pak systém hlídá, odkud a kam se zboží pohybuje.',
         to: '/app/pobocky',
       },
       {
         label: 'Nahrát katalog položek',
-        description: 'Zadejte název, skladový kód a případně čárový kód. Prodejní cenu ani pokladnu nepotřebujete.',
+        description:
+          'Zadejte název, skladový kód a případně čárový kód. Prodejní cenu ani pokladnu nepotřebujete.',
         to: '/app/sklad',
       },
       {
@@ -60,7 +64,8 @@ export const BUSINESS_PROFILES: BusinessProfile[] = [
       },
       {
         label: 'Ověřit pohyby a minimum',
-        description: 'Ve stavu skladu uvidíte zásoby, historii, inventuru a upozornění na položky pod minimem.',
+        description:
+          'Ve stavu skladu uvidíte zásoby, historii, inventuru a upozornění na položky pod minimem.',
         to: '/app/zasoby',
       },
     ],
@@ -324,6 +329,7 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
     hiddenForRoles: ['Employee'],
   },
   { to: '/app/klienti', label: 'Klienti', module: 'invoicing', hiddenForRoles: ['Employee'] },
+  { to: '/app/crm', label: 'CRM', module: 'crm', hiddenForRoles: ['Employee'] },
   { to: '/app/import', label: 'Nahrát data', module: 'integrations', hiddenForRoles: ['Employee'] },
   { to: '/app/vernost', label: 'Věrnost', module: 'loyalty', hiddenForRoles: ['Employee'] },
   { to: '/app/akce-ceny', label: 'Akce a ceny', module: 'loyalty', hiddenForRoles: ['Employee'] },
