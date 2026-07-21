@@ -14,6 +14,11 @@ test('gastro onboarding ukáže doporučený start a pokračuje na pobočky', as
   await page.goto('/app/onboarding')
 
   await expect(page.getByRole('heading', { name: 'Doplňte údaje o firmě' })).toBeVisible()
+
+  // Výběr profilu je explicitní — výchozí je nově 'warehouse' (Samostatný sklad), takže gastro
+  // se musí zvolit. Radio input je sr-only → kliká se na kartu profilu.
+  await page.getByText('Gastro', { exact: true }).click()
+
   await expect(page.getByText('Doporučený start')).toBeVisible()
   await expect(page.getByText('Založit provozovny')).toBeVisible()
   await expect(page.getByText('Připravit stoly a QR')).toBeVisible()
