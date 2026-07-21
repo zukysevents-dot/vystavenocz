@@ -50,7 +50,9 @@ export function watchPage(page: Page, opts: { allowStatus?: number[] } = {}): Pa
     if (REQUEST_IGNORE.some((re) => re.test(url))) return
     // Zrušené requesty při odchodu ze stránky nejsou chyba.
     if (req.failure()?.errorText.includes('ERR_ABORTED')) return
-    watch.failedRequests.push(`${req.method()} ${new URL(url).pathname} — ${req.failure()?.errorText}`)
+    watch.failedRequests.push(
+      `${req.method()} ${new URL(url).pathname} — ${req.failure()?.errorText}`,
+    )
   })
   page.on('response', (res) => {
     const url = res.url()
@@ -101,6 +103,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: '/app/podpisy', heading: /podpisy/i },
   { path: '/app/nabidky', heading: /Nabídky/ },
   { path: '/app/klienti', heading: /Klienti/ },
+  { path: '/app/crm', heading: /CRM/ },
   { path: '/app/import', heading: /Nahrát data|Import/ },
   { path: '/app/import/faktury', heading: /Import faktur/ },
   { path: '/app/pokladna', heading: /Pokladna/ },
@@ -141,7 +144,11 @@ export async function dismissCookies(page: Page): Promise<void> {
     try {
       localStorage.setItem(
         'vystaveno.cookieConsent.v1',
-        JSON.stringify({ necessary: true, analytics: false, decidedAt: '2026-01-01T00:00:00.000Z' }),
+        JSON.stringify({
+          necessary: true,
+          analytics: false,
+          decidedAt: '2026-01-01T00:00:00.000Z',
+        }),
       )
     } catch {
       /* banner zůstane — testy ho zachytí */
