@@ -9,7 +9,7 @@
 | Endpoint                                  | Přístup                | Výsledek                                                                                   |
 | ----------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------ |
 | `POST /api/v1/subscription-claims/redeem` | JWT + `company.manage` | Přijme `{ code, termsVersion }` a povinný `Idempotency-Key`; vrací `201` se stavem nároku. |
-| `GET /api/v1/subscription-claims/me`      | JWT + `company.manage` | Vrátí stav nároku aktuální firmy, nebo `404`, pokud žádný nemá.                            |
+| `GET /api/v1/subscription-claims/me`      | JWT + `company.manage` | Vrátí stav nároku aktuální firmy, nebo `204`, pokud žádný nemá (designový prázdný stav).                            |
 
 Tenant je vždy firma z JWT. Jedna firma může mít právě jeden attribution; opakování se stejným idempotency klíčem vrátí stejný výsledek, jiný klíč vrátí `409`.
 
