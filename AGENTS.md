@@ -132,6 +132,7 @@ npm run format
 npx vitest run     # unit testy
 npx playwright test  # e2e (mock režim, seed v e2e/helpers/seed.ts)
 npm run test:e2e:audit  # e2e audit celé appky proti reálnému API (playwright.audit.config.ts, e2e/audit/; vyžaduje běžící FE v API režimu + backend s demo seedem; přihlášení jen z env E2E_DEMO_EMAIL/E2E_DEMO_PASSWORD)
+npm run test:e2e:personas  # persona-based audit (playwright.personas.config.ts, e2e/personas/; 8 person, desktop+mobil, účty přes pozvánkový flow, heslo z E2E_PERSONA_PASSWORD; report docs/testing/persona-audit-2026-07.md; nespouštět nad sdíleným stagingem)
 ```
 
 **Definice „hotovo":** `npm run build` + `npm run lint` + `npx vitest run` projdou; u UI flow i `npx playwright test`. Bez lokálního Node jde vše přes `npx`.

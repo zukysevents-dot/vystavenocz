@@ -44,3 +44,4 @@ globalize-mcp.mjs
 set-figma-token.cmd
 setup-claude-mcp.cmd
 NEXT-SESSION.md
+e2e/personas/.auth/

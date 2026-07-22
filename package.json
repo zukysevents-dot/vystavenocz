@@ -14,6 +14,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:audit": "playwright test --config playwright.audit.config.ts",
+    "test:e2e:personas": "playwright test --config playwright.personas.config.ts",
     "prepare": "husky"
   },
   "lint-staged": {
