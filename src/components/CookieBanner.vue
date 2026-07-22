@@ -105,7 +105,7 @@ function handleNecessaryOnly() {
                   Analytika
                 </Label>
                 <div class="text-[11px] text-muted-foreground">
-                  Google Analytics & Plausible — měření návštěvnosti.
+                  Měření návštěvnosti — zapneme jen s vaším souhlasem; zatím žádné neběží.
                 </div>
               </div>
               <Switch

@@ -1,7 +1,7 @@
 {
-  "name": "Vystaveno.cz — Česká fakturace s AI",
+  "name": "Vystaveno.cz — Modulární provozní systém",
   "short_name": "Vystaveno",
-  "description": "Vystav fakturu za 30 sekund. Česká fakturace pro OSVČ s AI asistentem.",
+  "description": "Faktury, pokladna, sklad, rezervace i směny pro malé české firmy — v jednom systému.",
   "start_url": "/app",
   "scope": "/",
   "display": "standalone",

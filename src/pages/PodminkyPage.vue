@@ -38,9 +38,12 @@ import PageHeader from '@/components/landing/PageHeader.vue'
       <ul class="ml-6 mt-3 list-disc space-y-1 text-muted-foreground">
         <li>vystavování faktur s automatickou QR platbou (SPAYD),</li>
         <li>správu klientů včetně načítání údajů z registru ARES,</li>
-        <li>export faktur do PDF,</li>
-        <li>volitelný AI asistent pro tvorbu položek faktury,</li>
-        <li>odesílání faktur e-mailem.</li>
+        <li>export faktur do PDF a účetních formátů (ISDOC, Pohoda XML),</li>
+        <li>zálohové faktury, dobropisy a opakované faktury,</li>
+        <li>
+          další volitelné moduly dle aktuální nabídky v aplikaci (pokladna, sklad, rezervace,
+          docházka a další).
+        </li>
       </ul>
     </section>
 
@@ -71,10 +74,11 @@ import PageHeader from '@/components/landing/PageHeader.vue'
         Doklady o platbě jsou vystavovány elektronicky.
       </p>
       <p class="mt-3 text-muted-foreground">
-        Platby jsou zpracovávány platebním poskytovatelem
-        <strong>Stripe Payments Europe Ltd.</strong> Předplatné se automaticky obnovuje, dokud jej
-        Uživatel nezruší prostřednictvím zákaznického portálu v aplikaci. Zrušením končí přístup k
-        placeným funkcím na konci aktuálního období.
+        Online platby předplatného zatím nejsou spuštěné — aktivace tarifu probíhá individuální
+        domluvou s Provozovatelem. Před spuštěním online plateb budou tyto podmínky doplněny o
+        platebního poskytovatele a pravidla obnovování předplatného; o změně budou Uživatelé předem
+        informováni. Zrušením předplatného končí přístup k placeným funkcím na konci aktuálního
+        uhrazeného období.
       </p>
     </section>
 
