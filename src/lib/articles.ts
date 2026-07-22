@@ -1263,7 +1263,7 @@ export const articles: Article[] = [
           {
             type: 'callout',
             variant: 'tip',
-            text: 'Vystaveno.cz umí na fakturu přidat jak QR kód (zdarma), tak odkaz na platbu kartou přes Stripe — klient si vybere způsob platby sám.',
+            text: 'Vystaveno.cz přidá na každou fakturu QR kód pro platbu bankou zdarma. Online platba kartou bude dostupná po napojení platebního poskytovatele.',
           },
         ],
       },
@@ -1587,15 +1587,15 @@ export const articles: Article[] = [
             type: 'ol',
             items: [
               'Vyber klienta z adresáře (nebo ho přidáš přes IČO — údaje se načtou z ARES).',
-              'Napiš položky (nebo necháš AI asistenta — napíšeš česky „konzultace 5 hodin po 1500 Kč“).',
+              'Napiš položky (např. „konzultace 5 hodin po 1500 Kč“) — ceny a DPH se spočítají samy.',
               'Vystaveno.cz automaticky doplní DUZP, splatnost, QR kód, DPH a kontroluje zákonné náležitosti.',
-              'Klikneš na „Vystavit“ — faktura se uloží, pošle e-mailem klientovi a uloží do exportu pro účetní.',
+              'Klikneš na „Vystavit“ — faktura se uloží, stáhneš ji jako PDF a máš ji v exportu pro účetní.',
             ],
           },
           {
             type: 'callout',
             variant: 'tip',
-            text: 'Prvních 14 dní zdarma bez karty. Žádný limit na počet faktur, AI asistent i QR platby v ceně.',
+            text: 'Prvních 14 dní zdarma bez karty. Žádný limit na počet faktur, QR platby v ceně.',
           },
         ],
       },

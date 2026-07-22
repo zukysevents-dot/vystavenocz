@@ -6,7 +6,7 @@ import PageHeader from '@/components/landing/PageHeader.vue'
   <PageHeader
     eyebrow="Právní"
     title="Ochrana osobních údajů (GDPR)"
-    subtitle="Účinné od 1. 1. 2026. V souladu s nařízením EU 2016/679."
+    subtitle="Aktualizováno 22. 7. 2026. V souladu s nařízením EU 2016/679."
   />
 
   <article
@@ -29,7 +29,7 @@ import PageHeader from '@/components/landing/PageHeader.vue'
         <li>e-mailová adresa, jméno a příjmení,</li>
         <li>fakturační údaje (název firmy, IČO, DIČ, adresa, bankovní spojení),</li>
         <li>logo firmy a vizuální nastavení faktur,</li>
-        <li>údaje o předplatném a platební historii (zpracovává Stripe),</li>
+        <li>údaje o předplatném (tarif a jeho stav; online platby zatím nejsou spuštěné),</li>
         <li>technické údaje: IP adresa, typ prohlížeče, log o přihlášení.</li>
       </ul>
 
@@ -61,8 +61,8 @@ import PageHeader from '@/components/landing/PageHeader.vue'
           podvodů, e-mailová komunikace o službě.
         </li>
         <li>
-          <strong>Souhlas</strong> (čl. 6 odst. 1 písm. a) — analytika a marketingové cookies (lze
-          kdykoliv odvolat).
+          <strong>Souhlas</strong> (čl. 6 odst. 1 písm. a) — případné analytické cookies; zapneme je
+          jen s vaším souhlasem (lze kdykoliv odvolat), zatím žádná analytika neběží.
         </li>
       </ul>
     </section>
@@ -80,25 +80,25 @@ import PageHeader from '@/components/landing/PageHeader.vue'
     <section>
       <h2 class="text-2xl font-bold">5. Příjemci údajů (zpracovatelé)</h2>
       <p class="mt-3 text-muted-foreground">
-        Pro provoz služby využíváme prověřené dodavatele, se kterými máme uzavřené zpracovatelské
-        smlouvy:
+        Vaše data zpracováváme primárně na <strong>vlastní infrastruktuře v EU</strong> — virtuální
+        server s databází PostgreSQL a úložištěm souborů tamtéž. Dále využíváme:
       </p>
       <ul class="ml-6 mt-3 list-disc space-y-1 text-muted-foreground">
         <li>
-          <strong>Supabase Inc.</strong> (USA) — databáze a autentizace, data uložena v EU regionu
-          (Frankfurt).
+          <strong>poskytovatele e-mailových služeb (SMTP)</strong> — odesílání systémových e-mailů
+          (doklady, pozvánky, upozornění),
         </li>
-        <li><strong>Cloudflare, Inc.</strong> (USA) — hosting a CDN, EU edge.</li>
-        <li><strong>Stripe Payments Europe Ltd.</strong> (Irsko) — zpracování plateb.</li>
-        <li><strong>Resend, Inc.</strong> (USA) — odesílání transakčních e-mailů.</li>
         <li>
-          <strong>Google Ireland Ltd.</strong> — AI funkce (volitelné, pouze obsah, který Uživatel
-          aktivně zadá do AI asistenta).
+          <strong>Google Ireland Ltd. / Apple Distribution International Ltd.</strong> — výhradně
+          přihlášení účtem Google nebo Apple (OAuth), pokud si je zvolíte.
         </li>
       </ul>
       <p class="mt-3 text-muted-foreground">
-        Předání mimo EU probíhá na základě Standardních smluvních doložek (SCC) dle rozhodnutí
-        Evropské komise.
+        Online platby předplatného zatím nejsou spuštěné; před jejich aktivací tuto stránku doplníme
+        o platebního zpracovatele. Případné předání údajů mimo EHP se opírá o rozhodnutí o
+        odpovídající ochraně (EU-US Data Privacy Framework) nebo standardní smluvní doložky (čl. 46
+        GDPR). Aktuální seznam subprocesorů rádi poskytneme na vyžádání na
+        <a href="mailto:patrik@vystaveno.cz" class="text-primary underline">patrik@vystaveno.cz</a>.
       </p>
     </section>
 
@@ -132,18 +132,21 @@ import PageHeader from '@/components/landing/PageHeader.vue'
     <section>
       <h2 class="text-2xl font-bold">7. Cookies</h2>
       <p class="mt-3 text-muted-foreground">
-        Používáme pouze technicky nezbytné cookies (přihlášení, předvolby) a — po udělení souhlasu —
-        analytické cookies pro měření návštěvnosti. Souhlas s cookies můžete kdykoliv změnit
-        kliknutím na odkaz v patičce stránky nebo vymazáním cookies ve vašem prohlížeči.
+        Používáme pouze technicky nezbytné cookies (přihlášení, předvolby). Analytické cookies
+        bychom nasadili jen s vaším předchozím souhlasem — v tuto chvíli žádné měření návštěvnosti
+        neprobíhá. Marketingové cookies nepoužíváme. Volbu můžete kdykoliv změnit vymazáním cookies
+        ve vašem prohlížeči.
       </p>
     </section>
 
     <section>
       <h2 class="text-2xl font-bold">8. Zabezpečení</h2>
       <p class="mt-3 text-muted-foreground">
-        Veškerá komunikace probíhá šifrovaně (TLS 1.3). Hesla jsou uložena pouze v podobě bezpečného
-        hashe. Přístup k databázi je řízen Row-Level Security politikami — Uživatel vidí pouze svá
-        data. Pravidelně provádíme bezpečnostní audity.
+        Veškerá komunikace probíhá šifrovaně (HTTPS). Hesla jsou uložena pouze v podobě bezpečného
+        hashe. Data jednotlivých firem jsou důsledně oddělena na úrovni serverových dotazů (tenant
+        izolace) a přístup k nim řídí role a oprávnění; klíčové akce se zapisují do auditního
+        záznamu. Účet můžete smazat přímo v aplikaci (Nastavení) nebo postupem na
+        <a href="/smazani-uctu" class="text-primary underline">vystaveno.cz/smazani-uctu</a>.
       </p>
     </section>
 

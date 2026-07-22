@@ -121,7 +121,7 @@ const moduleOptions: { id: AppModuleId; label: string; description: string; lock
   {
     id: 'ai',
     label: 'AI asistent',
-    description: 'Asistent nad doklady, provozem, reporty a doporučeními.',
+    description: 'Připravujeme — zatím není součástí aplikace.',
   },
   {
     id: 'integrations',
