@@ -1,6 +1,6 @@
 # Finální release readiness — Vystaveno (web + PWA, Android, iOS, backend)
 
-Datum kontroly: **2026-07-22** · Kontrola provedena agentovým grafem PLANNER → BUILDER → ATTACKER → FIXER → JUDGE nad repozitáři `vystavenocz` (main), `vystaveno-mobile` (main, e7369cf), `vystaveno-api` (main, 02e6971). Bez produkčního deploye, bez push, bez publikace do storů.
+Datum kontroly: **2026-07-22** · Kontrola provedena agentovým grafem PLANNER → BUILDER → ATTACKER → FIXER → JUDGE nad repozitáři `vystavenocz` (main 36c2a01 + tato větev `fix/release-report-reverify`), `vystaveno-mobile` (main, ab2aced), `vystaveno-api` (main b2c6fd5 + větev `fix/api-token-membership-revalidation`). Bez produkčního deploye, bez push, bez publikace do storů.
 
 ## 1. Verdict
 
@@ -8,16 +8,17 @@ Datum kontroly: **2026-07-22** · Kontrola provedena agentovým grafem PLANNER �
 
 ## 2. P0/P1 blockery nalezené v této kontrole
 
-| #   | Závažnost             | Nález                                                                                                                                                                                                                                                 | Stav                                                                           |
-| --- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| B1  | P0                    | Živá stránka `/gdpr` uváděla nepravdivé zpracovatele (Supabase, Cloudflare, Resend, Google AI, Stripe, „Row-Level Security") — realita je vlastní VPS + PostgreSQL + SMTP                                                                             | **OPRAVENO**                                                                   |
-| B2  | P0                    | „AI asistent" inzerován jako placená funkce na 4+ místech (ceník `pricing.ts`, obchodní podmínky, články nápovědy, popis modulu, PWA manifest), přitom žádná AI funkce v aplikaci ani backendu neexistuje                                             | **OPRAVENO**                                                                   |
-| B3  | P1                    | Obchodní podmínky tvrdily „platby zpracovává Stripe" a „předplatné se automaticky obnovuje" — backend žádný subscription billing nemá, online platby předplatného nejsou spuštěné                                                                     | **OPRAVENO**                                                                   |
-| B4  | P1                    | Cookie banner nabízel „Google Analytics & Plausible", přitom analytika je vědomě vypnutá (no-op)                                                                                                                                                      | **OPRAVENO** (text pravdivý; volba zůstává jako budoucí souhlas)               |
-| B5  | P1                    | Ceník sliboval „Cizí měny + kurz ČNB" (editor umí jen CZK) a „Automatické upomínky" (upomínka je předvyplněný e-mail v poštovním klientu uživatele); článek nápovědy tvrdil „faktura se pošle e-mailem klientovi" (odeslání z aplikace není dostupné) | **OPRAVENO**                                                                   |
-| B6  | P1 (rozhodnutí)       | Rozpor go-to-market: web komunikuje uzavřený early access (CTA vedou na e-mail), ale `/registrace` je plně funkční otevřená registrace s backendem                                                                                                    | **OTEVŘENÉ — rozhodnutí vlastníka** (otevřít, nebo routu před vydáním schovat) |
-| B7  | P0 (právní, mimo kód) | Právní texty (`/gdpr`, `/podminky`) jsou nyní pravdivé k dnešní realitě, ale dle `docs/legal/09` (C-27) vyžadují advokátní review a doplnění faktů F1–F8 (VPS/SMTP provider, retence) před ostrým provozem                                            | **OTEVŘENÉ — operátor**                                                        |
-| B8  | P1                    | Článek nápovědy na veřejné routě `/clanky` sliboval „odkaz na platbu kartou přes Stripe" na faktuře — Stripe integrace neexistuje (nalezeno nezávislým JUDGE, 2. kolo)                                                                                | **OPRAVENO**                                                                   |
+| #   | Závažnost             | Nález                                                                                                                                                                                                                                                 | Stav                                                                                         |
+| --- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| B1  | P0                    | Živá stránka `/gdpr` uváděla nepravdivé zpracovatele (Supabase, Cloudflare, Resend, Google AI, Stripe, „Row-Level Security") — realita je vlastní VPS + PostgreSQL + SMTP                                                                             | **OPRAVENO**                                                                                 |
+| B2  | P0                    | „AI asistent" inzerován jako placená funkce na 4+ místech (ceník `pricing.ts`, obchodní podmínky, články nápovědy, popis modulu, PWA manifest), přitom žádná AI funkce v aplikaci ani backendu neexistuje                                             | **OPRAVENO**                                                                                 |
+| B3  | P1                    | Obchodní podmínky tvrdily „platby zpracovává Stripe" a „předplatné se automaticky obnovuje" — backend žádný subscription billing nemá, online platby předplatného nejsou spuštěné                                                                     | **OPRAVENO**                                                                                 |
+| B4  | P1                    | Cookie banner nabízel „Google Analytics & Plausible", přitom analytika je vědomě vypnutá (no-op)                                                                                                                                                      | **OPRAVENO** (text pravdivý; volba zůstává jako budoucí souhlas)                             |
+| B5  | P1                    | Ceník sliboval „Cizí měny + kurz ČNB" (editor umí jen CZK) a „Automatické upomínky" (upomínka je předvyplněný e-mail v poštovním klientu uživatele); článek nápovědy tvrdil „faktura se pošle e-mailem klientovi" (odeslání z aplikace není dostupné) | **OPRAVENO**                                                                                 |
+| B6  | P1 (rozhodnutí)       | Rozpor go-to-market: web komunikuje uzavřený early access (CTA vedou na e-mail), ale `/registrace` je plně funkční otevřená registrace s backendem                                                                                                    | **OTEVŘENÉ — rozhodnutí vlastníka** (otevřít, nebo routu před vydáním schovat)               |
+| B7  | P0 (právní, mimo kód) | Právní texty (`/gdpr`, `/podminky`) jsou nyní pravdivé k dnešní realitě, ale dle `docs/legal/09` (C-27) vyžadují advokátní review a doplnění faktů F1–F8 (VPS/SMTP provider, retence) před ostrým provozem                                            | **OTEVŘENÉ — operátor**                                                                      |
+| B8  | P1                    | Článek nápovědy na veřejné routě `/clanky` sliboval „odkaz na platbu kartou přes Stripe" na faktuře — Stripe integrace neexistuje (nalezeno nezávislým JUDGE, 2. kolo)                                                                                | **OPRAVENO**                                                                                 |
+| B9  | P1                    | User-bound API token (MCP/AI) četl roli ze snapshotu na řádku tokenu — odebraný nebo degradovaný člen si přes token držel původní přístup až do revoke (nalezeno odpoledním re-checkem, sekce Re-verifikace)                                          | **OPRAVENO — ČEKÁ NA MERGE** (`vystaveno-api` větev `fix/api-token-membership-revalidation`) |
 
 ## 3. Co bylo opraveno (soubory)
 
@@ -33,18 +34,18 @@ Mimo tuto kontrolu (dříve, součást stavu): mobilní release balíček z 2026
 
 ## 4. Ověřeno automaticky
 
-| Brána                                                                                                                         | Výsledek                                                                     |
-| ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Web `npm run build` (vue-tsc + Vite)                                                                                          | ✅ bez chyb (i po opravách)                                                  |
-| Web `npm run lint`                                                                                                            | ✅                                                                           |
-| Web `npm run test` (vitest)                                                                                                   | ✅ 544/544                                                                   |
-| Web `npm run test:e2e` (mock režim)                                                                                           | ✅ 93/93                                                                     |
-| Web e2e audit proti reálnému API (`playwright.audit.config.ts`, 42 rout, desktop + mobilní viewport, konzole + 4xx/5xx + axe) | ✅ 126 passed, 1 flaky (`/app/sklad` — samostatně prošla), 1 skipped         |
-| Mobil `:composeApp:testDebugUnitTest`                                                                                         | ✅ BUILD SUCCESSFUL                                                          |
-| Mobil `:composeApp:assembleDebug`                                                                                             | ✅                                                                           |
-| Mobil `:composeApp:assembleRelease -Pvystaveno.apiBaseUrl=https://example.invalid/api/v1`                                     | ✅ (unsigned APK, versionCode 1 / 1.0.0; HTTPS enforcement v buildu funguje) |
-| Mobil `:composeApp:compileKotlinIosSimulatorArm64`                                                                            | ✅                                                                           |
-| Backend `dotnet test` (main)                                                                                                  | ✅ 379 unit + 1231 integračních, 0 failed                                    |
+| Brána                                                                                                                         | Výsledek                                                                                                                                                                                                                    |
+| ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Web `npm run build` (vue-tsc + Vite)                                                                                          | ✅ bez chyb (i po opravách)                                                                                                                                                                                                 |
+| Web `npm run lint`                                                                                                            | ✅                                                                                                                                                                                                                          |
+| Web `npm run test` (vitest)                                                                                                   | ✅ 544/544                                                                                                                                                                                                                  |
+| Web `npm run test:e2e` (mock režim)                                                                                           | ✅ 93/93                                                                                                                                                                                                                    |
+| Web e2e audit proti reálnému API (`playwright.audit.config.ts`, 42 rout, desktop + mobilní viewport, konzole + 4xx/5xx + axe) | ✅ 126 passed, 1 flaky (`/app/sklad` — samostatně prošla), 1 skipped                                                                                                                                                        |
+| Mobil `:composeApp:testDebugUnitTest`                                                                                         | ✅ BUILD SUCCESSFUL                                                                                                                                                                                                         |
+| Mobil `:composeApp:assembleDebug`                                                                                             | ✅                                                                                                                                                                                                                          |
+| Mobil `:composeApp:assembleRelease -Pvystaveno.apiBaseUrl=https://example.invalid/api/v1`                                     | ✅ (unsigned APK, versionCode 1 / 1.0.0; HTTPS enforcement v buildu funguje)                                                                                                                                                |
+| Mobil `:composeApp:compileKotlinIosSimulatorArm64`                                                                            | ✅                                                                                                                                                                                                                          |
+| Backend `dotnet test` (main)                                                                                                  | ✅ 379 unit, 0 failed; ranní běh 1231 integračních proběhl na stavu s opravou bf02a0e (ne na 02e6971, jak tvrdila původní hlavička) — plná integrační suita na finálním kandidátovi: výsledek doplněn v sekci Re-verifikace |
 
 ## 5. Ověřeno manuálně (browser, reálné API + demo data)
 
@@ -59,10 +60,11 @@ Přihlášení přes UI demo účtem; průchod: dashboard, faktury (rok historie
 - **Veřejné toky bez přihlášení** (`/objednavka/:slug`, `/rezervace/:slug`) a skutečné odeslání e-mailů (SMTP) — neověřeno v tomto běhu.
 - **Registrace end-to-end** — endpoint i stránka existují (rate-limited), ale nevytvářel jsem účty; navíc čeká rozhodnutí B6.
 - **Kilo Mayo / konkurenční ceníky Storyous, FakturaOnline** — oficiální ceníky nezveřejněné (individuální nabídky), označeno v tabulce.
+- **Plný integrační běh backendu na finálním kandidátovi** — je poslední automatická brána tohoto re-checku; běží po dokončení oprav a výsledek doplní orchestrátor do sekce Re-verifikace.
 
 ## 7. Výsledky buildů, testů a Playwrightu
 
-Viz sekce 4. Poznámky: audit suite při 4 paralelních workerech narazí na backend rate limit (429) — pro CI doporučen `--workers=1` (3,0 min). Backend integrační testy běží ~50 min (sekvenčně přes reálnou DB).
+Viz sekce 4. Poznámky: audit suite při 4 paralelních workerech narazí na backend rate limit (429) — pro CI doporučen `--workers=1` (3,0 min). Backend integrační testy běží proti reálné DB; finální běh celé suity trval 5 m 28 s (ranní odhad ~50 min se nepotvrdil).
 
 ## 8. Stav webu / PWA
 
@@ -150,17 +152,31 @@ Zdroje (ověřeno 2026-07-22): [1] idoklad.cz/cenik · [2] fakturoid.cz/cenik ·
 - [ ] **Google Cloud:** OAuth consent screen (produkční), Web client ID + secret (→ `OAuth__Google__*`), redirect URIs přesně dle `RELEASE_CHECKLIST.md`.
 - [ ] **Signing:** Android upload keystore (`keystore.properties` mimo Git) + `bundleRelease` AAB; Play App Signing SHA-256 → `assetlinks.json` na `https://app.vystaveno.cz/.well-known/`.
 - [ ] **Google Play Console:** záznam aplikace, Data Safety dle `DATA_SAFETY.md`, odkaz na smazání účtu `/smazani-uctu`, feature graphic 1024×500, screenshoty dle `STORE_LISTING.md`.
-- [ ] **Produkční secrets/VPS:** deploy backendu main (migrace aditivní: `AddOAuthMobilePlatform`, `AddCrm` — před deployem `pg_dump`), `.env` s OAuth klíči, `EMAIL_*` (SMTP), `Integrations__SecretEncryptionKey`, `PAYMENTS_PORTAL_BASE_URL`; deploy webu (nová `/gdpr`, `/podminky`, `/smazani-uctu`); smoke dle `docs/deploy-smoke-checklist.md`.
+- [ ] **Produkční secrets/VPS:** deploy backendu main (migrace aditivní: `AddOAuthMobilePlatform`, `AddCrm`, `AddApiTokenUserBinding` — před deployem `pg_dump`), `.env` s OAuth klíči, `EMAIL_*` (SMTP), `Integrations__SecretEncryptionKey`, `PAYMENTS_PORTAL_BASE_URL`; deploy webu (nová `/gdpr`, `/podminky`, `/smazani-uctu`); smoke dle `docs/deploy-smoke-checklist.md`.
+- [ ] **Mergnout opravné větve z re-verifikace:** `vystaveno-api` `fix/api-token-membership-revalidation` (B9 — membership revalidace API tokenů + regresní testy) a `vystavenocz` `fix/release-report-reverify` (`.env.production` + tento report) — PŘED vydáním.
 - [ ] **Právní review:** advokátní kontrola `/gdpr` + `/podminky` (C-27), doplnění faktů F1–F8 (`docs/legal/00-chybejici-fakta.md`) — hlavně VPS/SMTP provider a retence.
 - [ ] **Rozhodnutí:** otevřít registraci, nebo skrýt `/registrace` (B6); délka trialu; marketingový slib (sekce 14) — změny ceníku/trialu jen po schválení.
 - [ ] **Fyzická zařízení:** ruční QA dle `vystaveno-mobile/MOBILE_QA_CHECKLIST.md` (login, OAuth, POS, gastro, PDF, offline chování, TalkBack/VoiceOver).
 
 ## 18. Změněné dokumenty a artefakty
 
-- Opravy (tento check, necommitnuto): `src/pages/GdprPage.vue`, `src/pages/PodminkyPage.vue`, `src/components/CookieBanner.vue`, `src/lib/pricing.ts`, `src/lib/articles.ts`, `src/pages/NastaveniPage.vue`, `public/manifest.json`.
+- Opravy (tento check): `src/pages/GdprPage.vue`, `src/pages/PodminkyPage.vue`, `src/components/CookieBanner.vue`, `src/lib/pricing.ts`, `src/lib/articles.ts`, `src/pages/NastaveniPage.vue`, `public/manifest.json` — commitnuto (0ebc2d6), mergnuto do main (36c2a01) a pushnuto.
 - Tento report: `docs/release/final-release-readiness.md`.
 - Navazující dokumenty: `docs/product/vystaveno-product-overview.md` (produktový přehled ověřený proti API, 2026-07-21/22), `vystaveno-mobile/docs/release/*` (checklist, report, data safety, store listing), `docs/legal/*` (návrhy právních textů k review), `docs/deploy-smoke-checklist.md`.
 - Testovací artefakty (gitignored): `test-results/.last-run.json` + trace/screenshoty selhání v `test-results/` (HTML report se generuje jen při audit běhu, po následných opravných bězích nemusí existovat), build výstupy `dist/`, `composeApp/build/outputs/apk/release/composeApp-release-unsigned.apk`.
+
+## 19. Re-verifikace 2026-07-22 (odpolední nezávislý re-check)
+
+Druhý nezávislý průchod agentovým grafem nad finálním kandidátem (vystavenocz 36c2a01, vystaveno-mobile ab2aced, vystaveno-api b2c6fd5):
+
+- **Audit driftu backendu 02e6971 → b2c6fd5:** migrace `AddCrm` i `AddApiTokenUserBinding` jsou aditivní; tenant izolace CRM potvrzena včetně globálního query filtru; FE zpracování 204 prázdných stavů doloženo v `src/lib/http.ts`, `GrowthSettings.vue` a `SubscriptionClaimSettings.vue`; drift mobilního repa je docs-only.
+- **Znovu spuštěné brány:** web `npm run build` + `npm run lint` + unit 544/544; e2e 93/93 po reinstalaci Playwright browserů; backend `dotnet build` + unit 379.
+- **Nalezené a opravené P1 (B9):** membership revalidace user-bound API tokenů — auth handler dosud četl roli ze snapshotu na řádku tokenu, takže odebraný/degradovaný člen si přes token držel přístup až do revoke. Opraveno na větvi `vystaveno-api` `fix/api-token-membership-revalidation` (parita s `MembershipRevalidation` pro JWT: zrušené členství → 401, čerstvá role z DB) + regresní testy; **nutno mergnout PŘED vydáním** (viz sekce 2 řádek B9 a checklist v sekci 17).
+- **Opraven `.env.production`:** `VITE_API_URL` mířil na opuštěný legacy Render host — změněno na `/api/v1` (shodné s produkčním Dockerfile/docker-compose).
+- **P1 mezera testů zaplněna:** integrační testy pro empty-state 204 (`GET /growth/partner-profile`, `GET /subscription-claims/me` — drift commit 06bf654) doplněny na téže backend větvi.
+- **Známé P3 (neblokující):** demo heslo v seederu (guard `Seed__AllowDemo`, jen explicitní CLI); landing „platba hotově i kartou" — doporučeno majiteli přeformulovat; CRM úkoly soft-smazaného klienta — backlog.
+- **Souběžná práce:** untracked `e2e/personas/` + `playwright.personas.config.ts` ve vystavenocz jsou cizí rozdělaná práce mimo tento check; default e2e brána na špinavém stromu listuje 145 testů místo 93 (personas specs se přibalí) — brány běžely proti 93 testům release kandidáta.
+- Plná integrační suita (finální kandidát `fix/api-token-membership-revalidation`, 887bc87): ✅ 379 unit + 1235 integračních (vč. 4 nových regresních testů), 0 failed, 5 m 28 s — první plný běh na release kandidátovi.
 
 ---
 
