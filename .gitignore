@@ -19,6 +19,9 @@ test-results
 # E2E audit: uložená session (JWT tokeny) — nikdy necommitovat
 e2e/audit/.auth
 
+# Instalátory desktop appky servírované z VPS (bind mount, viz docker-compose.prod.yml)
+/downloads/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

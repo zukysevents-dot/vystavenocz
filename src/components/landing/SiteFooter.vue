@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { Mail } from 'lucide-vue-next'
+import { Mail, Monitor } from 'lucide-vue-next'
 import SiteLogo from '@/components/SiteLogo.vue'
 import { openCookieSettings } from '@/lib/cookie-consent'
 
@@ -16,6 +16,10 @@ const productLinks = [
 ]
 
 const year = computed(() => new Date().getFullYear())
+
+// V desktop appce (Tauri) běží stejný build z lokálního bundlu → odkaz na /download by tam vedl
+// do prázdna a nabízet stažení už nainstalované appky nemá smysl.
+const isDesktopApp = '__TAURI_INTERNALS__' in window
 </script>
 
 <template>
@@ -28,6 +32,17 @@ const year = computed(() => new Date().getFullYear())
             Modulární provozní systém pro gastro, služby, řemeslo i obchod — pokladna, kuchyně,
             sklad, rezervace i fakturace. České, postavené v Praze.
           </p>
+          <!-- Instalátor leží na VPS v /download (bind mount), ne v gitu. Stabilní název souboru,
+               ať se odkaz nemusí měnit s každou verzí. Uvádíme jen platformu, pro kterou build je. -->
+          <a
+            v-if="!isDesktopApp"
+            href="/download/vystaveno-mac.dmg"
+            download
+            class="mt-4 inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-surface"
+          >
+            <Monitor class="h-4 w-4" />
+            Stáhnout aplikaci pro macOS
+          </a>
         </div>
 
         <div>
