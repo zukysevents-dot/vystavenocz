@@ -100,9 +100,10 @@ test('mapa stolů → účet → položky → poznámka → odeslání do kuchyn
     .first()
     .click()
   const payDialog = page.getByRole('dialog').last()
-  // P0 NÁLEZ (2026-07-22): openPayment volá POST /promotions/calculate (permission loyalty.read),
-  // kterou role Employee nemá → 403 → „Výslednou cenu se nepodařilo ověřit" a dialog se NEotevře.
-  // Číšník tak v API režimu se zapnutým modulem loyalty nedokončí platbu (Restaurace ANI Pokladna).
+  // P0 NÁLEZ (2026-07-22, OPRAVENO 2026-07-26): openPayment volá POST /promotions/calculate
+  // (permission loyalty.read), kterou role Employee nemá. Dřív 403 → „Výslednou cenu se nepodařilo
+  // ověřit" a dialog se NEotevřel. Teď se 403 bere jako „náhled ceny není k dispozici" a platba
+  // pokračuje bez náhledu — výslednou cenu autoritativně počítá server při platbě.
   const outcome = await Promise.race([
     payDialog.waitFor({ state: 'visible', timeout: 10_000 }).then(() => 'dialog'),
     page
