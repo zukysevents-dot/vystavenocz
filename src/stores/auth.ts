@@ -15,6 +15,12 @@ const SESSION_KEY = 'vystaveno.auth.session.v1' // API: cache identity vedle tok
 type StoredUser = User & { password: string }
 type AuthResult = { ok: true } | { ok: false; error: string }
 
+export interface AccessibleCompany {
+  id: string
+  name: string
+  role: string
+  locationId: string | null
+}
 interface MeResponse {
   userId?: string
   id?: string
@@ -24,6 +30,7 @@ interface MeResponse {
   role: string | null
   modules?: string[]
   features?: string[]
+  companies?: AccessibleCompany[]
 }
 interface Session {
   user: User
@@ -56,6 +63,8 @@ export const useAuthStore = defineStore('auth', () => {
   const role = ref<string | null>(null)
   const modules = ref<AppModuleId[]>(DEFAULT_ENABLED_MODULES)
   const features = ref<string[]>([])
+  // Firmy, kam má účet přístup (z /me) — jen runtime stav pro přepínač, nepersistuje se.
+  const companies = ref<AccessibleCompany[]>([])
   const initialized = ref(false)
   const isAuthenticated = computed(() => user.value !== null)
 
@@ -136,7 +145,23 @@ export const useAuthStore = defineStore('auth', () => {
     role.value = me.role
     modules.value = normalizeModules(me.modules)
     features.value = me.features ?? []
+    companies.value = me.companies ?? []
     persistSession()
+  }
+
+  // Přepnutí aktivní firmy (multi-company účet): server vydá nový token pár s cílovou companyId,
+  // pak se přenačte identita. Volající po úspěchu přejde na /app (stará data stránek neplatí).
+  async function switchCompany(targetCompanyId: string): Promise<boolean> {
+    if (!isApiMode() || !user.value) return false
+    try {
+      const tokens = await http.post<Tokens>(`/companies/${targetCompanyId}/switch`)
+      setTokens(tokens)
+      await loadMe(user.value.email, user.value.fullName)
+      return true
+    } catch (e) {
+      console.error('Přepnutí firmy selhalo:', e)
+      return false
+    }
   }
 
   // Po změně tenant kontextu (založení firmy vydá nové tokeny s companyId) přenačti identitu.
@@ -249,6 +274,7 @@ export const useAuthStore = defineStore('auth', () => {
     role,
     modules,
     features,
+    companies,
     initialized,
     isAuthenticated,
     init,
@@ -257,6 +283,7 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     logout,
     reloadMe,
+    switchCompany,
     hasRole,
     hasModule,
     hasFeature,
