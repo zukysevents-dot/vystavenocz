@@ -13,14 +13,18 @@ import PageHeader from '@/components/landing/PageHeader.vue'
     class="prose-fakturio mx-auto mt-12 max-w-3xl space-y-8 px-4 pb-24 text-foreground sm:px-6 lg:px-8"
   >
     <section>
-      <h2 class="text-2xl font-bold">1. Smazání účtu přímo v mobilní aplikaci</h2>
+      <h2 class="text-2xl font-bold">1. Smazání účtu přímo v aplikaci</h2>
+      <p class="mt-3 text-muted-foreground">
+        <strong>Ve webové aplikaci:</strong> přihlaste se, otevřete <strong>Nastavení</strong> a
+        dole v sekci <strong>Účet</strong> zvolte <strong>Smazat účet</strong>.
+      </p>
       <ol class="ml-6 mt-3 list-decimal space-y-2 text-muted-foreground">
         <li>Přihlaste se do mobilní aplikace <strong>Vystaveno</strong>.</li>
         <li>Otevřete <strong>Více → Nastavení</strong>.</li>
         <li>Dole zvolte <strong>Smazat účet</strong>.</li>
         <li>
           Potvrďte akci heslem (účty přihlašované jen přes Google nebo Apple heslo nemají — stačí
-          potvrzení).
+          potvrzení; přihlášení přes Google/Apple je zatím dostupné v mobilní aplikaci).
         </li>
       </ol>
       <p class="mt-3 text-muted-foreground">

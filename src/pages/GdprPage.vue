@@ -90,7 +90,8 @@ import PageHeader from '@/components/landing/PageHeader.vue'
         </li>
         <li>
           <strong>Google Ireland Ltd. / Apple Distribution International Ltd.</strong> — výhradně
-          přihlášení účtem Google nebo Apple (OAuth), pokud si je zvolíte.
+          přihlášení účtem Google nebo Apple (OAuth), pokud si je zvolíte; toto přihlášení je zatím
+          dostupné v mobilní aplikaci.
         </li>
       </ul>
       <p class="mt-3 text-muted-foreground">
