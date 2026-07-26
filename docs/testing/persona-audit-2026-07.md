@@ -31,7 +31,10 @@ reálnému backendu (`vystaveno-api`, DB `vystaveno_e2e`), v desktopovém (1280�
 
 ### P0 — rozbitý hlavní workflow
 
-- **N1 — Obsluha (Employee) nedokončí platbu v Restauraci ani Pokladně.**
+- **N1 — Obsluha (Employee) nedokončí platbu v Restauraci ani Pokladně.** ✅ **OPRAVENO 2026-07-26**
+  (FE degradace: 403 z `/promotions/calculate` se bere jako „náhled ceny není k dispozici" — platba
+  pokračuje bez náhledu, výslednou cenu autoritativně počítá server; další 403 pokusy se neopakují).
+  Původní nález:
   `openPayment` (RestauracePage) i `openPaymentDialog` (PokladnaPage) volají před otevřením dialogu
   `POST /api/v1/promotions/calculate`, který vyžaduje `loyalty.read`. Role Employee ho nemá → 403 →
   „Výslednou cenu se nepodařilo ověřit. Zkuste platbu znovu." a platební dialog se **nikdy neotevře**.

@@ -450,6 +450,9 @@ const redeemPoints = ref(0)
 const pricePreview = ref<PromotionCalculation | null>(null)
 const pricePreviewLoading = ref(false)
 const pricePreviewError = ref(false)
+// 403 = role nemá loyalty.read (např. Obsluha) — náhled ceny prostě není k dispozici,
+// ale platba NESMÍ být zablokovaná: výslednou cenu autoritativně spočítá server při platbě účtu.
+const pricePreviewForbidden = ref(false)
 let pricePreviewSeq = 0
 const splitPricePreview = ref<PromotionCalculation | null>(null)
 const splitPricePreviewGroupId = ref<string | null>(null)
@@ -549,7 +552,12 @@ function promotionLinesForItems(items: OrderItemLine[]): PromotionLineInput[] {
 }
 
 async function refreshPricePreview() {
-  if (!apiMode || !loyaltyEnabled.value || !currentOrder.value?.items.length) {
+  if (
+    !apiMode ||
+    !loyaltyEnabled.value ||
+    !currentOrder.value?.items.length ||
+    pricePreviewForbidden.value
+  ) {
     pricePreviewSeq++
     pricePreview.value = null
     pricePreviewLoading.value = false
@@ -571,7 +579,9 @@ async function refreshPricePreview() {
   } catch (e) {
     if (seq === pricePreviewSeq) {
       pricePreview.value = null
-      pricePreviewError.value = true
+      // Chybějící oprávnění není chyba náhledu — platba pokračuje bez něj (a už se znovu nezkouší).
+      if (e instanceof ApiError && e.status === 403) pricePreviewForbidden.value = true
+      else pricePreviewError.value = true
     }
     console.error(e)
   } finally {
@@ -982,7 +992,7 @@ function splitPreviewLines(group: OrderSplitGroup): PromotionLineInput[] {
 }
 
 async function refreshSplitPricePreview(group: OrderSplitGroup | null) {
-  if (!group || !apiMode || !loyaltyEnabled.value) {
+  if (!group || !apiMode || !loyaltyEnabled.value || pricePreviewForbidden.value) {
     splitPricePreviewSeq++
     splitPricePreview.value = null
     splitPricePreviewGroupId.value = null
@@ -2311,7 +2321,8 @@ const currentOrderElapsed = computed(() =>
                 priceLevelAdjustment ||
                 promoDiscount ||
                 redeemDiscount ||
-                pricePreviewError
+                pricePreviewError ||
+                pricePreviewForbidden
               "
               class="space-y-2 rounded-xl border border-border bg-muted/30 p-3 text-sm"
             >
@@ -2333,7 +2344,10 @@ const currentOrderElapsed = computed(() =>
                   >−{{ formatCZK(redeemDiscount) }}</span
                 >
               </div>
-              <p v-if="pricePreviewError" class="text-xs text-muted-foreground">
+              <p
+                v-if="pricePreviewError || pricePreviewForbidden"
+                class="text-xs text-muted-foreground"
+              >
                 Náhled není dostupný; výsledná cena se ověří před platbou.
               </p>
             </div>

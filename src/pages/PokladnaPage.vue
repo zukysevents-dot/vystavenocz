@@ -155,6 +155,9 @@ const redeemPoints = ref(0)
 const pricePreview = ref<PromotionCalculation | null>(null)
 const pricePreviewLoading = ref(false)
 const pricePreviewError = ref(false)
+// 403 = role nemá loyalty.read (např. Obsluha) — náhled ceny prostě není k dispozici,
+// ale platba NESMÍ být zablokovaná: výslednou cenu autoritativně spočítá server při prodeji.
+const pricePreviewForbidden = ref(false)
 let pricePreviewSeq = 0
 
 const selectedPriceLevel = computed(
@@ -268,7 +271,7 @@ async function loadLoyaltyCheckoutData() {
 }
 
 async function refreshPricePreview() {
-  if (!apiMode || !loyaltyEnabled.value || !cart.value.length) {
+  if (!apiMode || !loyaltyEnabled.value || !cart.value.length || pricePreviewForbidden.value) {
     pricePreviewSeq++
     pricePreview.value = null
     pricePreviewLoading.value = false
@@ -290,7 +293,9 @@ async function refreshPricePreview() {
   } catch (e) {
     if (seq === pricePreviewSeq) {
       pricePreview.value = null
-      pricePreviewError.value = true
+      // Chybějící oprávnění není chyba náhledu — platba pokračuje bez něj (a už se znovu nezkouší).
+      if (e instanceof ApiError && e.status === 403) pricePreviewForbidden.value = true
+      else pricePreviewError.value = true
     }
     console.error(e)
   } finally {
@@ -969,6 +974,7 @@ function saleTime(iso: string): string {
             v-if="
               pricePreviewLoading ||
               pricePreviewError ||
+              pricePreviewForbidden ||
               selectedPriceLevel ||
               priceLevelAdjustment ||
               promoDiscount
@@ -999,7 +1005,7 @@ function saleTime(iso: string): string {
               <span class="text-muted-foreground">Získá bodů</span>
               <span class="tabular-nums">+{{ earnedPointsPreview }}</span>
             </div>
-            <div v-if="pricePreviewError" class="text-muted-foreground">
+            <div v-if="pricePreviewError || pricePreviewForbidden" class="text-muted-foreground">
               Náhled ceny není dostupný. Výsledná cena se ověří při platbě.
             </div>
           </div>
