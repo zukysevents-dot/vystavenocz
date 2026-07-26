@@ -388,17 +388,41 @@ async function onSave() {
 }
 
 // Odeslání faktury je prémiová akce — bez aktivního tarifu ukážeme paywall.
-function onSendClick(): void {
+// V API režimu server odesílá jen VYSTAVENOU fakturu — koncept se před otevřením dialogu
+// uloží a vystaví (uživatel odesláním vystavení zjevně chce; mock flow to dělá stejně).
+async function onSendClick(): Promise<void> {
   if (!hasAccess.value) {
     paywallOpen.value = true
     return
   }
+  if (isApiMode() && status.value === 'draft' && editingId.value) {
+    saving.value = true
+    try {
+      await persist()
+      syncFromSaved(await issue(editingId.value))
+    } catch (e) {
+      handleLifecycleError(e, 'Fakturu se nepodařilo vystavit — zkuste to znovu.')
+      return
+    } finally {
+      saving.value = false
+    }
+  }
   sendOpen.value = true
 }
 
-// Mock odeslání proběhlo v dialogu — koncept vystavíme (server přidělí číslo, Draft→Issued).
+// Po odeslání: API režim přenačte doklad ze serveru (Issued→Sent); mock vystaví koncept jako dřív.
 async function onSent() {
-  if (status.value !== 'draft' || !editingId.value) return
+  if (!editingId.value) return
+  if (isApiMode()) {
+    try {
+      const fresh = await get(editingId.value)
+      if (fresh) syncFromSaved(fresh)
+    } catch (e) {
+      console.warn('Obnovení faktury po odeslání selhalo:', e)
+    }
+    return
+  }
+  if (status.value !== 'draft') return
   saving.value = true
   try {
     await persist() // ulož případné rozeditované změny konceptu
@@ -746,6 +770,7 @@ async function onCancel() {
 
     <SendInvoiceDialog
       v-model:open="sendOpen"
+      :invoice-id="editingId"
       :recipient-email="clientSnapshot.email"
       :invoice-number="invoiceNumber"
       :supplier-name="supplierSnapshot.companyName"

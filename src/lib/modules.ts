@@ -255,6 +255,12 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
     hiddenForRoles: ['Employee', 'Accountant'],
   },
   {
+    to: '/app/tym',
+    label: 'Tým',
+    module: 'core',
+    hiddenForRoles: ['Employee', 'Accountant', 'Manager'],
+  },
+  {
     to: '/app/pobocky',
     label: 'Pobočky',
     module: 'core',
@@ -349,6 +355,42 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
   { to: '/app/predplatne', label: 'Předplatné', module: 'core', hiddenForRoles: ['Employee'] },
   { to: '/app/nastaveni', label: 'Nastavení', module: 'core', hiddenForRoles: ['Employee'] },
 ]
+
+// Provozní profily Kuchyně/Skladník (zrcadlí backend RolePermissions): místo vyjmenovávání
+// hiddenForRoles na každé položce mají ALLOWLIST — vidí jen obrazovky svého workflow + docházku.
+// Ostatní role dál řeší hiddenForRoles. Server oprávnění vynucuje vždy; tohle je jen navigace.
+export const OPERATIONAL_ROLE_NAV: Record<string, readonly string[]> = {
+  Kitchen: ['/app/kuchyne', '/app/dochazka'],
+  Stockkeeper: [
+    '/app/sklad',
+    '/app/zasoby',
+    '/app/naskladneni',
+    '/app/skladove-doklady',
+    '/app/dodavatele',
+    '/app/nakupni-objednavky',
+    '/app/kategorie',
+    '/app/dochazka',
+  ],
+}
+
+export function isNavVisibleForRole(item: AppNavDefinition, role: string | null): boolean {
+  if (!role) return true // fail-open jako hasRole — bez role (mock/náhled) se nic neskrývá
+  const allowlist = OPERATIONAL_ROLE_NAV[role]
+  if (allowlist) return allowlist.includes(item.to)
+  return !item.hiddenForRoles?.includes(role)
+}
+
+// Kam poslat provozní roli z „/app" (dashboard je fakturační) — zrcadlí Employee redirect v routeru.
+export function operationalLandingFor(
+  role: string | null,
+  enabledModules: readonly AppModuleId[],
+): string | null {
+  if (role === 'Kitchen')
+    return enabledModules.includes('gastro') ? '/app/kuchyne' : '/app/dochazka'
+  if (role === 'Stockkeeper')
+    return enabledModules.includes('stock') ? '/app/zasoby' : '/app/dochazka'
+  return null
+}
 
 export function normalizeModules(input: readonly string[] | null | undefined): AppModuleId[] {
   if (!input?.length) return DEFAULT_ENABLED_MODULES

@@ -38,12 +38,19 @@ import {
   CircleHelp,
   SlidersHorizontal,
   ClipboardList,
+  UserCog,
 } from 'lucide-vue-next'
 import SiteLogo from '@/components/SiteLogo.vue'
 import { Button } from '@/components/ui/button'
 import ThemeToggle from '@/components/ThemeToggle.vue'
+import { toast } from '@/components/ui/sonner'
 import { useAuthStore } from '@/stores/auth'
-import { APP_NAV_DEFINITIONS, isModuleEnabled, type AppNavDefinition } from '@/lib/modules'
+import {
+  APP_NAV_DEFINITIONS,
+  isModuleEnabled,
+  isNavVisibleForRole,
+  type AppNavDefinition,
+} from '@/lib/modules'
 
 const navIcons = {
   '/app': LayoutDashboard,
@@ -60,6 +67,7 @@ const navIcons = {
   '/app/modifikatory': SlidersHorizontal,
   '/app/dochazka': Clock,
   '/app/smeny': CalendarClock,
+  '/app/tym': UserCog,
   '/app/pobocky': Building2,
   '/app/audit': History,
   '/app/schvalovani': ShieldCheck,
@@ -125,7 +133,7 @@ function sectionForPath(path: string): SidebarSectionId {
     ].includes(path)
   )
     return 'products'
-  if (['/app/dochazka', '/app/smeny'].includes(path)) return 'team'
+  if (['/app/dochazka', '/app/smeny', '/app/tym'].includes(path)) return 'team'
   if (
     [
       '/app/nabidky',
@@ -144,7 +152,7 @@ function sectionForPath(path: string): SidebarSectionId {
 const nav = computed<SidebarNavItem[]>(() =>
   APP_NAV_DEFINITIONS.filter((item) => {
     if (!isModuleEnabled(item.module, auth.modules)) return false
-    if (auth.role && item.hiddenForRoles?.includes(auth.role)) return false
+    if (!isNavVisibleForRole(item, auth.role)) return false
     return true
   }).map((item) => ({ ...item, icon: navIcons[item.to as keyof typeof navIcons] })),
 )
@@ -167,6 +175,23 @@ function isActive(item: SidebarNavItem): boolean {
 async function signOut() {
   await auth.logout()
   router.push('/')
+}
+
+// Přepnutí aktivní firmy (jen účty s víc firmami) — server vydá nové tokeny, stránky se načtou znovu.
+const switching = ref(false)
+async function onSwitchCompany(event: Event) {
+  const target = (event.target as HTMLSelectElement).value
+  if (!target || target === auth.companyId) return
+  switching.value = true
+  const ok = await auth.switchCompany(target)
+  switching.value = false
+  if (ok) {
+    toast.success('Firma přepnuta.')
+    mobileOpen.value = false
+    router.push('/app')
+  } else {
+    toast.error('Firmu se nepodařilo přepnout.')
+  }
 }
 
 // Zavřít mobilní menu při změně cesty
@@ -229,6 +254,18 @@ watch(
       >
         <CircleHelp class="h-4 w-4" /> Průvodce
       </Button>
+      <select
+        v-if="auth.companies.length > 1"
+        class="mb-2 flex h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
+        :value="auth.companyId ?? ''"
+        :disabled="switching"
+        aria-label="Aktivní firma"
+        @change="onSwitchCompany"
+      >
+        <option v-for="company in auth.companies" :key="company.id" :value="company.id">
+          {{ company.name }}
+        </option>
+      </select>
       <div class="flex items-center gap-2 rounded-lg p-2 text-sm">
         <div
           class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground"
@@ -299,6 +336,18 @@ watch(
       >
         <CircleHelp class="h-4 w-4" /> Průvodce
       </Button>
+      <select
+        v-if="auth.companies.length > 1"
+        class="mb-2 flex h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
+        :value="auth.companyId ?? ''"
+        :disabled="switching"
+        aria-label="Aktivní firma"
+        @change="onSwitchCompany"
+      >
+        <option v-for="company in auth.companies" :key="company.id" :value="company.id">
+          {{ company.name }}
+        </option>
+      </select>
       <div class="flex items-center gap-2 rounded-lg p-2 text-sm">
         <div
           class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground"

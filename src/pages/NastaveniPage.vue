@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import {
   ChevronRight,
   Copy,
@@ -9,6 +9,7 @@ import {
   FileSpreadsheet,
   ImageUp,
   KeyRound,
+  Loader2,
   Pencil,
   Plus,
   Printer,
@@ -56,7 +57,7 @@ import {
   type TerminalPayment,
   type UpsertPaymentProviderConnectionRequest,
 } from '@/composables/useIntegrations'
-import { ApiError, isApiMode } from '@/lib/http'
+import { ApiError, http, isApiMode } from '@/lib/http'
 import { buildInvoiceNumber, formatCZK } from '@/lib/invoice'
 import {
   INTEGRATION_READINESS_ITEMS,
@@ -74,6 +75,35 @@ const auth = useAuthStore()
 const integrationsApi = useIntegrations()
 const { locations, load: loadLocations } = useLocations()
 const apiMode = isApiMode()
+const router = useRouter()
+
+// Smazání účtu (store požadavek — parita s mobilní aplikací; backend DELETE /me).
+const deleteAccountOpen = ref(false)
+const deleteAccountPassword = ref('')
+const deletingAccount = ref(false)
+
+async function deleteAccount(): Promise<void> {
+  deletingAccount.value = true
+  try {
+    await http.del(
+      '/me',
+      deleteAccountPassword.value ? { password: deleteAccountPassword.value } : {},
+    )
+    deleteAccountOpen.value = false
+    toast.success('Účet byl smazán.')
+    await auth.logout()
+    router.push('/')
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 422)
+      toast.error('Heslo nesouhlasí. Zkontrolujte ho a zkuste znovu.')
+    else if (e instanceof ApiError && e.status === 409)
+      toast.error('Jste poslední majitel firmy s dalšími členy — nejdřív předejte roli majitele.')
+    else toast.error('Účet se nepodařilo smazat. Zkuste to znovu.')
+    console.error(e)
+  } finally {
+    deletingAccount.value = false
+  }
+}
 
 // Max velikost loga (data URL žije v localStorage, držíme ho malé).
 const LOGO_MAX_BYTES = 512 * 1024
@@ -1577,6 +1607,57 @@ async function onSubmit(): Promise<void> {
         </Button>
       </div>
     </form>
+
+    <!-- Účet přihlášeného uživatele (smazání dle store požadavků; stejné chování jako mobilní app) -->
+    <div v-if="apiMode" class="mt-10 rounded-xl border border-destructive/40 bg-card p-4">
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Účet</h2>
+      <p class="mt-2 text-sm text-muted-foreground">
+        Přihlášeni jako <strong class="text-foreground">{{ auth.user?.email }}</strong
+        >. Smazání účtu je nevratné — smažeme vaše osobní údaje a okamžitě ukončíme všechna
+        přihlášení. Vystavené doklady firmy musíme ze zákona archivovat, zůstávají bez vazby na váš
+        účet.
+      </p>
+      <Button variant="outline" class="mt-3 text-destructive" @click="deleteAccountOpen = true">
+        Smazat účet
+      </Button>
+    </div>
+
+    <Dialog v-model:open="deleteAccountOpen">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Smazat účet</DialogTitle>
+          <DialogDescription>
+            Smazání je nevratné. Pokud jste poslední majitel firmy s dalšími členy, nejdřív předejte
+            roli majitele.
+          </DialogDescription>
+        </DialogHeader>
+        <div class="space-y-1.5">
+          <Label for="delete-account-password">Heslo pro potvrzení</Label>
+          <Input
+            id="delete-account-password"
+            v-model="deleteAccountPassword"
+            type="password"
+            autocomplete="current-password"
+          />
+          <p class="text-xs text-muted-foreground">
+            Účty přihlašované jen přes Google nebo Apple heslo nemají — pole nechte prázdné.
+          </p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" :disabled="deletingAccount" @click="deleteAccountOpen = false">
+            Zrušit
+          </Button>
+          <Button
+            class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            :disabled="deletingAccount"
+            @click="deleteAccount"
+          >
+            <Loader2 v-if="deletingAccount" class="h-4 w-4 animate-spin" />
+            Smazat účet
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     <!-- Konfigurace platebního providera (bez ukládání tajných hodnot) -->
     <Dialog v-model:open="providerDialogOpen">

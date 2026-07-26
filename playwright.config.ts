@@ -8,7 +8,7 @@ export default defineConfig({
   testDir: './e2e',
   // e2e/audit má vlastní config (playwright.audit.config.ts) a běží proti reálnému API,
   // ne proti mock webServeru — do výchozího běhu nepatří.
-  testIgnore: '**/audit/**',
+  testIgnore: ['**/audit/**', '**/personas/**'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { isApiMode } from '@/lib/http'
-import type { AppModuleId } from '@/lib/modules'
+import { operationalLandingFor, type AppModuleId } from '@/lib/modules'
 
 // Typování route meta (rozšíří se v dalších taskech — guards F0-35, SEO F2-31).
 declare module 'vue-router' {
@@ -53,6 +53,13 @@ const routes: RouteRecordRaw[] = [
     name: 'public-klientska-zona',
     component: () => import('@/pages/KlientskaZonaPage.vue'),
     meta: { title: 'Klientská zóna', layout: 'public' },
+  },
+  {
+    // Přijetí pozvánky do firmy — token autorizuje (anonymní backend endpoint), layout auth (formulář).
+    path: '/pozvanka/:token',
+    name: 'pozvanka',
+    component: () => import('@/pages/PozvankaPage.vue'),
+    meta: { title: 'Pozvánka do firmy', layout: 'auth' },
   },
   {
     path: '/funkce',
@@ -134,8 +141,20 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/RegistracePage.vue'),
     meta: { title: 'Registrace', layout: 'auth' },
   },
-  // Obnova hesla: routy /zapomenute-heslo a /reset-hesla dočasně vyřazeny — stránky byly stub bez backendu
-  // (falešně hlásily odeslání e-mailu). Vrátit až s reálným reset flow (API endpointy + SMTP).
+  // Obnova hesla — reálný flow proti /auth/forgot-password + /auth/reset-password (vyžaduje SMTP;
+  // bez něj server poctivě vrací 503 a stránka to řekne).
+  {
+    path: '/zapomenute-heslo',
+    name: 'zapomenute-heslo',
+    component: () => import('@/pages/ZapomenuteHesloPage.vue'),
+    meta: { title: 'Zapomenuté heslo', layout: 'auth' },
+  },
+  {
+    path: '/reset-hesla',
+    name: 'reset-hesla',
+    component: () => import('@/pages/ResetHeslaPage.vue'),
+    meta: { title: 'Nové heslo', layout: 'auth' },
+  },
 
   // --- App (AppLayout, chráněné route guardem níže) ---
   {
@@ -440,6 +459,18 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/app/tym',
+    name: 'app-tym',
+    component: () => import('@/pages/TymPage.vue'),
+    meta: {
+      title: 'Tým',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'core',
+      requiresRole: ['Owner', 'Admin'],
+    },
+  },
+  {
     path: '/app/audit',
     name: 'app-audit',
     component: () => import('@/pages/AuditPage.vue'),
@@ -611,6 +642,11 @@ router.beforeEach((to) => {
     if (auth.hasModule('pos')) return { path: '/app/pokladna' }
     if (auth.hasModule('jobs')) return { path: '/app/zakazky' }
     return { path: '/app/nastaveni' }
+  }
+  // Provozní profily Kuchyně/Skladník — dashboard je fakturační, přistanou rovnou ve svém workflow.
+  if (isApiMode() && to.name === 'app') {
+    const landing = operationalLandingFor(auth.role, auth.modules)
+    if (landing) return { path: landing }
   }
   return true
 })

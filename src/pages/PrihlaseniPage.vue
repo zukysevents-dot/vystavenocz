@@ -56,9 +56,15 @@ async function onSubmit() {
             />
           </div>
           <div class="space-y-2">
-            <!-- Obnova hesla skryta: backend reset flow zatím neexistuje (stub jen předstíral odeslání e-mailu).
-                 Až bude API + SMTP, vrátit odkaz na /zapomenute-heslo. -->
-            <Label for="password">Heslo</Label>
+            <div class="flex items-center justify-between">
+              <Label for="password">Heslo</Label>
+              <RouterLink
+                to="/zapomenute-heslo"
+                class="text-xs font-medium text-muted-foreground hover:text-foreground"
+              >
+                Zapomenuté heslo?
+              </RouterLink>
+            </div>
             <Input
               id="password"
               v-model="password"
