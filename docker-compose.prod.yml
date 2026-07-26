@@ -25,6 +25,9 @@ services:
   web:
     restart: unless-stopped
     ports: !reset [] # za Caddy → web nepublikuje port přímo na host
+    volumes:
+      # Instalátory desktop appky. Nahraj scp do ./downloads na VPS — nepatří do image ani do gitu.
+      - ./downloads:/usr/share/nginx/html/download:ro
 
   api:
     restart: unless-stopped

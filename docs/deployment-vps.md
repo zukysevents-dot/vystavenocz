@@ -97,6 +97,37 @@ Wrapper drží společný lock se zálohou, před změnou vytvoří konzistentn�
 - **Monitoring** — `ops/vps-health-check.sh` hlídá služby, endpointy, stáří backupu a disk; externí ping URL patří do `.ops.env`.
 - **TLS certy** přežijí restart ve volume `caddy_data`.
 
+## 8. Desktop aplikace ke stažení (`/download`)
+
+Instalátory Tauri appky (`vystaveno-desktop`) se **nebuildují na VPS ani nepatří do image/gitu** — nahrají se
+jako statické soubory do `~/vystavenocz/downloads/`, odkud je nginx servíruje na `/download/…`
+(bind mount v `docker-compose.prod.yml`, `location /download/` v `nginx.conf`). Odkaz v patičce webu míří
+na **stabilní název souboru**, aby se web nemusel měnit s každou verzí.
+
+Build na Macu (v repu `vystaveno-desktop`, potřebuje sousední `vystavenocz`):
+
+```bash
+npm run build   # → src-tauri/target/release/bundle/dmg/vystaveno-desktop_<verze>_aarch64.dmg
+```
+
+Nahrání na VPS (přepis stejného názvu = nová verze; nginx nic necachuje dlouhodobě):
+
+```bash
+ssh <vps> 'mkdir -p ~/vystavenocz/downloads'
+scp src-tauri/target/release/bundle/dmg/vystaveno-desktop_*_aarch64.dmg <vps>:~/vystavenocz/downloads/vystaveno-mac.dmg
+curl -fsSI https://<domena>/download/vystaveno-mac.dmg | head -3
+```
+
+Poznámky:
+
+- Mount se přidává až při (re)create kontejneru — po první změně compose souboru je potřeba
+  `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d web`.
+- Instalátor **není podepsaný ani notarizovaný** (chybí Apple Developer ID). macOS ho označí za
+  nedůvěryhodný; uživatel ho musí povolit ručně (`Otevřít` z kontextového menu / Nastavení → Soukromí).
+  Do webu proto netvrď, že jde o ověřenou aplikaci ze App Store.
+- Windows `.msi` / Linux `.deb`/AppImage jde vyrobit **jen na dané platformě** (Tauri necross-compiluje);
+  dokud build neexistuje, na web nepatří odkaz na něj.
+
 ## Časté problémy
 
 | Příznak                                         | Příčina                                                                | Řešení                                                                   |
