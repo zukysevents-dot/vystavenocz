@@ -36,10 +36,17 @@ const linking = ref(false)
 const linkError = ref('')
 const intent = ref<'login' | 'register'>('login')
 
-/** Kam po dokončení: server řekne `returnTo`, jinak onboarding (nová firma) nebo aplikace. */
+/**
+ * Kam po dokončení. Pořadí: `returnTo` ze serveru → výběr modulů → aplikace.
+ *
+ * Na onboarding jde nejen účet bez firmy, ale i každý, kdo přišel z REGISTRACE: backend nové
+ * federované identitě firmu rovnou zakládá, takže „nemá firmu" by u Google registrace nikdy
+ * neplatilo a člověk by po registraci spadl rovnou do prázdné aplikace.
+ */
 function finish(returnTo: string | null, isNewCompany: boolean) {
-  const target = returnTo ? safeRedirect(returnTo) : isNewCompany ? '/app/onboarding' : '/app'
-  router.replace(target)
+  if (returnTo) return router.replace(safeRedirect(returnTo))
+  const wantsSetup = isNewCompany || intent.value === 'register'
+  router.replace(wantsSetup ? '/app/onboarding' : '/app')
 }
 
 function fail(message: string) {

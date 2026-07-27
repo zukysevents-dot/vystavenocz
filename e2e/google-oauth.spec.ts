@@ -130,6 +130,29 @@ test('nový Google účet bez firmy pokračuje do onboardingu a v URL nezůstane
   expect(page.url()).not.toContain('state=')
 })
 
+test('registrace přes Google pokračuje výběrem modulů, i když firma vznikla na serveru', async ({
+  page,
+}) => {
+  await apiMode(page)
+  // Backend nové identitě firmu zakládá sám → companyId existuje. Rozhoduje záměr uživatele.
+  await routeOauth(page, { kind: 'tokens', companyId: 'c_nova' })
+  await page.goto('/registrace')
+
+  await page.getByRole('button', { name: 'Registrovat se přes Google' }).click()
+
+  await expect(page).toHaveURL(/\/app\/onboarding$/)
+})
+
+test('přihlášení přes Google výběrem modulů neobtěžuje', async ({ page }) => {
+  await apiMode(page)
+  await routeOauth(page, { kind: 'tokens', companyId: 'c_stara' })
+  await page.goto('/prihlaseni')
+
+  await page.getByRole('button', { name: 'Pokračovat přes Google' }).click()
+
+  await expect(page).toHaveURL(/\/app$/)
+})
+
 test('existující Google účet se přihlásí a vrátí na původně chtěnou stránku', async ({ page }) => {
   await apiMode(page)
   await routeOauth(page, { kind: 'tokens', returnTo: '/app/faktury' })
