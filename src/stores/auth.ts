@@ -9,6 +9,12 @@ import {
   type AppModuleId,
 } from '@/lib/modules'
 import { permissiveSnapshot, type AccessMode, type EntitlementSnapshot } from '@/lib/entitlements'
+import {
+  safeRedirect,
+  type OauthCallbackResponse,
+  type OauthLinkRequired,
+  type OauthStartResponse,
+} from '@/lib/oauth'
 
 // Dva režimy podle VITE_API_URL (viz http.ts):
 //  - mock (prázdné URL): účty + session žijí v localStorage (vývoj / e2e seed).
@@ -235,6 +241,51 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // ── Přihlášení přes poskytovatele identity (Google) ─────────────────────────
+  // Server je jediný zdroj pravdy: vydává state/nonce/PKCE, ověřuje id_token a vrací NAŠE tokeny.
+  // Store se chová stejně jako u e-mailového přihlášení — tokeny + `/me` + persistovaná session.
+
+  /** Krok 1: vyžádá si od serveru authorize URL. `returnTo` je jen relativní cesta (open-redirect). */
+  async function startExternalLogin(provider: string, returnTo?: string | null): Promise<string> {
+    const res = await http.post<OauthStartResponse>(`/auth/external/${provider}/start`, {
+      returnTo: returnTo ? safeRedirect(returnTo, '') || null : null,
+      platform: 'web',
+    })
+    return res.authorizeUrl
+  }
+
+  /**
+   * Krok 2: vymění `code`+`state` za naši session. Vrací buď hotové přihlášení, nebo požadavek na
+   * propojení s existujícím účtem — auto-propojení podle e-mailu server záměrně nedělá.
+   */
+  async function completeExternalLogin(
+    provider: string,
+    code: string,
+    state: string,
+  ): Promise<
+    | { ok: true; returnTo: string | null; isNewCompany: boolean }
+    | { ok: false; linkRequired: OauthLinkRequired }
+  > {
+    const res = await http.post<OauthCallbackResponse>(`/auth/external/${provider}/callback`, {
+      code,
+      state,
+    })
+    if (!res.tokens) {
+      if (res.linkRequired) return { ok: false, linkRequired: res.linkRequired }
+      throw new Error('external-callback-empty')
+    }
+    setTokens(res.tokens)
+    await loadMe('', null)
+    return { ok: true, returnTo: res.returnTo, isNewCompany: !companyId.value }
+  }
+
+  /** Krok 3 (jen při `linkRequired`): propojení potvrzené heslem k existujícímu účtu. */
+  async function confirmExternalLink(ticket: string, password: string): Promise<void> {
+    const tokens = await http.post<Tokens>('/auth/external/link/confirm', { ticket, password })
+    setTokens(tokens)
+    await loadMe('', null)
+  }
+
   async function login(email: string, password: string): Promise<AuthResult> {
     if (isApiMode()) {
       try {
@@ -364,6 +415,9 @@ export const useAuthStore = defineStore('auth', () => {
     init,
     clearInvalidSession: clearApiSession,
     login,
+    startExternalLogin,
+    completeExternalLogin,
+    confirmExternalLink,
     register,
     logout,
     reloadMe,

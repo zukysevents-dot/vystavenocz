@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { toast } from '@/components/ui/sonner'
 import { useAuthStore } from '@/stores/auth'
+import GoogleSignInButton from '@/components/auth/GoogleSignInButton.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -79,6 +80,8 @@ async function onSubmit() {
             Přihlásit se
           </Button>
         </form>
+
+        <GoogleSignInButton intent="login" />
 
         <p class="mt-6 text-center text-sm text-muted-foreground">
           Nemáte účet?

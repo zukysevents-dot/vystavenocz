@@ -150,6 +150,13 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Zapomenuté heslo', layout: 'auth' },
   },
   {
+    // Návrat od poskytovatele identity (Google). Veřejná — uživatel v tu chvíli ještě není přihlášený.
+    path: '/oauth/callback',
+    name: 'oauth-callback',
+    component: () => import('@/pages/OauthCallbackPage.vue'),
+    meta: { title: 'Přihlášení', layout: 'auth' },
+  },
+  {
     path: '/reset-hesla',
     name: 'reset-hesla',
     component: () => import('@/pages/ResetHeslaPage.vue'),
