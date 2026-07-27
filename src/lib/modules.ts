@@ -44,6 +44,15 @@ export function recommendedModules(): AppModuleId[] {
   return BUSINESS_PROFILES.find((profile) => profile.id === id)?.modules ?? []
 }
 
+/** Prošel už uživatel výběrem oboru? Onboarding je jednorázový — po přihlášení se neopakuje. */
+export function hasBusinessProfile(): boolean {
+  return localStorage.getItem(PROFILE_STORAGE_KEY) !== null
+}
+
+export function clearBusinessProfile(): void {
+  localStorage.removeItem(PROFILE_STORAGE_KEY)
+}
+
 export interface BusinessProfile {
   id: BusinessProfileId
   label: string
