@@ -22,7 +22,27 @@ export type AppModuleId = (typeof APP_MODULES)[number]
 
 export const DEFAULT_ENABLED_MODULES: AppModuleId[] = [...APP_MODULES]
 
-export type BusinessProfileId = 'warehouse' | 'gastro' | 'services' | 'crafts' | 'shop'
+export type BusinessProfileId =
+  | 'solo'
+  | 'beauty'
+  | 'warehouse'
+  | 'gastro'
+  | 'services'
+  | 'crafts'
+  | 'shop'
+
+// Obor si firma vybere v onboardingu; držíme ho lokálně, aby šlo později označit doporučené moduly.
+// ponytail: localStorage stačí — je to jen nápověda v UI, ne nárok ani nastavení na serveru.
+const PROFILE_STORAGE_KEY = 'vystaveno.business-profile.v1'
+
+export function saveBusinessProfile(id: BusinessProfileId): void {
+  localStorage.setItem(PROFILE_STORAGE_KEY, id)
+}
+
+export function recommendedModules(): AppModuleId[] {
+  const id = localStorage.getItem(PROFILE_STORAGE_KEY)
+  return BUSINESS_PROFILES.find((profile) => profile.id === id)?.modules ?? []
+}
 
 export interface BusinessProfile {
   id: BusinessProfileId
@@ -38,10 +58,57 @@ export interface BusinessProfileSetupStep {
   to: string
 }
 
+// Pořadí = pořadí v onboardingu. První je nejjednodušší start (jen faktury), zbytek přidává provoz.
 export const BUSINESS_PROFILES: BusinessProfile[] = [
   {
+    id: 'solo',
+    label: 'Živnostník / OSVČ',
+    description: 'Jen faktury a klienti. Nic navíc — další části si kdykoli přidáte.',
+    modules: ['core', 'invoicing'],
+    setupSteps: [
+      {
+        label: 'Vystavit první fakturu',
+        description: 'Údaje firmy už máte vyplněné, stačí doplnit odběratele a položky.',
+        to: '/app/faktury',
+      },
+      {
+        label: 'Uložit si klienty',
+        description: 'Klienta stačí zadat jednou, příště se předvyplní sám.',
+        to: '/app/klienti',
+      },
+      {
+        label: 'Připravit podklady pro účetní',
+        description: 'Export dokladů za období si účetní stáhne v jednom souboru.',
+        to: '/app/uctarna',
+      },
+    ],
+  },
+  {
+    id: 'beauty',
+    label: 'Kadeřnictví, salon, kosmetika',
+    description: 'Objednávkový kalendář, klienti a faktury za služby.',
+    modules: ['core', 'invoicing', 'booking'],
+    setupSteps: [
+      {
+        label: 'Připravit rezervace',
+        description: 'Kalendář a online objednání nahradí sešit i esemesky.',
+        to: '/app/rezervace',
+      },
+      {
+        label: 'Založit klienty',
+        description: 'Historie návštěv pomůže s opakovanými termíny i fakturací.',
+        to: '/app/klienti',
+      },
+      {
+        label: 'Vystavit fakturu',
+        description: 'Doklad za službu vystavíte za minutu, včetně QR platby.',
+        to: '/app/faktury',
+      },
+    ],
+  },
+  {
     id: 'warehouse',
-    label: 'Samostatný sklad',
+    label: 'Sklad a velkoobchod',
     description: 'Příjem, výdej, převody, inventury a minima zásob — bez pokladny a gastro.',
     modules: ['core', 'stock', 'reporting', 'ai', 'integrations'],
     setupSteps: [
@@ -72,7 +139,7 @@ export const BUSINESS_PROFILES: BusinessProfile[] = [
   },
   {
     id: 'gastro',
-    label: 'Gastro',
+    label: 'Restaurace, kavárna, bar',
     description: 'Pokladna, stoly, kuchyně, sklad, uzávěrky, docházka a rezervace.',
     modules: [
       'core',
@@ -117,7 +184,7 @@ export const BUSINESS_PROFILES: BusinessProfile[] = [
   },
   {
     id: 'services',
-    label: 'Služby',
+    label: 'Služby a poradenství',
     description: 'Rezervace, klienti, služby, fakturace, docházka a reporty.',
     modules: ['core', 'invoicing', 'booking', 'attendance', 'reporting', 'ai', 'integrations'],
     setupSteps: [
@@ -163,7 +230,7 @@ export const BUSINESS_PROFILES: BusinessProfile[] = [
   },
   {
     id: 'shop',
-    label: 'Obchod',
+    label: 'Obchod a prodejna',
     description: 'Produkty, pokladna, čárové kódy, sklad, vratky, věrnost a přehledy.',
     modules: ['core', 'invoicing', 'pos', 'stock', 'reporting', 'loyalty', 'ai', 'integrations'],
     setupSteps: [

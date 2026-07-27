@@ -572,6 +572,19 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Předplatné', layout: 'app', requiresAuth: true, requiresModule: 'core' },
   },
   {
+    // Zamčená část aplikace — upsell místo tichého přesměrování. Modul je v cestě, aby fungoval
+    // i přímý odkaz (deep link ze mobilu / z e-mailu).
+    path: '/app/modul/:module',
+    name: 'app-modul-nedostupny',
+    component: () => import('@/pages/ModulNedostupnyPage.vue'),
+    meta: {
+      title: 'Rozšíření Vystaveno',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'core',
+    },
+  },
+  {
     path: '/app/predplatne/dekujeme',
     name: 'app-predplatne-dekujeme',
     component: () => import('@/pages/PredplatneDekujemePage.vue'),
@@ -631,9 +644,10 @@ router.beforeEach((to) => {
   if (to.meta.requiresRole && auth.isAuthenticated && !auth.hasRole(...to.meta.requiresRole)) {
     return { name: 'app' }
   }
-  // Modulový UX gate: tenant vidí jen zapnuté moduly. API enforcement přijde navazujícím krokem.
+  // Modulový UX gate: firma se dostane jen do částí, na které má nárok. Server to vynucuje vždy —
+  // tohle je UX vrstva, která místo tichého přesměrování ukáže, co daná část přinese a co ji obsahuje.
   if (to.meta.requiresModule && auth.isAuthenticated && !auth.hasModule(to.meta.requiresModule)) {
-    return { name: 'app' }
+    return { name: 'app-modul-nedostupny', params: { module: to.meta.requiresModule } }
   }
   // Employee nemá invoices.read → přehled (dashboard) by vracel 403; přistane na první provozní stránce.
   // Landing musí respektovat zapnuté moduly, jinak vznikne smyčka: crafts tenant nemá `pos`, takže

@@ -86,7 +86,7 @@ async function routeApp(page: Page, modules: string[]): Promise<void> {
   })
 }
 
-test('klienti: tenant bez invoicing nevidí nav a /app/klienti přesměruje bez „server nedostupný"', async ({
+test('klienti: tenant bez invoicing nevidí nav a /app/klienti vede na vysvětlení, ne na chybu', async ({
   page,
 }) => {
   await seedApiSession(page, GASTRO_MODULES)
@@ -94,11 +94,12 @@ test('klienti: tenant bez invoicing nevidí nav a /app/klienti přesměruje bez 
 
   await page.goto('/app/klienti')
 
-  // Route guard přesměruje na Přehled (name 'app').
-  await expect(page).toHaveURL(/\/app$/)
-  await expect(page.getByRole('heading', { name: 'Dnes ve firmě' })).toBeVisible()
+  // Route guard pošle uživatele na vysvětlení, co daná část přinese (dřív tichý redirect na Přehled).
+  await expect(page).toHaveURL(/\/app\/modul\/invoicing$/)
+  await expect(page.getByRole('heading', { name: 'Fakturace a klienti' })).toBeVisible()
   // Nesmí se zobrazit stránka Klienti ani zavádějící chyba serveru.
-  await expect(page.getByRole('heading', { name: 'Klienti' })).toHaveCount(0)
+  // `exact` je nutné — jinak by „Klienti" chytilo i nadpis vysvětlení „Fakturace a klienti".
+  await expect(page.getByRole('heading', { name: 'Klienti', exact: true })).toHaveCount(0)
   await expect(page.getByText('Server je momentálně nedostupný')).toHaveCount(0)
   // Nav odkaz „Klienti" je pro tenanta bez invoicing skrytý.
   await expect(page.getByRole('link', { name: 'Klienti' })).toHaveCount(0)

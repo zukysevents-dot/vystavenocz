@@ -31,6 +31,14 @@ describe('module capabilities', () => {
     expect(isModuleEnabled('stock', ['core', 'gastro'])).toBe(false)
   })
 
+  it('starts a new company on the smallest profile — invoicing only', () => {
+    const solo = BUSINESS_PROFILES[0]
+
+    expect(solo.id).toBe('solo')
+    expect(solo.modules).toEqual(['core', 'invoicing'])
+    expect(solo.setupSteps[0]?.to).toBe('/app/faktury')
+  })
+
   it('business profiles always include core and keep vertical modules scoped', () => {
     const gastro = BUSINESS_PROFILES.find((profile) => profile.id === 'gastro')!
     const crafts = BUSINESS_PROFILES.find((profile) => profile.id === 'crafts')!
@@ -78,7 +86,9 @@ describe('module capabilities', () => {
 
   it('keeps operational stock documents visible without a POS or gastro module', () => {
     const documents = APP_NAV_DEFINITIONS.find((item) => item.to === '/app/skladove-doklady')!
-    const purchaseOrders = APP_NAV_DEFINITIONS.find((item) => item.to === '/app/nakupni-objednavky')!
+    const purchaseOrders = APP_NAV_DEFINITIONS.find(
+      (item) => item.to === '/app/nakupni-objednavky',
+    )!
     const modifiers = APP_NAV_DEFINITIONS.find((item) => item.to === '/app/modifikatory')!
 
     expect(documents.module).toBe('stock')

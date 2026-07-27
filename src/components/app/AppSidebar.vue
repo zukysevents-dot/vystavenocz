@@ -39,6 +39,7 @@ import {
   SlidersHorizontal,
   ClipboardList,
   UserCog,
+  Plus,
 } from 'lucide-vue-next'
 import SiteLogo from '@/components/SiteLogo.vue'
 import { Button } from '@/components/ui/button'
@@ -164,6 +165,8 @@ const groupedNav = computed(() =>
     }))
     .filter((section) => section.items.length > 0),
 )
+// Moduly mění jen ten, kdo se dostane do Nastavení firmy (stejné pravidlo jako nav položka).
+const canAddModules = computed(() => nav.value.some((item) => item.to === '/app/nastaveni'))
 const route = useRoute()
 const router = useRouter()
 const mobileOpen = ref(false)
@@ -186,9 +189,10 @@ async function onSwitchCompany(event: Event) {
   const ok = await auth.switchCompany(target)
   switching.value = false
   if (ok) {
-    toast.success('Firma přepnuta.')
     mobileOpen.value = false
-    router.push('/app')
+    // Tvrdý přechod: aplikace nastartuje znovu už v nové firmě. Softový router.push by nechal
+    // v paměti rozpracovaná data, filtry a načtené seznamy PŘEDCHOZÍ firmy.
+    window.location.assign('/app')
   } else {
     toast.error('Firmu se nepodařilo přepnout.')
   }
@@ -244,6 +248,16 @@ watch(
           {{ item.label }}
         </RouterLink>
       </section>
+
+      <RouterLink
+        v-if="canAddModules"
+        to="/app/nastaveni#moduly"
+        class="flex items-center gap-3 rounded-lg border border-dashed border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        @click="mobileOpen = false"
+      >
+        <Plus class="h-4 w-4" />
+        Přidat modul
+      </RouterLink>
     </nav>
 
     <div class="border-t border-border p-3">
@@ -326,6 +340,16 @@ watch(
           {{ item.label }}
         </RouterLink>
       </section>
+
+      <RouterLink
+        v-if="canAddModules"
+        to="/app/nastaveni#moduly"
+        class="flex items-center gap-3 rounded-lg border border-dashed border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        @click="mobileOpen = false"
+      >
+        <Plus class="h-4 w-4" />
+        Přidat modul
+      </RouterLink>
     </nav>
 
     <div class="border-t border-border p-3">

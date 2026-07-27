@@ -76,6 +76,16 @@ function notifyUnauthorized(): void {
   if (typeof window !== 'undefined') window.dispatchEvent(new Event('vystaveno:unauthorized'))
 }
 
+// 403 s tarifním důvodem znamená, že lokální snapshot je prokazatelně zastaralý (firma o modul přišla,
+// předplatné skončilo, podpora zasáhla). Jen tehdy si vyžádáme nový — na happy path žádné volání navíc.
+function notifyEntitlementStale(problem: unknown): void {
+  if (typeof window === 'undefined') return
+  const reason = (problem as { reason?: unknown } | undefined)?.reason
+  if (typeof reason !== 'string') return
+  if (reason !== 'module_not_in_plan' && !reason.startsWith('subscription_')) return
+  window.dispatchEvent(new Event('vystaveno:entitlement-stale'))
+}
+
 function refreshTokens(): Promise<Tokens | null> {
   const current = getTokens()
   if (!current?.refreshToken) return Promise.resolve(null)
@@ -144,6 +154,7 @@ async function request<T>(
       /* prázdné / nečitelné tělo */
     }
     const problem = detail as { detail?: string; title?: string } | undefined
+    if (res.status === 403) notifyEntitlementStale(detail)
     throw new ApiError(
       res.status,
       problem?.detail ?? problem?.title ?? `HTTP ${res.status}`,
@@ -183,6 +194,7 @@ async function download(path: string, retry = true): Promise<DownloadResponse> {
       }
     }
     const problem = detail as { detail?: string; title?: string } | undefined
+    if (res.status === 403) notifyEntitlementStale(detail)
     throw new ApiError(
       res.status,
       problem?.detail ?? problem?.title ?? `HTTP ${res.status}`,
@@ -244,6 +256,7 @@ async function uploadRequest<T>(
       }
     }
     const problem = detail as { detail?: string; title?: string } | undefined
+    if (response.status === 403) notifyEntitlementStale(detail)
     throw new ApiError(
       response.status,
       problem?.detail ?? problem?.title ?? `HTTP ${response.status}`,

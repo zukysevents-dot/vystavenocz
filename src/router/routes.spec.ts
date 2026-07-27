@@ -10,6 +10,9 @@ vi.mock('@/lib/http', async (importOriginal) => {
   return { ...actual, isApiMode: () => true }
 })
 
+// router.push čeká na lazy import cílové stránky — na cold startu to 5s default nestíhá.
+const ROUTER_PUSH_TIMEOUT_MS = 20_000
+
 describe('app routes — role gates', () => {
   it('registers public order route without auth', () => {
     const route = router.getRoutes().find((r) => r.name === 'public-objednavka')
@@ -76,21 +79,79 @@ describe('guard: Employee landing podle modulů (bez redirect smyčky)', () => {
     auth.initialized = true // guard nezavolá init() → náš stav zůstane
   }
 
-  it('crafts tenant (jobs bez pos) → /app/zakazky, ne smyčka na /app/pokladna', async () => {
-    setupEmployee(['core', 'jobs'])
-    await router.push('/app')
-    expect(router.currentRoute.value.path).toBe('/app/zakazky')
-  })
+  it(
+    'crafts tenant (jobs bez pos) → /app/zakazky, ne smyčka na /app/pokladna',
+    async () => {
+      setupEmployee(['core', 'jobs'])
+      await router.push('/app')
+      expect(router.currentRoute.value.path).toBe('/app/zakazky')
+    },
+    ROUTER_PUSH_TIMEOUT_MS,
+  )
 
-  it('pos tenant → /app/pokladna (zachované chování)', async () => {
-    setupEmployee(['core', 'pos'])
-    await router.push('/app')
-    expect(router.currentRoute.value.path).toBe('/app/pokladna')
-  })
+  it(
+    'pos tenant → /app/pokladna (zachované chování)',
+    async () => {
+      setupEmployee(['core', 'pos'])
+      await router.push('/app')
+      expect(router.currentRoute.value.path).toBe('/app/pokladna')
+    },
+    ROUTER_PUSH_TIMEOUT_MS,
+  )
 
-  it('bez pos i jobs → /app/nastaveni (žádný modulový gate ho neodmítne)', async () => {
-    setupEmployee(['core'])
-    await router.push('/app')
-    expect(router.currentRoute.value.path).toBe('/app/nastaveni')
-  })
+  it(
+    'bez pos i jobs → /app/nastaveni (žádný modulový gate ho neodmítne)',
+    async () => {
+      setupEmployee(['core'])
+      await router.push('/app')
+      expect(router.currentRoute.value.path).toBe('/app/nastaveni')
+    },
+    ROUTER_PUSH_TIMEOUT_MS,
+  )
+})
+
+describe('guard: zamčený modul vede na upsell, ne na tichý redirect', () => {
+  function setupOwner(modules: AppModuleId[]) {
+    setActivePinia(createPinia())
+    const auth = useAuthStore()
+    auth.user = { id: 'u1', email: 'majitel@x.cz', fullName: 'Majitel' }
+    auth.companyId = 'c1'
+    auth.role = 'Owner'
+    auth.modules = modules
+    auth.initialized = true
+  }
+
+  it(
+    'přímá URL na část mimo tarif skončí na vysvětlení, ne na Přehledu',
+    async () => {
+      setupOwner(['core', 'invoicing'])
+      await router.push('/app/restaurace')
+
+      expect(router.currentRoute.value.name).toBe('app-modul-nedostupny')
+      expect(router.currentRoute.value.params.module).toBe('gastro')
+    },
+    ROUTER_PUSH_TIMEOUT_MS,
+  )
+
+  it(
+    'stránka vysvětlení sama není zamčená (jinak by vznikla smyčka)',
+    async () => {
+      setupOwner(['core'])
+      await router.push('/app/modul/gastro')
+
+      expect(router.currentRoute.value.name).toBe('app-modul-nedostupny')
+    },
+    ROUTER_PUSH_TIMEOUT_MS,
+  )
+
+  it(
+    'dostupný modul projde bez přesměrování',
+    async () => {
+      setupOwner(['core', 'invoicing'])
+      await router.push('/app/faktury')
+
+      expect(router.currentRoute.value.path).toBe('/app/faktury')
+    },
+    ROUTER_PUSH_TIMEOUT_MS,
+  )
 })

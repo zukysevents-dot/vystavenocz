@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
   ChevronRight,
   Copy,
@@ -65,7 +65,8 @@ import {
   integrationStateLabel,
   summarizeIntegrationReadiness,
 } from '@/lib/integration-readiness'
-import type { AppModuleId } from '@/lib/modules'
+import { recommendedModules, type AppModuleId } from '@/lib/modules'
+import { upsellFor } from '@/lib/entitlements'
 import type { Company, VatMode } from '@/lib/types'
 import SubscriptionClaimSettings from '@/components/app/SubscriptionClaimSettings.vue'
 import GrowthSettings from '@/components/app/GrowthSettings.vue'
@@ -76,6 +77,7 @@ const integrationsApi = useIntegrations()
 const { locations, load: loadLocations } = useLocations()
 const apiMode = isApiMode()
 const router = useRouter()
+const route = useRoute()
 
 // Smazání účtu (store požadavek — parita s mobilní aplikací; backend DELETE /me).
 const deleteAccountOpen = ref(false)
@@ -240,6 +242,11 @@ onMounted(async () => {
   } catch {
     enabledModules.value = auth.modules
   }
+  // Příchod z „+ Přidat modul" v menu — router scrolluje vždy nahoru, sekci doskrolujeme sami.
+  if (route.hash === '#moduly') {
+    await nextTick()
+    document.getElementById('moduly')?.scrollIntoView()
+  }
   const c = companyStore.company
   if (!c) return
   form.companyName = c.companyName ?? ''
@@ -269,8 +276,21 @@ onMounted(async () => {
   }
 })
 
+// Modul mimo tarif si firma nemůže zapnout sama — server takový požadavek odmítne. UI ho proto
+// ukáže jako nedostupný s informací, co ho obsahuje, místo aby nabídlo akci, která spadne.
+function moduleUnavailable(module: AppModuleId): boolean {
+  return auth.entitlement.lockedModules.includes(module)
+}
+
+function modulePlanHint(module: AppModuleId): string {
+  return `Obsahuje ${upsellFor(module).plan}`
+}
+
+// Obor zvolený v onboardingu — jen nápověda „tohle se k vaší práci hodí", nic nezapíná sama.
+const recommended = recommendedModules()
+
 function toggleModule(module: AppModuleId, enabled: boolean | 'indeterminate' | undefined): void {
-  if (module === 'core') return
+  if (module === 'core' || moduleUnavailable(module)) return
   if (enabled === true) {
     if (!enabledModules.value.includes(module))
       enabledModules.value = [...enabledModules.value, module]
@@ -990,24 +1010,46 @@ async function onSubmit(): Promise<void> {
       </div>
 
       <!-- Moduly -->
-      <div class="rounded-xl border border-border bg-card p-6">
+      <div id="moduly" class="scroll-mt-20 rounded-xl border border-border bg-card p-6">
         <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Moduly</h2>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Zapněte si jen to, co používáte. V menu se objeví hned po uložení.
+        </p>
         <div class="mt-4 grid gap-3 sm:grid-cols-2">
           <label
             v-for="module in moduleOptions"
             :key="module.id"
             class="flex gap-3 rounded-lg border border-border p-4"
-            :class="module.locked ? 'bg-muted/30' : 'cursor-pointer hover:bg-muted/40'"
+            :class="
+              module.locked || moduleUnavailable(module.id)
+                ? 'bg-muted/30'
+                : 'cursor-pointer hover:bg-muted/40'
+            "
           >
             <Checkbox
               class="mt-0.5"
               :model-value="enabledModules.includes(module.id)"
-              :disabled="module.locked"
+              :disabled="module.locked || moduleUnavailable(module.id)"
               @update:model-value="(checked) => toggleModule(module.id, checked)"
             />
             <span>
-              <span class="block text-sm font-semibold">{{ module.label }}</span>
+              <span class="block text-sm font-semibold">
+                {{ module.label }}
+                <span
+                  v-if="recommended.includes(module.id) && !enabledModules.includes(module.id)"
+                  class="ml-1 rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-medium text-primary"
+                >
+                  Hodí se pro váš obor
+                </span>
+              </span>
               <span class="mt-1 block text-xs text-muted-foreground">{{ module.description }}</span>
+              <RouterLink
+                v-if="moduleUnavailable(module.id)"
+                :to="`/app/modul/${module.id}`"
+                class="mt-1 block text-xs font-medium text-primary hover:underline"
+              >
+                {{ modulePlanHint(module.id) }} →
+              </RouterLink>
             </span>
           </label>
         </div>

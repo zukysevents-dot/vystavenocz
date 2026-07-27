@@ -1,46 +1,90 @@
 <script setup lang="ts">
-import { storeToRefs } from 'pinia'
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { AlertTriangle, Sparkles } from 'lucide-vue-next'
-import { useSubscriptionStore } from '@/stores/subscription'
+import { AlertTriangle, Clock, Sparkles } from 'lucide-vue-next'
+import { useAuthStore } from '@/stores/auth'
+import { useSubscription } from '@/composables/useSubscription'
+import { daysUntil } from '@/lib/entitlements'
 
-const { isPaid, isTrial, trialDaysLeft } = storeToRefs(useSubscriptionStore())
+// Stavový pruh nad aplikací. Všechny stavy jdou ze serveru (entitlement snapshot), nikdy z prohlížeče.
+const auth = useAuthStore()
+const { plan, isTrial, isGracePeriod, trialDaysLeft } = useSubscription()
+
+const isReadOnly = computed(() => auth.entitlement.accessMode === 'read_only')
+const isLocked = computed(() => auth.entitlement.accessMode === 'locked')
+const graceDaysLeft = computed(() => daysUntil(plan.value.graceEndsAt))
+
+function dayWord(n: number): string {
+  return n === 1 ? 'den' : n < 5 ? 'dny' : 'dní'
+}
 </script>
 
 <template>
-  <!-- Expirovaný trial / bez aktivního trialu — blokující banner. -->
+  <!-- Přístup pozastavený — upsell by tady byl nemístný, patří sem podpora. -->
   <div
-    v-if="!isPaid && !isTrial"
+    v-if="isLocked"
+    class="flex items-center gap-2 border-b border-coral/30 bg-coral/10 px-4 py-2 text-sm text-coral"
+  >
+    <AlertTriangle class="h-4 w-4 shrink-0" />
+    <span class="font-medium">Přístup je pozastavený. Napište nám prosím na podporu.</span>
+  </div>
+
+  <!-- Předplatné skončilo: data zůstávají ke čtení i k exportu, zápisy ne. -->
+  <div
+    v-else-if="isReadOnly"
     class="flex items-center justify-between gap-3 border-b border-coral/30 bg-coral/10 px-4 py-2 text-sm"
   >
     <div class="flex items-center gap-2 text-coral">
-      <AlertTriangle class="h-4 w-4" />
+      <AlertTriangle class="h-4 w-4 shrink-0" />
       <span class="font-medium">
-        Zkušební doba skončila — pro vystavování faktur aktivujte předplatné.
+        Předplatné skončilo — data máte pořád k nahlédnutí i k exportu, nové zápisy ale nejdou.
       </span>
     </div>
     <RouterLink
       to="/app/predplatne"
-      class="rounded-full bg-coral px-3 py-1 text-xs font-semibold text-coral-foreground hover:opacity-90"
+      class="shrink-0 rounded-full bg-coral px-3 py-1 text-xs font-semibold text-coral-foreground hover:opacity-90"
     >
-      Aktivovat
+      Obnovit
     </RouterLink>
   </div>
 
-  <!-- Aktivní trial — jen pokud zbývá ≤ 7 dní. -->
+  <!-- Ochranná lhůta — všechno ještě funguje, ale je potřeba jednat. -->
   <div
-    v-else-if="!isPaid && isTrial && trialDaysLeft !== null && trialDaysLeft <= 7"
+    v-else-if="isGracePeriod"
+    class="flex items-center justify-between gap-3 border-b border-coral/30 bg-coral/10 px-4 py-2 text-sm"
+  >
+    <div class="flex items-center gap-2 text-foreground">
+      <Clock class="h-4 w-4 shrink-0 text-coral" />
+      <span>
+        Tarif {{ plan.name }} je potřeba obnovit<span v-if="graceDaysLeft !== null">
+          — zbývá <strong>{{ graceDaysLeft }}</strong> {{ dayWord(graceDaysLeft) }}</span
+        >
+      </span>
+    </div>
+    <RouterLink
+      to="/app/predplatne"
+      class="shrink-0 text-xs font-semibold text-primary hover:underline"
+    >
+      Obnovit →
+    </RouterLink>
+  </div>
+
+  <!-- Zkušební doba — jen když se blíží konec. -->
+  <div
+    v-else-if="isTrial && trialDaysLeft !== null && trialDaysLeft <= 7"
     class="flex items-center justify-between gap-3 border-b border-mint/30 bg-mint/10 px-4 py-2 text-sm"
   >
     <div class="flex items-center gap-2 text-foreground">
-      <Sparkles class="h-4 w-4 text-mint-foreground" />
+      <Sparkles class="h-4 w-4 shrink-0 text-mint-foreground" />
       <span>
-        Zkušební doba: zbývá <strong>{{ trialDaysLeft }}</strong>
-        {{ trialDaysLeft === 1 ? 'den' : trialDaysLeft < 5 ? 'dny' : 'dní' }}
+        Zkušební doba: zbývá <strong>{{ trialDaysLeft }}</strong> {{ dayWord(trialDaysLeft) }}
       </span>
     </div>
-    <RouterLink to="/app/predplatne" class="text-xs font-semibold text-primary hover:underline">
-      Aktivovat za 100 Kč/měs →
+    <RouterLink
+      to="/app/predplatne"
+      class="shrink-0 text-xs font-semibold text-primary hover:underline"
+    >
+      Zobrazit možnosti →
     </RouterLink>
   </div>
 </template>

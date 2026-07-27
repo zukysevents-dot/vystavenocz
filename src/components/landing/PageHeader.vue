@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ArrowRight } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { DEMO_MAILTO } from '@/lib/landing-cta'
+import { RouterLink } from 'vue-router'
+import { REGISTER_ROUTE } from '@/lib/landing-cta'
 
 withDefaults(
   defineProps<{
@@ -47,10 +48,10 @@ withDefaults(
         class="hero-rise mt-8 flex flex-col items-center justify-center gap-3 [animation-delay:270ms] sm:flex-row"
       >
         <Button variant="coral" size="lg" class="group" as-child>
-          <a :href="DEMO_MAILTO">
-            Chci demo
+          <RouterLink :to="REGISTER_ROUTE">
+            Vyzkoušet zdarma
             <ArrowRight class="transition-transform group-hover:translate-x-0.5" />
-          </a>
+          </RouterLink>
         </Button>
       </div>
     </div>

@@ -70,6 +70,21 @@ async function routeApp(page: Page, opts: { emailDelivered: boolean }): Promise<
           features: [],
         },
       })
+    if (method === 'GET' && path === '/company')
+      return route.fulfill({
+        json: {
+          id: 'c_e2e',
+          name: 'E2E Bistro',
+          ico: '12345678',
+          dic: null,
+          email: 'e2e@vystaveno.cz',
+          phone: null,
+          logoUrl: null,
+          defaultDueDays: 14,
+          currency: 'CZK',
+          address: { street: 'Testovací 1', city: 'Praha', postalCode: '11000', country: 'CZ' },
+        },
+      })
     if (method === 'GET' && path === '/company/members')
       return route.fulfill({ json: paged(MEMBERS) })
     if (method === 'GET' && path === '/company/invitations')
@@ -127,7 +142,8 @@ test('pozvánka ukáže jednorázový odkaz a upozorní na nedoručený e-mail',
   await routeApp(page, { emailDelivered: false })
   await page.goto('/app/tym')
 
-  await expect(page.getByRole('heading', { name: 'Tým' })).toBeVisible()
+  // Sidebar má sekci se stejným názvem — heading hledej jen v obsahu stránky.
+  await expect(page.getByRole('main').getByRole('heading', { name: 'Tým' })).toBeVisible()
   await expect(page.getByText('E2E Test')).toBeVisible()
 
   await page.getByRole('button', { name: 'Pozvat člena' }).click()
