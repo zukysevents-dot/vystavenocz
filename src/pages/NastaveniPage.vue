@@ -1015,6 +1015,16 @@ async function onSubmit(): Promise<void> {
         <p class="mt-1 text-sm text-muted-foreground">
           Zapněte si jen to, co používáte. V menu se objeví hned po uložení.
         </p>
+        <!-- Rychlá cesta pro toho, kdo nechce klikat modul po modulu: vybere obor a sadu dostane. -->
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          class="mt-3"
+          @click="router.push('/app/onboarding')"
+        >
+          Vybrat podle oboru
+        </Button>
         <div class="mt-4 grid gap-3 sm:grid-cols-2">
           <label
             v-for="module in moduleOptions"
