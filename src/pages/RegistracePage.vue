@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from '@/components/ui/sonner'
 import { useAuthStore } from '@/stores/auth'
+import GoogleSignInButton from '@/components/auth/GoogleSignInButton.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -126,6 +127,8 @@ async function onSubmit() {
             Registrací souhlasíte s podmínkami služby.
           </p>
         </form>
+
+        <GoogleSignInButton intent="register" />
 
         <p class="mt-6 text-center text-sm text-muted-foreground">
           Už máte účet?

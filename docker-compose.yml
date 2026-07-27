@@ -39,6 +39,12 @@ services:
       Email__From: ${EMAIL_FROM:-}
       Email__Username: ${EMAIL_USERNAME:-}
       Email__Password: ${EMAIL_PASSWORD:-}
+      # Přihlášení přes Google. Prázdná hodnota = poskytovatel nenakonfigurovaný → /auth/external/*
+      # vrací 503 a tlačítko poctivě řekne, že se přihlášení nepodařilo (fail-closed, nikdy falešný
+      # úspěch). Client secret žije JEN tady na serveru, nikdy v SPA ani v mobilní aplikaci.
+      OAuth__Google__ClientId: ${OAUTH_GOOGLE_CLIENT_ID:-}
+      OAuth__Google__ClientSecret: ${OAUTH_GOOGLE_CLIENT_SECRET:-}
+      OAuth__RedirectUri: ${OAUTH_REDIRECT_URI:-}
       # Web je same-origin přes nginx; desktop (Tauri) volá cross-origin → povol jeho originy (ops).
       Cors__AllowedOrigins__0: 'tauri://localhost'
       Cors__AllowedOrigins__1: 'http://tauri.localhost'
