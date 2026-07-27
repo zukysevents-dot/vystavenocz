@@ -39,6 +39,10 @@ services:
       Email__From: ${EMAIL_FROM:-}
       Email__Username: ${EMAIL_USERNAME:-}
       Email__Password: ${EMAIL_PASSWORD:-}
+      # Placené moduly: dokud se neplatí, drž Entitlements__Enforce=false — tarif pak neomezuje
+      # nic (ani to, co vidí klient) a všechny moduly jsou dostupné. Zapnout AŽ po backfillu firem
+      # a spuštění plateb; postup je v docs/product/module-migration-rollout.md.
+      Entitlements__Enforce: ${ENTITLEMENTS_ENFORCE:-false}
       # Přihlášení přes Google. Prázdná hodnota = poskytovatel nenakonfigurovaný → /auth/external/*
       # vrací 503 a tlačítko poctivě řekne, že se přihlášení nepodařilo (fail-closed, nikdy falešný
       # úspěch). Client secret žije JEN tady na serveru, nikdy v SPA ani v mobilní aplikaci.
