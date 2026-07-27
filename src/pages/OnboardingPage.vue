@@ -9,7 +9,7 @@ import { toast } from '@/components/ui/sonner'
 import { useCompanyStore } from '@/stores/company'
 import { useAuthStore } from '@/stores/auth'
 import type { Company } from '@/lib/types'
-import { BUSINESS_PROFILES, type BusinessProfileId } from '@/lib/modules'
+import { BUSINESS_PROFILES, saveBusinessProfile, type BusinessProfileId } from '@/lib/modules'
 
 const companyStore = useCompanyStore()
 const auth = useAuthStore()
@@ -18,7 +18,7 @@ const router = useRouter()
 const submitting = ref(false)
 
 const form = reactive({
-  business_profile: 'warehouse' as BusinessProfileId,
+  business_profile: 'solo' as BusinessProfileId, // nejmenší start: jen faktury, zbytek si firma přidá
   company_name: '',
   ico: '',
   dic: '',
@@ -69,7 +69,10 @@ async function onSubmit() {
   try {
     await companyStore.save(payload) // API režim: založí firmu (POST /companies) + uloží nastavení
     const profile = selectedProfile.value
-    if (profile) await companyStore.saveModules(profile.modules)
+    if (profile) {
+      await companyStore.saveModules(profile.modules)
+      saveBusinessProfile(profile.id)
+    }
   } catch {
     submitting.value = false
     toast.error('Profil firmy se nepodařilo uložit. Zkuste to znovu.')
@@ -89,8 +92,12 @@ async function onSubmit() {
     <form class="mt-8 space-y-6" @submit.prevent="onSubmit">
       <div class="rounded-xl border border-border bg-card p-6">
         <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Typ podnikání
+          Čím se živíte?
         </h2>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Zapneme vám jen to, co pro svou práci potřebujete. Zbytek si kdykoli přidáte tlačítkem
+          <span class="font-medium text-foreground">+ Přidat modul</span> v levém menu.
+        </p>
         <div class="mt-4 grid gap-3 sm:grid-cols-2">
           <label
             v-for="profile in BUSINESS_PROFILES"
@@ -140,8 +147,8 @@ async function onSubmit() {
           </div>
         </div>
         <p class="mt-4 text-xs text-muted-foreground">
-          Po uložení profilu otevřeme první krok. Další části zůstanou v levém menu podle zapnutých
-          modulů.
+          Po uložení otevřeme první krok. V menu uvidíte jen zapnuté části — další přidáte tlačítkem
+          + Přidat modul.
         </p>
       </div>
 

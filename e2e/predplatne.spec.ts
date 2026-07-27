@@ -1,15 +1,38 @@
 import { test, expect } from './fixtures/test'
 import { seedApp } from './helpers/seed'
 
-test('fiktivní upgrade na Pro → děkujeme → aktivní tarif', async ({ page }) => {
+// Předplatné se z prohlížeče nedá aktivovat — dřív tady bylo tlačítko „Aktivovat Pro", které si
+// tarif zapnulo lokálně v localStorage. Stránka teď jen pravdivě ukazuje serverový stav a nabízí
+// cestu, jak o změnu požádat.
+
+test('zkušební doba: stránka ukazuje stav, obsah tarifu a cestu ke změně', async ({ page }) => {
   await seedApp(page, { subscription: 'trial' })
   await page.goto('/app/predplatne')
 
-  await page.getByRole('button', { name: 'Aktivovat Pro' }).click()
-  await expect(page).toHaveURL(/\/app\/predplatne\/dekujeme/)
-  await expect(page.getByRole('heading', { name: 'Děkujeme!' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Předplatné' })).toBeVisible()
+  await expect(page.getByText(/Zkušební doba tarifu Růst/)).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'V tarifu Růst' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Změna tarifu' })).toBeVisible()
 
+  // Žádná lokální aktivace tarifu.
+  await expect(page.getByRole('button', { name: /Aktivovat/ })).toHaveCount(0)
+})
+
+test('zaplacený tarif: stránka ho ukáže jako aktivní', async ({ page }) => {
+  await seedApp(page, { subscription: 'pro' })
   await page.goto('/app/predplatne')
-  await expect(page.getByText('Aktivní tarif: Vystaveno Pro')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Aktivovat Pro' })).toHaveCount(0)
+
+  await expect(page.getByText('Aktivní tarif: Růst')).toBeVisible()
+  await expect(page.getByRole('button', { name: /Aktivovat/ })).toHaveCount(0)
+})
+
+test('po skončení předplatného stránka pravdivě řekne, co dál', async ({ page }) => {
+  await seedApp(page, { subscription: 'expired' })
+  await page.goto('/app/predplatne')
+
+  await expect(page.getByText('Předplatné skončilo').first()).toBeVisible()
+  await expect(page.getByText(/prohlížet i vyexportovat/)).toBeVisible()
+  // Nikdy technický důvod.
+  await expect(page.getByText('module_not_in_plan')).toHaveCount(0)
+  await expect(page.getByText('403')).toHaveCount(0)
 })

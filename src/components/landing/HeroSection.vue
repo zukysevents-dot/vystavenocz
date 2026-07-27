@@ -2,7 +2,7 @@
 import { RouterLink } from 'vue-router'
 import { ArrowRight, Check, ShieldCheck, MapPin, MonitorSmartphone } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { DEMO_MAILTO } from '@/lib/landing-cta'
+import { REGISTER_ROUTE, LOGIN_ROUTE } from '@/lib/landing-cta'
 
 const benefits = [
   'Gastro bez papírů — mapa stolů, účty, bony do kuchyně i na bar',
@@ -78,18 +78,18 @@ const signals = [
         class="hero-rise mt-11 flex w-full flex-col justify-center gap-3 [animation-delay:360ms] sm:flex-row sm:items-center"
       >
         <Button size="xl" variant="coral" class="group w-full text-base sm:w-auto" as-child>
-          <a :href="DEMO_MAILTO">
-            Chci demo
+          <RouterLink :to="REGISTER_ROUTE">
+            Vyzkoušet zdarma
             <ArrowRight class="transition-transform group-hover:translate-x-0.5" />
-          </a>
+          </RouterLink>
         </Button>
         <Button size="xl" variant="outline" class="w-full sm:w-auto" as-child>
-          <RouterLink to="/funkce">Prohlédnout moduly</RouterLink>
+          <RouterLink :to="LOGIN_ROUTE">Přihlásit se</RouterLink>
         </Button>
       </div>
 
       <p class="hero-rise mt-4 font-mono text-xs text-muted-foreground [animation-delay:430ms]">
-        Ukázka zdarma a bez závazku · odpovídáme do 24 hodin.
+        14 dní zdarma · bez karty · začnete jen s fakturami.
       </p>
 
       <ul

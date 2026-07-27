@@ -1,10 +1,13 @@
 /**
- * Obchodní CTA veřejného webu před spuštěním aplikace.
- * Login/registrace se z veřejného webu nepropaguje — všechna CTA vedou na e-mail
- * (demo, early access, zájem o modul). Jediný zdroj adresy a předvyplněných zpráv.
+ * CTA veřejného webu. Hlavní cesta je teď rovnou do aplikace (registrace / přihlášení);
+ * e-mailová CTA zůstávají pro early access a zájem o konkrétní modul z ceníku.
  */
 
 export const CONTACT_EMAIL = 'patrik@vystaveno.cz'
+
+/** Primární CTA veřejného webu — založení účtu. Sekundární je přihlášení. */
+export const REGISTER_ROUTE = '/registrace'
+export const LOGIN_ROUTE = '/prihlaseni'
 
 function mailto(subject: string, body?: string): string {
   const query = [`subject=${encodeURIComponent(subject)}`]

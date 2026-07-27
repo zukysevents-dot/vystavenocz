@@ -2,7 +2,7 @@
 import { RouterLink } from 'vue-router'
 import { ArrowRight } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { DEMO_MAILTO, CONTACT_EMAIL } from '@/lib/landing-cta'
+import { REGISTER_ROUTE, LOGIN_ROUTE, CONTACT_EMAIL } from '@/lib/landing-cta'
 import { vReveal } from '@/lib/reveal'
 </script>
 
@@ -30,7 +30,7 @@ import { vReveal } from '@/lib/reveal'
           class="mb-6 inline-flex items-center gap-3 font-mono text-[0.7rem] font-medium uppercase tracking-[0.22em] text-muted-foreground"
         >
           <span class="h-px w-7 bg-coral" aria-hidden="true" />
-          Domluvte si ukázku
+          Začněte ještě dnes
         </p>
         <h2
           class="mx-auto max-w-2xl font-display text-4xl font-black leading-[1.0] tracking-[-0.02em] text-foreground sm:text-[3.25rem]"
@@ -38,22 +38,22 @@ import { vReveal } from '@/lib/reveal'
           Uvidíte to na <span class="text-gradient-heading">vlastním provozu.</span>
         </h2>
         <p class="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-          Projdeme spolu váš provoz a ukážeme, jak by ve Vystavenu fungoval — od pokladny po
-          uzávěrku. Zdarma a bez závazku.
+          Založte si účet a začněte jen s fakturami. Podle vašeho oboru vám sami nabídneme, co se
+          hodí přidat — pokladnu, sklad, rezervace nebo zakázky.
         </p>
         <div class="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Button variant="coral" size="xl" class="group h-14 px-10 text-base" as-child>
-            <a :href="DEMO_MAILTO">
-              Chci demo
+            <RouterLink :to="REGISTER_ROUTE">
+              Vyzkoušet zdarma
               <ArrowRight class="transition-transform group-hover:translate-x-0.5" />
-            </a>
+            </RouterLink>
           </Button>
           <Button variant="outline" size="xl" class="h-14 px-8 text-base" as-child>
-            <RouterLink to="/cenik">Vybrat moduly</RouterLink>
+            <RouterLink :to="LOGIN_ROUTE">Přihlásit se</RouterLink>
           </Button>
         </div>
         <p class="mt-5 font-mono text-xs text-muted-foreground">
-          Odpovídáme do 24 hodin · {{ CONTACT_EMAIL }}
+          14 dní zdarma, bez karty · {{ CONTACT_EMAIL }}
         </p>
       </div>
     </div>

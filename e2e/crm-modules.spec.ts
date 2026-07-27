@@ -170,7 +170,7 @@ async function routeApp(page: Page, modules: string[]): Promise<void> {
   })
 }
 
-test('crm: tenant bez modulu nevidí nav a /app/crm přesměruje bez „server nedostupný"', async ({
+test('crm: tenant bez modulu nevidí nav a /app/crm vede na vysvětlení, ne na chybu', async ({
   page,
 }) => {
   await seedApiSession(page, BASE_MODULES)
@@ -178,9 +178,9 @@ test('crm: tenant bez modulu nevidí nav a /app/crm přesměruje bez „server n
 
   await page.goto('/app/crm')
 
-  await expect(page).toHaveURL(/\/app$/)
-  await expect(page.getByRole('heading', { name: 'Dnes ve firmě' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'CRM' })).toHaveCount(0)
+  // Zamčený add-on vede na vysvětlení přínosu s cestou k tarifu, ne na tichý redirect.
+  await expect(page).toHaveURL(/\/app\/modul\/crm$/)
+  await expect(page.getByText('Historie komunikace a úkoly u klienta')).toBeVisible()
   await expect(page.getByText('Server je momentálně nedostupný')).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'CRM' })).toHaveCount(0)
 })

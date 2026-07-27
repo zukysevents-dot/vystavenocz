@@ -25,6 +25,12 @@ window.addEventListener('vystaveno:unauthorized', () => {
   void router.replace({ name: 'prihlaseni' })
 })
 
+// Server odmítl akci kvůli tarifu → náš snapshot je zastaralý (firma o modul přišla, předplatné
+// skončilo, podpora zasáhla). Přenačteme identitu, aby navigace i bannery hned odpovídaly realitě.
+window.addEventListener('vystaveno:entitlement-stale', () => {
+  void useAuthStore(pinia).reloadMe()
+})
+
 // Sledování chyb přes Sentry (aktivní jen když je nastaven VITE_SENTRY_DSN).
 const sentryDsn = (import.meta.env as Record<string, string | undefined>).VITE_SENTRY_DSN
 Sentry.init({

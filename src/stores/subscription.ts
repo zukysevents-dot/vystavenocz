@@ -1,59 +1,42 @@
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { defineStore } from 'pinia'
+import { useAuthStore } from '@/stores/auth'
+import { daysUntil } from '@/lib/entitlements'
 import type { Subscription } from '@/lib/types'
 
-// MVP mock — stav předplatného (bez Stripe). Nový uživatel dostane 14denní trial.
-// Reálnou platební logiku doplní F7; rozhraní (isPaid/isTrial/trialDaysLeft) zůstane.
-const STORAGE_KEY = 'vystaveno.subscription.v1'
-const TRIAL_DAYS = 14
-
-function defaultTrial(): Subscription {
-  const ends = new Date()
-  ends.setDate(ends.getDate() + TRIAL_DAYS)
-  return { active: true, plan: 'trial', trialEndsAt: ends.toISOString(), subscriptionUntil: null }
-}
-
+/**
+ * Stav předplatného DERIVOVANÝ ze serveru (`/me` → `entitlement`).
+ *
+ * Dřív to byl localStorage mock, který si sám udělil 14denní trial a měl `activatePro()` —
+ * z prohlížeče se tak dal „zaplatit" tarif. Rozhraní (`isPaid`/`isTrial`/`trialDaysLeft`) zůstává
+ * stejné, aby banner, paywall i stránka předplatného fungovaly bez úprav, ale hodnoty teď pocházejí
+ * VÝHRADNĚ ze serveru a nedají se lokálně zfalšovat.
+ */
 export const useSubscriptionStore = defineStore('subscription', () => {
-  const subscription = ref<Subscription | null>(null)
-  const initialized = ref(false)
+  const auth = useAuthStore()
 
-  function persist(): void {
-    if (subscription.value) localStorage.setItem(STORAGE_KEY, JSON.stringify(subscription.value))
-    else localStorage.removeItem(STORAGE_KEY)
-  }
+  const plan = computed(() => auth.entitlement.plan)
 
-  function init(): void {
-    if (initialized.value) return
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) {
-        subscription.value = JSON.parse(raw) as Subscription
-      } else {
-        subscription.value = defaultTrial()
-        persist()
-      }
-    } catch {
-      subscription.value = defaultTrial()
-    }
-    initialized.value = true
-  }
+  const subscription = computed<Subscription | null>(() => ({
+    active: auth.entitlement.accessMode === 'full',
+    plan: plan.value.status === 'trial' ? 'trial' : 'pro',
+    trialEndsAt: plan.value.status === 'trial' ? plan.value.renewsAt : null,
+    subscriptionUntil: plan.value.status === 'trial' ? null : plan.value.renewsAt,
+  }))
 
-  const trialDaysLeft = computed<number | null>(() => {
-    const end = subscription.value?.trialEndsAt
-    if (!end) return null
-    const ms = new Date(end).getTime() - Date.now()
-    return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)))
-  })
-
-  const isPaid = computed(() => subscription.value?.plan === 'pro' && subscription.value.active)
-  const isTrial = computed(
-    () => subscription.value?.plan === 'trial' && (trialDaysLeft.value ?? 0) > 0,
+  /** Zbývající dny zkušební doby podle serveru; null = firma není ve zkušební době. */
+  const trialDaysLeft = computed<number | null>(() =>
+    plan.value.status === 'trial' ? daysUntil(plan.value.renewsAt) : null,
   )
 
-  function activatePro(): void {
-    subscription.value = { active: true, plan: 'pro', trialEndsAt: null, subscriptionUntil: null }
-    persist()
-  }
+  const isTrial = computed(() => plan.value.status === 'trial')
+  /** Zaplacený (nebo dlouhodobě přiznaný) tarif — ne zkušební doba a s plným přístupem. */
+  const isPaid = computed(() => !isTrial.value && auth.entitlement.accessMode === 'full')
+  /** Doba, kdy přístup ještě běží, ale je potřeba jednat (po konci zkušební doby nebo období). */
+  const isGracePeriod = computed(() => plan.value.status === 'grace_period')
 
-  return { subscription, initialized, isPaid, isTrial, trialDaysLeft, init, activatePro }
+  // Kompatibilní no-op — dřív se tady inicializoval localStorage. Stav teď přichází s identitou.
+  function init(): void {}
+
+  return { subscription, plan, isPaid, isTrial, isGracePeriod, trialDaysLeft, init }
 })

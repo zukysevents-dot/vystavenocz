@@ -3,11 +3,8 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import AppSidebar from '@/components/app/AppSidebar.vue'
 import TrialBanner from '@/components/app/TrialBanner.vue'
-import { useSubscriptionStore } from '@/stores/subscription'
 import { useCompanyStore } from '@/stores/company'
 
-// Mock předplatné (14denní trial) — inicializace pro TrialBanner.
-useSubscriptionStore().init()
 // Profil firmy: API režim ho natáhne ze serveru (jednou), mock z localStorage. Fire-and-forget —
 // stránky čtou companyStore.company reaktivně, takže se po načtení samy překreslí.
 void useCompanyStore().load()

@@ -5,6 +5,8 @@ const KEYS = {
   auth: 'vystaveno.auth.user.v1',
   company: 'vystaveno.company.v1',
   subscription: 'vystaveno.subscription.v1',
+  // Mock režim nemá server → stav tarifu se pro náhled/e2e simuluje tímto snapshotem.
+  entitlement: 'vystaveno.entitlement.mock.v1',
   invoices: 'vystaveno:invoices',
   clients: 'vystaveno:clients',
 }
@@ -84,18 +86,59 @@ export async function seedApp(page: Page, opts: SeedOptions = {}): Promise<void>
             subscriptionUntil: null,
           }
 
+  // Snapshot ve stejném tvaru, jaký v API režimu vrací /me → stránky i banner čtou jeden kontrakt.
+  const entitlement = {
+    companyId: 'c_e2e',
+    plan: {
+      id: sub === 'pro' ? 'growth' : sub === 'expired' ? 'free' : 'growth',
+      name: sub === 'pro' ? 'Růst' : sub === 'expired' ? 'Základ' : 'Růst',
+      status: sub === 'pro' ? 'active' : sub === 'expired' ? 'expired' : 'trial',
+      renewsAt: sub === 'trial' ? new Date(now + 10 * day).toISOString() : null,
+      graceEndsAt: null,
+      canManageSubscription: true,
+    },
+    modules: [
+      'core',
+      'invoicing',
+      'pos',
+      'gastro',
+      'stock',
+      'attendance',
+      'booking',
+      'jobs',
+      'reporting',
+      'loyalty',
+      'ai',
+      'integrations',
+      'crm',
+    ],
+    features: [],
+    limits: {},
+    accessMode: sub === 'expired' ? 'read_only' : 'full',
+    lockedModules: sub === 'expired' ? [] : ['verified_signing'],
+  }
+
   await page.addInitScript(
-    ({ keys, user, company, subscription, invoices, client }) => {
+    ({ keys, user, company, subscription, entitlement, invoices, client }) => {
       // Seed jen jednou za kontext — jinak by se přepsaly změny stavu (např. activatePro)
       // při každé další navigaci, protože addInitScript běží před každým načtením stránky.
       if (localStorage.getItem('__e2e_seeded__')) return
       localStorage.setItem(keys.auth, JSON.stringify(user))
       localStorage.setItem(keys.company, JSON.stringify(company))
       localStorage.setItem(keys.subscription, JSON.stringify(subscription))
+      localStorage.setItem(keys.entitlement, JSON.stringify(entitlement))
       localStorage.setItem(keys.invoices, JSON.stringify(invoices ?? []))
       localStorage.setItem(keys.clients, JSON.stringify([client]))
       localStorage.setItem('__e2e_seeded__', '1')
     },
-    { keys: KEYS, user, company, subscription, invoices: opts.invoices, client: DEFAULT_CLIENT },
+    {
+      keys: KEYS,
+      user,
+      company,
+      subscription,
+      entitlement,
+      invoices: opts.invoices,
+      client: DEFAULT_CLIENT,
+    },
   )
 }
