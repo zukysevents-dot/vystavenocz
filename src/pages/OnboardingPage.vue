@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { CheckCircle2, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import SiteLogo from '@/components/SiteLogo.vue'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from '@/components/ui/sonner'
@@ -10,6 +11,7 @@ import { useCompanyStore } from '@/stores/company'
 import { useAuthStore } from '@/stores/auth'
 import type { Company } from '@/lib/types'
 import { BUSINESS_PROFILES, saveBusinessProfile, type BusinessProfileId } from '@/lib/modules'
+import { upsellFor } from '@/lib/entitlements'
 
 const companyStore = useCompanyStore()
 const auth = useAuthStore()
@@ -32,6 +34,13 @@ const form = reactive({
 
 const selectedProfile = computed(() =>
   BUSINESS_PROFILES.find((profile) => profile.id === form.business_profile),
+)
+
+// Co přesně se firmě zapne — ať výběr není slepý. `core` je vždy a nic v menu nepřidává.
+const selectedModuleLabels = computed(() =>
+  (selectedProfile.value?.modules ?? [])
+    .filter((module) => module !== 'core')
+    .map((module) => upsellFor(module).title),
 )
 
 onMounted(async () => {
@@ -85,155 +94,178 @@ async function onSubmit() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-3xl p-8">
-    <h1 class="text-3xl font-bold tracking-tight">Doplňte údaje o firmě</h1>
-    <p class="mt-1 text-muted-foreground">Tyto údaje se objeví na všech vašich fakturách.</p>
-
-    <form class="mt-8 space-y-6" @submit.prevent="onSubmit">
-      <div class="rounded-xl border border-border bg-card p-6">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Čím se živíte?
-        </h2>
-        <p class="mt-1 text-sm text-muted-foreground">
-          Zapneme vám jen to, co pro svou práci potřebujete. Zbytek si kdykoli přidáte tlačítkem
-          <span class="font-medium text-foreground">+ Přidat modul</span> v levém menu.
-        </p>
-        <div class="mt-4 grid gap-3 sm:grid-cols-2">
-          <label
-            v-for="profile in BUSINESS_PROFILES"
-            :key="profile.id"
-            class="cursor-pointer rounded-lg border p-4 transition-colors"
-            :class="
-              form.business_profile === profile.id
-                ? 'border-primary bg-primary-soft text-primary'
-                : 'border-border hover:bg-muted'
-            "
-          >
-            <input
-              v-model="form.business_profile"
-              class="sr-only"
-              type="radio"
-              name="business_profile"
-              :value="profile.id"
-            />
-            <span class="block text-sm font-semibold">{{ profile.label }}</span>
-            <span class="mt-1 block text-xs text-muted-foreground">{{ profile.description }}</span>
-          </label>
-        </div>
+  <div class="min-h-screen bg-hero px-4 py-10">
+    <div class="mx-auto max-w-3xl">
+      <div class="mb-8 flex justify-center">
+        <SiteLogo />
       </div>
+      <h1 class="text-center text-3xl font-bold tracking-tight">Co budete používat?</h1>
+      <p class="mx-auto mt-2 max-w-xl text-center text-muted-foreground">
+        Vyberte, čím se živíte. Podle toho vám v aplikaci zapneme jen ty části, které potřebujete —
+        menu pak nebude plné věcí, které nepoužíváte.
+      </p>
 
-      <div v-if="selectedProfile" class="rounded-xl border border-border bg-card p-6">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Doporučený start
-        </h2>
-        <div class="mt-4 space-y-3">
-          <div
-            v-for="(step, index) in selectedProfile.setupSteps"
-            :key="step.to"
-            class="flex gap-3 border-b border-border pb-3 last:border-0 last:pb-0"
-          >
-            <div
-              class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary"
+      <form class="mt-8 space-y-6" @submit.prevent="onSubmit">
+        <div class="rounded-xl border border-border bg-card p-6">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Čím se živíte?
+          </h2>
+          <p class="mt-1 text-sm text-muted-foreground">
+            Zbytek si kdykoli přidáte tlačítkem
+            <span class="font-medium text-foreground">+ Přidat modul</span> v levém menu.
+          </p>
+          <div class="mt-4 grid gap-3 sm:grid-cols-2">
+            <label
+              v-for="profile in BUSINESS_PROFILES"
+              :key="profile.id"
+              class="cursor-pointer rounded-lg border p-4 transition-colors"
+              :class="
+                form.business_profile === profile.id
+                  ? 'border-primary bg-primary-soft text-primary'
+                  : 'border-border hover:bg-muted'
+              "
             >
-              {{ index + 1 }}
-            </div>
-            <div>
-              <div class="flex items-center gap-1.5 font-medium">
-                <CheckCircle2 class="h-4 w-4 text-primary" />
-                {{ step.label }}
+              <input
+                v-model="form.business_profile"
+                class="sr-only"
+                type="radio"
+                name="business_profile"
+                :value="profile.id"
+              />
+              <span class="block text-sm font-semibold">{{ profile.label }}</span>
+              <span class="mt-1 block text-xs text-muted-foreground">{{
+                profile.description
+              }}</span>
+            </label>
+          </div>
+        </div>
+
+        <div v-if="selectedProfile" class="rounded-xl border border-border bg-card p-6">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Co se vám zapne v menu
+          </h2>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <span
+              v-for="label in selectedModuleLabels"
+              :key="label"
+              class="rounded-full bg-primary-soft px-3 py-1 text-xs font-medium text-primary"
+            >
+              {{ label }}
+            </span>
+          </div>
+
+          <h2 class="mt-6 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Doporučený start
+          </h2>
+          <div class="mt-4 space-y-3">
+            <div
+              v-for="(step, index) in selectedProfile.setupSteps"
+              :key="step.to"
+              class="flex gap-3 border-b border-border pb-3 last:border-0 last:pb-0"
+            >
+              <div
+                class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary"
+              >
+                {{ index + 1 }}
               </div>
-              <p class="mt-1 text-sm text-muted-foreground">{{ step.description }}</p>
+              <div>
+                <div class="flex items-center gap-1.5 font-medium">
+                  <CheckCircle2 class="h-4 w-4 text-primary" />
+                  {{ step.label }}
+                </div>
+                <p class="mt-1 text-sm text-muted-foreground">{{ step.description }}</p>
+              </div>
+            </div>
+          </div>
+          <p class="mt-4 text-xs text-muted-foreground">
+            Po uložení otevřeme první krok. V menu uvidíte jen zapnuté části — další přidáte
+            tlačítkem + Přidat modul.
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-border bg-card p-6">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Firma</h2>
+          <div class="mt-4 space-y-4">
+            <div class="space-y-2">
+              <Label for="company_name">Název firmy</Label>
+              <Input id="company_name" v-model="form.company_name" required />
+            </div>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div class="space-y-2">
+                <Label for="ico">IČO</Label>
+                <Input id="ico" v-model="form.ico" required />
+              </div>
+              <div class="space-y-2">
+                <Label for="dic">DIČ</Label>
+                <Input id="dic" v-model="form.dic" placeholder="CZ12345678" />
+              </div>
             </div>
           </div>
         </div>
-        <p class="mt-4 text-xs text-muted-foreground">
-          Po uložení otevřeme první krok. V menu uvidíte jen zapnuté části — další přidáte tlačítkem
-          + Přidat modul.
-        </p>
-      </div>
 
-      <div class="rounded-xl border border-border bg-card p-6">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Firma</h2>
-        <div class="mt-4 space-y-4">
-          <div class="space-y-2">
-            <Label for="company_name">Název firmy</Label>
-            <Input id="company_name" v-model="form.company_name" required />
-          </div>
-          <div class="grid gap-4 sm:grid-cols-2">
+        <div class="rounded-xl border border-border bg-card p-6">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Sídlo</h2>
+          <div class="mt-4 space-y-4">
             <div class="space-y-2">
-              <Label for="ico">IČO</Label>
-              <Input id="ico" v-model="form.ico" required />
+              <Label for="street">Ulice a č.p.</Label>
+              <Input id="street" v-model="form.street" />
             </div>
-            <div class="space-y-2">
-              <Label for="dic">DIČ</Label>
-              <Input id="dic" v-model="form.dic" placeholder="CZ12345678" />
+            <div class="grid gap-4 sm:grid-cols-[1fr_140px]">
+              <div class="space-y-2">
+                <Label for="city">Město</Label>
+                <Input id="city" v-model="form.city" />
+              </div>
+              <div class="space-y-2">
+                <Label for="zip">PSČ</Label>
+                <Input id="zip" v-model="form.zip" />
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div class="rounded-xl border border-border bg-card p-6">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Sídlo</h2>
-        <div class="mt-4 space-y-4">
-          <div class="space-y-2">
-            <Label for="street">Ulice a č.p.</Label>
-            <Input id="street" v-model="form.street" />
-          </div>
-          <div class="grid gap-4 sm:grid-cols-[1fr_140px]">
-            <div class="space-y-2">
-              <Label for="city">Město</Label>
-              <Input id="city" v-model="form.city" />
-            </div>
-            <div class="space-y-2">
-              <Label for="zip">PSČ</Label>
-              <Input id="zip" v-model="form.zip" />
+        <div class="rounded-xl border border-border bg-card p-6">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Bankovní spojení
+          </h2>
+          <div class="mt-4 space-y-4">
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div class="space-y-2">
+                <Label for="bank_account">Číslo účtu</Label>
+                <Input id="bank_account" v-model="form.bank_account" placeholder="123456789/0100" />
+              </div>
+              <div class="space-y-2">
+                <Label for="iban">IBAN</Label>
+                <Input id="iban" v-model="form.iban" placeholder="CZ65 0800 …" />
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div class="rounded-xl border border-border bg-card p-6">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Bankovní spojení
-        </h2>
-        <div class="mt-4 space-y-4">
-          <div class="grid gap-4 sm:grid-cols-2">
+        <div class="rounded-xl border border-border bg-card p-6">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Číslování faktur
+          </h2>
+          <div class="mt-4 space-y-4">
             <div class="space-y-2">
-              <Label for="bank_account">Číslo účtu</Label>
-              <Input id="bank_account" v-model="form.bank_account" placeholder="123456789/0100" />
+              <Label for="invoice_number_prefix">Prefix faktur</Label>
+              <Input
+                id="invoice_number_prefix"
+                v-model="form.invoice_number_prefix"
+                placeholder="FA"
+              />
             </div>
-            <div class="space-y-2">
-              <Label for="iban">IBAN</Label>
-              <Input id="iban" v-model="form.iban" placeholder="CZ65 0800 …" />
-            </div>
+            <p class="text-xs text-muted-foreground">Příklad: FA-2026-001</p>
           </div>
         </div>
-      </div>
 
-      <div class="rounded-xl border border-border bg-card p-6">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Číslování faktur
-        </h2>
-        <div class="mt-4 space-y-4">
-          <div class="space-y-2">
-            <Label for="invoice_number_prefix">Prefix faktur</Label>
-            <Input
-              id="invoice_number_prefix"
-              v-model="form.invoice_number_prefix"
-              placeholder="FA"
-            />
-          </div>
-          <p class="text-xs text-muted-foreground">Příklad: FA-2026-001</p>
+        <div class="flex justify-end gap-2">
+          <Button type="button" variant="ghost" @click="router.push('/app')">Přeskočit</Button>
+          <Button type="submit" variant="coral" :disabled="submitting">
+            <Loader2 v-if="submitting" class="h-4 w-4 animate-spin" />
+            Uložit a pokračovat
+          </Button>
         </div>
-      </div>
-
-      <div class="flex justify-end gap-2">
-        <Button type="button" variant="ghost" @click="router.push('/app')">Přeskočit</Button>
-        <Button type="submit" variant="coral" :disabled="submitting">
-          <Loader2 v-if="submitting" class="h-4 w-4 animate-spin" />
-          Uložit a pokračovat
-        </Button>
-      </div>
-    </form>
+      </form>
+    </div>
   </div>
 </template>

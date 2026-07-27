@@ -200,8 +200,7 @@ export const useCompanyStore = defineStore('company', () => {
       return auth.modules
     }
 
-    auth.modules = normalized
-    return normalized
+    return auth.setModules(normalized) // mock: uloží volbu, ať ji reload nezahodí
   }
 
   return { company, initialized, init, load, save, loadModules, saveModules }

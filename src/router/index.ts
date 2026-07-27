@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { isApiMode } from '@/lib/http'
-import { operationalLandingFor, type AppModuleId } from '@/lib/modules'
+import { hasBusinessProfile, operationalLandingFor, type AppModuleId } from '@/lib/modules'
 
 // Typování route meta (rozšíří se v dalších taskech — guards F0-35, SEO F2-31).
 declare module 'vue-router' {
@@ -557,7 +557,9 @@ const routes: RouteRecordRaw[] = [
     path: '/app/onboarding',
     name: 'app-onboarding',
     component: () => import('@/pages/OnboardingPage.vue'),
-    meta: { title: 'Onboarding', layout: 'app', requiresAuth: true, requiresModule: 'core' },
+    // Layout `auth` = celá obrazovka BEZ sidebaru: nová firma si tu teprve vybírá, co bude
+    // používat, takže menu se všemi moduly by ukazovalo věci, které si ještě nezvolila.
+    meta: { title: 'Onboarding', layout: 'auth', requiresAuth: true, requiresModule: 'core' },
   },
   {
     path: '/app/pruvodce',
@@ -638,6 +640,15 @@ router.beforeEach((to) => {
     to.name !== 'app-onboarding'
   ) {
     return { name: 'app-onboarding' }
+  }
+  // Onboarding je JEDNORÁZOVÝ: kdo už firmu má (API režim) nebo si obor vybral (mock), jde rovnou
+  // do aplikace — po přihlášení se výběr modulů znovu neukazuje.
+  if (
+    to.name === 'app-onboarding' &&
+    auth.isAuthenticated &&
+    (isApiMode() ? Boolean(auth.companyId) : hasBusinessProfile())
+  ) {
+    return { name: 'app' }
   }
   // Role gating: routa vyhrazená rolím (manažerské stránky) → nedostatečná role zpět na Přehled.
   // hasRole je fail-open (mock / neznámá role neblokuje); skutečné vynucení je na backendu.

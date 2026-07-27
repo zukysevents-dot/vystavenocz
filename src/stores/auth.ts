@@ -2,7 +2,12 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { User } from '@/lib/types'
 import { http, isApiMode, getTokens, setTokens, ApiError, type Tokens } from '@/lib/http'
-import { DEFAULT_ENABLED_MODULES, normalizeModules, type AppModuleId } from '@/lib/modules'
+import {
+  clearBusinessProfile,
+  DEFAULT_ENABLED_MODULES,
+  normalizeModules,
+  type AppModuleId,
+} from '@/lib/modules'
 import { permissiveSnapshot, type AccessMode, type EntitlementSnapshot } from '@/lib/entitlements'
 
 // Dva režimy podle VITE_API_URL (viz http.ts):
@@ -16,7 +21,7 @@ const SESSION_KEY = 'vystaveno.auth.session.v1' // API: cache identity vedle tok
 // nasimulovat pro demo a testy. V API režimu se NEČTE: tam snapshot vždy přichází z /me.
 const MOCK_ENTITLEMENT_KEY = 'vystaveno.entitlement.mock.v1'
 
-type StoredUser = User & { password: string }
+type StoredUser = User & { password: string; modules?: AppModuleId[] }
 type AuthResult = { ok: true } | { ok: false; error: string }
 
 export interface AccessibleCompany {
@@ -86,12 +91,33 @@ export const useAuthStore = defineStore('auth', () => {
     features.value = []
     entitlement.value = permissiveSnapshot(DEFAULT_ENABLED_MODULES)
     companies.value = []
+    clearBusinessProfile()
     persistSession()
   }
 
   function persistMock(): void {
     if (user.value) localStorage.setItem(USER_KEY, JSON.stringify(user.value))
     else localStorage.removeItem(USER_KEY)
+  }
+
+  /**
+   * Jediné místo, kudy se mění zapnuté moduly (onboarding, Nastavení).
+   *
+   * MOCK režim nemá server, odkud by se po reloadu/přihlášení vzaly — volba se proto ukládá k
+   * mock ÚČTU, ne do session: jinak by se menu po refreshi vrátilo ke všem modulům a po
+   * odhlášení a novém přihlášení by výběr z onboardingu zmizel. V API režimu je zdroj `/me`.
+   */
+  function setModules(next: AppModuleId[]): AppModuleId[] {
+    modules.value = normalizeModules(next)
+    if (!isApiMode() && user.value) {
+      const users = loadUsers()
+      const stored = users.find((u) => u.id === user.value!.id)
+      if (stored) {
+        stored.modules = modules.value
+        saveUsers(users)
+      }
+    }
+    return modules.value
   }
 
   function persistSession(): void {
@@ -144,6 +170,8 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = raw ? (JSON.parse(raw) as User) : null
       const mock = localStorage.getItem(MOCK_ENTITLEMENT_KEY)
       if (mock) entitlement.value = JSON.parse(mock) as EntitlementSnapshot
+      const stored = user.value && loadUsers().find((u) => u.id === user.value!.id)
+      if (stored?.modules) modules.value = normalizeModules(stored.modules)
     } catch {
       user.value = null
       modules.value = DEFAULT_ENABLED_MODULES
@@ -229,6 +257,7 @@ export const useAuthStore = defineStore('auth', () => {
       return { ok: false, error: 'Špatný e-mail nebo heslo.' }
     }
     user.value = { id: found.id, email: found.email, fullName: found.fullName }
+    modules.value = found.modules ? normalizeModules(found.modules) : DEFAULT_ENABLED_MODULES
     persistMock()
     return { ok: true }
   }
@@ -287,6 +316,9 @@ export const useAuthStore = defineStore('auth', () => {
     modules.value = DEFAULT_ENABLED_MODULES
     features.value = []
     entitlement.value = permissiveSnapshot(DEFAULT_ENABLED_MODULES)
+    // Obor je nápověda vázaná na účet — další uživatel na stejném prohlížeči nesmí zdědit cizí
+    // doporučení. Volba modulů zůstává uložená u mock účtu, takže se po přihlášení vrátí.
+    clearBusinessProfile()
     persistMock()
   }
 
@@ -336,6 +368,7 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     reloadMe,
     switchCompany,
+    setModules,
     hasRole,
     hasModule,
     hasFeature,
