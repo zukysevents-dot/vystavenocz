@@ -77,19 +77,26 @@ async function onSubmit() {
   }
   try {
     await companyStore.save(payload) // API režim: založí firmu (POST /companies) + uloží nastavení
-    const profile = selectedProfile.value
-    if (profile) {
-      await companyStore.saveModules(profile.modules)
-      saveBusinessProfile(profile.id)
-    }
   } catch {
     submitting.value = false
     toast.error('Profil firmy se nepodařilo uložit. Zkuste to znovu.')
     return
   }
+
+  // Moduly jsou samostatný krok: server může některý odmítnout (není v tarifu). Firma je v tu
+  // chvíli ULOŽENÁ, takže uživatele nedržíme na formuláři — jen pravdivě řekneme, co se nezaplo.
+  const profile = selectedProfile.value
+  if (profile) {
+    try {
+      await companyStore.saveModules(profile.modules)
+      saveBusinessProfile(profile.id)
+    } catch {
+      toast.error('Některé části se nepodařilo zapnout. Doplníte je v Nastavení → Moduly.')
+    }
+  }
   submitting.value = false
   toast.success('Profil firmy uložen.')
-  router.push(selectedProfile.value?.setupSteps[0]?.to ?? '/app')
+  router.push('/app') // Přehled — doporučené kroky má uživatel v menu i v Průvodci
 }
 </script>
 
@@ -178,7 +185,7 @@ async function onSubmit() {
             </div>
           </div>
           <p class="mt-4 text-xs text-muted-foreground">
-            Po uložení otevřeme první krok. V menu uvidíte jen zapnuté části — další přidáte
+            Po uložení vás pustíme do aplikace. V menu uvidíte jen zapnuté části — další přidáte
             tlačítkem + Přidat modul.
           </p>
         </div>
