@@ -242,6 +242,7 @@ onMounted(async () => {
   } catch {
     enabledModules.value = auth.modules
   }
+  savedModules.value = [...enabledModules.value]
   // Příchod z „+ Přidat modul" v menu — router scrolluje vždy nahoru, sekci doskrolujeme sami.
   if (route.hash === '#moduly') {
     await nextTick()
@@ -297,6 +298,31 @@ function toggleModule(module: AppModuleId, enabled: boolean | 'indeterminate' | 
     return
   }
   enabledModules.value = enabledModules.value.filter((m) => m !== module)
+}
+
+// Moduly se potvrzují přímo ve své sekci — uživatel nemusí hledat hlavní tlačítko na konci stránky.
+// `savedModules` je poslední serverem potvrzený stav, proti kterému se pozná nepotvrzená změna.
+const savedModules = ref<AppModuleId[]>([])
+const modulesSaving = ref(false)
+
+const modulesDirty = computed(() => {
+  const a = [...enabledModules.value].sort().join(',')
+  const b = [...savedModules.value].sort().join(',')
+  return a !== b
+})
+
+async function saveModulesOnly(): Promise<void> {
+  if (modulesSaving.value) return
+  modulesSaving.value = true
+  try {
+    enabledModules.value = await companyStore.saveModules(enabledModules.value)
+    savedModules.value = [...enabledModules.value]
+    toast.success('Moduly uloženy. V menu se projeví hned.')
+  } catch {
+    toast.error('Moduly se nepodařilo uložit. Zkuste to znovu.')
+  } finally {
+    modulesSaving.value = false
+  }
 }
 
 // Živý náhled, jaké číslo dostane příští faktura.
@@ -893,7 +919,9 @@ async function onSubmit(): Promise<void> {
   }
   try {
     await companyStore.save(payload)
+    // Hlavní tlačítko ukládá moduly také — kdo je přepne a použije zvyklou cestu, o změnu nepřijde.
     enabledModules.value = await companyStore.saveModules(enabledModules.value)
+    savedModules.value = [...enabledModules.value]
   } catch (e) {
     // API chyba (validace/síť) nebo localStorage quota (velké logo jako data URL) — neukládej tiše.
     const isQuota = e instanceof Error && e.name === 'QuotaExceededError'
@@ -1062,6 +1090,24 @@ async function onSubmit(): Promise<void> {
               </RouterLink>
             </span>
           </label>
+        </div>
+
+        <!-- Potvrzení přímo tady: kdo přišel z „+ Přidat modul", nemusí hledat tlačítko na konci stránky. -->
+        <div
+          class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 p-4"
+        >
+          <p class="text-sm" :class="modulesDirty ? 'text-foreground' : 'text-muted-foreground'">
+            <template v-if="modulesDirty">Máte nepotvrzenou změnu modulů.</template>
+            <template v-else>Zapnuto {{ enabledModules.length }} modulů.</template>
+          </p>
+          <Button
+            type="button"
+            :disabled="!modulesDirty || modulesSaving"
+            data-testid="save-modules"
+            @click="saveModulesOnly"
+          >
+            {{ modulesSaving ? 'Ukládám…' : 'Uložit moduly' }}
+          </Button>
         </div>
       </div>
 
@@ -1574,7 +1620,9 @@ async function onSubmit(): Promise<void> {
             />
             <span v-else class="text-xs text-muted-foreground">Bez loga</span>
           </div>
-          <div class="space-y-2">
+          <!-- relative: `sr-only` je position:absolute — bez pozicovaného rodiče by se input umístil
+               vůči celé stránce a nafoukl výšku dokumentu (prázdné scrollování pod aplikací). -->
+          <div class="relative space-y-2">
             <Label
               for="logo"
               class="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-accent"
