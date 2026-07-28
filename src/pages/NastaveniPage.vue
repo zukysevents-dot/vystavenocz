@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
 import {
   ChevronRight,
   Copy,
@@ -65,8 +65,6 @@ import {
   integrationStateLabel,
   summarizeIntegrationReadiness,
 } from '@/lib/integration-readiness'
-import { recommendedModules, type AppModuleId } from '@/lib/modules'
-import { upsellFor } from '@/lib/entitlements'
 import type { Company, VatMode } from '@/lib/types'
 import SubscriptionClaimSettings from '@/components/app/SubscriptionClaimSettings.vue'
 import GrowthSettings from '@/components/app/GrowthSettings.vue'
@@ -77,7 +75,6 @@ const integrationsApi = useIntegrations()
 const { locations, load: loadLocations } = useLocations()
 const apiMode = isApiMode()
 const router = useRouter()
-const route = useRoute()
 
 // Smazání účtu (store požadavek — parita s mobilní aplikací; backend DELETE /me).
 const deleteAccountOpen = ref(false)
@@ -118,53 +115,11 @@ const vatModes: { value: VatMode; label: string }[] = [
   { value: 'non_payer', label: 'Neplátce DPH' },
 ]
 
-const moduleOptions: { id: AppModuleId; label: string; description: string; locked?: boolean }[] = [
-  {
-    id: 'core',
-    label: 'Jádro',
-    description: 'Firma, pobočky, uživatelé, klienti a nastavení.',
-    locked: true,
-  },
-  {
-    id: 'invoicing',
-    label: 'Fakturace',
-    description: 'Faktury, nabídky, DPH, cashflow a účetní výstupy.',
-  },
-  { id: 'pos', label: 'Pokladna', description: 'Prodej, platby, účtenky, uzávěrky a Z-reporty.' },
-  { id: 'gastro', label: 'Gastro', description: 'Restaurace, stoly, kuchyně a gastro provoz.' },
-  { id: 'stock', label: 'Sklad', description: 'Zásoby, naskladnění, inventury a skladové pohyby.' },
-  {
-    id: 'attendance',
-    label: 'Docházka',
-    description: 'Zaměstnanci, směny, příchody, odchody a pauzy.',
-  },
-  { id: 'booking', label: 'Rezervace', description: 'Služby, zdroje a veřejné rezervace.' },
-  { id: 'jobs', label: 'Zakázky', description: 'Výjezdy, práce v terénu a zakázkový provoz.' },
-  {
-    id: 'reporting',
-    label: 'Reporty',
-    description: 'Konsolidace, manažerské přehledy a porovnání provozoven.',
-  },
-  {
-    id: 'loyalty',
-    label: 'Věrnost',
-    description: 'Věrnostní programy, návraty zákazníků a marketing.',
-  },
-  {
-    id: 'ai',
-    label: 'AI asistent',
-    description: 'Připravujeme — zatím není součástí aplikace.',
-  },
-  {
-    id: 'integrations',
-    label: 'Integrace',
-    description: 'Nahrání a stažení dat, účetní výstupy a propojení dalších služeb.',
-  },
-]
-
 const integrationReadiness = INTEGRATION_READINESS_ITEMS
 const integrationSummary = computed(() => summarizeIntegrationReadiness(integrationReadiness))
-const integrationsModuleEnabled = computed(() => enabledModules.value.includes('integrations'))
+const integrationsModuleEnabled = computed(() => auth.hasModule('integrations'))
+// Moduly se spravují na vlastní stránce; sem patří jen odkaz pro role, které tam mají přístup.
+const canManageModules = computed(() => auth.hasRole('Owner', 'Admin'))
 const integrationRuntimeAvailable = computed(() => apiMode && integrationsModuleEnabled.value)
 const canManageIntegrations = computed(() => auth.hasRole('Owner', 'Admin', 'Manager'))
 const terminalPayments = ref<TerminalPayment[]>([])
@@ -233,21 +188,9 @@ const form = reactive({
   defaultPaymentDays: 14,
   publicSlug: '',
 })
-const enabledModules = ref<AppModuleId[]>([...auth.modules])
 
 onMounted(async () => {
   await companyStore.load()
-  try {
-    enabledModules.value = await companyStore.loadModules()
-  } catch {
-    enabledModules.value = auth.modules
-  }
-  savedModules.value = [...enabledModules.value]
-  // Příchod z „+ Přidat modul" v menu — router scrolluje vždy nahoru, sekci doskrolujeme sami.
-  if (route.hash === '#moduly') {
-    await nextTick()
-    document.getElementById('moduly')?.scrollIntoView()
-  }
   const c = companyStore.company
   if (!c) return
   form.companyName = c.companyName ?? ''
@@ -276,54 +219,6 @@ onMounted(async () => {
     ])
   }
 })
-
-// Modul mimo tarif si firma nemůže zapnout sama — server takový požadavek odmítne. UI ho proto
-// ukáže jako nedostupný s informací, co ho obsahuje, místo aby nabídlo akci, která spadne.
-function moduleUnavailable(module: AppModuleId): boolean {
-  return auth.entitlement.lockedModules.includes(module)
-}
-
-function modulePlanHint(module: AppModuleId): string {
-  return `Obsahuje ${upsellFor(module).plan}`
-}
-
-// Obor zvolený v onboardingu — jen nápověda „tohle se k vaší práci hodí", nic nezapíná sama.
-const recommended = recommendedModules()
-
-function toggleModule(module: AppModuleId, enabled: boolean | 'indeterminate' | undefined): void {
-  if (module === 'core' || moduleUnavailable(module)) return
-  if (enabled === true) {
-    if (!enabledModules.value.includes(module))
-      enabledModules.value = [...enabledModules.value, module]
-    return
-  }
-  enabledModules.value = enabledModules.value.filter((m) => m !== module)
-}
-
-// Moduly se potvrzují přímo ve své sekci — uživatel nemusí hledat hlavní tlačítko na konci stránky.
-// `savedModules` je poslední serverem potvrzený stav, proti kterému se pozná nepotvrzená změna.
-const savedModules = ref<AppModuleId[]>([])
-const modulesSaving = ref(false)
-
-const modulesDirty = computed(() => {
-  const a = [...enabledModules.value].sort().join(',')
-  const b = [...savedModules.value].sort().join(',')
-  return a !== b
-})
-
-async function saveModulesOnly(): Promise<void> {
-  if (modulesSaving.value) return
-  modulesSaving.value = true
-  try {
-    enabledModules.value = await companyStore.saveModules(enabledModules.value)
-    savedModules.value = [...enabledModules.value]
-    toast.success('Moduly uloženy. V menu se projeví hned.')
-  } catch {
-    toast.error('Moduly se nepodařilo uložit. Zkuste to znovu.')
-  } finally {
-    modulesSaving.value = false
-  }
-}
 
 // Živý náhled, jaké číslo dostane příští faktura.
 const numberPreview = computed(() =>
@@ -919,9 +814,6 @@ async function onSubmit(): Promise<void> {
   }
   try {
     await companyStore.save(payload)
-    // Hlavní tlačítko ukládá moduly také — kdo je přepne a použije zvyklou cestu, o změnu nepřijde.
-    enabledModules.value = await companyStore.saveModules(enabledModules.value)
-    savedModules.value = [...enabledModules.value]
   } catch (e) {
     // API chyba (validace/síť) nebo localStorage quota (velké logo jako data URL) — neukládej tiše.
     const isQuota = e instanceof Error && e.name === 'QuotaExceededError'
@@ -1037,78 +929,23 @@ async function onSubmit(): Promise<void> {
         </div>
       </div>
 
-      <!-- Moduly -->
-      <div id="moduly" class="scroll-mt-20 rounded-xl border border-border bg-card p-6">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Moduly</h2>
-        <p class="mt-1 text-sm text-muted-foreground">
-          Zapněte si jen to, co používáte. V menu se objeví hned po uložení.
-        </p>
-        <!-- Rychlá cesta pro toho, kdo nechce klikat modul po modulu: vybere obor a sadu dostane. -->
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          class="mt-3"
-          @click="router.push('/app/onboarding')"
-        >
-          Vybrat podle oboru
-        </Button>
-        <div class="mt-4 grid gap-3 sm:grid-cols-2">
-          <label
-            v-for="module in moduleOptions"
-            :key="module.id"
-            class="flex gap-3 rounded-lg border border-border p-4"
-            :class="
-              module.locked || moduleUnavailable(module.id)
-                ? 'bg-muted/30'
-                : 'cursor-pointer hover:bg-muted/40'
-            "
-          >
-            <Checkbox
-              class="mt-0.5"
-              :model-value="enabledModules.includes(module.id)"
-              :disabled="module.locked || moduleUnavailable(module.id)"
-              @update:model-value="(checked) => toggleModule(module.id, checked)"
-            />
-            <span>
-              <span class="block text-sm font-semibold">
-                {{ module.label }}
-                <span
-                  v-if="recommended.includes(module.id) && !enabledModules.includes(module.id)"
-                  class="ml-1 rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-medium text-primary"
-                >
-                  Hodí se pro váš obor
-                </span>
-              </span>
-              <span class="mt-1 block text-xs text-muted-foreground">{{ module.description }}</span>
-              <RouterLink
-                v-if="moduleUnavailable(module.id)"
-                :to="`/app/modul/${module.id}`"
-                class="mt-1 block text-xs font-medium text-primary hover:underline"
-              >
-                {{ modulePlanHint(module.id) }} →
-              </RouterLink>
-            </span>
-          </label>
-        </div>
-
-        <!-- Potvrzení přímo tady: kdo přišel z „+ Přidat modul", nemusí hledat tlačítko na konci stránky. -->
-        <div
-          class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 p-4"
-        >
-          <p class="text-sm" :class="modulesDirty ? 'text-foreground' : 'text-muted-foreground'">
-            <template v-if="modulesDirty">Máte nepotvrzenou změnu modulů.</template>
-            <template v-else>Zapnuto {{ enabledModules.length }} modulů.</template>
+      <!-- Moduly mají vlastní stránku; tady zůstává jen cesta k nim (bez duplicitního výběru). -->
+      <div
+        v-if="canManageModules"
+        id="moduly"
+        class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-6"
+      >
+        <div>
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Moduly firmy
+          </h2>
+          <p class="mt-1 text-sm text-muted-foreground">
+            Spravujte aktivní části aplikace na samostatné stránce.
           </p>
-          <Button
-            type="button"
-            :disabled="!modulesDirty || modulesSaving"
-            data-testid="save-modules"
-            @click="saveModulesOnly"
-          >
-            {{ modulesSaving ? 'Ukládám…' : 'Uložit moduly' }}
-          </Button>
         </div>
+        <RouterLink to="/app/moduly">
+          <Button type="button" variant="outline">Otevřít moduly</Button>
+        </RouterLink>
       </div>
 
       <!-- Integrace -->

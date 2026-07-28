@@ -57,6 +57,12 @@ test.describe('a11y (axe) — bez serious/critical porušení', () => {
     expect(await blockingViolations(page)).toEqual([])
   })
 
+  test('moduly', async ({ page }) => {
+    await seedApp(page, { subscription: 'pro' })
+    await page.goto('/app/moduly')
+    expect(await blockingViolations(page)).toEqual([])
+  })
+
   test('předplatné', async ({ page }) => {
     await seedApp(page, { subscription: 'pro' })
     await page.goto('/app/predplatne')

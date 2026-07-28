@@ -561,6 +561,20 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/app/moduly',
+    name: 'app-moduly',
+    component: () => import('@/pages/ModulyPage.vue'),
+    // Moduly firmy mění jen vedení — Manager/Accountant/Employee sem ani přímou URL nesmí
+    // (guard je UX vrstva, `PUT /company/modules` vynucuje roli i nárok na serveru).
+    meta: {
+      title: 'Přidat moduly',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'core',
+      requiresRole: ['Owner', 'Admin'],
+    },
+  },
+  {
     path: '/app/onboarding',
     name: 'app-onboarding',
     component: () => import('@/pages/OnboardingPage.vue'),

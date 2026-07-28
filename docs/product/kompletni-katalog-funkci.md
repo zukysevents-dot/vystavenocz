@@ -152,7 +152,7 @@ Vystaveno je **modulární provozní systém pro malé a střední provozy** —
 ### Role, moduly a oprávnění
 
 **Pro koho:** majitel/admin (nastavuje), všichni (podléhají)
-**Kde ji najdete:** projeví se skrytím menu a chováním obrazovek; moduly v `Nastavení → Moduly`
+**Kde ji najdete:** projeví se skrytím menu a chováním obrazovek; moduly v menu `Přidat moduly`
 **Co umožňuje:** 7 rolí (Majitel, Admin, Vedoucí, Účetní, Obsluha, Kuchyně, Skladník) × 14 modulů; Vedoucí je datově omezen na svou pobočku; Obsluha záměrně nemá storno bez schválení, neomezené slevy ani nákupní ceny; **server vynucuje vše** (403), menu jen skrývá
 **Praktický přínos:** číšník nevidí finance, účetní nesahá na sklad
 **Omezení nebo podmínky:** ✚ web nově zná i role Kuchyně a Skladník — mají vlastní zúženou navigaci (Kuchyně: KDS + Docházka; Skladník: sklad + Docházka) a z Přehledu je aplikace pošle rovnou do jejich workflow; mobil totéž po commitnutí oprav
@@ -207,7 +207,7 @@ Vystaveno je **modulární provozní systém pro malé a střední provozy** —
 ### Zapínání modulů
 
 **Pro koho:** majitel, admin
-**Kde ji najdete:** `Nastavení → Moduly`
+**Kde ji najdete:** menu `Přidat moduly` (`/app/moduly`)
 **Co umožňuje:** zapnout/vypnout 12 modulů (Jádro je vždy zapnuté); vypnutý modul zmizí z menu a přímá adresa přesměruje na Přehled
 **Omezení nebo podmínky:** doplňky **CRM** a **Ověřené podpisy** v přepínačích nejsou — zapínají se na straně serveru (obchodní add-on); modul **AI asistent** je viditelný, ale nic nedělá („Připravujeme")
 **Stav:** Ostré
