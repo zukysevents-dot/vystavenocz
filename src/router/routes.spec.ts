@@ -36,6 +36,15 @@ describe('app routes — role gates', () => {
     expect(route?.meta.requiresModule).toBe('pos')
   })
 
+  it('lets only Owner and Admin open the company modules page', () => {
+    const route = router.getRoutes().find((r) => r.name === 'app-moduly')
+
+    expect(route?.path).toBe('/app/moduly')
+    expect(route?.meta.requiresRole).toEqual(['Owner', 'Admin'])
+    expect(route?.meta.requiresModule).toBe('core')
+    expect(route?.meta.requiresAuth).toBe(true)
+  })
+
   it('allows only Owner and Admin to manage branches', () => {
     const route = router.getRoutes().find((r) => r.name === 'app-pobocky')
 

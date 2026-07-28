@@ -22,6 +22,85 @@ export type AppModuleId = (typeof APP_MODULES)[number]
 
 export const DEFAULT_ENABLED_MODULES: AppModuleId[] = [...APP_MODULES]
 
+/** Katalog pro stránku „Přidat moduly" — název a lidský přínos, ne technický popis. */
+export interface ModuleCatalogEntry {
+  id: AppModuleId
+  label: string
+  description: string
+  /** Modul je povinný základ — nejde vypnout. */
+  required?: boolean
+}
+
+export const MODULE_CATALOG: ModuleCatalogEntry[] = [
+  {
+    id: 'core',
+    label: 'Jádro',
+    description: 'Firma, pobočky, uživatelé, klienti a nastavení.',
+    required: true,
+  },
+  {
+    id: 'invoicing',
+    label: 'Fakturace',
+    description: 'Faktury, nabídky, DPH, cashflow a účetní výstupy.',
+  },
+  { id: 'pos', label: 'Pokladna', description: 'Prodej, platby, účtenky, uzávěrky a Z-reporty.' },
+  { id: 'gastro', label: 'Gastro', description: 'Restaurace, stoly, kuchyně a gastro provoz.' },
+  {
+    id: 'stock',
+    label: 'Sklad',
+    description: 'Zásoby, příjem, výdej, inventury a skladové pohyby.',
+  },
+  {
+    id: 'attendance',
+    label: 'Docházka',
+    description: 'Zaměstnanci, směny, příchody, odchody a pauzy.',
+  },
+  { id: 'booking', label: 'Rezervace', description: 'Služby, zdroje a veřejné rezervace.' },
+  { id: 'jobs', label: 'Zakázky', description: 'Výjezdy, práce v terénu a zakázkový provoz.' },
+  {
+    id: 'reporting',
+    label: 'Reporty',
+    description: 'Konsolidace, manažerské přehledy a porovnání provozoven.',
+  },
+  {
+    id: 'loyalty',
+    label: 'Věrnost',
+    description: 'Věrnostní programy, návraty zákazníků a marketing.',
+  },
+  { id: 'crm', label: 'CRM', description: 'Poznámky, úkoly a historie komunikace u klienta.' },
+  {
+    id: 'verified_signing',
+    label: 'Podpisy',
+    description: 'Ověřené podepsání smluv a předávacích protokolů.',
+  },
+  { id: 'ai', label: 'AI asistent', description: 'Doporučení a nápověda k provozu.' },
+  {
+    id: 'integrations',
+    label: 'Integrace',
+    description: 'Nahrání a stažení dat, účetní výstupy a propojení dalších služeb.',
+  },
+]
+
+// Moduly, které ještě nejsou ostré. NESMÍ se tvářit jako zapnuté ani nabídnout aktivaci —
+// i kdyby je server v `modules` poslal, uživatel by čekal funkci, která v aplikaci není.
+export const COMING_SOON_MODULES: readonly AppModuleId[] = ['ai']
+
+export type ModuleState = 'active' | 'available' | 'locked' | 'coming_soon'
+
+/**
+ * Stav modulu pro stránku Moduly. `lockedModules` je nárok ze serveru (entitlement snapshot) —
+ * modul mimo tarif si firma nezapne ani kliknutím, server takový požadavek odmítne.
+ */
+export function moduleState(
+  module: AppModuleId,
+  enabledModules: readonly AppModuleId[],
+  lockedModules: readonly string[],
+): ModuleState {
+  if (COMING_SOON_MODULES.includes(module)) return 'coming_soon'
+  if (lockedModules.includes(module)) return 'locked'
+  return enabledModules.includes(module) ? 'active' : 'available'
+}
+
 export type BusinessProfileId =
   | 'solo'
   | 'beauty'
@@ -427,6 +506,14 @@ export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
     label: 'Podpisy',
     module: 'verified_signing',
     hiddenForRoles: ['Employee'],
+  },
+  // Moduly firmy jsou vlastní položka menu (ne karta schovaná v nastavení). Mění je jen vedení —
+  // stejné role jako Tým/Pobočky; route to navíc vynucuje `requiresRole`.
+  {
+    to: '/app/moduly',
+    label: 'Přidat moduly',
+    module: 'core',
+    hiddenForRoles: ['Employee', 'Accountant', 'Manager'],
   },
   { to: '/app/predplatne', label: 'Předplatné', module: 'core', hiddenForRoles: ['Employee'] },
   { to: '/app/nastaveni', label: 'Nastavení', module: 'core', hiddenForRoles: ['Employee'] },

@@ -31,7 +31,7 @@ Uživatelská cesta nového zákazníka:
 1. **Registrace / přístup.** Veřejná online registrace zatím není otevřená pro každého — provoz běží v režimu _early access_ s osobním nasazením (na webu tlačítka „Chci demo" a „Zapsat se do early access"). Přihlášení i registrační obrazovky (`/prihlaseni`, `/registrace`) v aplikaci existují.
 2. **Založení firmy.** Po prvním přihlášení vás aplikace vede do **onboardingu** (`/app/onboarding`): vyberete **typ podnikání** — Samostatný sklad, Gastro, Služby, Řemesla a zakázky, nebo Obchod.
 3. **Nastavení údajů firmy.** Vyplníte název, IČO, DIČ, sídlo a **režim DPH** (neplátce / identifikovaná osoba / plátce). Tyto údaje se propíšou na všechny faktury. Nastavíte i **veřejný slug** pro online objednávky, QR stoly a veřejné rezervace.
-4. **Výběr oboru = sada modulů.** Podle zvoleného profilu se zapnou moduly (např. Gastro zapne pokladnu, stoly, kuchyni, sklad, docházku, rezervace, reporty). Moduly lze kdykoli doladit v `Nastavení → Moduly`.
+4. **Výběr oboru = sada modulů.** Podle zvoleného profilu se zapnou moduly (např. Gastro zapne pokladnu, stoly, kuchyni, sklad, docházku, rezervace, reporty). Moduly lze kdykoli doladit v samostatné položce menu `Přidat moduly` (`/app/moduly`, jen majitel/správce).
 5. **První klient.** V `Klienti` (`/app/klienti`) přidáte odběratele ručně, nebo je hromadně **naimportujete z CSV**.
 6. **První produkt/služba.** V `Produkty` (`/app/sklad`) založíte skladovou/prodejní položku; u služeb a zakázek slouží **Ceník služeb** (`/app/cenik-sluzeb`).
 7. **První doklad.** Vystavíte **fakturu** (`/app/faktury` → _Nová faktura_) s živým náhledem daňového dokladu, nebo vytvoříte **nabídku** (`/app/nabidky`) a převedete ji na zakázku či fakturu. Gastro/obchod začne prodejem na **pokladně**.
@@ -192,7 +192,7 @@ Pozvaná účetní otevře `Účtárna` → filtr období → _Export CSV_ nebo 
 
 **Důležité: skutečné zabezpečení vynucuje server, ne jen skryté menu.** Skrytí položek v menu a přesměrování v aplikaci je pohodlí pro uživatele. Ostré vynucení oprávnění, tenant izolace (data jedné firmy jsou oddělená od druhé), validace a finanční součty jsou na backendu. V demo/ukázkovém režimu bez serveru je kontrola rolí „fail-open" (nic neblokuje) — v ostrém provozu ji vynucuje API.
 
-**Jak se dostat k funkci, kterou nemáte aktivní.** Když modul není zapnutý, aplikace vás z jeho adresy vrátí na Přehled. Modul si zapne majitel/admin v `Nastavení → Moduly` (může znamenat úpravu tarifu). Pokud jde o roli, požádáte majitele/admina o vyšší oprávnění.
+**Jak se dostat k funkci, kterou nemáte aktivní.** Když modul není zapnutý, aplikace vás z jeho adresy vrátí na Přehled. Modul si zapne majitel/admin v menu `Přidat moduly` (může znamenat úpravu tarifu). Pokud jde o roli, požádáte majitele/admina o vyšší oprávnění.
 
 ---
 

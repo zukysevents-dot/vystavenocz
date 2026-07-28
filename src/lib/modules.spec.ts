@@ -3,10 +3,42 @@ import {
   APP_MODULES,
   APP_NAV_DEFINITIONS,
   BUSINESS_PROFILES,
+  COMING_SOON_MODULES,
   DEFAULT_ENABLED_MODULES,
+  MODULE_CATALOG,
   isModuleEnabled,
+  moduleState,
   normalizeModules,
 } from '@/lib/modules'
+
+describe('module catalog and states', () => {
+  it('covers every module so the Moduly page never hides what the company has', () => {
+    expect(MODULE_CATALOG.map((m) => m.id).sort()).toEqual([...APP_MODULES].sort())
+  })
+
+  it('marks an enabled module as active and a missing one as available to add', () => {
+    expect(moduleState('pos', ['core', 'pos'], [])).toBe('active')
+    expect(moduleState('stock', ['core', 'pos'], [])).toBe('available')
+  })
+
+  it('marks a module outside the plan as locked, even when the tenant selected it before', () => {
+    expect(moduleState('gastro', ['core'], ['gastro'])).toBe('locked')
+    expect(moduleState('gastro', ['core', 'gastro'], ['gastro'])).toBe('locked')
+  })
+
+  it('never shows a module that is not live yet as active or addable', () => {
+    expect(COMING_SOON_MODULES).toContain('ai')
+    expect(moduleState('ai', ['core', 'ai'], [])).toBe('coming_soon')
+    expect(moduleState('ai', ['core'], ['ai'])).toBe('coming_soon')
+  })
+
+  it('keeps the Moduly nav item away from roles that must not change the plan', () => {
+    const item = APP_NAV_DEFINITIONS.find((i) => i.to === '/app/moduly')
+
+    expect(item?.label).toBe('Přidat moduly')
+    expect(item?.hiddenForRoles).toEqual(['Employee', 'Accountant', 'Manager'])
+  })
+})
 
 describe('module capabilities', () => {
   it('defaults to all modules so the current app stays available before tenant selection exists', () => {

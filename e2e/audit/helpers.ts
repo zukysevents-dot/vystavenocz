@@ -129,6 +129,7 @@ export const APP_ROUTES: AppRoute[] = [
   // partnerský profil ani akviziční nárok) — FE ho polyká a ukáže prázdný stav.
   { path: '/app/nastaveni', heading: /Nastavení/, allowStatus: [404] },
   { path: '/app/nastaveni/api-webhooky', heading: /Propojení pro vývojáře|API/ },
+  { path: '/app/moduly', heading: /Moduly/ },
   { path: '/app/pruvodce', heading: /Průvodce/ },
   { path: '/app/predplatne', heading: /Předplatné/ },
 ]
