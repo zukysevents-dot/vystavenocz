@@ -62,12 +62,14 @@ function storedInvoices(page: import('@playwright/test').Page) {
   return page.evaluate(
     () =>
       JSON.parse(localStorage.getItem('vystaveno:invoices') || '[]') as Array<{
+        id: string
         documentType: string
         parentInvoiceId?: string | null
         status: string
         invoiceNumber: string | null
         total: number
         items: Array<{ quantity: number }>
+        cancelReason?: string | null
       }>,
   )
 }
@@ -162,4 +164,38 @@ test('editor: výběr typu Zálohová faktura vytvoří proforma doklad', async 
 
   const pf = (await storedInvoices(page)).find((i) => i.documentType === 'proforma')
   expect(pf).toBeTruthy()
+})
+
+test('editor: stornování vystavené faktury vyžaduje důvod (backend 415 bez těla)', async ({
+  page,
+}) => {
+  await seedApp(page, {
+    subscription: 'pro',
+    invoices: [
+      mkInvoice({
+        id: 'inv-cancel',
+        status: 'issued',
+        invoiceNumber: 'FA-2026-0002',
+        paidAt: null,
+      }),
+    ],
+  })
+  await page.goto('/app/faktury/editor?id=inv-cancel')
+
+  await page.getByRole('button', { name: 'Stornovat' }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+
+  // Bez důvodu se storno neodešle.
+  await page.getByRole('button', { name: 'Stornovat' }).last().click()
+  await expect(page.getByText('Zadejte důvod stornování.')).toBeVisible()
+  const beforeConfirm = (await storedInvoices(page)).find((i) => i.id === 'inv-cancel')
+  expect(beforeConfirm!.status).toBe('issued')
+
+  await page.getByLabel('Důvod stornování').fill('Duplicitní faktura')
+  await page.getByRole('button', { name: 'Stornovat' }).last().click()
+  await expect(page.getByText('Faktura stornována.')).toBeVisible()
+
+  const after = (await storedInvoices(page)).find((i) => i.id === 'inv-cancel')
+  expect(after!.status).toBe('cancelled')
+  expect(after!.cancelReason).toBe('Duplicitní faktura')
 })

@@ -28,6 +28,7 @@ import {
 import QuickClientDialog, { type QuickClient } from '@/components/app/QuickClientDialog.vue'
 import InvoiceDocument from '@/components/app/InvoiceDocument.vue'
 import SendInvoiceDialog from '@/components/app/SendInvoiceDialog.vue'
+import CancelInvoiceDialog from '@/components/app/CancelInvoiceDialog.vue'
 import PaywallDialog from '@/components/app/PaywallDialog.vue'
 import { downloadInvoicePdf } from '@/lib/invoice-pdf'
 import { ApiError, isApiMode } from '@/lib/http'
@@ -86,6 +87,7 @@ const quickOpen = ref(false)
 const showPreview = ref(true)
 const downloadingPdf = ref(false)
 const sendOpen = ref(false)
+const cancelOpen = ref(false)
 const paywallOpen = ref(false)
 // Skrytý off-screen render dokumentu pro zachycení do PDF.
 const pdfDocEl = ref<HTMLElement | null>(null)
@@ -432,11 +434,16 @@ async function onMarkPaid() {
   }
 }
 
-async function onCancel() {
+function onCancelClick(): void {
+  cancelOpen.value = true
+}
+
+async function onCancelConfirm(reason: string) {
   if (!editingId.value) return
   saving.value = true
   try {
-    syncFromSaved(await cancel(editingId.value))
+    syncFromSaved(await cancel(editingId.value, reason))
+    cancelOpen.value = false
     toast.success('Faktura stornována.')
   } catch (e) {
     handleLifecycleError(e, 'Tuto fakturu už nelze stornovat.')
@@ -491,7 +498,7 @@ async function onCancel() {
           v-if="editingId && (status === 'issued' || status === 'overdue')"
           variant="outline"
           :disabled="saving || loading"
-          @click="onCancel"
+          @click="onCancelClick"
         >
           <Ban class="h-4 w-4 text-destructive" />
           <span class="hidden sm:inline">Stornovat</span>
@@ -750,6 +757,13 @@ async function onCancel() {
       :invoice-number="invoiceNumber"
       :supplier-name="supplierSnapshot.companyName"
       @sent="onSent"
+    />
+
+    <CancelInvoiceDialog
+      v-model:open="cancelOpen"
+      :invoice-number="invoiceNumber"
+      :cancelling="saving"
+      @confirm="onCancelConfirm"
     />
 
     <PaywallDialog v-model:open="paywallOpen" />

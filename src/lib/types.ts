@@ -107,6 +107,7 @@ export interface Invoice {
   dueDate: string
   taxableDate: string
   paidAt: string | null
+  cancelReason?: string | null
   variableSymbol: string | null
   constantSymbol: string | null
   specificSymbol: string | null

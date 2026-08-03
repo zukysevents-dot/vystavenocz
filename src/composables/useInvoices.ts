@@ -236,11 +236,13 @@ export function useInvoices() {
     })
   }
 
-  /** Stornuje fakturu (Draft/Issued→Cancelled) — číslo zůstává. */
-  async function cancel(id: string): Promise<Invoice> {
+  /** Stornuje fakturu (Draft/Issued→Cancelled) — číslo zůstává. Backend vyžaduje důvod. */
+  async function cancel(id: string, reason: string): Promise<Invoice> {
     if (isApiMode())
-      return upsert(invoiceFromApi(await http.post<InvoiceApiResponse>(`/invoices/${id}/cancel`)))
-    return localTransition(id, { status: 'cancelled' })
+      return upsert(
+        invoiceFromApi(await http.post<InvoiceApiResponse>(`/invoices/${id}/cancel`, { reason })),
+      )
+    return localTransition(id, { status: 'cancelled', cancelReason: reason })
   }
 
   /**
