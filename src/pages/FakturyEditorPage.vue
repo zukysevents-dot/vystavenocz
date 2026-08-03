@@ -31,7 +31,7 @@ import SendInvoiceDialog from '@/components/app/SendInvoiceDialog.vue'
 import CancelInvoiceDialog from '@/components/app/CancelInvoiceDialog.vue'
 import PaywallDialog from '@/components/app/PaywallDialog.vue'
 import { downloadInvoicePdf } from '@/lib/invoice-pdf'
-import { ApiError, isApiMode } from '@/lib/http'
+import { ApiError, isApiMode, saveErrorMessage } from '@/lib/http'
 import { useClients } from '@/composables/useClients'
 import {
   useInvoices,
@@ -309,10 +309,32 @@ function syncFromSaved(inv: Invoice): void {
   if (inv.invoiceNumber) invoiceNumber.value = inv.invoiceNumber
   status.value = inv.status
   paidAt.value = inv.paidAt
+  adoptServerLineIds(inv)
+}
+
+// Řádky si po uložení převezmou serverová id (pořadí odpovídá editoru). Bez toho by editor
+// držel klientská uuid a KAŽDÉ další uložení by existující řádky smazalo a založilo znovu —
+// při selhání toho DELETE by na dokladu zůstaly obě kopie (zdvojené částky).
+// Počet se liší jen když uživatel psal během ukládání; pak si server id vezme až příští uložení.
+function adoptServerLineIds(inv: Invoice): void {
+  if (!isApiMode() || inv.items.length !== items.value.length) return
+  // Párujeme podle pořadí, takže se musí shodovat i popisy — jinak by si řádek vzal cizí
+  // serverové id a příští uložení by přepsalo jiný řádek. Když to nesedí, id nepřebíráme.
+  const sameOrder = items.value.every((it, i) => inv.items[i]?.description === it.description)
+  if (!sameOrder) return
+  items.value.forEach((it, i) => {
+    const serverId = inv.items[i]?.id
+    if (serverId) it.id = serverId
+  })
 }
 
 // Uloží aktuální stav faktury (create nebo update konceptu). Bez toastu — řeší volající.
 async function persist(): Promise<void> {
+  // Server odběratele vyžaduje (CreateInvoiceRequest.ClientId). Bez tohoto guardu odešle editor
+  // clientId: null, backend vrátí nesrozumitelnou validační chybu a rozdělaný doklad se ztratí.
+  if (isApiMode() && !selectedClientId.value) {
+    throw new ApiError(422, 'Vyberte klienta — bez něj doklad nelze uložit.')
+  }
   // Z konceptových řádků dopočítej součty po řádcích (lib calcLine).
   const builtItems: InvoiceItem[] = normalizedItems().map((it) => {
     const line = calcLine(it, vatPayer.value)
@@ -359,13 +381,16 @@ async function persist(): Promise<void> {
   }
 }
 
-// Přeloží serverový konflikt stavu (409) na srozumitelnou hlášku; ostatní chyby propustí dál.
+// Přeloží serverový konflikt stavu (409) na srozumitelnou hlášku; ostatní chyby ohlásí obecně.
+// Chybu NIKDY nepropouštěj dál — nezachycená by skončila jen v konzoli a uživatel by
+// po kliknutí na Uložit neviděl vůbec nic (falešný dojem, že se doklad uložil).
 function handleLifecycleError(e: unknown, conflictMessage: string): void {
   if (e instanceof ApiError && e.status === 409) {
     toast.error(conflictMessage)
     return
   }
-  throw e
+  toast.error(saveErrorMessage(e, 'Fakturu se nepodařilo uložit.'))
+  console.error(e)
 }
 
 async function onSave() {

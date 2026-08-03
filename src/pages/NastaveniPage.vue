@@ -845,7 +845,10 @@ async function onSubmit(): Promise<void> {
     nextInvoiceSeq: Number(form.nextInvoiceSeq) || 1,
     defaultPaymentDays: Number.isFinite(dueDays) && dueDays >= 0 ? Math.floor(dueDays) : 14,
     publicSlug: normalizePublicSlug(form.publicSlug),
-    email: auth.user?.email ?? companyStore.company?.email ?? '',
+    // Kontaktní e-mail firmy formulář needituje — musí vyhrát uložená hodnota. Účet přihlášeného
+    // uživatele je jen fallback pro firmu bez e-mailu (onboarding), jinak by ho každé uložení
+    // nastavení přepsalo e-mailem toho, kdo zrovna klikl na Uložit.
+    email: companyStore.company?.email || auth.user?.email || '',
   }
   try {
     await companyStore.save(payload)

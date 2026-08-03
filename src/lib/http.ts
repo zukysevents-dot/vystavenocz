@@ -58,6 +58,39 @@ export class ApiError extends Error {
   }
 }
 
+/** Hlášky z ProblemDetails.errors (bez interních názvů polí), spojené do jedné věty. */
+function validationMessages(body: unknown): string | null {
+  const errors = (body as { errors?: unknown } | undefined)?.errors
+  if (!errors || typeof errors !== 'object') return null
+  const messages = Object.values(errors as Record<string, unknown>)
+    .flatMap((v) => (Array.isArray(v) ? v : [v]))
+    .filter((m): m is string => typeof m === 'string' && m.trim().length > 0)
+    // Serializační hlášky .NET („The JSON value could not be converted…") nejsou pro uživatele.
+    .filter((m) => !/^The\s|JSON|System\./i.test(m))
+  return messages.length ? [...new Set(messages)].join(' ') : null
+}
+
+/**
+ * Uživatelská hláška pro selhaný zápis. Bere jen srozumitelný `detail` z ProblemDetails
+ * (backend ho píše česky); technické `title`/`HTTP 500` se do UI nikdy nedostane (viz CLAUDE.md §6).
+ * Chyba bez odpovědi (offline, spadlý server) fallback doplní o připojení.
+ */
+export function saveErrorMessage(e: unknown, fallback: string): string {
+  if (e instanceof ApiError) {
+    if (e.status === 401) return 'Přihlášení vypršelo. Přihlaste se prosím znovu.'
+    const detail = (e.detail as { detail?: unknown } | undefined)?.detail
+    if (typeof detail === 'string' && detail.trim()) return detail.trim()
+    // Validace po polích (ProblemDetails.errors) — hlášky jsou české, názvy polí interní,
+    // takže uživateli ukážeme jen hlášky. Bez toho by viděl jen „nepodařilo se uložit".
+    const fieldErrors = validationMessages(e.detail)
+    if (fieldErrors) return `${fallback} ${fieldErrors}`
+    // Chyba vyrobená ve frontendu (bez těla odpovědi) nese rovnou českou hlášku pro uživatele.
+    if (e.detail === undefined && !/^HTTP \d+$/.test(e.message)) return e.message
+    return fallback
+  }
+  return `${fallback} Zkontrolujte připojení k serveru.`
+}
+
 export interface DownloadResponse {
   blob: Blob
   fileName: string | null

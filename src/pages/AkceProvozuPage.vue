@@ -9,7 +9,7 @@ import { toast } from '@/components/ui/sonner'
 import { useCategories } from '@/composables/useCategories'
 import { useProducts } from '@/composables/useProducts'
 import { usePromotions, type PromotionRuleInput } from '@/composables/usePromotions'
-import { isApiMode } from '@/lib/http'
+import { isApiMode, saveErrorMessage } from '@/lib/http'
 import {
   earnLoyaltyPoints,
   redeemLoyaltyPoints,
@@ -204,7 +204,13 @@ async function saveRule(): Promise<void> {
 }
 
 async function removePriceLevel(level: PriceLevel): Promise<void> {
-  await promotions.removePriceLevel(level.id)
+  try {
+    await promotions.removePriceLevel(level.id)
+  } catch (error) {
+    console.error(error)
+    toast.error(saveErrorMessage(error, 'Cenovou hladinu se nepodařilo odstranit.'))
+    return
+  }
   priceLevels.value = priceLevels.value.filter((item) => item.id !== level.id)
   if (selectedPriceLevelId.value === level.id)
     selectedPriceLevelId.value = priceLevels.value[0]?.id ?? null
@@ -212,7 +218,13 @@ async function removePriceLevel(level: PriceLevel): Promise<void> {
 }
 
 async function removeRule(rule: PromotionRule): Promise<void> {
-  await promotions.removePromotion(rule.id)
+  try {
+    await promotions.removePromotion(rule.id)
+  } catch (error) {
+    console.error(error)
+    toast.error(saveErrorMessage(error, 'Akční pravidlo se nepodařilo odstranit.'))
+    return
+  }
   rules.value = rules.value.filter((item) => item.id !== rule.id)
   toast.success('Akční pravidlo odstraněno.')
 }
