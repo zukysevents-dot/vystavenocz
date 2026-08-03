@@ -180,5 +180,9 @@ test('pracovník bez e-mailu se založí a dostane PIN', async ({ page }) => {
   await page.getByRole('button', { name: 'Nastavit PIN' }).last().click()
   await page.getByLabel('PIN (4–8 číslic)').fill('1234')
   await page.getByRole('button', { name: 'Uložit PIN' }).click()
-  await expect(page.getByText('PIN nastaven', { exact: false })).toBeVisible()
+  // Cíleně na toast: jakmile se seznam obnoví, obsahuje „PIN nastaven" i řádek člena
+  // a volný getByText by skončil na strict-mode violation.
+  await expect(
+    page.locator('[data-sonner-toast]').filter({ hasText: 'PIN nastaven' }),
+  ).toBeVisible()
 })

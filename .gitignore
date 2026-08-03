@@ -18,6 +18,7 @@ playwright-report*
 test-results
 # E2E audit: uložená session (JWT tokeny) — nikdy necommitovat
 e2e/audit/.auth
+e2e/persistence/.auth/
 
 # Instalátory desktop appky servírované z VPS (bind mount, viz docker-compose.prod.yml)
 /downloads/
