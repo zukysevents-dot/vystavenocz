@@ -15,6 +15,7 @@
     "test:e2e": "playwright test",
     "test:e2e:audit": "playwright test --config playwright.audit.config.ts",
     "test:e2e:personas": "playwright test --config playwright.personas.config.ts",
+    "test:e2e:persistence": "playwright test --config playwright.persistence.config.ts",
     "prepare": "husky",
     "audit:modules": "node scripts/audit-module-parity.mjs"
   },

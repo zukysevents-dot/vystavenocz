@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { http, setTokens } from '@/lib/http'
+import { ApiError, http, saveErrorMessage, setTokens } from '@/lib/http'
 
 // Ověřuje, že veřejná volání (klientský portál / rezervace) NEposílají Authorization,
 // i když je operátor přihlášený — jinak by JWT unikl na neautorizovaný public endpoint.
@@ -138,5 +138,46 @@ describe('http.upload', () => {
     expect(MockXhr.instances[1].headers.Authorization).toBe('Bearer NEW_ACCESS')
     expect(progress.mock.calls.map(([value]) => value)).toEqual([99, 100])
     MockXhr.prototype.send = originalSend
+  })
+})
+
+// Hláška o selhaném uložení musí být pro uživatele — nikdy „HTTP 500", název pole ani
+// serializační hláška .NET (viz CLAUDE.md §6: žádné technické detaily v UI).
+describe('saveErrorMessage', () => {
+  const fallback = 'Klienta se nepodařilo uložit.'
+
+  it('upřednostní srozumitelný detail z ProblemDetails', () => {
+    const e = new ApiError(409, 'Conflict', { detail: 'Klient má faktury.' })
+    expect(saveErrorMessage(e, fallback)).toBe('Klient má faktury.')
+  })
+
+  it('u validace po polích připojí hlášky polí, ale ne jejich názvy', () => {
+    const e = new ApiError(422, 'One or more validation errors occurred.', {
+      errors: { Ico: ['Neplatné IČO.'], 'BankAccount.Iban': ['Neplatný IBAN.'] },
+    })
+    expect(saveErrorMessage(e, fallback)).toBe(`${fallback} Neplatné IČO. Neplatný IBAN.`)
+  })
+
+  it('zahodí serializační hlášky .NET a použije fallback', () => {
+    const e = new ApiError(422, 'One or more validation errors occurred.', {
+      errors: { request: ['The request field is required.'] },
+    })
+    expect(saveErrorMessage(e, fallback)).toBe(fallback)
+  })
+
+  it('nikdy nezobrazí holý HTTP status', () => {
+    expect(saveErrorMessage(new ApiError(500, 'HTTP 500'), fallback)).toBe(fallback)
+  })
+
+  it('propustí hlášku vyrobenou ve frontendu (bez těla odpovědi)', () => {
+    const e = new ApiError(422, 'Vyberte klienta — bez něj doklad nelze uložit.')
+    expect(saveErrorMessage(e, fallback)).toBe('Vyberte klienta — bez něj doklad nelze uložit.')
+  })
+
+  it('vypršelou relaci pojmenuje a chybu bez odpovědi svede na připojení', () => {
+    expect(saveErrorMessage(new ApiError(401, 'Unauthorized'), fallback)).toMatch(/Přihlášení/)
+    expect(saveErrorMessage(new TypeError('Failed to fetch'), fallback)).toBe(
+      `${fallback} Zkontrolujte připojení k serveru.`,
+    )
   })
 })

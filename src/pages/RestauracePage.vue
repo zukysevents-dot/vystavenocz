@@ -473,6 +473,8 @@ const priceLevelAdjustment = computed(() =>
 )
 const promoDiscount = computed(() => pricePreview.value?.discountTotal ?? 0)
 let discountTimer: ReturnType<typeof setTimeout> | null = null
+// Fronta uložení slevy/spropitného — drží pořadí zápisů (viz scheduleDiscountUpdate).
+let discountInFlight: Promise<unknown> = Promise.resolve()
 // Poll otevřeného účtu (QR doobjednávky hosta) — běží jen v API módu, spouští se v onMounted.
 let accountRefreshTimer: ReturnType<typeof setInterval> | null = null
 
@@ -625,10 +627,16 @@ function scheduleDiscountUpdate() {
   const orderId = currentOrder.value.id
   discountTimer = setTimeout(() => {
     discountTimer = null
-    ordersApi
-      .updateDiscount(orderId, { discountPercent: pct, tipAmount: tip })
+    // Řetězení za předchozí uložení: dva souběžné PATCHe se můžou na serveru srovnat obráceně
+    // a starší hodnota by přepsala novější (obsluha by účtovala jinou slevu, než vidí).
+    discountInFlight = discountInFlight
+      .catch(() => {})
+      .then(() => ordersApi.updateDiscount(orderId, { discountPercent: pct, tipAmount: tip }))
       .then((updated) => {
-        if (currentOrder.value?.id === orderId) currentOrder.value = updated
+        if (currentOrder.value?.id !== orderId) return
+        currentOrder.value = updated
+        // Obsluha mezitím psala dál → dožeň poslední hodnotu, jinak by zůstala neuložená.
+        scheduleDiscountUpdate()
       })
       .catch((e) => {
         // Účet mezitím opustil/zrušil/přesunul uživatel jinam — nezobrazovat matoucí chybu.
@@ -645,6 +653,9 @@ watch([accountDiscountPercent, tipAmount], scheduleDiscountUpdate)
 async function flushDiscountUpdate() {
   if (!currentOrder.value) return
   cancelPendingDiscountUpdate()
+  // Nejdřív dojede rozjeté automatické uložení, ať se poslední zápis nepředběhne.
+  await discountInFlight.catch(() => {})
+  if (!currentOrder.value) return
   const pct = clampPercent(accountDiscountPercent.value)
   const tip = clampAmount(tipAmount.value)
   if (pct === currentOrder.value.discountPercent && tip === currentOrder.value.tipAmount) return

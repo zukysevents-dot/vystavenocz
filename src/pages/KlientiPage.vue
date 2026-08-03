@@ -41,7 +41,7 @@ import { downloadCsv } from '@/lib/csv-export'
 import { toast } from '@/components/ui/sonner'
 import LoadError from '@/components/app/LoadError.vue'
 import SecretRevealDialog from '@/components/settings/SecretRevealDialog.vue'
-import { http, isApiMode } from '@/lib/http'
+import { http, isApiMode, saveErrorMessage } from '@/lib/http'
 import type { Client } from '@/lib/types'
 
 const router = useRouter()
@@ -238,6 +238,10 @@ async function onSubmit() {
       toast.success('Klient vytvořen.')
     }
     dialogOpen.value = false
+  } catch (e) {
+    // Dialog zůstává otevřený i s vyplněnými údaji — rozdělaná práce se nesmí ztratit potichu.
+    toast.error(saveErrorMessage(e, 'Klienta se nepodařilo uložit.'))
+    console.error(e)
   } finally {
     submitting.value = false
   }
@@ -255,8 +259,14 @@ async function onDelete() {
   if (!id) return
   deleteOpen.value = false
   deleteId.value = null
-  await remove(id)
-  toast.success('Klient smazán.')
+  try {
+    await remove(id)
+    toast.success('Klient smazán.')
+  } catch (e) {
+    // Bez hlášky by řádek jen zůstal v seznamu a vypadalo to jako nefunkční tlačítko.
+    toast.error(saveErrorMessage(e, 'Klienta se nepodařilo smazat.'))
+    console.error(e)
+  }
 }
 </script>
 
