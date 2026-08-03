@@ -751,6 +751,41 @@ function integrationErrorMessage(e: unknown): string {
   return 'Integrace se nepodařilo načíst.'
 }
 
+// Backend vrací ProblemDetails.errors s PascalCase názvy polí DTO — namapuj je na české popisky z formuláře.
+const COMPANY_FIELD_LABELS: Record<string, string> = {
+  Ico: 'IČO',
+  Dic: 'DIČ',
+  CompanyName: 'Název firmy',
+  FullName: 'Jméno a příjmení (OSVČ)',
+  PublicSlug: 'Veřejný slug',
+  Street: 'Ulice a č.p.',
+  City: 'Město',
+  Zip: 'PSČ',
+  BankAccount: 'Číslo účtu',
+  'BankAccount.Iban': 'IBAN',
+  'BankAccount.Swift': 'SWIFT/BIC',
+  InvoiceNumberPrefix: 'Prefix čísla faktury',
+  InvoiceNumberFormat: 'Formát čísla faktury',
+  NextInvoiceSeq: 'Příští pořadové číslo',
+  DefaultPaymentDays: 'Splatnost (dní)',
+}
+
+function companySaveErrorMessage(e: unknown): string {
+  if (e instanceof Error && e.name === 'QuotaExceededError') {
+    return 'Nastavení se nepodařilo uložit — úložiště je plné. Zmenšete logo.'
+  }
+  if (e instanceof ApiError && e.status === 422) {
+    const errors = (e.detail as { errors?: Record<string, string[]> } | undefined)?.errors
+    const parts = errors
+      ? Object.entries(errors).map(
+          ([field, messages]) => `${COMPANY_FIELD_LABELS[field] ?? field}: ${messages.join(' ')}`,
+        )
+      : []
+    if (parts.length) return `Zkontrolujte pole — ${parts.join('; ')}`
+  }
+  return 'Nastavení se nepodařilo uložit. Zkuste to znovu.'
+}
+
 function terminalStatusLabel(status: TerminalPayment['status']): string {
   const labels: Record<TerminalPayment['status'], string> = {
     Pending: 'Čeká',
@@ -842,12 +877,7 @@ async function onSubmit(): Promise<void> {
     enabledModules.value = await companyStore.saveModules(enabledModules.value)
   } catch (e) {
     // API chyba (validace/síť) nebo localStorage quota (velké logo jako data URL) — neukládej tiše.
-    const isQuota = e instanceof Error && e.name === 'QuotaExceededError'
-    toast.error(
-      isQuota
-        ? 'Nastavení se nepodařilo uložit — úložiště je plné. Zmenšete logo.'
-        : 'Nastavení se nepodařilo uložit. Zkuste to znovu.',
-    )
+    toast.error(companySaveErrorMessage(e))
     return
   }
   toast.success('Nastavení uloženo. Projeví se v nových fakturách.')
