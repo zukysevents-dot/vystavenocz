@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures/test'
+import { dismissCookies } from './helpers/cookies'
 import { seedApp } from './helpers/seed'
 import type { Route } from '@playwright/test'
 
@@ -282,10 +283,18 @@ test('nastavení v API režimu ukáže živý stav integrací a stáhne účetn�
     // (designový prázdný stav — 404 by shodil console-error gate).
     if (method === 'GET' && path === '/growth/referrals/me') {
       return route.fulfill({
-        json: { activeInvitations: 0, capturedInvitations: 0, qualifiedInvitations: 0, availableFreeMonths: 0 },
+        json: {
+          activeInvitations: 0,
+          capturedInvitations: 0,
+          qualifiedInvitations: 0,
+          availableFreeMonths: 0,
+        },
       })
     }
-    if (method === 'GET' && (path === '/growth/partner-profile' || path === '/subscription-claims/me')) {
+    if (
+      method === 'GET' &&
+      (path === '/growth/partner-profile' || path === '/subscription-claims/me')
+    ) {
       return route.fulfill({ status: 204 })
     }
     return route.fulfill({ status: 404, json: { title: `Unhandled ${method} ${path}` } })
@@ -357,6 +366,8 @@ test('nastavení v API režimu ukáže živý stav integrací a stáhne účetn�
 })
 
 test('veřejný slug se normalizuje pro online objednávky a QR stoly', async ({ page }) => {
+  // Bez odbaveného souhlasu překrývá cookie banner tlačítko Uložit nastavení.
+  await dismissCookies(page)
   await seedApp(page, { subscription: 'pro' })
   await page.goto('/app/nastaveni')
 
@@ -574,10 +585,18 @@ async function routeCredentialVault(
     // (designový prázdný stav — 404 by shodil console-error gate).
     if (method === 'GET' && path === '/growth/referrals/me') {
       return route.fulfill({
-        json: { activeInvitations: 0, capturedInvitations: 0, qualifiedInvitations: 0, availableFreeMonths: 0 },
+        json: {
+          activeInvitations: 0,
+          capturedInvitations: 0,
+          qualifiedInvitations: 0,
+          availableFreeMonths: 0,
+        },
       })
     }
-    if (method === 'GET' && (path === '/growth/partner-profile' || path === '/subscription-claims/me')) {
+    if (
+      method === 'GET' &&
+      (path === '/growth/partner-profile' || path === '/subscription-claims/me')
+    ) {
       return route.fulfill({ status: 204 })
     }
     return route.fulfill({ status: 404, json: { title: `Unhandled ${method} ${path}` } })
