@@ -244,6 +244,7 @@ export function invoiceFromApi(dto: InvoiceApiResponse): Invoice {
     dueDate: dto.dueDate ?? '',
     taxableDate: dto.taxableSupplyDate ?? '',
     paidAt: dto.paidDate ?? null,
+    cancelReason: dto.cancelReason ?? null,
     // Backend tyto symboly (zatím) nevrací — frontend je needituje, doplníme null.
     variableSymbol: null,
     constantSymbol: null,

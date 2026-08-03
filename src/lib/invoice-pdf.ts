@@ -3,6 +3,14 @@
  * Zachytí vyrenderovaný <InvoiceDocument> (HTML) přes html2canvas-pro do bitmapy
  * a vloží ji do A4 PDF (jsPDF). Rasterizace = věrná podoba náhledu + plná česká
  * diakritika z fontu. Knihovny se načítají líně až při exportu.
+ *
+ * Bez textové vrstvy je PDF čistě obrázek — prohlížeče jako Chrome takový soubor
+ * považují za naskenovaný dokument a nabídnou/spustí vlastní OCR „vylepšení",
+ * které při zobrazení zahodí vizuální rozvržení (tabulky, sloupce, rámečky) a
+ * ukáže jen přetečený prostý text. Proto pod obrázek přidáváme neviditelnou
+ * textovou vrstvu (`renderingMode: 'invisible'`) se skutečným obsahem faktury —
+ * PDF pak má reálný vyhledatelný text a prohlížeč OCR přepis nespouští, vizuál
+ * zůstává beze změny (text je neviditelný).
  */
 
 /** Vyrenderuje element faktury do jsPDF dokumentu (A4, případně víc stran). */
@@ -36,7 +44,53 @@ async function renderToPdf(element: HTMLElement) {
     pdf.addImage(imgData, 'JPEG', 0, position, pageW, imgH)
     heightLeft -= pageH
   }
+
+  addInvisibleTextLayer(pdf, element, pageW, pageH)
+
   return pdf
+}
+
+/**
+ * Přidá přes celý obrázek faktury neviditelnou textovou vrstvu se skutečným
+ * obsahem (podle textových uzlů zdrojového elementu). Pozice jsou jen přibližné
+ * (z `Range.getBoundingClientRect()`) — u neviditelného textu nevadí, jde jen
+ * o to, aby PDF obsahovalo reálný text, ne aby se dal vizuálně 1:1 vybrat.
+ */
+function addInvisibleTextLayer(
+  pdf: import('jspdf').jsPDF,
+  element: HTMLElement,
+  pageW: number,
+  pageH: number,
+): void {
+  const rect = element.getBoundingClientRect()
+  if (rect.width <= 0) return
+  const mmPerPx = pageW / rect.width
+  const totalPages = pdf.getNumberOfPages()
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
+  const range = document.createRange()
+  let node: Node | null = walker.nextNode()
+  while (node) {
+    const text = node.textContent?.trim()
+    if (!text) {
+      node = walker.nextNode()
+      continue
+    }
+    range.selectNodeContents(node)
+    const r = range.getBoundingClientRect()
+    if (r.width > 0 && r.height > 0) {
+      const xMm = (r.left - rect.left) * mmPerPx
+      const yMm = (r.top - rect.top) * mmPerPx
+      const fontSizeMm = r.height * mmPerPx
+      const page = Math.min(Math.floor(yMm / pageH), totalPages - 1)
+      pdf.setPage(page + 1)
+      pdf.setFontSize(fontSizeMm * 2.83465) // mm → pt (1 mm = 2.83465 pt)
+      pdf.text(text, xMm, yMm - page * pageH + fontSizeMm * 0.8, {
+        renderingMode: 'invisible',
+        maxWidth: Math.max(pageW - xMm, 1),
+      })
+    }
+    node = walker.nextNode()
+  }
 }
 
 /** Stáhne fakturu jako PDF soubor. */
