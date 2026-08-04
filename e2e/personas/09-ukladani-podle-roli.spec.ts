@@ -10,6 +10,14 @@ import type { Page } from '@playwright/test'
 const TABLE =
   '[data-testid^="restaurant-table-map-"]:visible, [data-testid^="restaurant-table-list-"]:visible'
 
+/**
+ * POSLEDNÍ stůl v seznamu. Persona 04 (číšník) pracuje s PRVNÍM stolem — při dvou workerech by si
+ * oba testy lezly do stejného účtu a platba by narazila na cizí neodeslané položky.
+ */
+function someTable(page: Page) {
+  return page.locator(TABLE).last()
+}
+
 function unique(prefix: string): string {
   return `${prefix} ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
 }
@@ -53,7 +61,7 @@ test.describe('Číšník (Employee)', () => {
 
   test('položka na účtu se uloží a je tam i po obnovení stránky', async ({ page }) => {
     await go(page, '/app/restaurace')
-    const table = page.locator(TABLE).first()
+    const table = someTable(page)
     await expect(table).toBeVisible()
     await table.click()
 
@@ -94,7 +102,7 @@ test.describe('Číšník (Employee)', () => {
 
     // Účet drží server — po reloadu se musí položka vrátit ze serveru, ne z paměti karty.
     await page.reload()
-    await page.locator(TABLE).first().click()
+    await someTable(page).click()
     await expectItemOnAccount(page, productName)
   })
 
@@ -103,14 +111,14 @@ test.describe('Číšník (Employee)', () => {
     context,
   }) => {
     await go(page, '/app/restaurace')
-    const table = page.locator(TABLE).first()
+    const table = someTable(page)
     await expect(table).toBeVisible()
     const tableTestId = await table.getAttribute('data-testid')
 
     // Druhý „terminál" otevře účet na stejném stole dřív → první dostane z API 409.
     const second = await context.newPage()
     await go(second, '/app/restaurace')
-    await second.locator(TABLE).first().click()
+    await someTable(second).click()
     await expect(second.locator('[data-testid="restaurant-order-view"]')).toBeVisible()
     await second.close()
 

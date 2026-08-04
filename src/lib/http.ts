@@ -71,6 +71,16 @@ function validationMessages(body: unknown): string | null {
 }
 
 /**
+ * Zaloguj chybu, pokud nejde o 403. Odepřený přístup podle role (obsluha nevidí věrnostní data
+ * ani cenové hladiny) je normální stav, který UI ošetřuje prázdným zobrazením — v konzoli jen
+ * zaplavuje výpis a zakrývá skutečné chyby. Používej JEN tam, kde je 403 očekávaný.
+ */
+export function logUnlessForbidden(e: unknown): void {
+  if (e instanceof ApiError && e.status === 403) return
+  console.error(e)
+}
+
+/**
  * Uživatelská hláška pro selhaný zápis. Bere jen srozumitelný `detail` z ProblemDetails
  * (backend ho píše česky); technické `title`/`HTTP 500` se do UI nikdy nedostane (viz CLAUDE.md §6).
  * Chyba bez odpovědi (offline, spadlý server) fallback doplní o připojení.

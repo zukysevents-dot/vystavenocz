@@ -62,7 +62,7 @@ import { formatCZK, round2 } from '@/lib/invoice'
 import { findByEan } from '@/lib/reorder'
 import { buildReceipt, type ReceiptInfo } from '@/lib/receipt'
 import { calcPosTotals, clampAmount, clampPercent } from '@/lib/posCalc'
-import { ApiError, isApiMode } from '@/lib/http'
+import { ApiError, isApiMode, logUnlessForbidden } from '@/lib/http'
 import { isApprovalRequest } from '@/lib/types'
 import type { PriceLevel, PromotionCalculation, PromotionLineInput } from '@/lib/promotions'
 import { useCompanyStore } from '@/stores/company'
@@ -244,7 +244,7 @@ async function loadPriceLevels() {
     priceLevels.value = await promotions.listPriceLevels()
   } catch (e) {
     priceLevels.value = []
-    console.error(e)
+    logUnlessForbidden(e)
   }
 }
 
@@ -266,7 +266,7 @@ async function loadLoyaltyCheckoutData() {
   } catch (e) {
     loyaltyCustomers.value = []
     loyaltySettings.value = null
-    console.error(e)
+    logUnlessForbidden(e)
   }
 }
 

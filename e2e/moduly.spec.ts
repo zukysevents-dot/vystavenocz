@@ -247,9 +247,24 @@ test.describe('mobil', () => {
     await seedSession(page, owner)
     await routeApi(page, owner)
     await page.goto('/app/faktury')
+    // Počkej na ustálenou stránku. Klik do rozjeté navigace zásuvku otevře a hned zavře
+    // (zůstane `inert` + `-translate-x-full`), takže další krok pak sahá do zavřeného menu.
+    await expect(page.getByRole('heading', { name: 'Faktury' }).first()).toBeVisible()
 
     await page.getByRole('button', { name: 'Otevřít menu' }).click()
-    await page.getByRole('link', { name: 'Přidat moduly' }).click()
+    // Zásuvka se vysouvá zleva a v půlce animace je pořád mimo obrazovku (měřeno x = −271),
+    // přestože zavírací tlačítko už „vidět" je. Klik do ní pak skončí na „element is outside
+    // of the viewport". Počkej, až je opravdu na displeji.
+    const drawer = page.locator('aside.fixed')
+    await expect(drawer).toBeInViewport()
+    // V DOM jsou dvě kopie odkazu (desktopový sidebar + mobilní zásuvka); ta neaktivní má nulové
+    // rozměry, ale z přístupnostního stromu nemizí, takže do ní role-locator občas spadl a klik
+    // skončil na „element is outside of the viewport". `:visible` rozhoduje podle rozměru.
+    // Menu je navíc delší než displej → doscrollovat uvnitř zásuvky.
+    // Menu je delší než displej (1667 px obsahu na 667 px zásuvky), Moduly jsou až na konci.
+    const modulesLink = drawer.locator('a[href="/app/moduly"]')
+    await modulesLink.scrollIntoViewIfNeeded()
+    await modulesLink.click()
 
     await expect(page).toHaveURL(/\/app\/moduly$/)
     const first = await page.getByTestId('module-core').boundingBox()

@@ -72,7 +72,7 @@ import { usePromotions } from '@/composables/usePromotions'
 import { useSales } from '@/composables/useSales'
 import { useCustomers, type LoyaltyCustomer } from '@/composables/useCustomers'
 import { useLoyalty, type LoyaltySettings } from '@/composables/useLoyalty'
-import { ApiError, isApiMode, saveErrorMessage } from '@/lib/http'
+import { ApiError, isApiMode, saveErrorMessage, logUnlessForbidden } from '@/lib/http'
 import { formatCZK, round2 } from '@/lib/invoice'
 import { calcPosTotals, calcSplitGroupPayment, clampAmount, clampPercent } from '@/lib/posCalc'
 import { toast } from '@/components/ui/sonner'
@@ -527,7 +527,7 @@ async function loadPriceLevels() {
     priceLevels.value = await promotions.listPriceLevels()
   } catch (e) {
     priceLevels.value = []
-    console.error(e)
+    logUnlessForbidden(e)
   }
 }
 
@@ -549,7 +549,7 @@ async function loadLoyaltyCheckoutData() {
   } catch (e) {
     loyaltyCustomers.value = []
     loyaltySettings.value = null
-    console.error(e)
+    logUnlessForbidden(e)
   }
 }
 
