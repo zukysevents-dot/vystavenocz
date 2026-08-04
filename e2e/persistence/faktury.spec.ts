@@ -1,8 +1,36 @@
 import { test, expect, type Page } from '@playwright/test'
-import { expectWrite, loginFresh, settle, toast, unique } from './helpers'
+import { apiContext, expectWrite, loginFresh, settle, toast, unique } from './helpers'
 
 // Ukládání faktury v editoru: koncept, řádky, přetrvání po reloadu i novém přihlášení,
 // chování při selhání serveru a při odchodu ze stránky během ukládání.
+
+// Doklad se bez odběratele neuloží. Na čerstvé firmě žádný není, tak si ho suita založí sama
+// (a po sobě uklidí) — testy tak nezávisí na naseedovaných datech prostředí.
+let ownClientName: string | null = null
+
+test.beforeAll(async () => {
+  const api = await apiContext()
+  const list = await api.get('clients?pageSize=1')
+  if (((await list.json()).items ?? []).length === 0) {
+    ownClientName = unique('E2E Odběratel')
+    const res = await api.post('clients', {
+      data: { name: ownClientName, country: 'CZ', defaultPaymentDays: 14 },
+    })
+    expect(res.status(), 'příprava odběratele pro faktury').toBe(201)
+  }
+  await api.dispose()
+})
+
+test.afterAll(async () => {
+  if (!ownClientName) return
+  const api = await apiContext()
+  const items = (await (await api.get('clients?pageSize=100')).json()).items as Array<{
+    id: string
+    name: string
+  }>
+  for (const c of items.filter((i) => i.name === ownClientName)) await api.delete(`clients/${c.id}`)
+  await api.dispose()
+})
 
 async function newInvoice(page: Page): Promise<void> {
   await page.goto('/app/faktury/editor')
