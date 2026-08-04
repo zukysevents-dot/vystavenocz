@@ -5,6 +5,11 @@ import { API_URL, apiContext, dismissCookies, expectWrite, settle, toast, unique
 // nesmí skončit tichou ztrátou změn.
 
 test('klient uložený v jedné firmě není vidět v jiné firmě', async ({ page, browser }) => {
+  // Test zakládá druhý účet přes API — to patří na lokální/testovací prostředí, ne na živý web.
+  test.skip(
+    !/localhost|127\.0\.0\.1/.test(API_URL),
+    'zakládá účet — spouštět jen proti lokálnímu API',
+  )
   const name = unique('E2E Izolace')
   await page.goto('/app/klienti')
   await settle(page)
