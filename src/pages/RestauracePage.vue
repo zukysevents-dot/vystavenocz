@@ -72,7 +72,7 @@ import { usePromotions } from '@/composables/usePromotions'
 import { useSales } from '@/composables/useSales'
 import { useCustomers, type LoyaltyCustomer } from '@/composables/useCustomers'
 import { useLoyalty, type LoyaltySettings } from '@/composables/useLoyalty'
-import { ApiError, isApiMode } from '@/lib/http'
+import { ApiError, isApiMode, saveErrorMessage } from '@/lib/http'
 import { formatCZK, round2 } from '@/lib/invoice'
 import { calcPosTotals, calcSplitGroupPayment, clampAmount, clampPercent } from '@/lib/posCalc'
 import { toast } from '@/components/ui/sonner'
@@ -352,6 +352,24 @@ watch(currentFloorId, () => {
   if (apiMode) loadTables()
 })
 
+/**
+ * Otevře účet na stole. Když ho mezitím otevřel jiný terminál (409), obsluha nesmí skončit
+ * u hlášky „nepodařilo se" — účet už na tom stole je, tak ho převezmeme a jen dáme vědět.
+ * Ve dvousměnném provozu na dvou tabletech je tenhle souběh běžný stav, ne chyba.
+ */
+async function openOrAdoptExisting(table: DiningTable): Promise<Order> {
+  try {
+    return await ordersApi.open(table.id)
+  } catch (e) {
+    if (!(e instanceof ApiError) || e.status !== 409) throw e
+    await refreshOpen()
+    const adopted = occupancy.value.get(table.id)
+    if (!adopted) throw e
+    toast.info('Účet na tomto stole už otevřel jiný terminál — pokračujete v něm.')
+    return await ordersApi.get(adopted.id)
+  }
+}
+
 async function selectTable(table: DiningTable) {
   if (busy.value) return
   selectedTable.value = table
@@ -363,13 +381,13 @@ async function selectTable(table: DiningTable) {
       mode.value = 'order'
     } else {
       // volný stůl → rovnou otevři účet
-      currentOrder.value = await ordersApi.open(table.id)
+      currentOrder.value = await openOrAdoptExisting(table)
       await refreshOpen()
       mode.value = 'order'
     }
     syncDiscountFromOrder(currentOrder.value)
   } catch (e) {
-    toast.error('Účet se nepodařilo otevřít.')
+    toast.error(saveErrorMessage(e, 'Účet se nepodařilo otevřít.'))
     console.error(e)
   } finally {
     busy.value = false
