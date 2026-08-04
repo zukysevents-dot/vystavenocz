@@ -136,6 +136,7 @@ npx playwright test  # e2e (mock režim, seed v e2e/helpers/seed.ts)
 npm run test:e2e:audit  # e2e audit celé appky proti reálnému API (playwright.audit.config.ts, e2e/audit/; vyžaduje běžící FE v API režimu + backend s demo seedem; přihlášení jen z env E2E_DEMO_EMAIL/E2E_DEMO_PASSWORD)
 npm run test:e2e:personas  # persona-based audit (playwright.personas.config.ts, e2e/personas/; 8 person, desktop+mobil, účty přes pozvánkový flow, heslo z E2E_PERSONA_PASSWORD; report docs/testing/persona-audit-2026-07.md; nespouštět nad sdíleným stagingem)
 npm run test:e2e:persistence  # e2e ukládání/přetrvání dat proti reálnému API (playwright.persistence.config.ts, e2e/persistence/; stejné prostředí jako audit — běžící FE v API režimu + backend s demo seedem; ověřuje uložení, zpětnou vazbu, reload, návrat, nové přihlášení v čistém prohlížeči, tenant izolaci a chybové stavy)
+# e2e/personas/09-ukladani-podle-roli.spec.ts navíc ověřuje ukládání per role (číšník, skladník, účetní, manažerka) v desktop i mobilním projektu
 ```
 
 ### Nové oblasti (2026-07-26)

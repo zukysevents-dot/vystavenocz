@@ -1,5 +1,6 @@
 import { test, expect, go, visibleNavLabels } from './fixtures'
 import { authFile } from './personas'
+import type { Page } from '@playwright/test'
 
 // PERSONA 2 — Skladník (role Stockkeeper: catalog.read + cost_view, inventory.read/manage, BEZ write_off).
 // Scénář: příjem zboží, stav zásob, výdej, inventura, objednání chybějících položek.
@@ -12,6 +13,19 @@ import { authFile } from './personas'
 //  - FE roli „Stockkeeper" nezná → menu se nefiltruje (vidí i finance), role-gated routy přesměrují.
 
 test.use({ storageState: authFile('sklad'), allowStatus: [403] })
+
+/** Vybere konkrétní pobočku (u firmy s jedinou pobočkou selektor není → no-op). */
+async function selectFirstLocation(page: Page, trigger: string): Promise<void> {
+  const select = page.locator(trigger)
+  if (!(await select.isVisible().catch(() => false))) return
+  await select.click()
+  const option = page
+    .getByRole('option')
+    .filter({ hasNotText: /Všechny pobočky/ })
+    .first()
+  if (await option.isVisible().catch(() => false)) await option.click()
+  else await page.keyboard.press('Escape')
+}
 
 test('přehled stavu skladu + vyhledávání + filtr pobočky', async ({ page }, testInfo) => {
   await go(page, '/app/zasoby')
@@ -55,6 +69,9 @@ test('příjem zboží: příjemka +1 ks, poté výdej −1 ks (čistá nula)', 
   await expect(
     page.getByRole('heading', { name: /Příjem zboží|Naskladnění/ }).first(),
   ).toBeVisible()
+  // Firma s víc pobočkami vyžaduje konkrétní sklad — bez něj příjemku právem odmítne
+  // („Vyberte konkrétní pobočku…"), takže výběr patří do scénáře, ne až k překvapení u uložení.
+  await selectFirstLocation(page, '#receive-location')
   await page.getByPlaceholder(/Makro/).first().fill('E2E dodavatel')
   await page.getByPlaceholder(/hledejte podle názvu/i).fill('pivo')
   await page.waitForTimeout(800)
@@ -80,6 +97,7 @@ test('příjem zboží: příjemka +1 ks, poté výdej −1 ks (čistá nula)', 
 
   // Výdej −1 ks stejného produktu ze Stavu skladu (běžný výdej — Stockkeeper na něj má právo).
   await go(page, '/app/zasoby')
+  await selectFirstLocation(page, '#stock-location') // ruční skladová akce chce konkrétní sklad
   await page
     .getByPlaceholder(/Hledat podle názvu/)
     .first()
@@ -95,6 +113,7 @@ test('příjem zboží: příjemka +1 ks, poté výdej −1 ks (čistá nula)', 
 
 test('korekce a inventura: dialogy se otevřou, NEPOTVRZUJEME', async ({ page }) => {
   await go(page, '/app/zasoby')
+  await selectFirstLocation(page, '#stock-location')
   const inventura = page.getByRole('button', { name: /Inventura/ }).first()
   await expect(inventura, 'tlačítko Inventura je dostupné').toBeVisible()
   await inventura.click()

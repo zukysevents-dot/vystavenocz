@@ -323,15 +323,17 @@ async function onDelete() {
           :key="c.id"
           class="flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-muted/40"
         >
-          <div class="flex items-center gap-3">
+          <!-- min-w-0 + break-words: dlouhé jméno nebo e-mail klienta jinak flex položku roztáhne,
+               stránka přeteče do šířky a mobil kvůli tomu odzoomuje — pak se ani dialog nedá ovládat. -->
+          <div class="flex min-w-0 items-center gap-3">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-soft text-primary"
+              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary"
             >
               <Building2 class="h-5 w-5" />
             </div>
-            <div>
-              <div class="font-semibold">{{ c.name }}</div>
-              <div class="text-sm text-muted-foreground">
+            <div class="min-w-0">
+              <div class="break-words font-semibold">{{ c.name }}</div>
+              <div class="break-words text-sm text-muted-foreground">
                 {{ c.ico ? `IČO ${c.ico}` : 'Bez IČO' }}
                 {{ c.city ? ` • ${c.city}` : '' }}
                 {{ c.email ? ` • ${c.email}` : '' }}

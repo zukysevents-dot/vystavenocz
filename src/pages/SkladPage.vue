@@ -302,15 +302,17 @@ async function onDelete() {
           :key="p.id"
           class="flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-muted/40"
         >
-          <div class="flex items-center gap-3">
+          <!-- min-w-0 + break-words: dlouhý název produktu jinak flex položku roztáhne, stránka
+               přeteče do šířky a mobil odzoomuje (pak nejde ovládat ani dialog). -->
+          <div class="flex min-w-0 items-center gap-3">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-soft text-primary"
+              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary"
             >
               <Package class="h-5 w-5" />
             </div>
-            <div>
-              <div class="font-semibold">{{ p.name }}</div>
-              <div class="text-sm text-muted-foreground">
+            <div class="min-w-0">
+              <div class="break-words font-semibold">{{ p.name }}</div>
+              <div class="break-words text-sm text-muted-foreground">
                 {{ p.sku }} • DPH {{ p.vatRate }} %
                 <span v-if="p.allergens?.length">
                   • Alergeny {{ formatAllergenCodes(p.allergens) }}
@@ -390,7 +392,9 @@ async function onDelete() {
 
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="space-y-2">
-              <Label for="p-price">Cena vč. DPH (Kč) {{ hasSalesWorkflow ? '*' : '(volitelné)' }}</Label>
+              <Label for="p-price"
+                >Cena vč. DPH (Kč) {{ hasSalesWorkflow ? '*' : '(volitelné)' }}</Label
+              >
               <Input
                 id="p-price"
                 v-model.number="form.salePrice"
