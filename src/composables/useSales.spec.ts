@@ -35,7 +35,21 @@ describe('useSales — kontrakt volání', () => {
       priceLevelId: null,
       customerId: null,
       redeemPoints: 0,
+      idempotencyKey: null,
     })
+  })
+
+  it('create pošle idempotency klíč — retry po timeoutu nesmí naúčtovat dvakrát', async () => {
+    vi.mocked(http.post).mockResolvedValue({ id: 's1' } as never)
+    await useSales().create(
+      'Cash',
+      [{ productId: 'p1', description: 'Burger', quantity: 1, unitPrice: 199, vatRate: 12 }],
+      { idempotencyKey: 'pokus-1' },
+    )
+    expect(http.post).toHaveBeenCalledWith(
+      '/sales',
+      expect.objectContaining({ idempotencyKey: 'pokus-1' }),
+    )
   })
 
   it('create pošle přijatou hotovost (cashReceived) při platbě hotově', async () => {
