@@ -174,7 +174,8 @@ test('pracovník bez e-mailu se založí a dostane PIN', async ({ page }) => {
   await page.getByRole('button', { name: 'Založit pracovníka' }).click()
 
   await expect(page.getByText('Kuchař Karel')).toBeVisible()
-  await expect(page.getByText('Bez e-mailu — přihlašuje se jen PINem')).toBeVisible()
+  // Text nesmí slibovat přihlášení PINem — PIN obrazovka na pokladně zatím neexistuje.
+  await expect(page.getByText('Bez e-mailu — zatím se nemůže sám přihlásit')).toBeVisible()
 
   // Nastavení PINu (hodnota se nikam nevrací, jen hasPin).
   await page.getByRole('button', { name: 'Nastavit PIN' }).last().click()
