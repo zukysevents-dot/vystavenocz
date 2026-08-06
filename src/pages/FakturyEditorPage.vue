@@ -14,6 +14,7 @@ import {
   Mail,
   CheckCircle2,
   Ban,
+  FileCheck2,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -46,6 +47,7 @@ import {
   calcTotals,
   documentTypeLabel,
   formatCZK,
+  formatDate,
   variableSymbolFromInvoiceNumber,
 } from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
@@ -103,6 +105,15 @@ const documentTypeOptions = [
   { value: 'proforma', label: 'Zálohová faktura' },
 ] as const
 const canChooseType = computed(() => status.value === 'draft')
+
+// V ostrém režimu vlastní číslo dokladu, datum vystavení, variabilní symbol i způsob úhrady SERVER:
+// číslo se přiděluje z číselné řady až při vystavení, datum vystavení se doplní tamtéž, VS se odvozuje
+// z čísla a doklad se tiskne s bankovním převodem. Jako editovatelná pole to byla lež — uživatel je
+// vyplnil, uložení je zahodilo a po návratu do dokladu byla prázdná. Proto je jen zobrazujeme.
+const serverOwnedFields = isApiMode()
+const variableSymbolDisplay = computed(
+  () => variableSymbol.value.trim() || variableSymbolFromInvoiceNumber(invoiceNumber.value),
+)
 
 // Stav hlavičky.
 const selectedClientId = ref('')
@@ -303,10 +314,14 @@ async function onDownloadPdf() {
   }
 }
 
-// Převezme do editoru serverovou pravdu po uložení/přechodu (id, přidělené číslo, stav).
+// Převezme do editoru serverovou pravdu po uložení/přechodu (id, přidělené číslo, datumy, stav).
 function syncFromSaved(inv: Invoice): void {
   editingId.value = inv.id
   if (inv.invoiceNumber) invoiceNumber.value = inv.invoiceNumber
+  // Datum vystavení i splatnost doplňuje server při vystavení — bez převzetí by editor (a náhled
+  // i PDF) dál ukazoval svoji původní hodnotu, případně „Doplní se při vystavení“ u už vystavené faktury.
+  if (inv.issueDate) issueDate.value = inv.issueDate
+  if (inv.dueDate) dueDate.value = inv.dueDate
   status.value = inv.status
   paidAt.value = inv.paidAt
   adoptServerLineIds(inv)
@@ -408,6 +423,32 @@ async function onSave() {
       toast.error('Faktura s tímto číslem už existuje. Změňte číslo faktury.')
     } else {
       handleLifecycleError(e, 'Vystavenou fakturu už nelze upravovat (jen koncept).')
+    }
+  } finally {
+    saving.value = false
+  }
+}
+
+// Vystavení = z rozdělaného konceptu se stane hotová faktura: uloží se a server jí přidělí číslo
+// z číselné řady i datum vystavení. Bez této akce zůstal doklad navždy konceptem bez čísla.
+async function onIssue(): Promise<void> {
+  if (!hasAccess.value) {
+    paywallOpen.value = true
+    return
+  }
+  saving.value = true
+  try {
+    await persist()
+    if (!editingId.value) return
+    syncFromSaved(await issue(editingId.value))
+    toast.success(
+      invoiceNumber.value ? `Faktura vystavena — č. ${invoiceNumber.value}.` : 'Faktura vystavena.',
+    )
+  } catch (e) {
+    if (e instanceof DuplicateInvoiceNumberError) {
+      toast.error('Faktura s tímto číslem už existuje. Změňte číslo faktury.')
+    } else {
+      handleLifecycleError(e, 'Fakturu se nepodařilo vystavit — zkuste to znovu.')
     }
   } finally {
     saving.value = false
@@ -561,10 +602,20 @@ async function onCancelConfirm(reason: string) {
           <CheckCircle2 class="h-4 w-4 text-success" />
           <span class="hidden sm:inline">Uhrazeno</span>
         </Button>
-        <Button variant="coral" :disabled="saving || loading" @click="onSave">
+        <Button variant="outline" :disabled="saving || loading" @click="onSave">
           <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
           <Save v-else class="h-4 w-4" />
           Uložit koncept
+        </Button>
+        <Button
+          v-if="status === 'draft'"
+          variant="coral"
+          :disabled="saving || loading"
+          @click="onIssue"
+        >
+          <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
+          <FileCheck2 v-else class="h-4 w-4" />
+          Vystavit fakturu
         </Button>
       </div>
     </div>
@@ -630,11 +681,17 @@ async function onCancelConfirm(reason: string) {
           </div>
           <div class="space-y-2">
             <Label for="inv-number">Číslo faktury</Label>
-            <Input id="inv-number" v-model="invoiceNumber" />
+            <Input v-if="!serverOwnedFields" id="inv-number" v-model="invoiceNumber" />
+            <div
+              v-else
+              class="flex h-9 items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-muted-foreground"
+            >
+              {{ invoiceNumber || 'Přidělí se při vystavení' }}
+            </div>
           </div>
           <div class="space-y-2">
             <Label for="inv-payment">Způsob úhrady</Label>
-            <Select v-model="paymentMethod">
+            <Select v-if="!serverOwnedFields" v-model="paymentMethod">
               <SelectTrigger id="inv-payment">
                 <SelectValue />
               </SelectTrigger>
@@ -644,10 +701,22 @@ async function onCancelConfirm(reason: string) {
                 </SelectItem>
               </SelectContent>
             </Select>
+            <div
+              v-else
+              class="flex h-9 items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-muted-foreground"
+            >
+              Převodem
+            </div>
           </div>
           <div class="space-y-2">
             <Label for="inv-issue">Datum vystavení</Label>
-            <Input id="inv-issue" v-model="issueDate" type="date" />
+            <Input v-if="!serverOwnedFields" id="inv-issue" v-model="issueDate" type="date" />
+            <div
+              v-else
+              class="flex h-9 items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-muted-foreground"
+            >
+              {{ issueDate ? formatDate(issueDate) : 'Doplní se při vystavení' }}
+            </div>
           </div>
           <div class="space-y-2">
             <Label for="inv-due">Datum splatnosti</Label>
@@ -655,7 +724,18 @@ async function onCancelConfirm(reason: string) {
           </div>
           <div class="space-y-2">
             <Label for="inv-vs">Variabilní symbol</Label>
-            <Input id="inv-vs" v-model="variableSymbol" inputmode="numeric" />
+            <Input
+              v-if="!serverOwnedFields"
+              id="inv-vs"
+              v-model="variableSymbol"
+              inputmode="numeric"
+            />
+            <div
+              v-else
+              class="flex h-9 items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-muted-foreground"
+            >
+              {{ variableSymbolDisplay || 'Odvodí se z čísla faktury' }}
+            </div>
           </div>
         </div>
       </div>
@@ -792,7 +872,7 @@ async function onCancelConfirm(reason: string) {
           :issue-date="issueDate"
           :due-date="dueDate"
           :taxable-date="issueDate"
-          :variable-symbol="variableSymbol"
+          :variable-symbol="variableSymbolDisplay"
           :payment-method="paymentMethod"
         />
       </div>
@@ -828,7 +908,7 @@ async function onCancelConfirm(reason: string) {
         :issue-date="issueDate"
         :due-date="dueDate"
         :taxable-date="issueDate"
-        :variable-symbol="variableSymbol"
+        :variable-symbol="variableSymbolDisplay"
         :payment-method="paymentMethod"
       />
     </div>
