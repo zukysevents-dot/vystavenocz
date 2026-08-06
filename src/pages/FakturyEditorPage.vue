@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeft,
@@ -26,6 +26,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import QuickClientDialog, { type QuickClient } from '@/components/app/QuickClientDialog.vue'
 import InvoiceDocument from '@/components/app/InvoiceDocument.vue'
 import SendInvoiceDialog from '@/components/app/SendInvoiceDialog.vue'
@@ -83,10 +90,14 @@ const paymentMethods = [
   { value: 'card', label: 'Kartou' },
 ]
 
+/** Šířka vykresleného dokladu (A4 @ 96 dpi) — musí odpovídat `.invoice-doc` v InvoiceDocument.vue. */
+const DOC_WIDTH_PX = 794
+
 const loading = ref(true)
 const saving = ref(false)
 const quickOpen = ref(false)
 const showPreview = ref(true)
+const fullPreviewOpen = ref(false)
 const downloadingPdf = ref(false)
 const sendOpen = ref(false)
 const cancelOpen = ref(false)
@@ -301,6 +312,32 @@ const clientSnapshot = computed<ClientSnapshot>(() => {
   }
   return adHocClient.value ?? { name: '' }
 })
+
+// Jeden zdroj vlastností dokladu pro všechny tři vykreslení (náhled, náhled přes celou obrazovku, PDF).
+const documentProps = computed(() => ({
+  supplier: supplierSnapshot.value,
+  client: clientSnapshot.value,
+  items: previewItems.value,
+  invoiceNumber: invoiceNumber.value,
+  issueDate: issueDate.value,
+  dueDate: dueDate.value,
+  taxableDate: issueDate.value,
+  variableSymbol: variableSymbolDisplay.value,
+  paymentMethod: paymentMethod.value,
+}))
+
+// Náhled je pevná A4 (794 px). Na užší obrazovce ho zmenšíme přesně na dostupnou šířku, ať je
+// vidět celý doklad; nikdy nezvětšujeme (na desktopu tedy zůstává 1:1 jako dřív).
+const previewBox = ref<HTMLElement | null>(null)
+const previewZoom = ref(1)
+function fitPreview(): void {
+  const width = previewBox.value?.clientWidth ?? 0
+  previewZoom.value = width ? Math.min(1, width / DOC_WIDTH_PX) : 1
+}
+// Náhled se do stránky přidá až po načtení dokladu a dá se schovat — přeměř po každé změně.
+watch([showPreview, loading], () => void nextTick(fitPreview))
+onMounted(() => window.addEventListener('resize', fitPreview, { passive: true }))
+onUnmounted(() => window.removeEventListener('resize', fitPreview))
 
 async function onDownloadPdf() {
   if (!pdfDocEl.value) return
@@ -868,22 +905,24 @@ async function onCancelConfirm(reason: string) {
         </div>
       </div>
 
-      <!-- Živý náhled faktury -->
-      <div
-        v-if="showPreview"
-        class="overflow-x-auto rounded-xl border border-border bg-muted/30 p-4"
-      >
-        <InvoiceDocument
-          :supplier="supplierSnapshot"
-          :client="clientSnapshot"
-          :items="previewItems"
-          :invoice-number="invoiceNumber"
-          :issue-date="issueDate"
-          :due-date="dueDate"
-          :taxable-date="issueDate"
-          :variable-symbol="variableSymbolDisplay"
-          :payment-method="paymentMethod"
-        />
+      <!-- Živý náhled faktury. Doklad má pevnou šířku A4 (794 px) — na mobilu se do obrazovky
+           nevešel a byla vidět jen jeho levá část, proto ho zmenšíme na dostupnou šířku a
+           klepnutím se otevře přes celou obrazovku v čitelné velikosti. -->
+      <div v-if="showPreview" class="rounded-xl border border-border bg-muted/30 p-4">
+        <button
+          ref="previewBox"
+          type="button"
+          class="block w-full overflow-hidden rounded-lg"
+          aria-label="Zobrazit fakturu přes celou obrazovku"
+          @click="fullPreviewOpen = true"
+        >
+          <div :style="{ zoom: previewZoom }">
+            <InvoiceDocument v-bind="documentProps" />
+          </div>
+        </button>
+        <p class="mt-3 text-center text-xs text-muted-foreground">
+          Klepnutím zobrazíte fakturu přes celou obrazovku
+        </p>
       </div>
     </div>
 
@@ -907,19 +946,27 @@ async function onCancelConfirm(reason: string) {
 
     <PaywallDialog v-model:open="paywallOpen" />
 
+    <!-- Faktura přes celou obrazovku — hlavně pro mobil, kde se A4 do šířky nevejde.
+         Doklad je tu v plné velikosti a scrolluje se v obou osách, aby šel přečíst. -->
+    <Dialog v-model:open="fullPreviewOpen">
+      <DialogContent
+        class="flex h-[100dvh] w-screen max-w-none flex-col gap-0 rounded-none p-0 sm:h-[90vh] sm:max-w-4xl sm:rounded-lg"
+      >
+        <DialogHeader class="border-b border-border px-4 py-3 pr-14 text-left">
+          <DialogTitle class="text-base">Náhled faktury</DialogTitle>
+          <DialogDescription class="text-xs">
+            Doklad je ve skutečné velikosti — posunutím si prohlédnete celou stranu.
+          </DialogDescription>
+        </DialogHeader>
+        <div class="min-h-0 flex-1 overflow-auto bg-muted/30 p-4">
+          <InvoiceDocument v-if="fullPreviewOpen" v-bind="documentProps" />
+        </div>
+      </DialogContent>
+    </Dialog>
+
     <!-- Skrytý off-screen render dokumentu pro PDF export (vždy v DOM kvůli QR). -->
     <div ref="pdfDocEl" aria-hidden="true" style="position: fixed; left: -10000px; top: 0">
-      <InvoiceDocument
-        :supplier="supplierSnapshot"
-        :client="clientSnapshot"
-        :items="previewItems"
-        :invoice-number="invoiceNumber"
-        :issue-date="issueDate"
-        :due-date="dueDate"
-        :taxable-date="issueDate"
-        :variable-symbol="variableSymbolDisplay"
-        :payment-method="paymentMethod"
-      />
+      <InvoiceDocument v-bind="documentProps" />
     </div>
   </div>
 </template>

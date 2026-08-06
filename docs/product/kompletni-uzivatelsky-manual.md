@@ -586,6 +586,8 @@ Každý odeslaný doklad má stejný přehledný vzhled Vystaveno.cz: název, ob
 
 Na telefonu zůstává součet a akce Uložit koncept dole na obrazovce i při dlouhém seznamu položek. Koncept uložte před návratem nebo odesláním.
 
+Náhled faktury je na telefonu zmenšený tak, aby byl vidět celý doklad. Klepnutím na něj fakturu otevřete přes celou obrazovku ve skutečné velikosti; posunutím si prohlédnete celou stranu a křížkem náhled zavřete.
+
 Pokud nový dosud neuložený doklad obnovíte v tomtéž prohlížeči, nabídne se rozepsaný koncept k výslovnému obnovení nebo zahození. Obnova sama nevytváří fakturu; vytvoří se až akcí Uložit koncept.
 
 Když se při odeslání zobrazí informace o nedostupném e-mailu, jde o nastavení serveru, ne o smazání dokladu. Doklad zůstane uložený; správce musí doplnit SMTP údaje. Do té doby stáhněte PDF a odešlete jej ze svého e-mailu.
