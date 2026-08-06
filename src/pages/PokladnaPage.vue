@@ -197,10 +197,10 @@ const earnedPointsPreview = computed(() => {
   if (!selectedCustomer.value || rate <= 0) return 0
   return Math.max(0, Math.floor((checkoutTotal.value - clampAmount(tipAmount.value)) / rate))
 })
-const pricingReady = computed(
-  () =>
-    !apiMode || !loyaltyEnabled.value || (!pricePreviewLoading.value && !pricePreviewError.value),
-)
+// Pozn.: náhled ceny je jen informace pro obsluhu — účtovanou cenu autoritativně počítá server při
+// prodeji. Tlačítko „Zaplatit“ se proto blokuje jen po dobu načítání (`pricePreviewLoading`);
+// SELHÁNÍ náhledu (403 i výpadek sítě) platbu nezastaví, jen se na něj upozorní (warnIfPreviewFailed).
+// Dřív tu byl `pricingReady`, který při síťové chybě platbu blokoval → na slabé síti nešlo prodávat.
 const priceLevelAdjustment = computed(() =>
   pricePreview.value
     ? round2(pricePreview.value.subtotalOriginal - pricePreview.value.subtotalAfterPriceLevel)
@@ -446,25 +446,31 @@ watch(
 // --- Jednotný platební dialog (hotově s výpočtem vrácení / karta přes terminálový krok) ---
 const paymentOpen = ref(false)
 
+// Náhled ceny selhal → platbu NEZASTAVUJEME (server cenu spočítá sám), jen obsluhu upozorníme,
+// že zobrazený součet nemusí obsahovat probíhající akci. Tichý rozdíl by byl horší než varování.
+function warnIfPreviewFailed(): void {
+  if (pricePreviewError.value) {
+    toast.warning('Náhled akcí se nenačetl. Konečnou cenu spočítá server — může být nižší.')
+  }
+}
+
 async function openPaymentDialog() {
   if (!cart.value.length || paying.value) return
   await refreshPricePreview()
-  if (!pricingReady.value) {
-    toast.error('Výslednou cenu se nepodařilo ověřit. Zkuste platbu znovu.')
-    return
-  }
+  warnIfPreviewFailed()
   paymentOpen.value = true
 }
 
 async function confirmPayment(payment: { method: PaymentMethod; cashReceived: number | null }) {
   await refreshPricePreview()
-  if (!pricingReady.value) {
-    toast.error('Výslednou cenu se nepodařilo ověřit. Zkuste platbu znovu.')
-    return
-  }
   const ok = await pay(payment.method, payment.cashReceived)
   if (ok) paymentOpen.value = false // při chybě zůstává otevřený, obsluha může zkusit znovu
 }
+
+// Klíč posledního NEDOKONČENÉHO pokusu o zaplacení. Retry po timeoutu/výpadku sítě pošle stejný klíč,
+// takže server vrátí původní účtenku místo druhého naúčtování; jakákoli změna košíku dá klíč nový.
+// Stejný mechanismus jako mobilní pokladna (PosScreenModel.checkout).
+let pendingCheckout: { key: string; payload: string } | null = null
 
 async function pay(method: PaymentMethod, cashReceived: number | null = null): Promise<boolean> {
   if (!cart.value.length || paying.value) return false
@@ -482,7 +488,7 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
     // Kč hodnota slevy na účet nejde odvodit ze Sale response (ta nese jen totaly PO slevě),
     // proto se bere z FE snapshotu před odesláním — jen pro zobrazení na účtence.
     const discountAmountSnapshot = receiptDiscountAmount()
-    const sale = await sales.create(method, items, {
+    const options = {
       discountPercent: clampPercent(accountDiscountPercent.value),
       tipAmount: clampAmount(tipAmount.value),
       locationId: currentLocationId.value || null,
@@ -490,7 +496,13 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
       priceLevelId: activePriceLevelId.value,
       customerId: activeCustomerId.value,
       redeemPoints: appliedRedeemPoints.value,
-    })
+    }
+    const payload = JSON.stringify({ method, items, options })
+    const idempotencyKey =
+      pendingCheckout?.payload === payload ? pendingCheckout.key : crypto.randomUUID()
+    pendingCheckout = { key: idempotencyKey, payload }
+    const sale = await sales.create(method, items, { ...options, idempotencyKey })
+    pendingCheckout = null
     const receiptLines = sale.items?.length
       ? sale.items.map((item) => ({
           name: [item.description ?? 'Položka', item.variantName].filter(Boolean).join(' · '),

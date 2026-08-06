@@ -42,6 +42,7 @@ JWT_SECRET=<min. 32 znaků>         # vygeneruj: openssl rand -base64 32
 DB_PASSWORD=<silné heslo DB>
 STRIPE_SECRET_KEY=<produkční Stripe secret>
 INTEGRATIONS_SECRET_ENCRYPTION_KEY=<32B base64> # vygeneruj: openssl rand -base64 32
+AUTH_PIN_LOOKUP_KEY=<32B base64>   # vygeneruj: openssl rand -base64 32 — jen když používáte PINy na pokladně
 PAYMENTS_PORTAL_BASE_URL=https://fakturace.example.com
 # SMTP: použij údaje svého poskytovatele (např. Resend, Postmark, Mailgun nebo vlastní doménový SMTP).
 EMAIL_HOST=smtp.example.com
@@ -53,6 +54,7 @@ EMAIL_PASSWORD=<SMTP heslo nebo API klíč>
 
 `JWT_SECRET`, `DB_PASSWORD`, `STRIPE_SECRET_KEY`, `INTEGRATIONS_SECRET_ENCRYPTION_KEY` a `EMAIL_PASSWORD` jsou **server-only secrety** — nikdy do gitu ani do frontend buildu. `EMAIL_FROM` musí být odesílací adresa/doména ověřená u daného e-mailového poskytovatele.
 `INTEGRATIONS_SECRET_ENCRYPTION_KEY` šifruje credential vault pro platební providery i ověřené podpisy; v API se mapuje na `Integrations__SecretEncryptionKey`. Bez něj backend bezpečně odmítne ukládání credentialů (`503`).
+`AUTH_PIN_LOOKUP_KEY` (v API `Auth__PinLookupKey`) je slepý index, kterým backend najde vlastníka PINu v rámci firmy. Bez něj je celá PIN vrstva fail-closed `503`: nejde nastavit PIN členovi týmu, přihlásit se PINem ani použít **manažerský override** u storna a slevy nad limit obsluhy. Je volitelný — nepoužíváte-li PINy, nechte ho prázdný. **Jakmile ho jednou nastavíte, už ho neměňte**: změnou se uložené PINy stanou nedohledatelnými a musely by se nastavit znovu.
 `PAYMENTS_PORTAL_BASE_URL` je veřejná HTTPS adresa aplikace bez lomítka na konci; API ji používá pro návrat zákazníka z online platby faktury. Na běžném VPS nasazení nastav stejnou hodnotu jako `https://$DOMAIN`.
 
 ## 4. Spuštění
@@ -130,13 +132,14 @@ Poznámky:
 
 ## Časté problémy
 
-| Příznak                                         | Příčina                                                                | Řešení                                                                   |
-| ----------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Caddy nezíská cert (TLS chyba)                  | DNS nemíří na VPS / port 80 zavřený                                    | Zkontroluj A záznam a firewall (80+443); `docker compose ... logs caddy` |
-| `/health/ready` → 503                           | DB nedostupná / špatné `DB_PASSWORD`                                   | Zkontroluj `.env` a `logs db`                                            |
-| API spadne hned po startu                       | chybí `JWT_SECRET`, `DB_PASSWORD` nebo `STRIPE_SECRET_KEY` (fail-fast) | Doplň `.env`, `up -d`                                                    |
-| Uložení credentialů providera/podpisů vrací 503 | chybí/neplatný `INTEGRATIONS_SECRET_ENCRYPTION_KEY`                    | Vygeneruj 32B base64 klíč, doplň `.env`, redeploy API                    |
-| Online checkout faktury vrací 500               | chybí `PAYMENTS_PORTAL_BASE_URL`                                       | Nastav veřejnou URL aplikace, např. `https://vystaveno.cz`, redeploy API |
-| `!reset` v compose hlásí chybu                  | stará Compose verze                                                    | Upgrade Docker Compose na ≥ 2.24.4                                       |
-| `web` build bere špatnou API URL                | cache                                                                  | `up -d --build --force-recreate` (build arg `VITE_API_URL=/api/v1`)      |
-| Health hlásí starou zálohu                      | backup neproběhl déle než 30 hodin                                     | zkontroluj `logs/backup.log`, spusť backup ručně a ověř restore          |
+| Příznak                                                         | Příčina                                                                | Řešení                                                                   |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Caddy nezíská cert (TLS chyba)                                  | DNS nemíří na VPS / port 80 zavřený                                    | Zkontroluj A záznam a firewall (80+443); `docker compose ... logs caddy` |
+| `/health/ready` → 503                                           | DB nedostupná / špatné `DB_PASSWORD`                                   | Zkontroluj `.env` a `logs db`                                            |
+| API spadne hned po startu                                       | chybí `JWT_SECRET`, `DB_PASSWORD` nebo `STRIPE_SECRET_KEY` (fail-fast) | Doplň `.env`, `up -d`                                                    |
+| Uložení credentialů providera/podpisů vrací 503                 | chybí/neplatný `INTEGRATIONS_SECRET_ENCRYPTION_KEY`                    | Vygeneruj 32B base64 klíč, doplň `.env`, redeploy API                    |
+| Nastavení PINu / PIN přihlášení / manažerský override vrací 503 | chybí `AUTH_PIN_LOOKUP_KEY`                                            | Vygeneruj 32B base64 klíč, doplň `.env`, redeploy API. Pak už ho neměň.  |
+| Online checkout faktury vrací 500                               | chybí `PAYMENTS_PORTAL_BASE_URL`                                       | Nastav veřejnou URL aplikace, např. `https://vystaveno.cz`, redeploy API |
+| `!reset` v compose hlásí chybu                                  | stará Compose verze                                                    | Upgrade Docker Compose na ≥ 2.24.4                                       |
+| `web` build bere špatnou API URL                                | cache                                                                  | `up -d --build --force-recreate` (build arg `VITE_API_URL=/api/v1`)      |
+| Health hlásí starou zálohu                                      | backup neproběhl déle než 30 hodin                                     | zkontroluj `logs/backup.log`, spusť backup ručně a ověř restore          |

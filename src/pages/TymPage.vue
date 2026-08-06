@@ -159,7 +159,9 @@ async function submitStaff(): Promise<void> {
     })
     staffOpen.value = false
     staffForm.displayName = ''
-    toast.success('Pracovník založen. Nastavte mu PIN, ať se může přihlásit na pokladně.')
+    // Nesmí slibovat přihlášení PINem — obrazovka pro přihlášení PINem zatím není ani ve webové
+    // pokladně, ani v mobilní aplikaci. Pracovník bez e-mailu se tedy sám nikam nepřihlásí.
+    toast.success('Pracovník založen. Zatím se ale sám nepřihlásí — potřebuje účet s e-mailem.')
     await load()
   } catch (e) {
     if (e instanceof ApiError && e.status === 422) toast.error('Zkontrolujte jméno a roli.')
@@ -359,7 +361,7 @@ onMounted(() => load())
                 >
               </p>
               <p class="mt-0.5 text-sm text-muted-foreground">
-                {{ member.email ?? 'Bez e-mailu — přihlašuje se jen PINem' }}
+                {{ member.email ?? 'Bez e-mailu — zatím se nemůže sám přihlásit' }}
               </p>
               <p class="mt-0.5 text-xs text-muted-foreground">
                 {{ locationName(member.locationId) }}
@@ -508,8 +510,9 @@ onMounted(() => load())
         <DialogHeader>
           <DialogTitle>Pracovník bez e-mailu</DialogTitle>
           <DialogDescription>
-            Provozní pracovník se přihlašuje jen PINem na pokladně — PIN mu nastavíte hned po
-            založení.
+            Zavedete pracovníka do týmu (role, pobočka, limit slevy) bez zakládání e-mailového účtu.
+            <strong>Přihlášení PINem na pokladně zatím není hotové</strong> — kdo se má sám
+            přihlašovat, potřebuje pozvánku na e-mail.
           </DialogDescription>
         </DialogHeader>
         <form class="space-y-3" @submit.prevent="submitStaff">
@@ -615,8 +618,10 @@ onMounted(() => load())
         <DialogHeader>
           <DialogTitle>{{ pinTarget?.hasPin ? 'Změnit PIN' : 'Nastavit PIN' }}</DialogTitle>
           <DialogDescription>
-            {{ pinTarget?.displayName }} — PIN slouží k rychlému přihlášení a přepnutí obsluhy na
-            pokladně. Nikde se neukládá v čitelné podobě.
+            {{ pinTarget?.displayName }} — PIN dnes slouží k
+            <strong>schválení rizikové akce</strong>
+            (storno, sleva nad limit), kde ho nadřízený zadá na zařízení obsluhy. Rychlé přepnutí
+            obsluhy PINem na pokladně zatím není hotové. Nikde se neukládá v čitelné podobě.
           </DialogDescription>
         </DialogHeader>
         <form class="space-y-3" @submit.prevent="submitPin">

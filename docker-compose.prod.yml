@@ -2,6 +2,7 @@
 # Spuštění na VPS (z adresáře vystavenocz, vedle sousedního ../vystaveno-api):
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 # Vyžaduje .env (gitignored) s: DOMAIN, ACME_EMAIL, JWT_SECRET, DB_PASSWORD, STRIPE_SECRET_KEY, INTEGRATIONS_SECRET_ENCRYPTION_KEY, PAYMENTS_PORTAL_BASE_URL.
+# Pro PINy obsluhy na pokladně (PIN login + manažerský override) navíc AUTH_PIN_LOOKUP_KEY.
 # Pro skutečné e-maily navíc EMAIL_HOST, EMAIL_PORT, EMAIL_FROM, EMAIL_USERNAME a EMAIL_PASSWORD.
 # (viz docs/deployment-vps.md)
 # Pozn.: `!reset` vyžaduje Docker Compose >= 2.24.4.
