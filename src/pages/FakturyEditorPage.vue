@@ -382,18 +382,27 @@ async function persist(): Promise<void> {
   }
 
   if (editingId.value) {
-    syncFromSaved(await update(editingId.value, input, vatPayer.value))
-  } else {
-    const created = await create(input, vatPayer.value)
-    // Posuň pořadové číslo jen v mock režimu (vodítko pro předvyplnění příští faktury).
-    // V API režimu čísla vlastní server (přiděluje je při issue), klientský seq se nepoužívá.
-    const c = companyStore.company
-    // save() je async; mock-only fire-and-forget (seq je jen klientské vodítko).
-    if (!isApiMode() && c) void companyStore.save({ nextInvoiceSeq: (c.nextInvoiceSeq || 1) + 1 })
-    syncFromSaved(created)
-    // Převezmi id do URL, aby další uložení byla update (ne duplicitní faktura).
-    router.replace({ query: { id: created.id } })
+    try {
+      syncFromSaved(await update(editingId.value, input, vatPayer.value))
+      return
+    } catch (e) {
+      // Doklad mezitím někdo smazal (jiná záložka/terminál) → server nemá co upravit (404) a každé
+      // další uložení by selhalo napořád. Rozdělanou fakturu nezahazujeme — uložíme ji jako NOVOU.
+      if (!(e instanceof ApiError && e.status === 404)) throw e
+      editingId.value = null
+      toast.info('Původní doklad byl mezitím smazán — ukládáme ho znovu jako nový.')
+    }
   }
+
+  const created = await create(input, vatPayer.value)
+  // Posuň pořadové číslo jen v mock režimu (vodítko pro předvyplnění příští faktury).
+  // V API režimu čísla vlastní server (přiděluje je při issue), klientský seq se nepoužívá.
+  const c = companyStore.company
+  // save() je async; mock-only fire-and-forget (seq je jen klientské vodítko).
+  if (!isApiMode() && c) void companyStore.save({ nextInvoiceSeq: (c.nextInvoiceSeq || 1) + 1 })
+  syncFromSaved(created)
+  // Převezmi id do URL, aby další uložení byla update (ne duplicitní faktura).
+  router.replace({ query: { id: created.id } })
 }
 
 // Přeloží serverový konflikt stavu (409) na srozumitelnou hlášku; ostatní chyby ohlásí obecně.
