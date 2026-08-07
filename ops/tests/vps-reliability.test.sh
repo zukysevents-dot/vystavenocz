@@ -74,6 +74,16 @@ set -u
 
 printf '%s\n' "$*" >>"$FAKE_DOCKER_LOG"
 
+if [[ "${1:-}" == "info" ]]; then
+  printf '%s\n' "${FAKE_DOCKER_ROOT:-/tmp}"
+  exit 0
+fi
+
+if [[ "${1:-}" == "volume" ]]; then
+  printf '%s\n' 'fixture-volume'
+  exit 0
+fi
+
 if [[ "${1:-}" == "inspect" ]]; then
   case "${*: -1}" in
     *'.State.Running'*) printf '%s\n' 'false' ;;
@@ -120,6 +130,23 @@ if [[ "${1:-}" == "compose" ]]; then
         cat >/dev/null
       elif [[ "$*" == *"show server_version"* ]]; then
         printf '%s\n' '16.9'
+      elif [[ "$*" == *" pg_basebackup "* ]]; then
+        if [[ "${FAKE_DOCKER_MODE:-success}" == "basebackup-fail" ]]; then
+          exit 45
+        fi
+        printf '%s\n' 'fixture-postgresql-basebackup'
+      elif [[ "$*" == *"to_char(now()"* ]]; then
+        printf '%s\n' '2026-07-11 12:00:00'
+      elif [[ "$*" == *"pg_switch_wal"* ]]; then
+        printf '%s\n' '0/3000000'
+      elif [[ "$*" == *"last_archived_time >"* ]]; then
+        printf '%s\n' "${FAKE_WAL_ARCHIVED:-t}"
+      elif [[ "$*" == *"pg_stat_archiver"* ]]; then
+        printf '%s\n' "${FAKE_ARCHIVER_STATUS:-ok|12}"
+      elif [[ "$*" == *"pg_ls_waldir"* ]]; then
+        printf '%s\n' "${FAKE_WAL_DIR_BYTES:-1048576}"
+      elif [[ "$*" == *"pg_stat_replication"* ]]; then
+        printf '%s\n' "${FAKE_REPLICATION:-1|1024}"
       else
         exit 64
       fi
@@ -151,7 +178,11 @@ if [[ "${1:-}" == "run" ]]; then
     exit 65
   fi
 
-  if [[ "$*" == *"tar -tzf /backup/api-files.tar.gz"* ]]; then
+  if [[ "$*" == *"tar -tzf /backup/api-files.tar.gz"* || "$*" == *"tar -tzf /backup/basebackup.tar.gz"* ]]; then
+    exit 0
+  fi
+
+  if [[ "$*" == *"tar -C /target -xzf /backup/basebackup.tar.gz"* ]]; then
     exit 0
   fi
 
@@ -162,6 +193,10 @@ if [[ "${1:-}" == "run" ]]; then
 fi
 
 if [[ "${1:-}" == "exec" ]]; then
+  if [[ "$*" == *"pg_is_in_recovery"* ]]; then
+    printf '%s\n' "${FAKE_PITR_IN_RECOVERY:-f}"
+    exit 0
+  fi
   if [[ "$*" == *" pg_isready "* || "$*" == *" createdb "* ]]; then
     exit 0
   fi
@@ -218,9 +253,12 @@ run_backup() {
   local curl_mode="${3:-success}"
   local flock_failure="${4:-0}"
   local mirror_dir="${5:-}"
+  local wal_archived="${6:-t}"
   local backup_root="$TMP_DIR/home/backups/vystaveno/automatic"
+  mkdir -p "$TMP_DIR/home/backups/vystaveno/wal-archive"
   env -i \
     HOME="$TMP_DIR/home" \
+    FAKE_WAL_ARCHIVED="$wal_archived" \
     PATH="$FAKE_BIN:$PATH" \
     TMPDIR="$TMP_DIR" \
     FAKE_DOCKER_LOG="$DOCKER_LOG" \
@@ -259,22 +297,57 @@ run_health() {
     VYSTAVENO_PROJECT_DIR="$PROJECT_FIXTURE" \
     VYSTAVENO_OPS_ENV="$OPS_ENV_FIXTURE" \
     VYSTAVENO_HEALTH_CHECK_COMPOSE=0 \
+    VYSTAVENO_MIN_DISK_FREE_PERCENT=0 \
     bash "$OPS_DIR/vps-health-check.sh"
 }
 
 run_verify() {
+  local in_recovery="${1:-f}"
   local backup_root="$TMP_DIR/home/backups/vystaveno/automatic"
   local timestamp_dir="$backup_root/20260711T120000Z"
   rm -rf "$backup_root"
-  mkdir -p "$timestamp_dir"
+  mkdir -p "$timestamp_dir" "$TMP_DIR/home/backups/vystaveno/wal-archive"
   printf '%s\n' dump >"$timestamp_dir/database.dump"
   printf '%s\n' files >"$timestamp_dir/api-files.tar.gz"
-  printf '%s\n' BACKUP_FORMAT_VERSION=1 >"$timestamp_dir/manifest.env"
-  (cd "$timestamp_dir" && sha256sum database.dump api-files.tar.gz manifest.env >SHA256SUMS)
+  printf '%s\n' base >"$timestamp_dir/basebackup.tar.gz"
+  printf 'BACKUP_FORMAT_VERSION=2\nPITR_TARGET_UTC=2026-07-11 12:00:00\n' >"$timestamp_dir/manifest.env"
+  (cd "$timestamp_dir" && sha256sum database.dump api-files.tar.gz basebackup.tar.gz manifest.env >SHA256SUMS)
   ln -s "$(basename "$timestamp_dir")" "$backup_root/latest"
   env -i HOME="$TMP_DIR/home" PATH="$FAKE_BIN:$PATH" TMPDIR="$TMP_DIR" \
-    FAKE_DOCKER_LOG="$DOCKER_LOG" VYSTAVENO_PROJECT_DIR="$PROJECT_FIXTURE" \
+    FAKE_DOCKER_LOG="$DOCKER_LOG" FAKE_PITR_IN_RECOVERY="$in_recovery" \
+    VYSTAVENO_PROJECT_DIR="$PROJECT_FIXTURE" \
     VYSTAVENO_OPS_ENV="$OPS_ENV_FIXTURE" bash "$OPS_DIR/vps-verify-backup.sh"
+}
+
+# Health se zapnutými kontrolami databáze (archivace WAL, velikost pg_wal, replikační zpoždění).
+run_health_db() {
+  local archiver="${1:-ok|12}"
+  local wal_bytes="${2:-1048576}"
+  local replication="${3:-1|1024}"
+  local replica_enabled="${4:-1}"
+  local backup_root="$TMP_DIR/home/backups/vystaveno/automatic"
+  local timestamp_dir="$backup_root/20260711T120000Z"
+  rm -rf "$backup_root"
+  mkdir -p "$timestamp_dir" "$TMP_DIR/home/backups/vystaveno/wal-archive"
+  printf '%s\n' 'BACKUP_FORMAT_VERSION=2' >"$timestamp_dir/manifest.env"
+  ln -s "$(basename "$timestamp_dir")" "$backup_root/latest"
+  printf 'COMPLETED_AT_EPOCH=%s\n' "$(date +%s)" >"$backup_root/.last-restore-check"
+  env -i \
+    HOME="$TMP_DIR/home" \
+    PATH="$FAKE_BIN:$PATH" \
+    TMPDIR="$TMP_DIR" \
+    FAKE_CURL_LOG="$CURL_LOG" \
+    FAKE_DOCKER_LOG="$DOCKER_LOG" \
+    FAKE_CURL_MODE=success \
+    FAKE_DOCKER_ROOT="$TMP_DIR" \
+    FAKE_ARCHIVER_STATUS="$archiver" \
+    FAKE_WAL_DIR_BYTES="$wal_bytes" \
+    FAKE_REPLICATION="$replication" \
+    VYSTAVENO_PROJECT_DIR="$PROJECT_FIXTURE" \
+    VYSTAVENO_OPS_ENV="$OPS_ENV_FIXTURE" \
+    VYSTAVENO_REPLICA_ENABLED="$replica_enabled" \
+    VYSTAVENO_MIN_DISK_FREE_PERCENT=0 \
+    bash "$OPS_DIR/vps-health-check.sh"
 }
 
 test_backup_success() {
@@ -303,6 +376,24 @@ test_backup_success() {
   ! find "$backup_root" -maxdepth 1 -type d -name '.partial-*' | grep -q . || fail "successful backup left a partial directory"
   assert_count 1 ' stop -t 30 api' "$DOCKER_LOG"
   assert_count 1 ' start api' "$DOCKER_LOG"
+
+  # PITR: fyzická base záloha + zafixovaný cíl obnovy. Bez obojího by šlo obnovit jen na noční snapshot.
+  assert_file "$final_dir/basebackup.tar.gz"
+  assert_contains "$final_dir/manifest.env" 'PITR_TARGET_UTC=2026-07-11 12:00:00'
+  assert_contains "$DOCKER_LOG" 'pg_basebackup'
+  assert_contains "$DOCKER_LOG" 'pg_switch_wal'
+}
+
+test_backup_requires_archived_wal() {
+  local backup_root="$TMP_DIR/home/backups/vystaveno/automatic"
+  rm -rf "$backup_root"
+  : >"$DOCKER_LOG"
+
+  if run_backup 0 success success 0 '' f >"$TMP_DIR/wal-failure.out" 2>&1; then
+    fail "backup unexpectedly succeeded when WAL was not archived"
+  fi
+  assert_contains "$TMP_DIR/wal-failure.out" 'WAL se nedoarchivoval'
+  [[ ! -e "$backup_root/20260711T120000Z" ]] || fail "unarchived WAL published a backup"
 }
 
 test_backup_archive_failure() {
@@ -443,6 +534,64 @@ test_restore_check_records_success() {
   assert_contains "$DOCKER_LOG" '--memory 1536m'
 }
 
+test_restore_check_recovers_to_target_time() {
+  local stamp="$TMP_DIR/home/backups/vystaveno/automatic/.last-restore-check"
+  : >"$DOCKER_LOG"
+  if ! run_verify >"$TMP_DIR/pitr-success.out" 2>&1; then
+    cat "$TMP_DIR/pitr-success.out" >&2
+    fail "PITR restore-check scenario failed"
+  fi
+  assert_contains "$TMP_DIR/pitr-success.out" 'Obnova na konkrétní čas prošla'
+  assert_contains "$stamp" 'PITR_VERIFIED_TARGET=2026-07-11 12:00:00'
+  # Obnova musí běžet z fyzické base zálohy a číst WAL archiv jen pro čtení.
+  assert_contains "$DOCKER_LOG" 'tar -C /target -xzf /backup/basebackup.tar.gz'
+  assert_contains "$DOCKER_LOG" '/var/lib/vystaveno/wal-archive:ro'
+}
+
+test_restore_check_fails_without_promote() {
+  : >"$DOCKER_LOG"
+  if run_verify t >"$TMP_DIR/pitr-stuck.out" 2>&1; then
+    fail "restore-check unexpectedly passed while recovery never promoted"
+  fi
+  assert_contains "$TMP_DIR/pitr-stuck.out" 'nedoběhla do povýšení clusteru'
+  [[ ! -f "$TMP_DIR/home/backups/vystaveno/automatic/.last-restore-check" ]] ||
+    fail "failed PITR check recorded a successful restore marker"
+}
+
+test_health_reports_wal_and_replication() {
+  if ! run_health_db >"$TMP_DIR/health-db.out" 2>&1; then
+    cat "$TMP_DIR/health-db.out" >&2
+    fail "health with database checks failed"
+  fi
+  assert_contains "$TMP_DIR/health-db.out" 'Replika je připojená, replikační zpoždění 1024 B'
+
+  if run_health_db 'failing|12' >"$TMP_DIR/health-archiver.out" 2>&1; then
+    fail "health unexpectedly passed while WAL archiving was failing"
+  fi
+  assert_contains "$TMP_DIR/health-archiver.out" 'Archivace WAL selhává'
+
+  if run_health_db 'ok|12' 9999999999 >"$TMP_DIR/health-walsize.out" 2>&1; then
+    fail "health unexpectedly passed while pg_wal was over the limit"
+  fi
+  assert_contains "$TMP_DIR/health-walsize.out" 'Adresář pg_wal narostl nad limit'
+
+  if run_health_db 'ok|12' 1048576 '0|0' >"$TMP_DIR/health-replica.out" 2>&1; then
+    fail "health unexpectedly passed without a connected replica"
+  fi
+  assert_contains "$TMP_DIR/health-replica.out" 'Hot standby replika není připojená'
+
+  if run_health_db 'ok|12' 1048576 '1|999999999' >"$TMP_DIR/health-lag.out" 2>&1; then
+    fail "health unexpectedly passed with replication lag over the limit"
+  fi
+  assert_contains "$TMP_DIR/health-lag.out" 'Replikační zpoždění překročilo limit'
+
+  # Bez repliky se replikace nehlídá — jinak by každá instalace bez standby hlásila chybu.
+  if ! run_health_db 'ok|12' 1048576 '0|0' 0 >"$TMP_DIR/health-noreplica.out" 2>&1; then
+    cat "$TMP_DIR/health-noreplica.out" >&2
+    fail "health failed on an installation without a replica"
+  fi
+}
+
 test_health_requires_restore_check() {
   if run_health success 0 >"$TMP_DIR/health-no-restore.out" 2>&1; then
     fail "health unexpectedly passed without restore-check marker"
@@ -452,6 +601,8 @@ test_health_requires_restore_check() {
 
 test_backup_success
 printf 'ok - successful backup is complete and atomic\n'
+test_backup_requires_archived_wal
+printf 'ok - backup without archived WAL is not published\n'
 test_backup_archive_failure
 printf 'ok - archive failure restarts API and is not published\n'
 test_backup_mirror_copy
@@ -468,6 +619,12 @@ test_config_is_not_executed
 printf 'ok - ops config is parsed, never executed\n'
 test_restore_check_records_success
 printf 'ok - isolated restore-check records monitored success\n'
+test_restore_check_recovers_to_target_time
+printf 'ok - restore-check proves recovery to a concrete point in time\n'
+test_restore_check_fails_without_promote
+printf 'ok - restore-check fails when recovery never reaches the target\n'
+test_health_reports_wal_and_replication
+printf 'ok - health reports WAL archiving, pg_wal size and replication lag\n'
 test_health_success
 printf 'ok - health check success\n'
 test_health_failure
