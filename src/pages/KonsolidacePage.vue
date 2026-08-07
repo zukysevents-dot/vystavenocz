@@ -49,7 +49,7 @@ async function reload(): Promise<void> {
   loading.value = true
   loadError.value = false
   try {
-    await Promise.all([loadLocations(), salesApi.listAll().then((s) => (sales.value = s))])
+    await Promise.all([loadLocations(), salesApi.list().then((s) => (sales.value = s))])
     await loadOperationalComparison()
   } catch (e) {
     console.warn('Načtení dat konsolidace selhalo:', e)

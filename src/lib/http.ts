@@ -81,6 +81,18 @@ export function logUnlessForbidden(e: unknown): void {
 }
 
 /**
+ * Uživatelská hláška pod „Obsah se nepodařilo načíst" (komponenta `LoadError`). Chybějící oprávnění
+ * je nutné odlišit od výpadku sítě — jinak role bez přístupu čte „zkontrolujte připojení" a marně
+ * hledá chybu u sebe. Prázdný řetězec = nech výchozí hlášku o připojení.
+ */
+export function loadErrorMessage(e: unknown): string {
+  if (e instanceof ApiError && e.status === 403) {
+    return 'Na tuto část nemáte oprávnění. Požádejte správce firmy o přístup.'
+  }
+  return ''
+}
+
+/**
  * Uživatelská hláška pro selhaný zápis. Bere jen srozumitelný `detail` z ProblemDetails
  * (backend ho píše česky); technické `title`/`HTTP 500` se do UI nikdy nedostane (viz CLAUDE.md §6).
  * Chyba bez odpovědi (offline, spadlý server) fallback doplní o připojení.

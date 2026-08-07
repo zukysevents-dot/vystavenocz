@@ -131,12 +131,15 @@ test('tým, nastavení firmy, moduly a předplatné', async ({ page }, testInfo)
   await go(page, '/app/nastaveni')
   await expect(page.getByRole('heading', { name: /Nastavení/ }).first()).toBeVisible()
   // Členové firmy a moduly — dosažitelnost z Nastavení (dokumentace; na mobilu jsou sekce skládané).
-  const clenove = await page
+  // Jen OBSAH stránky: `page.getByText` by na mobilu trefil odkazy ve složeném postranním menu
+  // a hlásil by rozdíl mezi desktopem a mobilem tam, kde žádný není.
+  const main = page.locator('main')
+  const clenove = await main
     .getByText(/Tým|Členové|Uživatelé|Oprávnění/)
     .first()
     .isVisible()
     .catch(() => false)
-  const moduly = await page
+  const moduly = await main
     .getByText(/Moduly|moduly/)
     .first()
     .isVisible()

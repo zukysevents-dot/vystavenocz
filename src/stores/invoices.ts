@@ -7,6 +7,8 @@ export const useInvoicesStore = defineStore('invoices', () => {
   const invoices = ref<Invoice[]>([])
   // True = poslední načtení selhalo (výpadek serveru) → UI ukáže chybu místo prázdna.
   const loadError = ref(false)
+  // Doplňující věta k chybě (např. chybějící oprávnění); prázdné = obecná hláška o připojení.
+  const loadErrorMessage = ref('')
 
-  return { invoices, loadError }
+  return { invoices, loadError, loadErrorMessage }
 })

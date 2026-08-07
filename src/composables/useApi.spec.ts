@@ -17,7 +17,7 @@ beforeEach(() => {
   localStorage.clear()
 })
 
-describe('useApi.listAll', () => {
+describe('useApi.list', () => {
   it('API režim: projde všechny stránky podle total a spojí je', async () => {
     vi.mocked(isApiMode).mockReturnValue(true)
     vi.mocked(http.get)
@@ -25,7 +25,7 @@ describe('useApi.listAll', () => {
       .mockResolvedValueOnce({ items: [{ id: '2' }], total: 250, page: 2, pageSize: 100 } as never)
       .mockResolvedValueOnce({ items: [{ id: '3' }], total: 250, page: 3, pageSize: 100 } as never)
 
-    const r = await useApi<{ id: string }>('sales').listAll()
+    const r = await useApi<{ id: string }>('sales').list()
 
     expect(http.get).toHaveBeenCalledTimes(3)
     expect(http.get).toHaveBeenNthCalledWith(1, '/sales?page=1&pageSize=100')
@@ -42,7 +42,7 @@ describe('useApi.listAll', () => {
       pageSize: 100,
     } as never)
 
-    const r = await useApi<{ id: string }>('sales').listAll()
+    const r = await useApi<{ id: string }>('sales').list()
 
     expect(http.get).toHaveBeenCalledTimes(1)
     expect(r.map((x) => x.id)).toEqual(['1', '2'])
@@ -58,16 +58,16 @@ describe('useApi.listAll', () => {
       pageSize: 100,
     } as never)
 
-    const r = await useApi<{ id: string }>('sales').listAll()
+    const r = await useApi<{ id: string }>('sales').list()
 
     expect(r.map((x) => x.id).sort()).toEqual(['1', '2'])
   })
 
-  it('mock režim: listAll čte vše z localStorage', async () => {
+  it('mock režim: list čte vše z localStorage', async () => {
     vi.mocked(isApiMode).mockReturnValue(false)
     localStorage.setItem('vystaveno:sales', JSON.stringify([{ id: 'a' }, { id: 'b' }]))
 
-    const r = await useApi<{ id: string }>('sales').listAll()
+    const r = await useApi<{ id: string }>('sales').list()
 
     expect(http.get).not.toHaveBeenCalled()
     expect(r.map((x) => x.id)).toEqual(['a', 'b'])
@@ -77,7 +77,7 @@ describe('useApi.listAll', () => {
     vi.mocked(isApiMode).mockReturnValue(true)
     vi.mocked(http.get).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 100 } as never)
 
-    const r = await useApi<{ id: string }>('sales').listAll()
+    const r = await useApi<{ id: string }>('sales').list()
 
     expect(http.get).toHaveBeenCalledTimes(1)
     expect(r).toEqual([])
@@ -91,7 +91,7 @@ describe('useApi.listAll', () => {
       async () => ({ items: [{ id: `id-${++n}` }], total: 6000, page: n, pageSize: 100 }) as never,
     )
 
-    const r = await useApi<{ id: string }>('sales').listAll()
+    const r = await useApi<{ id: string }>('sales').list()
 
     expect(http.get).toHaveBeenCalledTimes(50) // strop LIST_ALL_MAX_PAGES, ne ceil(6000/100)=60
     expect(warn).toHaveBeenCalledOnce()
