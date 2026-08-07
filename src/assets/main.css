@@ -221,9 +221,11 @@
 
   --due: #ffb020;
 
-  /* L 0.55: bílý text (badge „po splatnosti") musí i v dark theme splnit WCAG AA 4.5:1 (axe serious) */
-  --destructive: oklch(0.55 0.22 25);
-  --destructive-foreground: #ffffff;
+  /* Na tmavém podkladu slouží tahle barva i jako BARVA TEXTU (`text-destructive`), a tam měla
+     L 0.55 kontrast jen 3.4:1 (WCAG AA chce 4.5). Světlejší odstín + ink popředí — stejný vzor
+     jako `--success` v tmavém motivu; bílý text by na světlé červené kontrast ztratil. */
+  --destructive: oklch(0.72 0.19 25);
+  --destructive-foreground: #0a0411;
 
   --border: color-mix(in srgb, #d7b8ff 14%, transparent);
   --input: color-mix(in srgb, #d7b8ff 16%, transparent);

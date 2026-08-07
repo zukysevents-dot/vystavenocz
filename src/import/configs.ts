@@ -86,7 +86,7 @@ export const clientsConfig: ImportEntityConfig<ClientInput> = {
     const api = useClients()
     return {
       items: () => api.clients.value as (ClientInput & { id: string })[],
-      load: api.loadAll, // dedup musí vidět celý adresář, ne jen první stránku (import-klienti-produkty.md)
+      load: api.load, // dedup potřebuje celý adresář — `list()` stránkuje (import-klienti-produkty.md)
       create: (input) => api.create(input),
       update: (id, input) => api.update(id, input),
       remove: api.remove,
@@ -142,7 +142,7 @@ export const productsConfig: ImportEntityConfig<ProductInput> = {
     const api = useProducts()
     return {
       items: () => api.products.value as (ProductInput & { id: string })[],
-      load: api.loadAll, // dedup musí vidět celý katalog, ne jen první stránku (import-klienti-produkty.md)
+      load: api.load, // dedup potřebuje celý katalog — `list()` stránkuje (import-klienti-produkty.md)
       create: (input) => api.create(input),
       update: (id, input) => api.update(id, input),
       remove: api.remove,

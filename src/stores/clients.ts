@@ -7,6 +7,8 @@ export const useClientsStore = defineStore('clients', () => {
   const clients = ref<Client[]>([])
   // True = poslední načtení selhalo (výpadek serveru) → UI ukáže chybu místo prázdna.
   const loadError = ref(false)
+  // Doplňující věta k chybě (např. chybějící oprávnění); prázdné = obecná hláška o připojení.
+  const loadErrorMessage = ref('')
 
-  return { clients, loadError }
+  return { clients, loadError, loadErrorMessage }
 })

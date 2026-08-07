@@ -1,5 +1,6 @@
 import { storeToRefs } from 'pinia'
 import { useApi } from '@/composables/useApi'
+import { loadErrorMessage } from '@/lib/http'
 import { useClientsStore } from '@/stores/clients'
 import type { Client } from '@/lib/types'
 
@@ -9,28 +10,18 @@ export type ClientInput = Omit<Client, 'id' | 'createdAt' | 'updatedAt'>
 
 export function useClients() {
   const store = useClientsStore()
-  const { clients, loadError } = storeToRefs(store)
+  const { clients, loadError, loadErrorMessage: loadErrorText } = storeToRefs(store)
 
   async function load(): Promise<void> {
     store.loadError = false
+    store.loadErrorMessage = ''
     try {
       store.clients = await api.list()
     } catch (e) {
       console.warn('Načtení klientů selhalo:', e)
       store.clients = []
       store.loadError = true
-    }
-  }
-
-  // Všechny stránky (strop LIST_ALL_MAX) — import potřebuje pro dedup vidět CELÝ adresář, ne jen prvních 100.
-  async function loadAll(): Promise<void> {
-    store.loadError = false
-    try {
-      store.clients = await api.listAll()
-    } catch (e) {
-      console.warn('Načtení klientů selhalo:', e)
-      store.clients = []
-      store.loadError = true
+      store.loadErrorMessage = loadErrorMessage(e)
     }
   }
 
@@ -59,5 +50,5 @@ export function useClients() {
     return store.clients.find((c) => c.id === id) ?? null
   }
 
-  return { clients, loadError, load, loadAll, create, update, remove, getById }
+  return { clients, loadError, loadErrorText, load, create, update, remove, getById }
 }

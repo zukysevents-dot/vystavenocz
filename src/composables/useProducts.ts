@@ -21,16 +21,6 @@ export function useProducts() {
     }
   }
 
-  // Všechny stránky (strop LIST_ALL_MAX) — import potřebuje pro dedup vidět CELÝ katalog, ne jen prvních 100.
-  async function loadAll(): Promise<void> {
-    try {
-      store.products = await api.listAll()
-    } catch (e) {
-      console.warn('Načtení produktů selhalo:', e)
-      store.products = []
-    }
-  }
-
   async function create(input: ProductInput): Promise<Product> {
     // V API módu vrací server entitu se SERVEROVÝM id — to je zdroj pravdy (POS na něj odkazuje).
     const created = await api.create({ ...input, id: crypto.randomUUID() } as Product)
@@ -50,5 +40,5 @@ export function useProducts() {
     store.products = store.products.filter((p) => p.id !== id)
   }
 
-  return { products, load, loadAll, create, update, remove }
+  return { products, load, create, update, remove }
 }
