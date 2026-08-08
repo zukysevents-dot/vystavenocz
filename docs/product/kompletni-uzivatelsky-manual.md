@@ -329,7 +329,26 @@ Pokud není platební terminál přímo propojen, Vystaveno samo peníze nestrhn
 
 Před platbou upravte košík. Po dokončení prodeje postupujte podle pravidel firmy pro storno nebo opravu; nevytvářejte duplicitní prodej jen kvůli opravě účtenky.
 
-### 6.4 Výpis a export účtenek
+### 6.4 Prodej bez připojení (offline)
+
+Když vypadne síť, pokladna se nezastaví. Nahoře se objeví červené upozornění „Bez připojení — účtujete offline" a s ním čas, ze kterého je uložený ceník.
+
+Co v tu chvíli platí:
+
+- **Přijímáte jen hotovost.** Platba kartou i věrnostní body jsou nedostupné a aplikace to řekne předem, ne až u terminálu.
+- **Účtenka je „doklad k doúčtování".** Vytiskne se s výrazným rámečkem a větou, že prodej ještě není v systému. Nikdy netvrdí, že je odesláno.
+- **Prodeje čekají ve frontě.** Její počet vidíte na pokladně. Fronta i ceník přežijí vypnutí a znovuzapnutí zařízení i tvrdé obnovení stránky.
+- **Po obnovení sítě se všechno odešle samo**, jeden prodej po druhém. Můžete to uspíšit tlačítkem `Odeslat teď`.
+
+Po odeslání konečnou cenu spočítá server. Pokud se liší od částky vytištěné offline (akce, cenová hladina), aplikace rozdíl **ukáže** — nezamlčí ho.
+
+Když server prodej odmítne (typicky proto, že se den mezitím uzavřel), účtenka **nezmizí**. Zůstane ve frontě s vysvětlením a čeká na rozhodnutí vedoucího.
+
+**Uzávěrku nejde zavřít, dokud fronta není prázdná.** Kdyby to šlo, hotovost z offline provozu by chyběla v Z-reportu.
+
+Offline funguje jen jednoduchý prodej z pokladny. Účty u stolů, QR objednávky, storno ani uzávěrka bez sítě nefungují.
+
+### 6.5 Výpis a export účtenek
 
 Vpravo nahoře otevřete `Tržby`. Vidíte dnešní souhrn a historii účtenek. Pro kontrolu nebo předání účetní vyberte datum od/do a způsob platby, zvolte `Použít filtr` a pak `Export CSV`. Soubor obsahuje právě vybraný výřez včetně stornovaných účtenek, základu DPH, DPH, celku, spropitného a slevy na účet. Pokud je výběr příliš velký nebo se historie během exportu změní, soubor se raději nevytvoří — upravte období nebo export zopakujte.
 

@@ -22,6 +22,8 @@ export interface ReceiptInfo {
   cashChange?: number
   loyaltyEarnedPoints?: number
   loyaltyRedeemedPoints?: number
+  /** Prodej vznikl bez připojení a ještě není v systému — doklad se musí označit, ne tvářit jako hotový. */
+  pendingSettlement?: boolean
 }
 
 interface BuildReceiptArgs {
@@ -40,6 +42,7 @@ interface BuildReceiptArgs {
   cashChange?: number | null
   loyaltyEarnedPoints?: number
   loyaltyRedeemedPoints?: number
+  pendingSettlement?: boolean
 }
 
 export function buildReceipt({
@@ -57,6 +60,7 @@ export function buildReceipt({
   cashChange,
   loyaltyEarnedPoints,
   loyaltyRedeemedPoints,
+  pendingSettlement,
 }: BuildReceiptArgs): ReceiptInfo {
   const address = [company?.street, [company?.zip, company?.city].filter(Boolean).join(' ')]
     .filter(Boolean)
@@ -87,5 +91,6 @@ export function buildReceipt({
     cashChange: cashChange ?? undefined,
     loyaltyEarnedPoints: loyaltyEarnedPoints || undefined,
     loyaltyRedeemedPoints: loyaltyRedeemedPoints || undefined,
+    pendingSettlement: pendingSettlement || undefined,
   }
 }
