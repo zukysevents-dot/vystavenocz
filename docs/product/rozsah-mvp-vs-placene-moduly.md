@@ -14,13 +14,28 @@ Když nový modul vznikne potichu jako „to ještě doděláme", stanou se dvě
 
 Závazný rozsah drží smlouva — tělo smlouvy a **Přílohy č. 1 (Návrh vývoje) a č. 2 (Zadání)**. Při rozporu má přednost tělo smlouvy.
 
-Tělo smlouvy dělí fixní plnění do tří fází:
+Fixní plnění se dodává ve třech fázích:
 
 1. **Webový frontend na úrovni MVP** (veřejný web, fakturace, klienti, dashboard), **technický základ backendu** (architektura, databáze, CI) a **pokladní systém (POS)**.
 2. **Napojení fakturace a klientů na server**, **monetizace** (tarify a předplatné), **skladové a provozní funkce**, dokončení webového frontendu.
 3. **Desktopová a mobilní aplikace**, finální nasazení a předání.
 
-Detailní rozsah je v Příloze 1 a 2. **Když je nemáš po ruce, vyžádej si je u Patrika, než začneš** — bez nich nikdo neumí spolehlivě říct, jestli je featura uvnitř, nebo mimo.
+Rozpad rozsahu podle Přílohy 2:
+
+| Oblast                | Co do MVP patří                                                                                            |
+| --------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Technická stabilizace | repozitář, doména, hosting/VPS, databáze, env proměnné, produkční běh                                      |
+| Základní fakturace    | registrace, přihlášení, firma, klient, faktura, položky, splatnost, variabilní symbol, PDF, seznam, úhrada |
+| Klienti               | seznam, detail, IČO, DIČ, adresa, e-mail, telefon, poznámka, historie faktur, vyhledávání                  |
+| Monetizace            | platební stránka, free/paid tarif, evidence tarifu, omezení funkcí, webhooky                               |
+| Dashboard             | faktury, úhrady, po splatnosti, celková částka, poslední faktury a klienti, rychlé akce                    |
+| Pokladna (POS)        | prodej, účtenky, denní tržby, základní uzávěrka                                                            |
+| Sklad                 | produkty, SKU, ceny, zásoby, pohyby, inventura, nízký stav                                                 |
+| Desktop a mobil       | desktopová aplikace, mobilní aplikace, nasazení, předání                                                   |
+
+**Cokoli, co v téhle tabulce není, je kandidát na plnění nad rámec.** Příloha 1 navíc jmenovitě řadí mezi moduly **po MVP**: rezervační systém, docházkový systém, provozovny/role/tým, PWA a mobilní verzi, publikaci na Google Play a App Store. Ty tedy do fixní ceny nepatří, dokud na ně není objednávka.
+
+Nejde o výčet, který by šel číst extenzivně — „sklad" znamená rozsah z tabulky, ne multipobočkové zrcadlo s příjemkami a nákupními doporučeními.
 
 ## Signály, že jde o plnění NAD RÁMEC (placené zvlášť)
 
@@ -57,9 +72,10 @@ Dvě lhůty, na které pozor:
 
 Přibývá odspoda. Stav: `nahlášeno` → `čeká na objednávku` → `objednáno` / `nestavíme`.
 
-| Datum      | Položka               | Kdo vznesl | Stav          | Poznámka                                                                                                                                                                                                                                                                                                        |
-| ---------- | --------------------- | ---------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-08-08 | Možnost „vypnout EET" | objednatel | **nestavíme** | EET bylo v ČR zrušeno k 1. 1. 2023 a v aplikaci **není implementované** — není co vypínat. Přepínač v nastavení by zákazníkovi tvrdil funkci, kterou nemáme. Viz `src/lib/faq-data.ts`. Pokud jde ve skutečnosti o slovenskou **eKasu**, je to certifikovaná fiskalizace = samostatný projekt, ne zaškrtávátko. |
+| Datum      | Položka                                                                   | Kdo vznesl | Stav          | Poznámka                                                                                                                                                                                                                                                                                                        |
+| ---------- | ------------------------------------------------------------------------- | ---------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-08 | Rezervace, docházka/směny, provozovny a role, PWA, publikace do app storů | —          | **nahlášeno** | Příloha 1 je řadí mezi moduly **po MVP**, do fixní ceny nepatří. Části už v aplikaci existují (`attendance`, pobočky, role) — před fakturací nad rámec je potřeba doložit objednávku.                                                                                                                           |
+| 2026-08-08 | Možnost „vypnout EET"                                                     | objednatel | **nestavíme** | EET bylo v ČR zrušeno k 1. 1. 2023 a v aplikaci **není implementované** — není co vypínat. Přepínač v nastavení by zákazníkovi tvrdil funkci, kterou nemáme. Viz `src/lib/faq-data.ts`. Pokud jde ve skutečnosti o slovenskou **eKasu**, je to certifikovaná fiskalizace = samostatný projekt, ne zaškrtávátko. |
 
 ## Související
 
