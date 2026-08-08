@@ -26,6 +26,11 @@ const props = defineProps<{
   label?: string
   /** Probíhá odeslání platby na server. */
   busy?: boolean
+  /**
+   * Důvod, proč teď nejde platit kartou (typicky výpadek sítě). Obsluha to musí vidět PŘEDEM,
+   * ne až po zvolení karty — jinak by u terminálu zjistila, že platba nejde dokončit.
+   */
+  cardUnavailableReason?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -95,10 +100,18 @@ function confirmCard() {
           variant="outline"
           size="lg"
           class="h-20 flex-col gap-1 text-base"
+          :disabled="Boolean(cardUnavailableReason)"
           @click="step = 'card'"
         >
           <CreditCard class="h-5 w-5" /> Kartou
         </Button>
+        <p
+          v-if="cardUnavailableReason"
+          class="col-span-2 text-center text-sm text-muted-foreground"
+          data-testid="payment-card-unavailable"
+        >
+          {{ cardUnavailableReason }}
+        </p>
       </div>
 
       <!-- Krok 2a: hotovost — přijatá částka + vrácení -->

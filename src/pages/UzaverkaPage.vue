@@ -20,6 +20,7 @@ import { isApiMode } from '@/lib/http'
 import { useSalesReport } from '@/composables/useSalesReport'
 import { useDayClose, DayCloseError } from '@/composables/useDayClose'
 import { useLocations } from '@/composables/useLocations'
+import { useOfflineSales } from '@/composables/useOfflineSales'
 import { downloadCsv } from '@/lib/csv-export'
 import {
   buildShiftHandoverRowsFromDayClose,
@@ -54,6 +55,9 @@ import {
 import type { DayCloseResponse } from '@/lib/types'
 
 const apiMode = isApiMode()
+const offlineSales = useOfflineSales()
+// Účtenky pořízené offline, které ještě nedoletěly na server (včetně odmítnutých — ty taky patří do dne).
+const unsentSalesCount = computed(() => offlineSales.queue.value.length)
 
 const { loading, error, summary, vatBreakdown, soldProducts, byCategory, reload } = useSalesReport()
 const { listDayCloses, getDayClose, closeDay } = useDayClose()
@@ -131,6 +135,14 @@ const cashCounted = ref<string>('')
 const cashDrop = ref<string>('')
 
 function askClose(): void {
+  // Neodeslané offline účtenky patří do TOHO dne. Zavřít ho dřív, než doletí, by je vyhodilo
+  // z Z-reportu (server je pak odmítne s 409) — tržba by chyběla v uzávěrce i ve skladu.
+  if (unsentSalesCount.value > 0) {
+    toast.error(
+      `Nejdřív odešlete ${unsentSalesCount.value} účtenek z offline provozu. Do té doby den zavřít nejde.`,
+    )
+    return
+  }
   cashOpening.value = ''
   cashPayIns.value = ''
   cashPayOuts.value = ''
@@ -304,6 +316,7 @@ async function exportMonthlySummaryCsv(): Promise<void> {
 }
 
 onMounted(async () => {
+  await offlineSales.init()
   if (apiMode) {
     await loadLocations()
     locationsLoaded.value = true
@@ -706,6 +719,14 @@ watch([selectedDate, selectedLocationId], () => {
               čísla se ještě mění. Zavřením dne se vygeneruje Z-report a den se uzamkne.
             </span>
           </div>
+          <p
+            v-if="unsentSalesCount > 0"
+            data-testid="uzaverka-unsent-sales"
+            class="w-full text-sm font-medium text-destructive"
+          >
+            Čeká {{ unsentSalesCount }} účtenek z offline provozu. Než se odešlou, den zavřít nejde
+            — jinak by tržba chyběla v Z-reportu.
+          </p>
           <Button :disabled="closing" @click="askClose">
             <Loader2 v-if="closing" class="h-4 w-4 animate-spin" />
             <Lock v-else class="h-4 w-4" />
