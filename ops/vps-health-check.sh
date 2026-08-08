@@ -15,10 +15,19 @@ PING_URL="${VYSTAVENO_MONITOR_PING_URL:-}"
 MAX_BACKUP_AGE_SECONDS="${VYSTAVENO_MAX_BACKUP_AGE_SECONDS:-108000}"
 MAX_RESTORE_CHECK_AGE_SECONDS="${VYSTAVENO_MAX_RESTORE_CHECK_AGE_SECONDS:-691200}"
 MIN_DISK_FREE_PERCENT="${VYSTAVENO_MIN_DISK_FREE_PERCENT:-10}"
+# archive_timeout je 300 s, takže i tichý provoz musí odeslat segment dávno pod tímhle limitem.
+MAX_WAL_ARCHIVE_AGE_SECONDS="${VYSTAVENO_MAX_WAL_ARCHIVE_AGE_SECONDS:-1800}"
+MAX_WAL_DIR_BYTES="${VYSTAVENO_MAX_WAL_DIR_BYTES:-2147483648}"
+REPLICA_ENABLED="${VYSTAVENO_REPLICA_ENABLED:-0}"
+MAX_REPLICA_LAG_BYTES="${VYSTAVENO_MAX_REPLICA_LAG_BYTES:-67108864}"
+WAL_ARCHIVE_DIR="$(wal_archive_dir)"
 [[ -n "$BASE_URL" ]] || die "Nastav VYSTAVENO_BASE_URL nebo DOMAIN v .env."
 [[ "$MAX_BACKUP_AGE_SECONDS" =~ ^[0-9]+$ ]] || die "Neplatný limit stáří zálohy."
 [[ "$MAX_RESTORE_CHECK_AGE_SECONDS" =~ ^[0-9]+$ ]] || die "Neplatný limit stáří restore-checku."
 [[ "$MIN_DISK_FREE_PERCENT" =~ ^[0-9]+$ ]] || die "Neplatný limit volného místa."
+[[ "$MAX_WAL_ARCHIVE_AGE_SECONDS" =~ ^[0-9]+$ ]] || die "Neplatný limit stáří WAL archivu."
+[[ "$MAX_WAL_DIR_BYTES" =~ ^[0-9]+$ ]] || die "Neplatný limit velikosti pg_wal."
+[[ "$MAX_REPLICA_LAG_BYTES" =~ ^[0-9]+$ ]] || die "Neplatný limit replikačního zpoždění."
 
 prepare_backup_root
 if [[ -n "${VYSTAVENO_LOCK_FD:-}" ]]; then
@@ -70,6 +79,34 @@ if [[ "${VYSTAVENO_HEALTH_CHECK_COMPOSE:-1}" == "1" ]]; then
   for service in db api web caddy; do
     grep -qx "$service" <<<"$running_services" || fail_monitor "Compose služba $service neběží"
   done
+
+  # Archivace WAL je podmínka PITR a je to TICHÁ porucha: databáze jede dál, ale nearchivovaný WAL se hromadí
+  # v pg_wal a při zaplněném disku se PostgreSQL zastaví. Hlídáme poslední pokus, stáří archivu i objem pg_wal.
+  archiver="$(compose exec -T db psql -U vystaveno -d vystaveno -Atc "select case when last_failed_time is not null and (last_archived_time is null or last_failed_time > last_archived_time) then 'failing' else 'ok' end || '|' || coalesce(extract(epoch from now() - last_archived_time)::bigint::text, '-1') from pg_stat_archiver;" | tr -d '\r')" ||
+    fail_monitor "Nelze přečíst stav archivace WAL"
+  archiver_state="${archiver%%|*}"
+  archived_age="${archiver##*|}"
+  [[ "$archiver_state" == "ok" ]] || fail_monitor "Archivace WAL selhává — obnova na konkrétní čas by nebyla možná"
+  [[ "$archived_age" =~ ^-?[0-9]+$ ]] || fail_monitor "Nelze zjistit stáří posledního archivovaného WAL"
+  ((archived_age >= 0)) || fail_monitor "PostgreSQL zatím nearchivoval žádný WAL segment"
+  ((archived_age <= MAX_WAL_ARCHIVE_AGE_SECONDS)) || fail_monitor "Poslední archivovaný WAL je starší než povolený limit"
+
+  wal_bytes="$(compose exec -T db psql -U vystaveno -d vystaveno -Atc 'select coalesce(sum(size), 0)::bigint from pg_ls_waldir();' | tr -d '\r')" ||
+    fail_monitor "Nelze zjistit velikost adresáře pg_wal"
+  [[ "$wal_bytes" =~ ^[0-9]+$ ]] || fail_monitor "Neplatná velikost adresáře pg_wal"
+  ((wal_bytes <= MAX_WAL_DIR_BYTES)) || fail_monitor "Adresář pg_wal narostl nad limit ($wal_bytes B) — plný disk WAL zastaví databázi"
+
+  # Replika se hlídá, jen když se s ní počítá; jinak by každá instalace bez repliky hlásila chybu.
+  if [[ "$REPLICA_ENABLED" == "1" ]]; then
+    replication="$(compose exec -T db psql -U vystaveno -d vystaveno -Atc "select count(*) || '|' || coalesce(max(pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn))::bigint, 0) from pg_stat_replication;" | tr -d '\r')" ||
+      fail_monitor "Nelze zjistit stav replikace"
+    replicas_connected="${replication%%|*}"
+    replica_lag_bytes="${replication##*|}"
+    [[ "$replicas_connected" =~ ^[0-9]+$ && "$replica_lag_bytes" =~ ^-?[0-9]+$ ]] || fail_monitor "Neplatný stav replikace"
+    ((replicas_connected >= 1)) || fail_monitor "Hot standby replika není připojená"
+    ((replica_lag_bytes <= MAX_REPLICA_LAG_BYTES)) || fail_monitor "Replikační zpoždění překročilo limit ($replica_lag_bytes B)"
+    log "Replika je připojená, replikační zpoždění $replica_lag_bytes B."
+  fi
 fi
 
 latest_dir="$(resolve_backup_dir "$BACKUP_ROOT/latest")"
@@ -85,6 +122,8 @@ restore_age="$(( $(date +%s) - restore_completed ))"
 ((restore_age <= MAX_RESTORE_CHECK_AGE_SECONDS)) || fail_monitor "Poslední úspěšný restore-check je příliš starý"
 
 filesystem_paths=("$PROJECT_DIR" "$BACKUP_ROOT")
+# Plný filesystem WAL archivu = archivace začne selhávat a pg_wal poroste, dokud se databáze nezastaví.
+[[ ! -d "$WAL_ARCHIVE_DIR" ]] || filesystem_paths[${#filesystem_paths[@]}]="$WAL_ARCHIVE_DIR"
 if [[ "${VYSTAVENO_HEALTH_CHECK_COMPOSE:-1}" == "1" ]]; then
   docker_root="$(docker info --format '{{.DockerRootDir}}' 2>/dev/null)" || fail_monitor "Nelze zjistit Docker data-root"
   [[ -d "$docker_root" ]] || fail_monitor "Docker data-root neexistuje"

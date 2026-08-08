@@ -22,6 +22,19 @@ prepare_backup_root
 mkdir -p "$OPS_LOG_DIR"
 chmod 700 "$OPS_LOG_DIR"
 
+# WAL archiv pro PITR. Zapisuje do něj PostgreSQL z kontejneru jako uid 70, takže adresář musí patřit jemu —
+# proto ten jednorázový chown přes pomocný kontejner (provozní uživatel na hostiteli root nemá).
+WAL_ARCHIVE_DIR="$(wal_archive_dir)"
+[[ "$WAL_ARCHIVE_DIR" == /* ]] || die "WAL_ARCHIVE_DIR musí být absolutní cesta."
+mkdir -p "$WAL_ARCHIVE_DIR"
+[[ ! -L "$WAL_ARCHIVE_DIR" ]] || die "WAL archiv nesmí být symlink."
+docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges \
+  -v "$WAL_ARCHIVE_DIR:/target" "$HELPER_IMAGE" sh -ec 'chown 70:70 /target && chmod 750 /target'
+
+if [[ "$(read_env_value WAL_ARCHIVE_DIR 2>/dev/null || true)" != "$WAL_ARCHIVE_DIR" ]]; then
+  die "Do $PROJECT_DIR/.env doplň řádek WAL_ARCHIVE_DIR=$WAL_ARCHIVE_DIR a spusť instalátor znovu."
+fi
+
 if [[ ! -e "$OPS_ENV" ]]; then
   domain="$(read_domain || true)"
   env_tmp="$(mktemp "$PROJECT_DIR/.ops.env.tmp.XXXXXX")"
@@ -33,6 +46,11 @@ VYSTAVENO_BACKUP_RETENTION_DAYS=14
 VYSTAVENO_MAX_BACKUP_AGE_SECONDS=108000
 VYSTAVENO_MAX_RESTORE_CHECK_AGE_SECONDS=691200
 VYSTAVENO_MIN_DISK_FREE_PERCENT=10
+VYSTAVENO_MAX_WAL_ARCHIVE_AGE_SECONDS=1800
+VYSTAVENO_MAX_WAL_DIR_BYTES=2147483648
+# Zapni na 1 až po ./ops/vps-replica-init.sh — jinak by health hlásil chybějící repliku.
+VYSTAVENO_REPLICA_ENABLED=0
+VYSTAVENO_MAX_REPLICA_LAG_BYTES=67108864
 # Volitelné: Healthchecks.io nebo kompatibilní ping URL.
 VYSTAVENO_MONITOR_PING_URL=
 # Volitelné: už připojený samostatný šifrovaný off-site mount.

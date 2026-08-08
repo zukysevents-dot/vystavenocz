@@ -79,7 +79,7 @@ load_ops_config() {
     value="${line#*=}"
     [[ "$key" =~ ^[A-Z][A-Z0-9_]*$ ]] || die "Neplatný klíč na řádku $line_number v $OPS_ENV."
     case "$key" in
-      VYSTAVENO_BASE_URL | VYSTAVENO_BACKUP_RETENTION_DAYS | VYSTAVENO_MAX_BACKUP_AGE_SECONDS | VYSTAVENO_MAX_RESTORE_CHECK_AGE_SECONDS | VYSTAVENO_MIN_DISK_FREE_PERCENT | VYSTAVENO_MONITOR_PING_URL | VYSTAVENO_BACKUP_MIRROR_DIR)
+      VYSTAVENO_BASE_URL | VYSTAVENO_BACKUP_RETENTION_DAYS | VYSTAVENO_MAX_BACKUP_AGE_SECONDS | VYSTAVENO_MAX_RESTORE_CHECK_AGE_SECONDS | VYSTAVENO_MIN_DISK_FREE_PERCENT | VYSTAVENO_MONITOR_PING_URL | VYSTAVENO_BACKUP_MIRROR_DIR | VYSTAVENO_MAX_WAL_ARCHIVE_AGE_SECONDS | VYSTAVENO_MAX_WAL_DIR_BYTES | VYSTAVENO_REPLICA_ENABLED | VYSTAVENO_MAX_REPLICA_LAG_BYTES)
         printf -v "$key" '%s' "$value"
         ;;
       *)
@@ -150,10 +150,22 @@ verify_checksums() {
   fi
 }
 
-read_domain() {
-  local env_file="$PROJECT_DIR/.env"
+read_env_value() {
+  local key="$1" env_file="$PROJECT_DIR/.env"
   [[ -f "$env_file" ]] || return 1
-  sed -n 's/^DOMAIN=//p' "$env_file" | tail -n 1 | tr -d "'\"[:space:]"
+  sed -n "s/^$key=//p" "$env_file" | tail -n 1 | tr -d "'\"[:space:]"
+}
+
+read_domain() {
+  read_env_value DOMAIN
+}
+
+# Adresář WAL archivu musí být TÁŽ cesta, kterou dostane kontejner z .env (WAL_ARCHIVE_DIR) — jinak by
+# skripty uklízely jiný adresář, než do kterého PostgreSQL archivuje. Fallback je doporučená cesta z instalátoru.
+wal_archive_dir() {
+  local configured
+  configured="$(read_env_value WAL_ARCHIVE_DIR 2>/dev/null || true)"
+  printf '%s\n' "${configured:-$HOME/backups/vystaveno/wal-archive}"
 }
 
 file_mtime_epoch() {
