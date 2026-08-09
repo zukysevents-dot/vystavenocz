@@ -7,7 +7,7 @@ import {
   Check,
   RotateCcw,
   FileSpreadsheet,
-  TriangleAlert,
+  Info,
   Building2,
   ListOrdered,
   FileWarning,
@@ -153,16 +153,17 @@ async function onRollback(): Promise<void> {
       {{ STEP_TITLE[state.step] }}
     </h2>
 
-    <!-- Info: jak se historické faktury ukládají -->
+    <!-- Info: jak se historické faktury ukládají. Psáno pro obsluhu, ne pro vývojáře —
+         technický název endpointu ani varovná ikona sem nepatří, tohle je běžný stav. -->
     <div
       v-if="isApiMode()"
       class="mb-6 flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground"
     >
-      <TriangleAlert class="mt-0.5 h-4 w-4 shrink-0" />
+      <Info class="mt-0.5 h-4 w-4 shrink-0" />
       <span>
-        Faktury se ukládají přes <code class="rounded bg-muted px-1">/invoices/import</code> se
-        zachovaným číslem a stavem. Pokud server fakturu odmítne (např. duplicitní číslo), řádek se
-        v souhrnu označí jako chyba.
+        Faktury se uloží přesně tak, jak jsou — s původním číslem, datem i stavem úhrady.
+        Nepřečíslováváme je. Pokud některou uložit nepůjde (třeba už takové číslo máte), uvidíte to
+        na konci v souhrnu.
       </span>
     </div>
 
