@@ -108,6 +108,9 @@ const pdfDocEl = ref<HTMLElement | null>(null)
 const editingId = ref<string | null>(null)
 const status = ref<InvoiceStatus>('draft')
 const paidAt = ref<string | null>(null)
+// Zmražený snapshot dodavatele k okamžiku vystavení (server ho znovu snímkuje při issue) —
+// null u nové/rozpracované faktury, kde ještě dává smysl živý profil firmy.
+const loadedSupplierSnapshot = ref<SupplierSnapshot | null>(null)
 // Typ dokladu: editor tvoří jen fakturu / zálohovou (proforma). Dobropis vzniká akcí ze seznamu
 // (serverově, se zápornými částkami) a v editoru se needituje. Typ jde měnit jen u konceptu.
 const documentType = ref<DocumentType>('invoice')
@@ -206,6 +209,7 @@ onMounted(async () => {
       status.value = inv.status
       documentType.value = inv.documentType
       paidAt.value = inv.paidAt
+      loadedSupplierSnapshot.value = inv.supplierSnapshot ?? null
       invoiceNumber.value = inv.invoiceNumber ?? ''
       issueDate.value = inv.issueDate
       dueDate.value = inv.dueDate
@@ -275,6 +279,17 @@ function onQuickConfirm(client: QuickClient, savedClientId: string | null) {
 
 const supplierSnapshot = computed<SupplierSnapshot>(() => {
   const c = companyStore.company
+  // Vystavený doklad (status !== draft) má právní/platební údaje dodavatele zmražené k okamžiku
+  // vystavení — firma je mohla mezitím změnit (účet, adresa, DPH režim), ale historický doklad musí
+  // zůstat jak byl. Koncept ještě nic nezmrazuje, takže dál ukazuje živý profil firmy. Logo a barva
+  // jsou jen vizuální branding, který backend nesnímkuje — bere se vždy aktuální profil firmy.
+  if (status.value !== 'draft' && loadedSupplierSnapshot.value) {
+    return {
+      ...loadedSupplierSnapshot.value,
+      logoUrl: c?.logoUrl ?? null,
+      invoiceColor: c?.invoiceColor ?? null,
+    }
+  }
   return {
     companyName: c?.companyName ?? null,
     fullName: c?.fullName ?? null,
@@ -361,6 +376,7 @@ function syncFromSaved(inv: Invoice): void {
   if (inv.dueDate) dueDate.value = inv.dueDate
   status.value = inv.status
   paidAt.value = inv.paidAt
+  loadedSupplierSnapshot.value = inv.supplierSnapshot ?? null
   adoptServerLineIds(inv)
 }
 
