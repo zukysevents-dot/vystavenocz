@@ -324,23 +324,38 @@ async function onRollback(): Promise<void> {
               <TableCell>
                 <Badge
                   :variant="
-                    r.duplicate ? 'secondary' : r.warnings.length ? 'destructive' : 'outline'
+                    r.blocking.length
+                      ? 'destructive'
+                      : r.duplicate
+                        ? 'secondary'
+                        : r.warnings.length
+                          ? 'destructive'
+                          : 'outline'
                   "
                 >
                   {{
-                    r.duplicate
-                      ? 'Duplicita'
-                      : r.warnings.length
-                        ? 'Varování'
-                        : (STATUS_LABEL[r.input.status] ?? r.input.status)
+                    r.blocking.length
+                      ? 'Nelze uložit'
+                      : r.duplicate
+                        ? 'Duplicita'
+                        : r.warnings.length
+                          ? 'Varování'
+                          : (STATUS_LABEL[r.input.status] ?? r.input.status)
                   }}
                 </Badge>
-                <div v-if="r.warnings.length" class="mt-1 max-w-xs text-xs text-destructive">
+                <div v-if="r.blocking.length" class="mt-1 max-w-xs text-xs text-destructive">
+                  Doklad {{ r.blocking.join(', ') }} — doplňte ho ručně.
+                </div>
+                <div v-else-if="r.warnings.length" class="mt-1 max-w-xs text-xs text-destructive">
                   <div v-for="(w, wi) in r.warnings" :key="wi">{{ w }}</div>
                 </div>
               </TableCell>
               <TableCell>
-                <Select v-model="r.decision">
+                <!-- Doklad bez povinných polí server odmítne → volba se ani nenabízí. -->
+                <span v-if="r.blocking.length" class="text-xs text-muted-foreground">
+                  Přeskočí se
+                </span>
+                <Select v-else v-model="r.decision">
                   <SelectTrigger
                     class="h-8 w-32"
                     :aria-label="`Akce pro fakturu ${r.input.invoiceNumber || r.input.clientSnapshot.name || i + 1}`"

@@ -5,6 +5,7 @@ import { buildInvoiceNumber, calcTotals } from '@/lib/invoice'
 import { useImportLedger } from '../useImportLedger'
 import { supplierToCompanyPatch } from './supplier-profile'
 import { loadInvoiceFiles, type FileLoadError } from './load-invoice-files'
+import { blockingIssues } from './import-guard'
 import { inferSeriesFromNumbers, type SeriesSuggestion } from './invoice-series'
 import type { ParsedImportedInvoice } from './types'
 import type { ImportBatch, ImportResult } from '../types'
@@ -15,6 +16,8 @@ export type InvoiceImportStep = 'upload' | 'preview' | 'result'
 interface InvoiceRow extends ParsedImportedInvoice {
   duplicate: boolean
   decision: 'create' | 'skip'
+  /** Důvody, proč doklad server odmítne — prázdné pole = uložit jde. */
+  blocking: string[]
 }
 
 /**
@@ -75,10 +78,13 @@ export function useInvoiceImport() {
         const num = (p.input.invoiceNumber ?? '').toLowerCase()
         const duplicate = !!num && (existing.has(num) || seen.has(num))
         if (num) seen.add(num)
+        // Chybějící povinné pole server odmítne — takový řádek se ani nenabídne.
+        const blocking = blockingIssues(p)
         // Duplicita i varování (nesoulad částky / sazba DPH) → default přeskočit;
         // uživatel může povolit. U PDF je varování časté, proto je vidět v náhledu.
-        const decision: 'create' | 'skip' = duplicate || p.warnings.length > 0 ? 'skip' : 'create'
-        return { ...p, duplicate, decision }
+        const decision: 'create' | 'skip' =
+          blocking.length || duplicate || p.warnings.length > 0 ? 'skip' : 'create'
+        return { ...p, duplicate, decision, blocking }
       })
 
       state.fileErrors = loaded.errors
