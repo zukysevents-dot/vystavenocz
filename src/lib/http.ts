@@ -58,6 +58,49 @@ export class ApiError extends Error {
   }
 }
 
+/** Hlášky z ProblemDetails.errors (bez interních názvů polí), spojené do jedné věty. */
+function validationMessages(body: unknown): string | null {
+  const errors = (body as { errors?: unknown } | undefined)?.errors
+  if (!errors || typeof errors !== 'object') return null
+  const messages = Object.values(errors as Record<string, unknown>)
+    .flatMap((v) => (Array.isArray(v) ? v : [v]))
+    .filter((m): m is string => typeof m === 'string' && m.trim().length > 0)
+    // Serializační hlášky .NET („The JSON value could not be converted…") nejsou pro uživatele.
+    .filter((m) => !/^The\s|JSON|System\./i.test(m))
+  return messages.length ? [...new Set(messages)].join(' ') : null
+}
+
+/**
+ * Zaloguj chybu, pokud nejde o 403. Odepřený přístup podle role (obsluha nevidí věrnostní data
+ * ani cenové hladiny) je normální stav, který UI ošetřuje prázdným zobrazením — v konzoli jen
+ * zaplavuje výpis a zakrývá skutečné chyby. Používej JEN tam, kde je 403 očekávaný.
+ */
+export function logUnlessForbidden(e: unknown): void {
+  if (e instanceof ApiError && e.status === 403) return
+  console.error(e)
+}
+
+/**
+ * Uživatelská hláška pro selhaný zápis. Bere jen srozumitelný `detail` z ProblemDetails
+ * (backend ho píše česky); technické `title`/`HTTP 500` se do UI nikdy nedostane (viz CLAUDE.md §6).
+ * Chyba bez odpovědi (offline, spadlý server) fallback doplní o připojení.
+ */
+export function saveErrorMessage(e: unknown, fallback: string): string {
+  if (e instanceof ApiError) {
+    if (e.status === 401) return 'Přihlášení vypršelo. Přihlaste se prosím znovu.'
+    const detail = (e.detail as { detail?: unknown } | undefined)?.detail
+    if (typeof detail === 'string' && detail.trim()) return detail.trim()
+    // Validace po polích (ProblemDetails.errors) — hlášky jsou české, názvy polí interní,
+    // takže uživateli ukážeme jen hlášky. Bez toho by viděl jen „nepodařilo se uložit".
+    const fieldErrors = validationMessages(e.detail)
+    if (fieldErrors) return `${fallback} ${fieldErrors}`
+    // Chyba vyrobená ve frontendu (bez těla odpovědi) nese rovnou českou hlášku pro uživatele.
+    if (e.detail === undefined && !/^HTTP \d+$/.test(e.message)) return e.message
+    return fallback
+  }
+  return `${fallback} Zkontrolujte připojení k serveru.`
+}
+
 export interface DownloadResponse {
   blob: Blob
   fileName: string | null
@@ -71,6 +114,20 @@ export interface UploadOptions {
 // Souběžné requesty po expiraci tokenu sdílí jeden refresh — backend rotuje refresh token,
 // dva paralelní refreshe by se navzájem zneplatnily.
 let refreshing: Promise<Tokens | null> | null = null
+
+function notifyUnauthorized(): void {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('vystaveno:unauthorized'))
+}
+
+// 403 s tarifním důvodem znamená, že lokální snapshot je prokazatelně zastaralý (firma o modul přišla,
+// předplatné skončilo, podpora zasáhla). Jen tehdy si vyžádáme nový — na happy path žádné volání navíc.
+function notifyEntitlementStale(problem: unknown): void {
+  if (typeof window === 'undefined') return
+  const reason = (problem as { reason?: unknown } | undefined)?.reason
+  if (typeof reason !== 'string') return
+  if (reason !== 'module_not_in_plan' && !reason.startsWith('subscription_')) return
+  window.dispatchEvent(new Event('vystaveno:entitlement-stale'))
+}
 
 function refreshTokens(): Promise<Tokens | null> {
   const current = getTokens()
@@ -106,15 +163,18 @@ async function request<T>(
   body?: unknown,
   retry = true,
   isPublic = false,
+  extraHeaders?: Record<string, string>,
 ): Promise<T> {
   const baseUrl = apiUrl()
   if (!baseUrl) throw new ApiError(0, 'API URL není nastavené.')
   // Veřejná volání (klientský portál, rezervace) MUSÍ jít bez Authorization —
   // jinak by se na public endpoint přiložil JWT náhodně přihlášeného operátora.
   const tokens = isPublic ? null : getTokens()
+  const shouldNotifyUnauthorized = !isPublic && Boolean(tokens?.accessToken || tokens?.refreshToken)
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   if (tokens?.accessToken) headers.Authorization = `Bearer ${tokens.accessToken}`
+  Object.assign(headers, extraHeaders)
 
   const res = await fetch(`${baseUrl}${path}`, {
     method,
@@ -125,10 +185,11 @@ async function request<T>(
   // Access token expiroval → zkus refresh a request jednou zopakuj (jen u auth volání).
   if (!isPublic && res.status === 401 && retry && getTokens()?.refreshToken) {
     const refreshed = await refreshTokens()
-    if (refreshed) return request<T>(method, path, body, false)
+    if (refreshed) return request<T>(method, path, body, false, isPublic, extraHeaders)
   }
 
   if (!res.ok) {
+    if (res.status === 401 && shouldNotifyUnauthorized) notifyUnauthorized()
     let detail: unknown
     try {
       detail = await res.json()
@@ -136,6 +197,7 @@ async function request<T>(
       /* prázdné / nečitelné tělo */
     }
     const problem = detail as { detail?: string; title?: string } | undefined
+    if (res.status === 403) notifyEntitlementStale(detail)
     throw new ApiError(
       res.status,
       problem?.detail ?? problem?.title ?? `HTTP ${res.status}`,
@@ -151,6 +213,7 @@ async function download(path: string, retry = true): Promise<DownloadResponse> {
   const baseUrl = apiUrl()
   if (!baseUrl) throw new ApiError(0, 'API URL není nastavené.')
   const tokens = getTokens()
+  const shouldNotifyUnauthorized = Boolean(tokens?.accessToken || tokens?.refreshToken)
   const headers: Record<string, string> = { Accept: '*/*' }
   if (tokens?.accessToken) headers.Authorization = `Bearer ${tokens.accessToken}`
 
@@ -162,6 +225,7 @@ async function download(path: string, retry = true): Promise<DownloadResponse> {
   }
 
   if (!res.ok) {
+    if (res.status === 401 && shouldNotifyUnauthorized) notifyUnauthorized()
     let detail: unknown
     try {
       detail = await res.json()
@@ -173,6 +237,7 @@ async function download(path: string, retry = true): Promise<DownloadResponse> {
       }
     }
     const problem = detail as { detail?: string; title?: string } | undefined
+    if (res.status === 403) notifyEntitlementStale(detail)
     throw new ApiError(
       res.status,
       problem?.detail ?? problem?.title ?? `HTTP ${res.status}`,
@@ -196,6 +261,7 @@ async function uploadRequest<T>(
   const baseUrl = apiUrl()
   if (!baseUrl) throw new ApiError(0, 'API URL není nastavené.')
   const tokens = getTokens()
+  const shouldNotifyUnauthorized = Boolean(tokens?.accessToken || tokens?.refreshToken)
 
   const response = await new Promise<{ status: number; body: string }>((resolve, reject) => {
     const xhr = new XMLHttpRequest()
@@ -223,6 +289,7 @@ async function uploadRequest<T>(
   }
 
   if (response.status < 200 || response.status >= 300) {
+    if (response.status === 401 && shouldNotifyUnauthorized) notifyUnauthorized()
     let detail: unknown
     if (response.body) {
       try {
@@ -232,6 +299,7 @@ async function uploadRequest<T>(
       }
     }
     const problem = detail as { detail?: string; title?: string } | undefined
+    if (response.status === 403) notifyEntitlementStale(detail)
     throw new ApiError(
       response.status,
       problem?.detail ?? problem?.title ?? `HTTP ${response.status}`,
@@ -277,12 +345,16 @@ function parseContentDispositionFileName(value: string | null): string | null {
 export const http = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
+  postWithHeaders: <T>(path: string, body: unknown, headers: Record<string, string>) =>
+    request<T>('POST', path, body, true, false, headers),
   put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
-  del: <T = void>(path: string) => request<T>('DELETE', path),
+  del: <T = void>(path: string, body?: unknown) => request<T>('DELETE', path, body),
   download,
   upload,
   // Neautorizované volání (bez Authorization a bez refresh/retry) — veřejné endpointy.
   getPublic: <T>(path: string) => request<T>('GET', path, undefined, false, true),
   postPublic: <T>(path: string, body?: unknown) => request<T>('POST', path, body, false, true),
+  // URL pro veřejný odkaz (např. PDF klientského portálu) — nikdy nepřidává Authorization.
+  publicUrl: (path: string) => `${apiUrl() ?? ''}${path}`,
 }

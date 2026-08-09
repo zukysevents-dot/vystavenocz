@@ -154,12 +154,12 @@ test('přidání položky na účet zavřený jiným terminálem hlásí konflik
   await dismissCookies(page)
   await page.goto('/app/restaurace')
 
-  await page.getByRole('button', { name: /Stůl 1/ }).click()
-  await expect(page.getByRole('heading', { name: 'Účet — Stůl 1' })).toBeVisible()
+  await page.getByTestId('restaurant-table-list-table-1').click()
+  await expect(page.getByTestId('restaurant-order-view')).toBeVisible()
 
   // Přidání položky → backend 409 → jasná hláška + návrat na mapu (ne generická chyba).
   await page.getByRole('button', { name: /Espresso/ }).click()
   await expect(page.getByText('Účet mezitím zaplatil nebo zrušil jiný terminál.')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Účet — Stůl 1' })).toBeHidden()
-  await expect(page.getByRole('button', { name: /Stůl 1/ })).toBeVisible()
+  await expect(page.getByTestId('restaurant-order-view')).toBeHidden()
+  await expect(page.getByTestId('restaurant-map-view')).toBeVisible()
 })

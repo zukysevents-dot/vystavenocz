@@ -138,7 +138,7 @@ test('QR objednávka ke stolu vyžádá povinné modifikátory a odešle volby',
 
   await page.goto('/objednavka/bistro?table=table-1&name=St%C5%AFl%201')
   await page.getByRole('button', { name: 'Vybrat' }).click()
-  await expect(page.getByRole('dialog', { name: 'Vybrat modifikátory' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Vybrat možnosti' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Přidat do košíku' })).toBeDisabled()
 
   await page.getByRole('button', { name: /Velký/ }).click()
@@ -205,7 +205,7 @@ test('QR objednávka vybere variantu, ukáže její cenu a pošle jen její ID',
   await page.goto('/objednavka/bistro?table=table-1')
 
   await page.getByRole('button', { name: 'Vybrat' }).click()
-  await expect(page.getByRole('dialog', { name: 'Vybrat porci' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Vyberte velikost' })).toBeVisible()
   await page.getByRole('button', { name: /Velká/ }).click()
   await page.getByRole('button', { name: 'Pokračovat' }).click()
   await expect(page.getByText('Domácí limonáda · Velká')).toBeVisible()

@@ -38,6 +38,7 @@ import { useLocations } from '@/composables/useLocations'
 import { isApiMode, ApiError } from '@/lib/http'
 import { isApprovalRequest } from '@/lib/types'
 import { formatDate } from '@/lib/invoice'
+import LoadError from '@/components/app/LoadError.vue'
 import { toast } from '@/components/ui/sonner'
 import type {
   StockByLocationResponse,
@@ -55,12 +56,15 @@ const apiMode = isApiMode()
 const ALL_LOCATIONS = '__all__'
 
 const loading = ref(true)
+const loadError = ref(false)
 const busy = ref(false)
 const tab = ref<'levels' | 'movements' | 'mirror' | 'byLocation'>('levels')
 const search = ref('')
 const levelMap = ref(new Map<string, number>())
 const movements = ref<StockMovement[]>([])
 const movementsLoaded = ref(false)
+const movementsLoading = ref(false)
+const movementsError = ref(false)
 const mirror = ref<StockMirror | null>(null)
 const mirrorLoaded = ref(false)
 const mirrorLoading = ref(false)
@@ -246,30 +250,42 @@ watch(stockLocationId, async (locationId) => {
   }
 })
 
-onMounted(async () => {
-  if (!apiMode) {
-    loading.value = false
-    return
-  }
+async function reload() {
+  loading.value = true
+  loadError.value = false
   try {
     await Promise.all([loadProducts(), loadLocations()])
     await loadLevels()
   } catch (e) {
+    loadError.value = true
     console.error(e)
   } finally {
     loading.value = false
   }
+}
+
+onMounted(() => {
+  if (!apiMode) {
+    loading.value = false
+    return
+  }
+  reload()
 })
 
 async function showMovements() {
   tab.value = 'movements'
-  if (!movementsLoaded.value) {
-    try {
-      movements.value = await inv.movements()
-      movementsLoaded.value = true
-    } catch (e) {
-      console.error(e)
-    }
+  if (movementsLoaded.value || movementsLoading.value) return
+  movementsLoading.value = true
+  movementsError.value = false
+  try {
+    movements.value = await inv.movements()
+    movementsLoaded.value = true
+  } catch (e) {
+    movementsError.value = true
+    toast.error('Skladové pohyby se nepodařilo načíst.')
+    console.error(e)
+  } finally {
+    movementsLoading.value = false
   }
 }
 
@@ -536,7 +552,7 @@ async function submitStocktake() {
   <div class="mx-auto max-w-5xl p-4 sm:p-6 md:p-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Zásoby</h1>
+        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Stav skladu</h1>
         <p class="mt-1 text-muted-foreground">Stav skladu, příjem/výdej, korekce a inventura.</p>
       </div>
       <Button variant="outline" :disabled="!apiMode" @click="openStocktake">
@@ -548,11 +564,12 @@ async function submitStocktake() {
       v-if="!apiMode"
       class="mt-6 rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground"
     >
-      Sklad potřebuje připojení k serveru.
+      Stav skladu teď není dostupný. Zkontrolujte připojení a zkuste to znovu.
     </div>
 
     <template v-else>
-      <div class="mt-6 flex items-center gap-2">
+      <!-- flex-wrap: na 320px se přepínače záložek zalomí místo horizontálního overflow -->
+      <div class="mt-6 flex flex-wrap items-center gap-2">
         <button
           type="button"
           class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
@@ -647,6 +664,13 @@ async function submitStocktake() {
       <div v-if="loading" class="mt-6 flex justify-center p-12">
         <Loader2 class="h-6 w-6 animate-spin text-primary" />
       </div>
+      <LoadError
+        v-else-if="loadError"
+        class="mt-6"
+        message="Stav skladu se nepodařilo načíst. Skladová data se proto nezobrazují jako prázdná."
+        :retrying="loading"
+        @retry="reload"
+      />
 
       <!-- STAV ZÁSOB -->
       <template v-else-if="tab === 'levels'">
@@ -723,7 +747,18 @@ async function submitStocktake() {
       <!-- POHYBY -->
       <template v-else-if="tab === 'movements'">
         <div class="mt-4 overflow-hidden rounded-2xl border border-border bg-card">
-          <div v-if="!movements.length" class="p-12 text-center text-muted-foreground">
+          <div v-if="movementsLoading" class="p-12 text-center text-muted-foreground">
+            <Loader2 class="mx-auto mb-3 h-5 w-5 animate-spin text-primary" />
+            Načítám skladové pohyby.
+          </div>
+          <LoadError
+            v-else-if="movementsError"
+            class="border-0 shadow-none"
+            message="Historii skladových pohybů se nepodařilo načíst."
+            :retrying="movementsLoading"
+            @retry="showMovements"
+          />
+          <div v-else-if="!movements.length" class="p-12 text-center text-muted-foreground">
             Zatím žádné skladové pohyby.
           </div>
           <div v-else class="divide-y divide-border">
@@ -747,9 +782,9 @@ async function submitStocktake() {
                 >
                   {{ m.quantity >= 0 ? '+' : '' }}{{ fmtQty(m.quantity) }}
                 </span>
-                <span class="w-16 text-right text-muted-foreground"
-                  >= {{ fmtQty(m.quantityAfter) }}</span
-                >
+                <span class="w-16 text-right text-muted-foreground">
+                  {{ fmtQty(m.quantityAfter) }}
+                </span>
               </div>
             </div>
           </div>
@@ -785,7 +820,11 @@ async function submitStocktake() {
           </div>
           <div class="grid min-w-56 flex-1 gap-1.5">
             <Label for="mirror-search">Položka</Label>
-            <Input id="mirror-search" v-model="mirrorSearch" placeholder="Název nebo SKU" />
+            <Input
+              id="mirror-search"
+              v-model="mirrorSearch"
+              placeholder="Název nebo skladový kód"
+            />
           </div>
           <Button type="button" variant="outline" :disabled="mirrorLoading" @click="loadMirror">
             <Loader2 v-if="mirrorLoading" class="h-4 w-4 animate-spin" />
@@ -955,7 +994,7 @@ async function submitStocktake() {
               />
               <Input
                 v-model="byLocationSearch"
-                placeholder="Hledat produkt (název / SKU)…"
+                placeholder="Hledat podle názvu nebo skladového kódu…"
                 class="pl-9"
                 @keyup.enter="loadByLocation"
               />

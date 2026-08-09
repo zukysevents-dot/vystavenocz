@@ -140,7 +140,7 @@ test('dashboard: gastro tenant bez invoicing modulu nespadne na „server nedost
   await routeDashboard(page, GASTRO_MODULES)
   await page.goto('/app')
 
-  await expect(page.getByRole('heading', { name: 'Přehled' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Dnes ve firmě' })).toBeVisible()
   // Root-cause fix: žádná chybová karta „Server je momentálně nedostupný".
   await expect(page.getByText('Server je momentálně nedostupný')).toHaveCount(0)
   // Fakturační widgety a tlačítka skryté.
@@ -155,7 +155,7 @@ test('dashboard: tenant s invoicing modulem dál vidí fakturační přehled', a
   await routeDashboard(page, FULL_MODULES, { invoicingData: true })
   await page.goto('/app')
 
-  await expect(page.getByRole('heading', { name: 'Přehled' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Dnes ve firmě' })).toBeVisible()
   await expect(page.getByText('Faktury celkem')).toBeVisible()
   await expect(page.getByText('Tržby (posledních 6 měsíců)')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Nová faktura' })).toBeVisible()

@@ -103,8 +103,7 @@ test('správce založí skupinu modifikátorů', async ({ page }) => {
     const method = request.method()
 
     if (method === 'GET' && path === '/company') return route.fulfill({ json: company })
-    if (method === 'GET' && path === '/modifier-groups')
-      return route.fulfill({ json: paged(groups) })
+    if (method === 'GET' && path === '/modifier-groups') return route.fulfill({ json: groups })
     if (method === 'POST' && path === '/modifier-groups') {
       createdPayload = request.postDataJSON()
       return route.fulfill({
@@ -124,7 +123,7 @@ test('správce založí skupinu modifikátorů', async ({ page }) => {
   await dismissCookies(page)
   await page.goto('/app/modifikatory')
 
-  await expect(page.getByRole('heading', { name: 'Modifikátory' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Volby k produktům' })).toBeVisible()
   await expect(page.getByText('Přílohy', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Nová skupina' }).click()
@@ -154,8 +153,7 @@ test('správce přiřadí skupiny modifikátorů k produktu ve skladu', async ({
     if (method === 'GET' && path === '/company') return route.fulfill({ json: company })
     if (method === 'GET' && path === '/products') return route.fulfill({ json: paged([product]) })
     if (method === 'GET' && path === '/categories') return route.fulfill({ json: paged([]) })
-    if (method === 'GET' && path === '/modifier-groups')
-      return route.fulfill({ json: paged(groups) })
+    if (method === 'GET' && path === '/modifier-groups') return route.fulfill({ json: groups })
     if (method === 'GET' && path === `/products/${product.id}/modifier-groups`)
       return route.fulfill({ json: [groups[0]] })
     if (method === 'PUT' && path === `/products/${product.id}/modifier-groups`) {
@@ -170,12 +168,12 @@ test('správce přiřadí skupiny modifikátorů k produktu ve skladu', async ({
   await page.goto('/app/sklad')
 
   await expect(page.getByText('Burger')).toBeVisible()
-  await page.getByTitle('Modifikátory').click()
-  await expect(page.getByRole('dialog', { name: 'Modifikátory produktu' })).toBeVisible()
+  await page.getByTitle('Volby k produktu').click()
+  await expect(page.getByRole('dialog', { name: 'Volby k produktu' })).toBeVisible()
   await page.getByText('Extra', { exact: true }).click()
   await page.getByRole('button', { name: 'Uložit' }).click()
 
-  await expect(page.getByText('Modifikátory produktu uloženy.')).toBeVisible()
+  await expect(page.getByText('Volby k produktu byly uloženy.')).toBeVisible()
   expect(assignPayload).toEqual({
     groups: [
       { modifierGroupId: 'group-sides', sortOrder: 0 },

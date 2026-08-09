@@ -8,7 +8,7 @@ Tenhle manuál je pro **interní test** produktu na staging/VPS před ostrým sp
 ## Než začnete
 
 1. Přihlaste se testovacím účtem na staging adrese aplikace.
-2. Pokud je staging naplněný backend příkazem `seed-demo`, použijte účet `demo@vystaveno.cz` / `DemoGastro.2026`. Demo firma `Vystaveno Demo Gastro` má 3 pobočky a zapnuté všechny relevantní moduly pro průchod celou aplikací.
+2. Pokud je staging naplněný backend příkazem `seed-demo`, použijte účet `demo@vystaveno.cz` / `DemoGastro.2026`. Demo firma `Vystaveno Demo Gastro` má 3 pobočky, zapnuté všechny relevantní moduly a **simuluje cca rok provozu** — reporty, uzávěrky, tržby, faktury, směny, docházka i rezervace tedy nejsou prázdné, ale plné historie (počítejte s tím při kontrole čísel). Roční data vzniknou jen při prvním naseedování firmy (viz deploy checklist).
 3. Zkontrolujte, že jste ve správné testovací firmě a provozovně (vlevo nahoře).
 4. Testujte v klidu, na testovacích datech. Nic z toho není ostrý provoz.
 5. Když se něco chová jinak, než popisuje tento manuál, poznamenejte: co jste dělali, co jste čekali a co se stalo.
@@ -19,8 +19,9 @@ Cíl: prodat na pokladně a obsloužit stůl.
 
 1. Otevřete `Pokladna`. Přidejte pár položek (klik na dlaždici, hledání podle názvu/SKU/EAN, nebo `Sken / EAN` čtečkou).
 2. Klikněte `Zaplatit`, zvolte `Hotově` nebo `Kartou`. U hotovosti zadejte přijatou částku — systém ukáže, kolik vrátit. U karty potvrďte `Platba prošla` (terminál zatím potvrzuje obsluha ručně).
-3. Otevřete `Restaurace`, vyberte stůl, přidejte položky, dejte `Odeslat` (bon jde do kuchyně) a nakonec `Zaplatit`.
-4. V `Kuchyně` posuňte bon přes stavy `Odesláno → Připravuje se → Hotovo → Vydáno`.
+3. Otevřete `Stoly a objednávky` na tabletu 1024 × 768. Ověřte plnoobrazovkový režim bez levého menu, vyberte stůl, najděte produkt názvem/SKU/EAN a přidejte ho. Přes viditelné tlačítko `Poznámka · chod` nastavte u tří položek `Předkrm`, `Hlavní chod` a `Dezert`; na účtu i po `Odeslat na stanice` v kuchyni musí být v tomto pořadí pod samostatnými oddělovači. Před zaplacením přidejte ještě jednu položku a ověřte, že systém upozorní na neodeslanou položku. Nakonec ji odešlete a účet zaplaťte.
+4. V `Další` vyzkoušejte, že výběr zdrojového stolu účet ještě nesloučí a až `Sloučit účty` provede akci. U `Zrušit účet` ověřte, že bez závěrečného potvrzení účet zůstane otevřený.
+5. V `Kuchyně` posuňte předkrm přes stavy `Odesláno → Připravuje se → Hotovo → Vydáno` a ověřte, že hlavní chod a dezert zůstaly ve svém původním stavu.
 
 Co ověřit: prodej se objeví v tržbách, bon projde kuchyní, po zaplacení účtu zůstane jen nezaplacený zbytek (nebo se stůl uvolní).
 

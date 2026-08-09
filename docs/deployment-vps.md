@@ -42,12 +42,22 @@ JWT_SECRET=<min. 32 znaků>         # vygeneruj: openssl rand -base64 32
 DB_PASSWORD=<silné heslo DB>
 STRIPE_SECRET_KEY=<produkční Stripe secret>
 INTEGRATIONS_SECRET_ENCRYPTION_KEY=<32B base64> # vygeneruj: openssl rand -base64 32
+AUTH_PIN_LOOKUP_KEY=<32B base64>   # vygeneruj: openssl rand -base64 32 — jen když používáte PINy na pokladně
 PAYMENTS_PORTAL_BASE_URL=https://fakturace.example.com
+WAL_ARCHIVE_DIR=/home/deploy/backups/vystaveno/wal-archive # absolutní cesta, kam PostgreSQL archivuje WAL (PITR)
+# SMTP: použij údaje svého poskytovatele (např. Resend, Postmark, Mailgun nebo vlastní doménový SMTP).
+EMAIL_HOST=smtp.example.com
+EMAIL_PORT=587
+EMAIL_FROM=Vystaveno <noreply@example.com>
+EMAIL_USERNAME=<SMTP uživatel>
+EMAIL_PASSWORD=<SMTP heslo nebo API klíč>
 ```
 
-`JWT_SECRET`, `DB_PASSWORD`, `STRIPE_SECRET_KEY` a `INTEGRATIONS_SECRET_ENCRYPTION_KEY` jsou **server-only secrety** — nikdy do gitu ani do frontend buildu.
+`JWT_SECRET`, `DB_PASSWORD`, `STRIPE_SECRET_KEY`, `INTEGRATIONS_SECRET_ENCRYPTION_KEY` a `EMAIL_PASSWORD` jsou **server-only secrety** — nikdy do gitu ani do frontend buildu. `EMAIL_FROM` musí být odesílací adresa/doména ověřená u daného e-mailového poskytovatele.
 `INTEGRATIONS_SECRET_ENCRYPTION_KEY` šifruje credential vault pro platební providery i ověřené podpisy; v API se mapuje na `Integrations__SecretEncryptionKey`. Bez něj backend bezpečně odmítne ukládání credentialů (`503`).
+`AUTH_PIN_LOOKUP_KEY` (v API `Auth__PinLookupKey`) je slepý index, kterým backend najde vlastníka PINu v rámci firmy. Bez něj je celá PIN vrstva fail-closed `503`: nejde nastavit PIN členovi týmu, přihlásit se PINem ani použít **manažerský override** u storna a slevy nad limit obsluhy. Je volitelný — nepoužíváte-li PINy, nechte ho prázdný. **Jakmile ho jednou nastavíte, už ho neměňte**: změnou se uložené PINy stanou nedohledatelnými a musely by se nastavit znovu.
 `PAYMENTS_PORTAL_BASE_URL` je veřejná HTTPS adresa aplikace bez lomítka na konci; API ji používá pro návrat zákazníka z online platby faktury. Na běžném VPS nasazení nastav stejnou hodnotu jako `https://$DOMAIN`.
+`WAL_ARCHIVE_DIR` je **povinný** adresář na hostiteli, do kterého PostgreSQL archivuje WAL; díky němu jde obnovit na konkrétní čas, ne jen na noční snapshot. Bez něj `docker compose` s produkčním override souborem vědomě odmítne nastartovat (raději hlasitá chyba než tichý provoz bez archivace). Adresář založí a správně zpřístupní `./ops/install-vps-reliability.sh`; doporučená hodnota je `$HOME/backups/vystaveno/wal-archive`. Detaily, obnova na čas a hot standby replika: [docs/vps-reliability.md](vps-reliability.md).
 
 ## 4. Spuštění
 
@@ -91,15 +101,47 @@ Wrapper drží společný lock se zálohou, před změnou vytvoří konzistentn�
 - **Monitoring** — `ops/vps-health-check.sh` hlídá služby, endpointy, stáří backupu a disk; externí ping URL patří do `.ops.env`.
 - **TLS certy** přežijí restart ve volume `caddy_data`.
 
+## 8. Desktop aplikace ke stažení (`/download`)
+
+Instalátory Tauri appky (`vystaveno-desktop`) se **nebuildují na VPS ani nepatří do image/gitu** — nahrají se
+jako statické soubory do `~/vystavenocz/downloads/`, odkud je nginx servíruje na `/download/…`
+(bind mount v `docker-compose.prod.yml`, `location /download/` v `nginx.conf`). Odkaz v patičce webu míří
+na **stabilní název souboru**, aby se web nemusel měnit s každou verzí.
+
+Build na Macu (v repu `vystaveno-desktop`, potřebuje sousední `vystavenocz`):
+
+```bash
+npm run build   # → src-tauri/target/release/bundle/dmg/vystaveno-desktop_<verze>_aarch64.dmg
+```
+
+Nahrání na VPS (přepis stejného názvu = nová verze; nginx nic necachuje dlouhodobě):
+
+```bash
+ssh <vps> 'mkdir -p ~/vystavenocz/downloads'
+scp src-tauri/target/release/bundle/dmg/vystaveno-desktop_*_aarch64.dmg <vps>:~/vystavenocz/downloads/vystaveno-mac.dmg
+curl -fsSI https://<domena>/download/vystaveno-mac.dmg | head -3
+```
+
+Poznámky:
+
+- Mount se přidává až při (re)create kontejneru — po první změně compose souboru je potřeba
+  `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d web`.
+- Instalátor **není podepsaný ani notarizovaný** (chybí Apple Developer ID). macOS ho označí za
+  nedůvěryhodný; uživatel ho musí povolit ručně (`Otevřít` z kontextového menu / Nastavení → Soukromí).
+  Do webu proto netvrď, že jde o ověřenou aplikaci ze App Store.
+- Windows `.msi` / Linux `.deb`/AppImage jde vyrobit **jen na dané platformě** (Tauri necross-compiluje);
+  dokud build neexistuje, na web nepatří odkaz na něj.
+
 ## Časté problémy
 
-| Příznak                                         | Příčina                                                                | Řešení                                                                   |
-| ----------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Caddy nezíská cert (TLS chyba)                  | DNS nemíří na VPS / port 80 zavřený                                    | Zkontroluj A záznam a firewall (80+443); `docker compose ... logs caddy` |
-| `/health/ready` → 503                           | DB nedostupná / špatné `DB_PASSWORD`                                   | Zkontroluj `.env` a `logs db`                                            |
-| API spadne hned po startu                       | chybí `JWT_SECRET`, `DB_PASSWORD` nebo `STRIPE_SECRET_KEY` (fail-fast) | Doplň `.env`, `up -d`                                                    |
-| Uložení credentialů providera/podpisů vrací 503 | chybí/neplatný `INTEGRATIONS_SECRET_ENCRYPTION_KEY`                    | Vygeneruj 32B base64 klíč, doplň `.env`, redeploy API                    |
-| Online checkout faktury vrací 500               | chybí `PAYMENTS_PORTAL_BASE_URL`                                       | Nastav veřejnou URL aplikace, např. `https://vystaveno.cz`, redeploy API |
-| `!reset` v compose hlásí chybu                  | stará Compose verze                                                    | Upgrade Docker Compose na ≥ 2.24.4                                       |
-| `web` build bere špatnou API URL                | cache                                                                  | `up -d --build --force-recreate` (build arg `VITE_API_URL=/api/v1`)      |
-| Health hlásí starou zálohu                      | backup neproběhl déle než 30 hodin                                     | zkontroluj `logs/backup.log`, spusť backup ručně a ověř restore          |
+| Příznak                                                         | Příčina                                                                | Řešení                                                                   |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Caddy nezíská cert (TLS chyba)                                  | DNS nemíří na VPS / port 80 zavřený                                    | Zkontroluj A záznam a firewall (80+443); `docker compose ... logs caddy` |
+| `/health/ready` → 503                                           | DB nedostupná / špatné `DB_PASSWORD`                                   | Zkontroluj `.env` a `logs db`                                            |
+| API spadne hned po startu                                       | chybí `JWT_SECRET`, `DB_PASSWORD` nebo `STRIPE_SECRET_KEY` (fail-fast) | Doplň `.env`, `up -d`                                                    |
+| Uložení credentialů providera/podpisů vrací 503                 | chybí/neplatný `INTEGRATIONS_SECRET_ENCRYPTION_KEY`                    | Vygeneruj 32B base64 klíč, doplň `.env`, redeploy API                    |
+| Nastavení PINu / PIN přihlášení / manažerský override vrací 503 | chybí `AUTH_PIN_LOOKUP_KEY`                                            | Vygeneruj 32B base64 klíč, doplň `.env`, redeploy API. Pak už ho neměň.  |
+| Online checkout faktury vrací 500                               | chybí `PAYMENTS_PORTAL_BASE_URL`                                       | Nastav veřejnou URL aplikace, např. `https://vystaveno.cz`, redeploy API |
+| `!reset` v compose hlásí chybu                                  | stará Compose verze                                                    | Upgrade Docker Compose na ≥ 2.24.4                                       |
+| `web` build bere špatnou API URL                                | cache                                                                  | `up -d --build --force-recreate` (build arg `VITE_API_URL=/api/v1`)      |
+| Health hlásí starou zálohu                                      | backup neproběhl déle než 30 hodin                                     | zkontroluj `logs/backup.log`, spusť backup ručně a ověř restore          |

@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { isApiMode } from '@/lib/http'
-import type { AppModuleId } from '@/lib/modules'
+import { operationalLandingFor, type AppModuleId } from '@/lib/modules'
 
 // Typování route meta (rozšíří se v dalších taskech — guards F0-35, SEO F2-31).
 declare module 'vue-router' {
@@ -13,6 +13,8 @@ declare module 'vue-router' {
     requiresRole?: string[]
     /** Zapnutý runtime modul firmy. Nevyplněné = bez modulového omezení. */
     requiresModule?: AppModuleId
+    /** Provozní obrazovka přes celý viewport bez administračního sidebaru. */
+    operational?: boolean
   }
 }
 
@@ -51,6 +53,13 @@ const routes: RouteRecordRaw[] = [
     name: 'public-klientska-zona',
     component: () => import('@/pages/KlientskaZonaPage.vue'),
     meta: { title: 'Klientská zóna', layout: 'public' },
+  },
+  {
+    // Přijetí pozvánky do firmy — token autorizuje (anonymní backend endpoint), layout auth (formulář).
+    path: '/pozvanka/:token',
+    name: 'pozvanka',
+    component: () => import('@/pages/PozvankaPage.vue'),
+    meta: { title: 'Pozvánka do firmy', layout: 'auth' },
   },
   {
     path: '/funkce',
@@ -112,6 +121,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/PodminkyPage.vue'),
     meta: { title: 'Podmínky', layout: 'public' },
   },
+  {
+    path: '/smazani-uctu',
+    name: 'smazani-uctu',
+    component: () => import('@/pages/SmazaniUctuPage.vue'),
+    meta: { title: 'Smazání účtu', layout: 'public' },
+  },
 
   // --- Auth (AuthLayout — fullscreen, bez navbaru/footeru) ---
   {
@@ -126,15 +141,34 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/RegistracePage.vue'),
     meta: { title: 'Registrace', layout: 'auth' },
   },
-  // Obnova hesla: routy /zapomenute-heslo a /reset-hesla dočasně vyřazeny — stránky byly stub bez backendu
-  // (falešně hlásily odeslání e-mailu). Vrátit až s reálným reset flow (API endpointy + SMTP).
+  // Obnova hesla — reálný flow proti /auth/forgot-password + /auth/reset-password (vyžaduje SMTP;
+  // bez něj server poctivě vrací 503 a stránka to řekne).
+  {
+    path: '/zapomenute-heslo',
+    name: 'zapomenute-heslo',
+    component: () => import('@/pages/ZapomenuteHesloPage.vue'),
+    meta: { title: 'Zapomenuté heslo', layout: 'auth' },
+  },
+  {
+    // Návrat od poskytovatele identity (Google). Veřejná — uživatel v tu chvíli ještě není přihlášený.
+    path: '/oauth/callback',
+    name: 'oauth-callback',
+    component: () => import('@/pages/OauthCallbackPage.vue'),
+    meta: { title: 'Přihlášení', layout: 'auth' },
+  },
+  {
+    path: '/reset-hesla',
+    name: 'reset-hesla',
+    component: () => import('@/pages/ResetHeslaPage.vue'),
+    meta: { title: 'Nové heslo', layout: 'auth' },
+  },
 
   // --- App (AppLayout, chráněné route guardem níže) ---
   {
     path: '/app',
     name: 'app',
     component: () => import('@/pages/DashboardPage.vue'),
-    meta: { title: 'Přehled', layout: 'app', requiresAuth: true, requiresModule: 'core' },
+    meta: { title: 'Dnes ve firmě', layout: 'app', requiresAuth: true, requiresModule: 'core' },
   },
   {
     path: '/app/faktury',
@@ -181,7 +215,7 @@ const routes: RouteRecordRaw[] = [
     name: 'app-provozni-prehled',
     component: () => import('@/pages/ProvozniPrehledPage.vue'),
     meta: {
-      title: 'Provozní přehled',
+      title: 'Výsledky provozu',
       layout: 'app',
       requiresAuth: true,
       requiresModule: 'reporting',
@@ -193,11 +227,11 @@ const routes: RouteRecordRaw[] = [
     name: 'app-uzaverka',
     component: () => import('@/pages/UzaverkaPage.vue'),
     meta: {
-      title: 'Uzávěrka',
+      title: 'Denní uzávěrka',
       layout: 'app',
       requiresAuth: true,
       requiresModule: 'pos',
-      requiresRole: ['Owner', 'Manager'],
+      requiresRole: ['Owner', 'Admin', 'Manager'],
     },
   },
   {
@@ -215,7 +249,12 @@ const routes: RouteRecordRaw[] = [
     path: '/app/uctarna',
     name: 'app-uctarna',
     component: () => import('@/pages/UctarnaPage.vue'),
-    meta: { title: 'Účtárna', layout: 'app', requiresAuth: true, requiresModule: 'invoicing' },
+    meta: {
+      title: 'Export pro účetní',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'invoicing',
+    },
   },
   {
     path: '/app/dph',
@@ -297,11 +336,18 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Klienti', layout: 'app', requiresAuth: true, requiresModule: 'invoicing' },
   },
   {
+    path: '/app/crm',
+    name: 'app-crm',
+    component: () => import('@/pages/CrmPage.vue'),
+    // CRM je „Růst" add-on — backend /crm gatuje modulem crm (Permissions.Crm.* → ProductModules.Crm).
+    meta: { title: 'CRM', layout: 'app', requiresAuth: true, requiresModule: 'crm' },
+  },
+  {
     path: '/app/import',
     name: 'app-import',
     component: () => import('@/pages/ImportPage.vue'),
     meta: {
-      title: 'Import dat',
+      title: 'Nahrát data',
       layout: 'app',
       requiresAuth: true,
       requiresModule: 'integrations',
@@ -328,31 +374,64 @@ const routes: RouteRecordRaw[] = [
     path: '/app/sklad',
     name: 'app-sklad',
     component: () => import('@/pages/SkladPage.vue'),
-    meta: { title: 'Sklad', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
+    meta: { title: 'Produkty', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
   },
   {
     path: '/app/kategorie',
     name: 'app-kategorie',
     component: () => import('@/pages/KategoriePage.vue'),
-    meta: { title: 'Kategorie', layout: 'app', requiresAuth: true, requiresModule: 'core' },
+    meta: {
+      title: 'Kategorie produktů',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'stock',
+    },
   },
   {
     path: '/app/modifikatory',
     name: 'app-modifikatory',
     component: () => import('@/pages/ModifikatoryPage.vue'),
-    meta: { title: 'Modifikátory', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
+    meta: {
+      title: 'Volby k produktům',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'gastro',
+    },
   },
   {
     path: '/app/zasoby',
     name: 'app-zasoby',
     component: () => import('@/pages/ZasobyPage.vue'),
-    meta: { title: 'Zásoby', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
+    meta: { title: 'Stav skladu', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
   },
   {
     path: '/app/naskladneni',
     name: 'app-naskladneni',
     component: () => import('@/pages/NaskladneniPage.vue'),
-    meta: { title: 'Naskladnění', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
+    meta: { title: 'Příjem zboží', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
+  },
+  {
+    path: '/app/skladove-doklady',
+    name: 'app-skladove-doklady',
+    component: () => import('@/pages/SkladoveDokladyPage.vue'),
+    meta: { title: 'Skladové doklady', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
+  },
+  {
+    path: '/app/dodavatele',
+    name: 'app-dodavatele',
+    component: () => import('@/pages/DodavatelePage.vue'),
+    meta: { title: 'Dodavatelé', layout: 'app', requiresAuth: true, requiresModule: 'stock' },
+  },
+  {
+    path: '/app/nakupni-objednavky',
+    name: 'app-nakupni-objednavky',
+    component: () => import('@/pages/NakupniObjednavkyPage.vue'),
+    meta: {
+      title: 'Nákupní objednávky',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'stock',
+    },
   },
   {
     path: '/app/dochazka',
@@ -383,7 +462,19 @@ const routes: RouteRecordRaw[] = [
       layout: 'app',
       requiresAuth: true,
       requiresModule: 'core',
-      requiresRole: ['Owner', 'Manager'],
+      requiresRole: ['Owner', 'Admin'],
+    },
+  },
+  {
+    path: '/app/tym',
+    name: 'app-tym',
+    component: () => import('@/pages/TymPage.vue'),
+    meta: {
+      title: 'Tým',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'core',
+      requiresRole: ['Owner', 'Admin'],
     },
   },
   {
@@ -391,7 +482,7 @@ const routes: RouteRecordRaw[] = [
     name: 'app-audit',
     component: () => import('@/pages/AuditPage.vue'),
     meta: {
-      title: 'Audit',
+      title: 'Historie změn',
       layout: 'app',
       requiresAuth: true,
       requiresModule: 'core',
@@ -420,19 +511,35 @@ const routes: RouteRecordRaw[] = [
     path: '/app/restaurace',
     name: 'app-restaurace',
     component: () => import('@/pages/RestauracePage.vue'),
-    meta: { title: 'Restaurace', layout: 'app', requiresAuth: true, requiresModule: 'gastro' },
+    meta: {
+      title: 'Stoly a objednávky',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'gastro',
+      operational: true,
+    },
   },
   {
     path: '/app/kuchyne',
     name: 'app-kuchyne',
     component: () => import('@/pages/KuchynePage.vue'),
-    meta: { title: 'Kuchyně', layout: 'app', requiresAuth: true, requiresModule: 'gastro' },
+    meta: {
+      title: 'Kuchyňské objednávky',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'gastro',
+    },
   },
   {
     path: '/app/mapa-stolu',
     name: 'app-mapa-stolu',
     component: () => import('@/pages/MapaStoluPage.vue'),
-    meta: { title: 'Mapa stolů', layout: 'app', requiresAuth: true, requiresModule: 'gastro' },
+    meta: {
+      title: 'Nastavení stolů',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'gastro',
+    },
   },
   {
     path: '/app/nastaveni',
@@ -441,10 +548,39 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Nastavení', layout: 'app', requiresAuth: true, requiresModule: 'core' },
   },
   {
+    path: '/app/nastaveni/api-webhooky',
+    name: 'app-nastaveni-api-webhooky',
+    component: () => import('@/pages/ApiWebhookyPage.vue'),
+    // Správa API tokenů a webhooků — backend gate je integrations.api (jen Owner/Admin) + modul integrations;
+    // stránka se sám gatuje i v UI a mimo API režim ukazuje poznámku (vzor Integrace a exporty).
+    meta: {
+      title: 'Propojení pro vývojáře',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'integrations',
+    },
+  },
+  {
+    path: '/app/moduly',
+    name: 'app-moduly',
+    component: () => import('@/pages/ModulyPage.vue'),
+    // Moduly firmy mění jen vedení — Manager/Accountant/Employee sem ani přímou URL nesmí
+    // (guard je UX vrstva, `PUT /company/modules` vynucuje roli i nárok na serveru).
+    meta: {
+      title: 'Přidat moduly',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'core',
+      requiresRole: ['Owner', 'Admin'],
+    },
+  },
+  {
     path: '/app/onboarding',
     name: 'app-onboarding',
     component: () => import('@/pages/OnboardingPage.vue'),
-    meta: { title: 'Onboarding', layout: 'app', requiresAuth: true, requiresModule: 'core' },
+    // Layout `auth` = celá obrazovka BEZ sidebaru: nová firma si tu teprve vybírá, co bude
+    // používat, takže menu se všemi moduly by ukazovalo věci, které si ještě nezvolila.
+    meta: { title: 'Onboarding', layout: 'auth', requiresAuth: true, requiresModule: 'core' },
   },
   {
     path: '/app/pruvodce',
@@ -457,6 +593,19 @@ const routes: RouteRecordRaw[] = [
     name: 'app-predplatne',
     component: () => import('@/pages/PredplatnePage.vue'),
     meta: { title: 'Předplatné', layout: 'app', requiresAuth: true, requiresModule: 'core' },
+  },
+  {
+    // Zamčená část aplikace — upsell místo tichého přesměrování. Modul je v cestě, aby fungoval
+    // i přímý odkaz (deep link ze mobilu / z e-mailu).
+    path: '/app/modul/:module',
+    name: 'app-modul-nedostupny',
+    component: () => import('@/pages/ModulNedostupnyPage.vue'),
+    meta: {
+      title: 'Rozšíření Vystaveno',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'core',
+    },
   },
   {
     path: '/app/predplatne/dekujeme',
@@ -513,14 +662,17 @@ router.beforeEach((to) => {
   ) {
     return { name: 'app-onboarding' }
   }
+  // Onboarding se po přihlášení NEUKAZUJE sám (automatický odklon výše platí jen pro účet bez
+  // firmy), ale zůstává kdykoli otevřený z Nastavení — obor a s ním i sada modulů se mění.
   // Role gating: routa vyhrazená rolím (manažerské stránky) → nedostatečná role zpět na Přehled.
   // hasRole je fail-open (mock / neznámá role neblokuje); skutečné vynucení je na backendu.
   if (to.meta.requiresRole && auth.isAuthenticated && !auth.hasRole(...to.meta.requiresRole)) {
     return { name: 'app' }
   }
-  // Modulový UX gate: tenant vidí jen zapnuté moduly. API enforcement přijde navazujícím krokem.
+  // Modulový UX gate: firma se dostane jen do částí, na které má nárok. Server to vynucuje vždy —
+  // tohle je UX vrstva, která místo tichého přesměrování ukáže, co daná část přinese a co ji obsahuje.
   if (to.meta.requiresModule && auth.isAuthenticated && !auth.hasModule(to.meta.requiresModule)) {
-    return { name: 'app' }
+    return { name: 'app-modul-nedostupny', params: { module: to.meta.requiresModule } }
   }
   // Employee nemá invoices.read → přehled (dashboard) by vracel 403; přistane na první provozní stránce.
   // Landing musí respektovat zapnuté moduly, jinak vznikne smyčka: crafts tenant nemá `pos`, takže
@@ -529,6 +681,11 @@ router.beforeEach((to) => {
     if (auth.hasModule('pos')) return { path: '/app/pokladna' }
     if (auth.hasModule('jobs')) return { path: '/app/zakazky' }
     return { path: '/app/nastaveni' }
+  }
+  // Provozní profily Kuchyně/Skladník — dashboard je fakturační, přistanou rovnou ve svém workflow.
+  if (isApiMode() && to.name === 'app') {
+    const landing = operationalLandingFor(auth.role, auth.modules)
+    if (landing) return { path: landing }
   }
   return true
 })

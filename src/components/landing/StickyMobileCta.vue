@@ -2,10 +2,11 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { ArrowRight } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { DEMO_MAILTO } from '@/lib/landing-cta'
+import { RouterLink } from 'vue-router'
+import { REGISTER_ROUTE } from '@/lib/landing-cta'
 
 // Sticky CTA ve spodní části obrazovky — jen na mobilu. Objeví se po ~400px scrollu,
-// aby nepřekáželo v hero sekci, a drží CTA „Chci demo" vždy po ruce.
+// aby nepřekáželo v hero sekci, a drží registraci vždy po ruce.
 const visible = ref(false)
 
 function onScroll() {
@@ -29,13 +30,11 @@ onUnmounted(() => {
     :aria-hidden="!visible"
   >
     <Button variant="coral" size="lg" class="group w-full text-base" as-child>
-      <a :href="DEMO_MAILTO">
-        Chci demo zdarma
+      <RouterLink :to="REGISTER_ROUTE">
+        Vyzkoušet zdarma
         <ArrowRight class="transition-transform group-hover:translate-x-0.5" />
-      </a>
+      </RouterLink>
     </Button>
-    <p class="mt-1.5 text-center text-[11px] text-muted-foreground">
-      Bez závazku · odpovídáme do 24 hodin
-    </p>
+    <p class="mt-1.5 text-center text-[11px] text-muted-foreground">14 dní zdarma · bez karty</p>
   </div>
 </template>

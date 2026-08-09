@@ -6,8 +6,10 @@ import type { Company } from '@/lib/types'
 import { normalizeModules, type AppModuleId } from '@/lib/modules'
 
 // Profil firmy. Mock režim → localStorage. API režim → /company (GET/PUT) + /companies (POST založení).
-// Backend /company drží jen podmnožinu profilu; frontend-only pole (vatMode 3-stav, číslování faktur,
-// invoiceColor, fullName) zůstávají v localStorage overlay — jejich plná podpora na backendu je follow-up.
+// Backend /company drží jen podmnožinu profilu; frontend-only pole (číslování faktur, invoiceColor,
+// fullName) zůstávají v localStorage overlay — jejich plná podpora na backendu je follow-up.
+// Plátcovství DPH už serverové JE (`isVatPayer`) — bez toho se na novém zařízení firma tvářila
+// jako neplátce a editor faktur skrýval DPH.
 const STORAGE_KEY = 'vystaveno.company.v1'
 
 // Tvar backend /company (CompanySettingsResponse / UpdateCompanyRequest).
@@ -35,6 +37,7 @@ interface CompanySettingsResponse {
   address: AddressDto | null
   bankAccount: BankAccountDto | null
   publicSlug: string | null
+  isVatPayer?: boolean
 }
 interface CreateCompanyResponse {
   company: { id: string; name: string }
@@ -70,9 +73,22 @@ function emptyCompany(email: string, fullName: string | null): Company {
   }
 }
 
+// Server drží plátcovství jako bool. „Identifikovaná osoba" je pro server neplátce, ale rozlišení
+// má smysl jen lokálně — proto ho zachováme, když server plátcovství nepotvrdí.
+function vatModeFromResponse(
+  isVatPayer: boolean | undefined,
+  current: Company['vatMode'] | undefined,
+): Company['vatMode'] | undefined {
+  if (typeof isVatPayer !== 'boolean') return undefined // starší backend bez pole → nech overlay
+  if (isVatPayer) return 'payer'
+  return current === 'identified' ? 'identified' : 'non_payer'
+}
+
 // backend → frontend (jen pole, která backend zná; ostatní doplní overlay/defaults)
-function fromResponse(r: CompanySettingsResponse): Partial<Company> {
+function fromResponse(r: CompanySettingsResponse, current?: Company | null): Partial<Company> {
+  const vatMode = vatModeFromResponse(r.isVatPayer, current?.vatMode)
   return {
+    ...(vatMode ? { vatMode } : {}),
     id: r.id,
     companyName: r.name || null,
     ico: r.ico,
@@ -105,6 +121,7 @@ function toUpdateRequest(c: Company) {
     address: { street: c.street, city: c.city, postalCode: c.zip, country: c.country },
     bankAccount: { accountNumber: c.bankAccount, iban: c.iban, bic: c.swift },
     publicSlug: c.publicSlug,
+    isVatPayer: c.vatMode === 'payer',
   }
 }
 
@@ -143,7 +160,7 @@ export const useCompanyStore = defineStore('company', () => {
     try {
       const r = await http.get<CompanySettingsResponse>('/company')
       const base = company.value ?? emptyCompany(r.email ?? '', null)
-      company.value = { ...base, ...fromResponse(r) } // server přebije podporovaná pole, overlay zůstává
+      company.value = { ...base, ...fromResponse(r, base) } // server přebije podporovaná pole, overlay zůstává
       loaded.value = true
       persist()
     } catch {
@@ -169,7 +186,7 @@ export const useCompanyStore = defineStore('company', () => {
         merged.id = res.company.id
       }
       const r = await http.put<CompanySettingsResponse>('/company', toUpdateRequest(merged))
-      company.value = { ...merged, ...fromResponse(r) }
+      company.value = { ...merged, ...fromResponse(r, merged) }
       loaded.value = true
     } else {
       company.value = merged
@@ -200,8 +217,7 @@ export const useCompanyStore = defineStore('company', () => {
       return auth.modules
     }
 
-    auth.modules = normalized
-    return normalized
+    return auth.setModules(normalized) // mock: uloží volbu, ať ji reload nezahodí
   }
 
   return { company, initialized, init, load, save, loadModules, saveModules }

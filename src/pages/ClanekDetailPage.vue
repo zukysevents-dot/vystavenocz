@@ -4,7 +4,7 @@ import { useRoute, RouterLink } from 'vue-router'
 import { getArticleBySlug, getRelatedArticles } from '@/lib/articles'
 import { Clock, ArrowLeft, ArrowRight, Lightbulb, AlertTriangle } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { DEMO_MAILTO } from '@/lib/landing-cta'
+import { REGISTER_ROUTE } from '@/lib/landing-cta'
 import {
   Accordion,
   AccordionContent,
@@ -138,13 +138,14 @@ const formattedDate = computed(() =>
       <div class="mt-12 rounded-2xl border border-border bg-card p-8 text-center">
         <h3 class="text-xl font-bold text-foreground">Faktury, pokladna i sklad v jednom</h3>
         <p class="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-          Vystaveno spouštíme pro první provozy. Napište si o ukázku — zdarma a bez závazku.
+          Založte si účet zdarma — začnete jen s fakturami a zbytek si přidáte, až ho budete
+          potřebovat.
         </p>
         <Button variant="coral" size="lg" class="group mt-5" as-child>
-          <a :href="DEMO_MAILTO">
-            Chci demo
+          <RouterLink :to="REGISTER_ROUTE">
+            Vyzkoušet zdarma
             <ArrowRight class="transition-transform group-hover:translate-x-0.5" />
-          </a>
+          </RouterLink>
         </Button>
       </div>
     </div>

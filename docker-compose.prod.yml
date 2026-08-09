@@ -1,7 +1,11 @@
 # Produkční override pro VPS: TLS edge (Caddy + automatické Let's Encrypt) + restart politiky.
 # Spuštění na VPS (z adresáře vystavenocz, vedle sousedního ../vystaveno-api):
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-# Vyžaduje .env (gitignored) s: DOMAIN, ACME_EMAIL, JWT_SECRET, DB_PASSWORD, STRIPE_SECRET_KEY, INTEGRATIONS_SECRET_ENCRYPTION_KEY, PAYMENTS_PORTAL_BASE_URL
+# Vyžaduje .env (gitignored) s: DOMAIN, ACME_EMAIL, JWT_SECRET, DB_PASSWORD, STRIPE_SECRET_KEY, INTEGRATIONS_SECRET_ENCRYPTION_KEY, PAYMENTS_PORTAL_BASE_URL, WAL_ARCHIVE_DIR.
+# WAL_ARCHIVE_DIR je absolutní cesta na hostiteli, kam PostgreSQL archivuje WAL (PITR). Založí ho
+# ./ops/install-vps-reliability.sh; doporučená hodnota je ~/backups/vystaveno/wal-archive (viz docs/vps-reliability.md).
+# Pro PINy obsluhy na pokladně (PIN login + manažerský override) navíc AUTH_PIN_LOOKUP_KEY.
+# Pro skutečné e-maily navíc EMAIL_HOST, EMAIL_PORT, EMAIL_FROM, EMAIL_USERNAME a EMAIL_PASSWORD.
 # (viz docs/deployment-vps.md)
 # Pozn.: `!reset` vyžaduje Docker Compose >= 2.24.4.
 services:
@@ -24,6 +28,9 @@ services:
   web:
     restart: unless-stopped
     ports: !reset [] # za Caddy → web nepublikuje port přímo na host
+    volumes:
+      # Instalátory desktop appky. Nahraj scp do ./downloads na VPS — nepatří do image ani do gitu.
+      - ./downloads:/usr/share/nginx/html/download:ro
 
   api:
     restart: unless-stopped
@@ -35,10 +42,57 @@ services:
 
   db:
     restart: unless-stopped
+    # PITR: WAL se archivuje vedle záloh, takže obnova jde na KONKRÉTNÍ ČAS, ne jen na noční snapshot.
+    # archive_command je záměrně atomický (nejdřív .tmp, pak mv) — nedopsaný segment by jinak navždy
+    # blokoval doarchivování a WAL by se hromadil, dokud se nezastaví databáze.
+    # archive_timeout: i tichý provoz odešle segment aspoň jednou za 5 minut → RPO v jednotkách minut.
+    command:
+      - postgres
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+      - -c
+      - archive_mode=on
+      - -c
+      - archive_command=test ! -f /var/lib/vystaveno/wal-archive/%f && cp %p /var/lib/vystaveno/wal-archive/.%f.tmp && mv /var/lib/vystaveno/wal-archive/.%f.tmp /var/lib/vystaveno/wal-archive/%f
+      - -c
+      - archive_timeout=300
+      - -c
+      - wal_keep_size=512MB
+    volumes:
+      - ./ops/postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      # Adresář vlastní hostitel (musí patřit uid 70 = postgres v obraze) — zakládá ho install-vps-reliability.sh.
+      - ${WAL_ARCHIVE_DIR:?nastav WAL_ARCHIVE_DIR (např. /home/deploy/backups/vystaveno/wal-archive)}:/var/lib/vystaveno/wal-archive
+
+  # Hot standby replika. Neběží sama od sebe — je za profilem, protože prázdný datový adresář by jen spadl.
+  # Postup: ./ops/vps-replica-init.sh (naplní volume přes pg_basebackup) a pak
+  #   docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile replica up -d db_replica
+  # Failover je RUČNÍ (promote), automatika je vědomě mimo rozsah — viz docs/vps-reliability.md.
+  db_replica:
+    image: postgres:16-alpine
+    profiles: ['replica']
+    restart: unless-stopped
+    command:
+      - postgres
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+      - -c
+      - archive_mode=off # archivuje jen primár; replika by po promote začala psát do stejného archivu
+      - -c
+      - hot_standby=on
+    volumes:
+      - pgdata_replica:/var/lib/postgresql/data
+      - ./ops/postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ${WAL_ARCHIVE_DIR:?nastav WAL_ARCHIVE_DIR (např. /home/deploy/backups/vystaveno/wal-archive)}:/var/lib/vystaveno/wal-archive:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U vystaveno']
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
 volumes:
   caddy_data:
   caddy_config:
+  pgdata_replica:
   api_files:
     # Default odpovídá dnešnímu VPS volume; override je jen pro řízený DR cutover.
     name: ${API_FILES_VOLUME_NAME:-vystavenocz_api_files}

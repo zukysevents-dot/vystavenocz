@@ -47,6 +47,8 @@ export interface CreateSignatureEnvelopeInput {
   provider: string
   signer: SignatureSigner
   expiresAt?: string | null
+  /** SHA-256 hex otisk dokumentu (64 znaků) — v API režimu povinný, počítá se lokálně ze souboru. */
+  documentHash?: string | null
 }
 
 // Evidence / audit trail obálky (provider-neutral). Každý krok má čas, událost a volitelně hash.
@@ -140,6 +142,135 @@ export const SIGNATURE_DOCUMENT_TYPES: { key: string; label: string }[] = [
   { key: 'other', label: 'Ostatní' },
 ]
 
+// --- FE↔BE mapovací adapter (jen API režim, vzor invoice-api.ts) ---
+// Backend vrací ploché DTO (title/signerName/providerKey, enum PascalCase); FE typy vznikly nad mockem
+// (documentName/signer.{}/provider, lowercase). Bez mapování stránka Podpisy v API režimu padala na
+// `envelope.signer.name` (undefined). Mapování je idempotentní — FE tvar projde beze změny.
+
+interface ApiSigningEnvelope {
+  id: string
+  status: string
+  title: string
+  documentHash: string | null
+  signerName: string
+  signerEmail: string | null
+  signerPhone: string | null
+  providerKey: string
+  providerReference: string | null
+  documentType: string | null
+  externalReference: string | null
+  createdAt: string
+  sentAt: string | null
+  signedAt: string | null
+  expiresAt: string | null
+}
+
+function envelopeFromApi(dto: SignatureEnvelope | ApiSigningEnvelope): SignatureEnvelope {
+  if ('signer' in dto && dto.signer) return dto as SignatureEnvelope
+  const api = dto as ApiSigningEnvelope
+  return {
+    id: api.id,
+    documentName: api.title,
+    documentType: api.documentType ?? null,
+    externalReference: api.externalReference ?? null,
+    status: api.status.toLowerCase() as SignatureEnvelopeStatus,
+    provider: api.providerKey,
+    providerLabel: providerLabelFor(api.providerKey),
+    signer: {
+      name: api.signerName,
+      email: api.signerEmail ?? null,
+      phone: api.signerPhone ?? null,
+    },
+    evidenceHash: api.documentHash ?? null,
+    providerReference: api.providerReference ?? null,
+    createdAt: api.createdAt,
+    sentAt: api.sentAt ?? null,
+    signedAt: api.signedAt ?? null,
+    expiresAt: api.expiresAt ?? null,
+  }
+}
+
+interface ApiSigningEvidence {
+  envelopeId: string
+  title: string
+  documentHash: string | null
+  providerKey: string
+  events: {
+    type: string
+    note: string | null
+    evidenceHash: string | null
+    createdAt: string
+  }[]
+}
+
+function evidenceFromApi(dto: SignatureEvidence | ApiSigningEvidence): SignatureEvidence {
+  if ('entries' in dto) return dto
+  const api = dto as ApiSigningEvidence
+  return {
+    envelopeId: api.envelopeId,
+    documentName: api.title,
+    evidenceHash: api.documentHash ?? null,
+    provider: api.providerKey,
+    entries: (api.events ?? []).map((e) => ({
+      timestamp: e.createdAt,
+      event: e.type,
+      detail: e.note ?? null,
+      hash: e.evidenceHash ?? null,
+    })),
+  }
+}
+
+// Stav konfigurace: backend `WaitingForCredentials` (PascalCase enum) ↔ FE 'awaiting_credentials'.
+function connectionStatusFromApi(status: string): SigningConnectionStatus {
+  const s = status.toLowerCase()
+  return (s === 'waitingforcredentials' ? 'awaiting_credentials' : s) as SigningConnectionStatus
+}
+
+function connectionStatusToApi(status: SigningConnectionStatus): string {
+  return status === 'awaiting_credentials' ? 'WaitingForCredentials' : status
+}
+
+interface ApiSigningConnection {
+  id: string
+  providerKey: string
+  displayName: string
+  mode: string
+  status: string
+  configuredFields: string[]
+  requiredCredentialFields?: string[]
+  storedCredentialFields?: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+function connectionFromApi(
+  dto: SigningProviderConnection | ApiSigningConnection,
+): SigningProviderConnection {
+  const api = dto as ApiSigningConnection
+  return {
+    id: api.id,
+    providerKey: api.providerKey,
+    name: 'name' in dto && dto.name ? dto.name : api.displayName,
+    mode: api.mode.toLowerCase() as SigningConnectionMode,
+    status: connectionStatusFromApi(api.status),
+    configuredFields: api.configuredFields ?? [],
+    requiredCredentialFields: api.requiredCredentialFields,
+    storedCredentialFields: api.storedCredentialFields,
+    createdAt: api.createdAt,
+    updatedAt: api.updatedAt,
+  }
+}
+
+function connectionRequestToApi(request: UpsertSigningProviderConnectionRequest) {
+  return {
+    providerKey: request.providerKey,
+    displayName: request.name,
+    mode: request.mode,
+    status: connectionStatusToApi(request.status),
+    configuredFields: request.configuredFields ?? [],
+  }
+}
+
 const STORAGE_KEY = 'vystaveno:signing-envelopes'
 
 export function useVerifiedSigning() {
@@ -151,10 +282,10 @@ export function useVerifiedSigning() {
       return status ? all.filter((e) => e.status === status) : all
     }
     const query = status ? `?status=${encodeURIComponent(status)}` : ''
-    const res = await http.get<SignatureEnvelope[] | PagedResult<SignatureEnvelope>>(
+    const res = await http.get<ApiSigningEnvelope[] | PagedResult<ApiSigningEnvelope>>(
       `/verified-signing/envelopes${query}`,
     )
-    return Array.isArray(res) ? res : res.items
+    return (Array.isArray(res) ? res : res.items).map(envelopeFromApi)
   }
 
   async function getEnvelope(id: string): Promise<SignatureEnvelope> {
@@ -163,12 +294,24 @@ export function useVerifiedSigning() {
       if (!found) throw new Error('Podpisová obálka nenalezena.')
       return found
     }
-    return http.get<SignatureEnvelope>(`/verified-signing/envelopes/${id}`)
+    return envelopeFromApi(await http.get<ApiSigningEnvelope>(`/verified-signing/envelopes/${id}`))
   }
 
   async function createEnvelope(input: CreateSignatureEnvelopeInput): Promise<SignatureEnvelope> {
     if (!isApiMode()) return createMockEnvelope(input)
-    return http.post<SignatureEnvelope>('/verified-signing/envelopes', input)
+    return envelopeFromApi(
+      await http.post<ApiSigningEnvelope>('/verified-signing/envelopes', {
+        title: input.documentName,
+        documentHash: input.documentHash ?? null,
+        documentType: input.documentType ?? null,
+        externalReference: input.externalReference ?? null,
+        providerKey: input.provider,
+        signerName: input.signer.name,
+        signerEmail: input.signer.email,
+        signerPhone: input.signer.phone,
+        expiresAt: input.expiresAt ?? null,
+      }),
+    )
   }
 
   // Runtime seam: volitelný providerConnectionId nasměruje odeslání přes konkrétní Ready konfiguraci (a její adapter).
@@ -178,20 +321,26 @@ export function useVerifiedSigning() {
     providerConnectionId?: string | null,
   ): Promise<SignatureEnvelope> {
     if (!isApiMode()) return transitionMockEnvelope(id, 'sent', providerConnectionId)
-    return http.post<SignatureEnvelope>(
-      `/verified-signing/envelopes/${id}/send`,
-      providerConnectionId ? { providerConnectionId } : {},
+    return envelopeFromApi(
+      await http.post<ApiSigningEnvelope>(
+        `/verified-signing/envelopes/${id}/send`,
+        providerConnectionId ? { providerConnectionId } : {},
+      ),
     )
   }
 
   async function cancelEnvelope(id: string): Promise<SignatureEnvelope> {
     if (!isApiMode()) return transitionMockEnvelope(id, 'cancelled')
-    return http.post<SignatureEnvelope>(`/verified-signing/envelopes/${id}/cancel`, {})
+    return envelopeFromApi(
+      await http.post<ApiSigningEnvelope>(`/verified-signing/envelopes/${id}/cancel`, {}),
+    )
   }
 
   async function getEvidence(id: string): Promise<SignatureEvidence> {
     if (!isApiMode()) return buildMockEvidence(id)
-    return http.get<SignatureEvidence>(`/verified-signing/envelopes/${id}/evidence`)
+    return evidenceFromApi(
+      await http.get<ApiSigningEvidence>(`/verified-signing/envelopes/${id}/evidence`),
+    )
   }
 
   // --- Nastavení poskytovatelů (jen API režim; mock/dev ukáže v UI poznámku) ---
@@ -205,31 +354,41 @@ export function useVerifiedSigning() {
     )
   }
 
-  function listProviderConnections(): Promise<SigningProviderConnection[]> {
-    return normalizeList(
-      http.get<SigningProviderConnection[] | PagedResult<SigningProviderConnection>>(
+  async function listProviderConnections(): Promise<SigningProviderConnection[]> {
+    const res = await normalizeList(
+      http.get<ApiSigningConnection[] | PagedResult<ApiSigningConnection>>(
         '/verified-signing/provider-connections',
+      ),
+    )
+    return res.map(connectionFromApi)
+  }
+
+  async function getProviderConnection(id: string): Promise<SigningProviderConnection> {
+    return connectionFromApi(
+      await http.get<ApiSigningConnection>(`/verified-signing/provider-connections/${id}`),
+    )
+  }
+
+  async function createProviderConnection(
+    request: UpsertSigningProviderConnectionRequest,
+  ): Promise<SigningProviderConnection> {
+    return connectionFromApi(
+      await http.post<ApiSigningConnection>(
+        '/verified-signing/provider-connections',
+        connectionRequestToApi(request),
       ),
     )
   }
 
-  function getProviderConnection(id: string): Promise<SigningProviderConnection> {
-    return http.get<SigningProviderConnection>(`/verified-signing/provider-connections/${id}`)
-  }
-
-  function createProviderConnection(
-    request: UpsertSigningProviderConnectionRequest,
-  ): Promise<SigningProviderConnection> {
-    return http.post<SigningProviderConnection>('/verified-signing/provider-connections', request)
-  }
-
-  function updateProviderConnection(
+  async function updateProviderConnection(
     id: string,
     request: UpsertSigningProviderConnectionRequest,
   ): Promise<SigningProviderConnection> {
-    return http.put<SigningProviderConnection>(
-      `/verified-signing/provider-connections/${id}`,
-      request,
+    return connectionFromApi(
+      await http.put<ApiSigningConnection>(
+        `/verified-signing/provider-connections/${id}`,
+        connectionRequestToApi(request),
+      ),
     )
   }
 
@@ -326,7 +485,7 @@ function createMockEnvelope(input: CreateSignatureEnvelopeInput): SignatureEnvel
     provider: input.provider,
     providerLabel: providerLabelFor(input.provider),
     signer: input.signer,
-    evidenceHash: mockEvidenceHash(id),
+    evidenceHash: input.documentHash ?? mockEvidenceHash(id),
     createdAt: new Date().toISOString(),
     sentAt: null,
     signedAt: null,

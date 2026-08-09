@@ -115,7 +115,7 @@ watch(
         >
       </DialogHeader>
       <div v-if="!apiMode" class="rounded-md border p-3 text-sm text-muted-foreground">
-        Varianty jsou dostupné po připojení k API.
+        Varianty jsou dostupné po přihlášení do online aplikace.
       </div>
       <div v-else-if="loading" class="flex justify-center py-10">
         <Loader2 class="h-6 w-6 animate-spin" />

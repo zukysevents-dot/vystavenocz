@@ -12,6 +12,7 @@ import {
   Building2,
   Upload,
   Download,
+  Link2,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,14 +40,58 @@ import { useAres } from '@/composables/useAres'
 import { downloadCsv } from '@/lib/csv-export'
 import { toast } from '@/components/ui/sonner'
 import LoadError from '@/components/app/LoadError.vue'
+import SecretRevealDialog from '@/components/settings/SecretRevealDialog.vue'
+import { http, isApiMode, saveErrorMessage } from '@/lib/http'
 import type { Client } from '@/lib/types'
 
 const router = useRouter()
 const { clients, loadError, load, create, update, remove } = useClients()
 const ares = useAres()
 
+const apiMode = isApiMode()
 const loading = ref(true)
 const search = ref('')
+
+// Klientská zóna: vygenerování odkazu pro klienta (token se zobrazí JEDNOU) + zrušení přístupu.
+const portalClient = ref<Client | null>(null)
+const portalLink = ref('')
+const portalBusy = ref(false)
+
+function openPortal(c: Client): void {
+  portalClient.value = c
+}
+
+async function generatePortalLink(): Promise<void> {
+  const client = portalClient.value
+  if (!client) return
+  portalBusy.value = true
+  try {
+    const res = await http.post<{ token: string }>(`/clients/${client.id}/portal-token`)
+    portalClient.value = null
+    portalLink.value = `${window.location.origin}/klient/${res.token}`
+  } catch (e) {
+    toast.error('Odkaz se nepodařilo vygenerovat.')
+    console.error(e)
+  } finally {
+    portalBusy.value = false
+  }
+}
+
+async function revokePortalLink(): Promise<void> {
+  const client = portalClient.value
+  if (!client) return
+  portalBusy.value = true
+  try {
+    await http.del<void>(`/clients/${client.id}/portal-token`)
+    toast.success('Přístup do klientské zóny zrušen.')
+    portalClient.value = null
+  } catch (e) {
+    toast.error('Přístup se nepodařilo zrušit.')
+    console.error(e)
+  } finally {
+    portalBusy.value = false
+  }
+}
 const editing = ref<Client | null>(null)
 const dialogOpen = ref(false)
 const deleteId = ref<string | null>(null)
@@ -193,6 +238,10 @@ async function onSubmit() {
       toast.success('Klient vytvořen.')
     }
     dialogOpen.value = false
+  } catch (e) {
+    // Dialog zůstává otevřený i s vyplněnými údaji — rozdělaná práce se nesmí ztratit potichu.
+    toast.error(saveErrorMessage(e, 'Klienta se nepodařilo uložit.'))
+    console.error(e)
   } finally {
     submitting.value = false
   }
@@ -210,8 +259,14 @@ async function onDelete() {
   if (!id) return
   deleteOpen.value = false
   deleteId.value = null
-  await remove(id)
-  toast.success('Klient smazán.')
+  try {
+    await remove(id)
+    toast.success('Klient smazán.')
+  } catch (e) {
+    // Bez hlášky by řádek jen zůstal v seznamu a vypadalo to jako nefunkční tlačítko.
+    toast.error(saveErrorMessage(e, 'Klienta se nepodařilo smazat.'))
+    console.error(e)
+  }
 }
 </script>
 
@@ -268,15 +323,17 @@ async function onDelete() {
           :key="c.id"
           class="flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-muted/40"
         >
-          <div class="flex items-center gap-3">
+          <!-- min-w-0 + break-words: dlouhé jméno nebo e-mail klienta jinak flex položku roztáhne,
+               stránka přeteče do šířky a mobil kvůli tomu odzoomuje — pak se ani dialog nedá ovládat. -->
+          <div class="flex min-w-0 items-center gap-3">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-soft text-primary"
+              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary"
             >
               <Building2 class="h-5 w-5" />
             </div>
-            <div>
-              <div class="font-semibold">{{ c.name }}</div>
-              <div class="text-sm text-muted-foreground">
+            <div class="min-w-0">
+              <div class="break-words font-semibold">{{ c.name }}</div>
+              <div class="break-words text-sm text-muted-foreground">
                 {{ c.ico ? `IČO ${c.ico}` : 'Bez IČO' }}
                 {{ c.city ? ` • ${c.city}` : '' }}
                 {{ c.email ? ` • ${c.email}` : '' }}
@@ -284,6 +341,15 @@ async function onDelete() {
             </div>
           </div>
           <div class="flex items-center gap-1">
+            <Button
+              v-if="apiMode"
+              variant="ghost"
+              size="icon"
+              title="Klientská zóna (odkaz pro klienta)"
+              @click="openPortal(c)"
+            >
+              <Link2 class="h-4 w-4" />
+            </Button>
             <Button variant="ghost" size="icon" title="Upravit" @click="openEdit(c)">
               <Pencil class="h-4 w-4" />
             </Button>
@@ -419,5 +485,35 @@ async function onDelete() {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    <!-- Klientská zóna: generování / zrušení odkazu -->
+    <Dialog :open="portalClient != null" @update:open="(o) => !o && (portalClient = null)">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Klientská zóna</DialogTitle>
+          <DialogDescription>
+            {{ portalClient?.name }} — klient přes odkaz bez přihlášení uvidí své faktury a nabídky,
+            stáhne PDF a schválí nabídku. Nový odkaz nahradí ten předchozí.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter class="gap-2">
+          <Button variant="outline" :disabled="portalBusy" @click="revokePortalLink">
+            Zrušit přístup
+          </Button>
+          <Button :disabled="portalBusy" @click="generatePortalLink">
+            <Loader2 v-if="portalBusy" class="h-4 w-4 animate-spin" />
+            Vygenerovat odkaz
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <SecretRevealDialog
+      :open="portalLink !== ''"
+      title="Odkaz do klientské zóny"
+      description="Pošlete odkaz klientovi. Zobrazuje se jen jednou — příště vygenerujete nový (starý přestane platit)."
+      :secret="portalLink"
+      @close="portalLink = ''"
+    />
   </div>
 </template>

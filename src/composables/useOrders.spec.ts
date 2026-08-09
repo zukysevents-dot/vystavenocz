@@ -12,6 +12,32 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
+describe('useOrders — stránkování otevřených účtů', () => {
+  it('načte a spojí všechny stránky otevřených účtů', async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({ id: `o${index + 1}` }))
+    vi.mocked(http.get)
+      .mockResolvedValueOnce({
+        items: firstPage,
+        total: 101,
+        page: 1,
+        pageSize: 100,
+      } as never)
+      .mockResolvedValueOnce({
+        items: [{ id: 'o101' }],
+        total: 101,
+        page: 2,
+        pageSize: 100,
+      } as never)
+
+    const result = await useOrders().listOpen()
+
+    expect(result).toHaveLength(101)
+    expect(result.at(-1)?.id).toBe('o101')
+    expect(http.get).toHaveBeenNthCalledWith(1, '/orders?status=Open&page=1&pageSize=100')
+    expect(http.get).toHaveBeenNthCalledWith(2, '/orders?status=Open&page=2&pageSize=100')
+  })
+})
+
 describe('useOrders — payload položek (note/course)', () => {
   it('addItem bez meta neposílá note/course (nová položka)', async () => {
     vi.mocked(http.post).mockResolvedValue({} as never)
@@ -147,16 +173,22 @@ describe('useOrders — payload položek (note/course)', () => {
 
   it('payItems volá POST /orders/{id}/pay-items s vybraným množstvím položek', async () => {
     vi.mocked(http.post).mockResolvedValue({} as never)
-    await useOrders().payItems('o1', 'Card', [
-      { itemId: 'i1', quantity: 1 },
-      { itemId: 'i2', quantity: 0.5 },
-    ])
+    await useOrders().payItems(
+      'o1',
+      'Card',
+      [
+        { itemId: 'i1', quantity: 1 },
+        { itemId: 'i2', quantity: 0.5 },
+      ],
+      'payment-1',
+    )
     expect(http.post).toHaveBeenCalledWith('/orders/o1/pay-items', {
       paymentMethod: 'Card',
       items: [
         { itemId: 'i1', quantity: 1 },
         { itemId: 'i2', quantity: 0.5 },
       ],
+      idempotencyKey: 'payment-1',
       cashReceived: null,
       priceLevelId: null,
     })
@@ -164,10 +196,11 @@ describe('useOrders — payload položek (note/course)', () => {
 
   it('payItems pošle přijatou hotovost (cashReceived) při platbě hotově', async () => {
     vi.mocked(http.post).mockResolvedValue({} as never)
-    await useOrders().payItems('o1', 'Cash', [{ itemId: 'i1', quantity: 1 }], 200)
+    await useOrders().payItems('o1', 'Cash', [{ itemId: 'i1', quantity: 1 }], 'payment-2', 200)
     expect(http.post).toHaveBeenCalledWith('/orders/o1/pay-items', {
       paymentMethod: 'Cash',
       items: [{ itemId: 'i1', quantity: 1 }],
+      idempotencyKey: 'payment-2',
       cashReceived: 200,
       priceLevelId: null,
     })
@@ -175,10 +208,18 @@ describe('useOrders — payload položek (note/course)', () => {
 
   it('payItems pošle zvolenou cenovou hladinu (priceLevelId)', async () => {
     vi.mocked(http.post).mockResolvedValue({} as never)
-    await useOrders().payItems('o1', 'Card', [{ itemId: 'i1', quantity: 1 }], null, 'vip-1')
+    await useOrders().payItems(
+      'o1',
+      'Card',
+      [{ itemId: 'i1', quantity: 1 }],
+      'payment-3',
+      null,
+      'vip-1',
+    )
     expect(http.post).toHaveBeenCalledWith('/orders/o1/pay-items', {
       paymentMethod: 'Card',
       items: [{ itemId: 'i1', quantity: 1 }],
+      idempotencyKey: 'payment-3',
       cashReceived: null,
       priceLevelId: 'vip-1',
     })

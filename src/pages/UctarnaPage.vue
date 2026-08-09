@@ -110,7 +110,7 @@ async function exportIsdoc(inv: Invoice) {
   <div class="mx-auto max-w-6xl p-4 sm:p-6 md:p-8">
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Účtárna</h1>
+        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Export pro účetní</h1>
         <p class="mt-1 text-muted-foreground">
           Export podkladů pro účetní — ISDOC i CSV jedním kliknutím.
         </p>

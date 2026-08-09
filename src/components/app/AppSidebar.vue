@@ -7,7 +7,6 @@ import {
   Users,
   Settings,
   LogOut,
-  Sparkles,
   CreditCard,
   ShoppingCart,
   Package,
@@ -37,12 +36,22 @@ import {
   FileSignature,
   Repeat,
   CircleHelp,
+  SlidersHorizontal,
+  ClipboardList,
+  UserCog,
+  Blocks,
 } from 'lucide-vue-next'
 import SiteLogo from '@/components/SiteLogo.vue'
 import { Button } from '@/components/ui/button'
 import ThemeToggle from '@/components/ThemeToggle.vue'
+import { toast } from '@/components/ui/sonner'
 import { useAuthStore } from '@/stores/auth'
-import { APP_NAV_DEFINITIONS, isModuleEnabled, type AppNavDefinition } from '@/lib/modules'
+import {
+  APP_NAV_DEFINITIONS,
+  isModuleEnabled,
+  isNavVisibleForRole,
+  type AppNavDefinition,
+} from '@/lib/modules'
 
 const navIcons = {
   '/app': LayoutDashboard,
@@ -53,12 +62,18 @@ const navIcons = {
   '/app/sklad': Package,
   '/app/zasoby': Boxes,
   '/app/naskladneni': ScanBarcode,
+  '/app/skladove-doklady': FileText,
+  '/app/dodavatele': Building2,
+  '/app/nakupni-objednavky': ClipboardList,
+  '/app/modifikatory': SlidersHorizontal,
   '/app/dochazka': Clock,
   '/app/smeny': CalendarClock,
+  '/app/tym': UserCog,
   '/app/pobocky': Building2,
   '/app/audit': History,
   '/app/schvalovani': ShieldCheck,
   '/app/konsolidace': BarChart3,
+  '/app/provozni-prehled': BarChart3,
   '/app/uzaverka': Receipt,
   '/app/rezervace': CalendarDays,
   '/app/kategorie': Tags,
@@ -71,8 +86,11 @@ const navIcons = {
   '/app/klienti': Users,
   '/app/import': Upload,
   '/app/vernost': Heart,
+  '/app/akce-ceny': Percent,
   '/app/zakazky': Wrench,
+  '/app/cenik-sluzeb': Wrench,
   '/app/podpisy': FileSignature,
+  '/app/moduly': Blocks,
   '/app/predplatne': CreditCard,
   '/app/nastaveni': Settings,
 } as const
@@ -81,14 +99,73 @@ const auth = useAuthStore()
 
 type SidebarNavItem = AppNavDefinition & { icon: (typeof navIcons)[keyof typeof navIcons] }
 
+const sidebarSections = [
+  { id: 'today', label: 'Dnes' },
+  { id: 'operations', label: 'Provoz' },
+  { id: 'products', label: 'Produkty a sklad' },
+  { id: 'team', label: 'Tým' },
+  { id: 'finance', label: 'Finance' },
+  { id: 'company', label: 'Firma a nastavení' },
+] as const
+
+type SidebarSectionId = (typeof sidebarSections)[number]['id']
+
+function sectionForPath(path: string): SidebarSectionId {
+  if (path === '/app') return 'today'
+  if (
+    [
+      '/app/pokladna',
+      '/app/restaurace',
+      '/app/kuchyne',
+      '/app/rezervace',
+      '/app/uzaverka',
+    ].includes(path)
+  )
+    return 'operations'
+  if (
+    [
+      '/app/sklad',
+      '/app/zasoby',
+      '/app/naskladneni',
+      '/app/skladove-doklady',
+      '/app/dodavatele',
+      '/app/nakupni-objednavky',
+      '/app/modifikatory',
+      '/app/kategorie',
+    ].includes(path)
+  )
+    return 'products'
+  if (['/app/dochazka', '/app/smeny', '/app/tym'].includes(path)) return 'team'
+  if (
+    [
+      '/app/nabidky',
+      '/app/faktury',
+      '/app/opakovane-faktury',
+      '/app/cashflow',
+      '/app/uctarna',
+      '/app/dph',
+      '/app/klienti',
+    ].includes(path)
+  )
+    return 'finance'
+  return 'company'
+}
+
 const nav = computed<SidebarNavItem[]>(() =>
   APP_NAV_DEFINITIONS.filter((item) => {
     if (!isModuleEnabled(item.module, auth.modules)) return false
-    if (auth.role && item.hiddenForRoles?.includes(auth.role)) return false
+    if (!isNavVisibleForRole(item, auth.role)) return false
     return true
   }).map((item) => ({ ...item, icon: navIcons[item.to as keyof typeof navIcons] })),
 )
-const canInvoice = computed(() => auth.role !== 'Employee')
+const groupedNav = computed(() =>
+  sidebarSections
+    .map((section) => ({
+      ...section,
+      items: nav.value.filter((item) => sectionForPath(item.to) === section.id),
+    }))
+    .filter((section) => section.items.length > 0),
+)
 const route = useRoute()
 const router = useRouter()
 const mobileOpen = ref(false)
@@ -100,6 +177,24 @@ function isActive(item: SidebarNavItem): boolean {
 async function signOut() {
   await auth.logout()
   router.push('/')
+}
+
+// Přepnutí aktivní firmy (jen účty s víc firmami) — server vydá nové tokeny, stránky se načtou znovu.
+const switching = ref(false)
+async function onSwitchCompany(event: Event) {
+  const target = (event.target as HTMLSelectElement).value
+  if (!target || target === auth.companyId) return
+  switching.value = true
+  const ok = await auth.switchCompany(target)
+  switching.value = false
+  if (ok) {
+    mobileOpen.value = false
+    // Tvrdý přechod: aplikace nastartuje znovu už v nové firmě. Softový router.push by nechal
+    // v paměti rozpracovaná data, filtry a načtené seznamy PŘEDCHOZÍ firmy.
+    window.location.assign('/app')
+  } else {
+    toast.error('Firmu se nepodařilo přepnout.')
+  }
 }
 
 // Zavřít mobilní menu při změně cesty
@@ -131,22 +226,27 @@ watch(
       <SiteLogo />
     </div>
 
-    <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto p-3">
-      <RouterLink
-        v-for="item in nav"
-        :key="item.to"
-        :to="item.to"
-        class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
-        :class="
-          isActive(item)
-            ? 'bg-primary-soft text-primary'
-            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-        "
-        @click="mobileOpen = false"
-      >
-        <component :is="item.icon" class="h-4 w-4" />
-        {{ item.label }}
-      </RouterLink>
+    <nav class="min-h-0 flex-1 space-y-4 overflow-y-auto p-3">
+      <section v-for="section in groupedNav" :key="section.id">
+        <h2 class="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-foreground">
+          {{ section.label }}
+        </h2>
+        <RouterLink
+          v-for="item in section.items"
+          :key="item.to"
+          :to="item.to"
+          class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
+          :class="
+            isActive(item)
+              ? 'bg-primary-soft text-primary'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+          "
+          @click="mobileOpen = false"
+        >
+          <component :is="item.icon" class="h-4 w-4" />
+          {{ item.label }}
+        </RouterLink>
+      </section>
     </nav>
 
     <div class="border-t border-border p-3">
@@ -157,19 +257,19 @@ watch(
       >
         <CircleHelp class="h-4 w-4" /> Průvodce
       </Button>
-      <button
-        v-if="canInvoice"
-        type="button"
-        class="w-full rounded-lg bg-gradient-to-br from-primary-soft to-accent p-3 text-left text-xs transition-all hover:shadow-md"
-        @click="router.push('/app/faktury/editor')"
+      <select
+        v-if="auth.companies.length > 1"
+        class="mb-2 flex h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
+        :value="auth.companyId ?? ''"
+        :disabled="switching"
+        aria-label="Aktivní firma"
+        @change="onSwitchCompany"
       >
-        <div class="flex items-center gap-2 font-semibold text-primary">
-          <Sparkles class="h-3.5 w-3.5" /> AI asistent
-        </div>
-        <p class="mt-1 text-muted-foreground">Vytvoř novou fakturu pomocí AI</p>
-      </button>
-
-      <div class="mt-3 flex items-center gap-2 rounded-lg p-2 text-sm">
+        <option v-for="company in auth.companies" :key="company.id" :value="company.id">
+          {{ company.name }}
+        </option>
+      </select>
+      <div class="flex items-center gap-2 rounded-lg p-2 text-sm">
         <div
           class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground"
         >
@@ -194,10 +294,12 @@ watch(
     @click="mobileOpen = false"
   />
 
-  <!-- Mobilní drawer -->
+  <!-- Mobilní drawer: zavřený je jen odsunutý transformem, proto inert — jinak by odkazy
+       mimo obrazovku zůstaly fokusovatelné klávesnicí a viditelné pro čtečky. -->
   <aside
     class="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-border bg-card shadow-xl transition-transform duration-200 md:hidden"
     :class="mobileOpen ? 'translate-x-0' : '-translate-x-full'"
+    :inert="!mobileOpen"
   >
     <div class="flex h-14 items-center justify-between border-b border-border px-4">
       <SiteLogo />
@@ -206,22 +308,27 @@ watch(
       </Button>
     </div>
 
-    <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto p-3">
-      <RouterLink
-        v-for="item in nav"
-        :key="item.to"
-        :to="item.to"
-        class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
-        :class="
-          isActive(item)
-            ? 'bg-primary-soft text-primary'
-            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-        "
-        @click="mobileOpen = false"
-      >
-        <component :is="item.icon" class="h-4 w-4" />
-        {{ item.label }}
-      </RouterLink>
+    <nav class="min-h-0 flex-1 space-y-4 overflow-y-auto p-3">
+      <section v-for="section in groupedNav" :key="section.id">
+        <h2 class="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-foreground">
+          {{ section.label }}
+        </h2>
+        <RouterLink
+          v-for="item in section.items"
+          :key="item.to"
+          :to="item.to"
+          class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
+          :class="
+            isActive(item)
+              ? 'bg-primary-soft text-primary'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+          "
+          @click="mobileOpen = false"
+        >
+          <component :is="item.icon" class="h-4 w-4" />
+          {{ item.label }}
+        </RouterLink>
+      </section>
     </nav>
 
     <div class="border-t border-border p-3">
@@ -232,19 +339,19 @@ watch(
       >
         <CircleHelp class="h-4 w-4" /> Průvodce
       </Button>
-      <button
-        v-if="canInvoice"
-        type="button"
-        class="w-full rounded-lg bg-gradient-to-br from-primary-soft to-accent p-3 text-left text-xs transition-all hover:shadow-md"
-        @click="router.push('/app/faktury/editor')"
+      <select
+        v-if="auth.companies.length > 1"
+        class="mb-2 flex h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
+        :value="auth.companyId ?? ''"
+        :disabled="switching"
+        aria-label="Aktivní firma"
+        @change="onSwitchCompany"
       >
-        <div class="flex items-center gap-2 font-semibold text-primary">
-          <Sparkles class="h-3.5 w-3.5" /> AI asistent
-        </div>
-        <p class="mt-1 text-muted-foreground">Vytvoř novou fakturu pomocí AI</p>
-      </button>
-
-      <div class="mt-3 flex items-center gap-2 rounded-lg p-2 text-sm">
+        <option v-for="company in auth.companies" :key="company.id" :value="company.id">
+          {{ company.name }}
+        </option>
+      </select>
+      <div class="flex items-center gap-2 rounded-lg p-2 text-sm">
         <div
           class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground"
         >

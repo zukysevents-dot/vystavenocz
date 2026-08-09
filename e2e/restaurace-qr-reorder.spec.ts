@@ -159,12 +159,12 @@ test('obsluha vidí QR doobjednávku hosta v aktualizovaném totalu před platbo
   await dismissCookies(page)
   await page.goto('/app/restaurace')
 
-  await page.getByRole('button', { name: /Stůl 1/ }).click()
-  await expect(page.getByRole('heading', { name: 'Účet — Stůl 1' })).toBeVisible()
+  await page.getByTestId('restaurant-table-list-table-1').click()
+  await expect(page.getByTestId('restaurant-order-view')).toBeVisible()
 
   // Výchozí stav: obsluha vidí 1 položku za 59 Kč.
-  const waiterBar = page.locator('.fixed').filter({ hasText: 'Stůl 1' })
-  await expect(waiterBar.getByText('1 položka · 59,00 Kč')).toBeVisible()
+  const waiterBar = page.getByTestId('restaurant-mobile-actions')
+  await expect(page.getByTestId('restaurant-total-mobile')).toContainText('59,00 Kč')
 
   // Host doobjedná přes QR (backend teď vrací 2 položky).
   qrReordered = true
@@ -172,6 +172,7 @@ test('obsluha vidí QR doobjednávku hosta v aktualizovaném totalu před platbo
   // Obsluha zmáčkne Zaplatit → forced refresh natáhne aktuální účet → dialog i lišta ukazují 118 Kč (2 položky).
   await waiterBar.getByRole('button', { name: /^Zaplatit$/ }).click()
   await expect(page.getByText('K úhradě')).toBeVisible()
-  await expect(page.getByText('118,00 Kč').first()).toBeVisible()
-  await expect(waiterBar.getByText('2 položek · 118,00 Kč')).toBeVisible()
+  await expect(page.getByTestId('payment-total')).toContainText('118,00 Kč')
+  await expect(page.getByTestId('restaurant-total-mobile')).toContainText('118,00 Kč')
+  await expect(page.getByTestId('restaurant-order-item-item-2')).toBeAttached()
 })

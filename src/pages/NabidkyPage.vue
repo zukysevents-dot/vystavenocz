@@ -72,6 +72,9 @@ const deleteId = ref<string | null>(null)
 const submitting = ref(false)
 const busyId = ref<string | null>(null)
 const quickClientOpen = ref(false)
+const emailDialogOpen = ref(false)
+const emailQuote = ref<Quote | null>(null)
+const recipientEmail = ref('')
 
 const vatRates: VatRate[] = [21, 12, 0]
 const statuses: QuoteStatus[] = ['draft', 'sent', 'accepted', 'rejected', 'expired']
@@ -287,6 +290,37 @@ async function changeStatus(q: Quote, status: QuoteStatus) {
   }
 }
 
+function openEmailDialog(q: Quote) {
+  if (busyId.value) return
+  emailQuote.value = q
+  recipientEmail.value = q.clientId
+    ? (clients.value.find((client) => client.id === q.clientId)?.email ?? '')
+    : ''
+  emailDialogOpen.value = true
+}
+
+async function sendEmail() {
+  const q = emailQuote.value
+  const to = recipientEmail.value.trim()
+  if (!q || busyId.value) return
+  if (!to) {
+    toast.error('Zadejte e-mail, na který se má nabídka poslat.')
+    return
+  }
+  busyId.value = q.id
+  try {
+    await quotesApi.sendEmail(q.id, { to })
+    toast.success('Nabídka byla odeslána e-mailem.')
+    emailDialogOpen.value = false
+    emailQuote.value = null
+    await reload()
+  } catch {
+    toast.error('Nabídku se nepodařilo odeslat. Zkontrolujte zadaný e-mail a SMTP nastavení.')
+  } finally {
+    busyId.value = null
+  }
+}
+
 // --- převod na zakázku ---
 async function toJob(q: Quote) {
   if (busyId.value) return
@@ -483,10 +517,20 @@ async function convertToInvoice(q: Quote) {
                     variant="ghost"
                     size="sm"
                     :disabled="busyId === q.id"
-                    title="Odeslat nabídku"
-                    @click="changeStatus(q, 'sent')"
+                    title="Odeslat nabídku e-mailem"
+                    @click="openEmailDialog(q)"
                   >
-                    <Send class="h-4 w-4" /> Odeslat
+                    <Send class="h-4 w-4" /> E-mailem
+                  </Button>
+                  <Button
+                    v-if="q.status === 'sent'"
+                    variant="ghost"
+                    size="sm"
+                    :disabled="busyId === q.id"
+                    title="Poslat nabídku znovu e-mailem"
+                    @click="openEmailDialog(q)"
+                  >
+                    <Send class="h-4 w-4" /> E-mailem
                   </Button>
                   <Button
                     v-if="q.status === 'sent'"
@@ -679,6 +723,44 @@ async function convertToInvoice(q: Quote) {
     </Dialog>
 
     <QuickClientDialog v-model:open="quickClientOpen" @confirm="onQuickClient" />
+
+    <!-- Odeslání nabídky: adresa se předvyplní z klienta, ale lze ji jednorázově upravit. -->
+    <Dialog v-model:open="emailDialogOpen">
+      <DialogContent class="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Odeslat nabídku e-mailem</DialogTitle>
+          <DialogDescription>
+            {{ emailQuote ? `Nabídka ${emailQuote.number}` : 'Nabídka' }} se odešle na jednu adresu.
+            Změna zde nepřepíše kartu klienta.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="grid gap-1.5">
+          <Label for="quote-recipient-email">E-mail příjemce</Label>
+          <Input
+            id="quote-recipient-email"
+            v-model="recipientEmail"
+            type="email"
+            autocomplete="email"
+            placeholder="zakaznik@firma.cz"
+            @keydown.enter.prevent="sendEmail"
+          />
+          <p class="text-xs text-muted-foreground">
+            Nemá-li klient uložený e-mail, jednoduše jej napište sem. Pro příště ho můžete doplnit v
+            kartě klienta.
+          </p>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" :disabled="!!busyId" @click="emailDialogOpen = false"
+            >Zrušit</Button
+          >
+          <Button variant="coral" :disabled="!!busyId || !recipientEmail.trim()" @click="sendEmail">
+            <Send class="h-4 w-4" /> Odeslat e-mail
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     <!-- Potvrzení smazání -->
     <AlertDialog :open="!!deleteId" @update:open="(o: boolean) => !o && (deleteId = null)">

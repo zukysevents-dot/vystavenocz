@@ -3,7 +3,7 @@ import { RouterLink } from 'vue-router'
 import { ShieldCheck, Database, Clock, Heart, Sparkles, Map, AlertTriangle } from 'lucide-vue-next'
 import PageHeader from '@/components/landing/PageHeader.vue'
 import { Button } from '@/components/ui/button'
-import { DEMO_MAILTO } from '@/lib/landing-cta'
+import { REGISTER_ROUTE } from '@/lib/landing-cta'
 
 const promises = [
   {
@@ -39,7 +39,7 @@ const promises = [
 ]
 
 const limits = [
-  'Aplikace zatím běží v režimu early access — veřejnou online registraci připravujeme, přístup teď domlouváme osobně.',
+  'Aplikace běží v režimu early access — účet si založíte sami online, ale některé moduly ještě dokončujeme.',
   'Termíny vývoje nových funkcí orientačně dodržujeme, ale závisí na změnách legislativy a třetích stranách (např. banky, ARES).',
   'Ceny modulů jsou orientační do veřejného spuštění; změnu vždy oznámíme dopředu a nikdy ji nezavádíme zpětně.',
   'Vrácení peněz za nevyčerpané období nenárokujeme automaticky, ale píšete-li nám férový důvod, řešíme individuálně.',
@@ -89,7 +89,7 @@ const limits = [
 
       <div class="mt-10 flex flex-col items-center gap-3 text-center">
         <Button variant="coral" size="lg" as-child>
-          <a :href="DEMO_MAILTO">Chci demo</a>
+          <RouterLink :to="REGISTER_ROUTE">Vyzkoušet zdarma</RouterLink>
         </Button>
         <RouterLink
           to="/cenik"

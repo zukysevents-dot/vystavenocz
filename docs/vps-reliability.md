@@ -16,7 +16,7 @@ Zdroj pravdy jsou verzované skripty v `ops/`.
 
 ## Obsah a konzistence zálohy
 
-Dokončený timestamp balík obsahuje `database.dump`, `api-files.tar.gz`, `manifest.env` a `SHA256SUMS`. API se při snapshotu
+Dokončený timestamp balík obsahuje `database.dump`, `api-files.tar.gz`, `basebackup.tar.gz`, `manifest.env` a `SHA256SUMS`. API se při snapshotu
 zastaví, takže PostgreSQL a přílohy mají společnou konzistenční hranici. Skript si před zastavením zapamatuje původní stav API;
 při zachytitelné chybě API vrátí do původního stavu a `.partial-*` balík odstraní. Před stopem zapíše maintenance marker: po
 `SIGKILL` nebo pádu shellu jej příští health běh rozpozná a API bezpečně nastartuje. `latest` se přepne atomicky až po kontrole
@@ -25,14 +25,70 @@ dumpu, archivu a checksumů.
 Před začátkem se kontroluje místo na backup filesystemu. Rezerva je minimálně 1 GiB nebo dvojnásobek posledního payloadu.
 Retence maže jen validní timestamp balíky uvnitř pevného rootu, nikdy `latest`, a vždy zachová nejméně dvě dokončené zálohy.
 
+## Obnova na konkrétní čas (PITR)
+
+Samotný noční snapshot znamená ztrátu všeho od poslední zálohy. Proto PostgreSQL archivuje WAL:
+
+- `archive_mode=on` a atomický `archive_command` (nejdřív `.tmp`, pak `mv`) — nedopsaný segment by jinak navždy blokoval
+  doarchivování a WAL by se hromadil, dokud se databáze nezastaví;
+- `archive_timeout=300`, takže i tichý provoz odešle segment aspoň jednou za 5 minut → **RPO v jednotkách minut**;
+- cíl je `WAL_ARCHIVE_DIR` z `.env` — povinná absolutní cesta na hostiteli, kterou zakládá instalátor a vlastní uid 70
+  (postgres v kontejneru). Bez ní `docker compose` s produkčním override vědomě nenastartuje.
+
+Denní záloha kromě logického `pg_dump` pořizuje i **fyzickou base zálohu** (`basebackup.tar.gz`) — z logického dumpu PITR
+udělat nelze. Hned po ní zafixuje `PITR_TARGET_UTC`, vynutí `pg_switch_wal()` a **počká, až se WAL doarchivuje**; když se
+nedoarchivuje, záloha se nepublikuje. Díky tomu je u každého balíku prokazatelné, na jaký čas se z něj dá obnovit.
+
+WAL archiv se drží o den déle než balíky (nejstarší držená base záloha by jinak zůstala bez svého WAL).
+
+Známé omezení: off-site mirror kopíruje **balíky, ne WAL archiv**. Při ztrátě celého VPS je tedy RPO daný poslední zálohou;
+PITR pokrývá poškození dat a chybný zásah na živém stroji. Proti ztrátě celého stroje slouží replika na druhém VPS.
+
+## Hot standby replika
+
+Replika chrání **dostupnost** (pokladna běží dál), zálohy chrání data. Failover je záměrně **ruční** — automatika (Patroni)
+je mimo rozsah, protože špatně nastavený automatický failover udělá víc škody než užitku.
+
+```bash
+cd ~/vystavenocz
+./ops/vps-replica-init.sh                    # naplní volume přes pg_basebackup a spustí repliku
+# v .ops.env pak přepni VYSTAVENO_REPLICA_ENABLED=1, ať ji hlídá health
+```
+
+Replika je za compose profilem `replica` (prázdný datový adresář by jen spadl), archivaci má vypnutou (archivuje jen primár)
+a WAL archiv má připojený read-only. Přepis existujícího volume je destruktivní, proto ho `vps-replica-init.sh` vyžaduje
+potvrdit `VYSTAVENO_REPLICA_FORCE=1`.
+
+### Přepnutí na repliku do 15 minut
+
+1. **Rozhodni, že primár nejde opravit** (typicky poškozený datový adresář nebo mrtvý stroj). Zapiš čas rozhodnutí.
+2. Zastav aplikaci, ať do primáru nic nepřiteče:
+   `docker compose -f docker-compose.yml -f docker-compose.prod.yml stop api`
+3. Povyš repliku:
+   `docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile replica exec db_replica pg_ctl promote -D /var/lib/postgresql/data`
+   Hotovo je, když `select pg_is_in_recovery()` vrátí `f`.
+4. Přepni API na povýšený uzel — v `.env` změň hostitele v připojovacím řetězci na `db_replica`
+   (`Database__ConnectionString: 'Host=db_replica;...'` se skládá v compose, takže stačí přepsat proměnnou a API znovu vytvořit):
+   `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate api`
+5. **Ověř, že běží správný uzel:** `docker compose ... exec db_replica psql -U vystaveno -d vystaveno -Atc 'select pg_is_in_recovery()'`
+   musí vrátit `f`, a produktový smoke musí projít: přihlášení, prodej na pokladně, uzávěrka dne.
+6. Hned po stabilizaci spusť `./ops/vps-backup.sh` — nový primár nemá vlastní zálohu a starý už neplatí.
+
+**Návrat zpět** není „přepnutí obráceně": původní primár je po promote rozejitý a musí se postavit znovu jako replika
+(`./ops/vps-replica-init.sh` proti novému primáru). Do té doby jedeš bez standby a víš o tom.
+
 ## Instalace na VPS
+
+Nejdřív do `.env` doplň `WAL_ARCHIVE_DIR` (absolutní cesta, doporučeně `$HOME/backups/vystaveno/wal-archive`).
+Bez ní produkční stack vědomě nenastartuje — raději hlasitá chyba než tichý provoz bez archivace WAL.
 
 ```bash
 cd ~/vystavenocz
 chmod +x ops/*.sh ops/lib/*.sh ops/tests/*.sh
+./ops/install-vps-reliability.sh   # založí WAL archiv se správným vlastníkem a nastaví cron
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d db   # restart kvůli archive_mode
 ./ops/vps-backup.sh
 ./ops/vps-verify-backup.sh
-./ops/install-vps-reliability.sh
 ```
 
 Instalátor atomicky vytvoří `.ops.env`, stáhne připnuté obrazy a idempotentně nastaví cron v `CRON_TZ=UTC`:
@@ -41,8 +97,21 @@ Instalátor atomicky vytvoří `.ops.env`, stáhne připnuté obrazy a idempoten
 - konzistentní backup denně v 02:30;
 - plný restore-check každou neděli v 04:15.
 
-Výchozí RPO je 24 hodin. Backup starší než 30 hodin nebo méně než 10 % volného místa na projektovém či backup filesystemu
-je chyba. Logy a záznamy deployů jsou v `~/backups/vystaveno/logs`.
+RPO je s archivací WAL v jednotkách minut (bez ní byl 24 hodin). Backup starší než 30 hodin nebo méně než 10 % volného
+místa na projektovém, backup či WAL filesystemu je chyba. Logy a záznamy deployů jsou v `~/backups/vystaveno/logs`.
+
+## Předakční kontrola (festival, velká akce)
+
+Projdi **den předem**, ne v den akce — na doplnění chybějícího už nebude čas:
+
+| Kontrola               | Příkaz / kde                                                | Co musí platit                                            |
+| ---------------------- | ----------------------------------------------------------- | --------------------------------------------------------- |
+| Záloha ověřená obnovou | `./ops/vps-verify-backup.sh`                                | projde včetně obnovy na konkrétní čas                     |
+| Archivace WAL běží     | `./ops/vps-health-check.sh`                                 | žádná chyba archivace, `pg_wal` pod limitem               |
+| Replika v syncu        | `./ops/vps-health-check.sh` s `VYSTAVENO_REPLICA_ENABLED=1` | replika připojená, zpoždění pod limitem                   |
+| Volné místo            | health check                                                | ≥ 10 % na projektu, zálohách i WAL archivu                |
+| Přepnutí vyzkoušené    | postup výše na testovací kopii                              | zvládneš ho do 15 minut podle papíru, ne z hlavy          |
+| Záložní konektivita    | druhá SIM / router                                          | dokud není hotový offline režim POS, bez sítě se neúčtuje |
 
 ## Bezpečný deploy
 
@@ -63,13 +132,25 @@ novými commity a image ID. Při chybě nemaže data ani neprovádí slepý roll
 ```
 
 `latest` se jednou přeloží na neměnný timestamp adresář. Kontrolují se všechny SHA-256, archiv příloh a kompletní `pg_restore`
-do jednorázové DB zakončený kontrolním dotazem. Kontejner má 1,5 GiB memory limit a 1 GiB datový tmpfs, takže větší obnova
+do jednorázové DB zakončený kontrolním dotazem. Balík s `basebackup.tar.gz` navíc projde **obnovou na konkrétní čas**:
+rozbalí se fyzická base záloha, přehraje se WAL z archivu (`restore_command`), cluster se povýší přesně na
+`PITR_TARGET_UTC` z manifestu a teprve pak proběhne kontrolní dotaz. Když se cluster do cíle nedostane, restore-check
+selže a marker se nezapíše — týdenní kontrola tedy hlídá i PITR, ne jen snapshot. Kontejner má 1,5 GiB memory limit a 1 GiB datový tmpfs, takže větší obnova
 bezpečně selže místo vyčerpání hostitele a musí se ověřit na samostatném recovery stroji. Úspěch atomicky obnoví marker, jehož
 stáří hlídá health; selhávající týdenní restore-check proto nezůstane skrytý. Produkční DB ani API se nepoužijí.
 
 ## Monitoring a off-site
 
-Health kontroluje Compose služby, `/health/live`, `/health/ready`, `/api/v1/ping`, stáří lokální zálohy a oba filesystémy.
+Health kontroluje Compose služby, `/health/live`, `/health/ready`, `/api/v1/ping`, stáří lokální zálohy a všechny tři
+filesystémy (projekt, zálohy, WAL archiv). Nad databází navíc hlídá:
+
+- **archivaci WAL** — poslední pokus nesmí být neúspěšný a poslední archivovaný segment nesmí být starší než
+  `VYSTAVENO_MAX_WAL_ARCHIVE_AGE_SECONDS` (výchozí 1800 s). Zaseknutá archivace je tichá porucha;
+- **velikost `pg_wal`** proti `VYSTAVENO_MAX_WAL_DIR_BYTES` (výchozí 2 GiB) — rostoucí `pg_wal` znamená, že se WAL
+  nedostává do archivu, a plný disk WAL **zastaví databázi**;
+- **replikační zpoždění** proti `VYSTAVENO_MAX_REPLICA_LAG_BYTES` (výchozí 64 MiB) a to, že je replika vůbec připojená.
+  Kontroluje se jen při `VYSTAVENO_REPLICA_ENABLED=1`, ať instalace bez standby nehlásí falešnou chybu.
+
 Do `.ops.env` lze vložit externí dead-man URL:
 
 ```dotenv

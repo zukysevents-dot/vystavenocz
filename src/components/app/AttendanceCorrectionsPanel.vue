@@ -101,7 +101,7 @@ async function save(): Promise<void> {
     await reload()
   } catch (e) {
     if (e instanceof ApiError && e.status === 403)
-      toast.error('Tuto docházku nemůžete opravit (jiná pobočka nebo role).')
+      toast.error('Nemáte oprávnění upravit tuto docházku.')
     else if (e instanceof ApiError && e.status === 422) toast.error('Neplatné časy.')
     else toast.error('Oprava selhala.')
     console.error(e)

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeft,
@@ -14,6 +14,7 @@ import {
   Mail,
   CheckCircle2,
   Ban,
+  FileCheck2,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,13 +26,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import QuickClientDialog, { type QuickClient } from '@/components/app/QuickClientDialog.vue'
 import InvoiceDocument from '@/components/app/InvoiceDocument.vue'
 import SendInvoiceDialog from '@/components/app/SendInvoiceDialog.vue'
 import CancelInvoiceDialog from '@/components/app/CancelInvoiceDialog.vue'
 import PaywallDialog from '@/components/app/PaywallDialog.vue'
 import { downloadInvoicePdf } from '@/lib/invoice-pdf'
-import { ApiError, isApiMode } from '@/lib/http'
+import { ApiError, isApiMode, saveErrorMessage } from '@/lib/http'
 import { useClients } from '@/composables/useClients'
 import {
   useInvoices,
@@ -46,6 +54,7 @@ import {
   calcTotals,
   documentTypeLabel,
   formatCZK,
+  formatDate,
   variableSymbolFromInvoiceNumber,
 } from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
@@ -81,10 +90,14 @@ const paymentMethods = [
   { value: 'card', label: 'Kartou' },
 ]
 
+/** Šířka vykresleného dokladu (A4 @ 96 dpi) — musí odpovídat `.invoice-doc` v InvoiceDocument.vue. */
+const DOC_WIDTH_PX = 794
+
 const loading = ref(true)
 const saving = ref(false)
 const quickOpen = ref(false)
 const showPreview = ref(true)
+const fullPreviewOpen = ref(false)
 const downloadingPdf = ref(false)
 const sendOpen = ref(false)
 const cancelOpen = ref(false)
@@ -103,6 +116,15 @@ const documentTypeOptions = [
   { value: 'proforma', label: 'Zálohová faktura' },
 ] as const
 const canChooseType = computed(() => status.value === 'draft')
+
+// V ostrém režimu vlastní číslo dokladu, datum vystavení, variabilní symbol i způsob úhrady SERVER:
+// číslo se přiděluje z číselné řady až při vystavení, datum vystavení se doplní tamtéž, VS se odvozuje
+// z čísla a doklad se tiskne s bankovním převodem. Jako editovatelná pole to byla lež — uživatel je
+// vyplnil, uložení je zahodilo a po návratu do dokladu byla prázdná. Proto je jen zobrazujeme.
+const serverOwnedFields = isApiMode()
+const variableSymbolDisplay = computed(
+  () => variableSymbol.value.trim() || variableSymbolFromInvoiceNumber(invoiceNumber.value),
+)
 
 // Stav hlavičky.
 const selectedClientId = ref('')
@@ -291,6 +313,32 @@ const clientSnapshot = computed<ClientSnapshot>(() => {
   return adHocClient.value ?? { name: '' }
 })
 
+// Jeden zdroj vlastností dokladu pro všechny tři vykreslení (náhled, náhled přes celou obrazovku, PDF).
+const documentProps = computed(() => ({
+  supplier: supplierSnapshot.value,
+  client: clientSnapshot.value,
+  items: previewItems.value,
+  invoiceNumber: invoiceNumber.value,
+  issueDate: issueDate.value,
+  dueDate: dueDate.value,
+  taxableDate: issueDate.value,
+  variableSymbol: variableSymbolDisplay.value,
+  paymentMethod: paymentMethod.value,
+}))
+
+// Náhled je pevná A4 (794 px). Na užší obrazovce ho zmenšíme přesně na dostupnou šířku, ať je
+// vidět celý doklad; nikdy nezvětšujeme (na desktopu tedy zůstává 1:1 jako dřív).
+const previewBox = ref<HTMLElement | null>(null)
+const previewZoom = ref(1)
+function fitPreview(): void {
+  const width = previewBox.value?.clientWidth ?? 0
+  previewZoom.value = width ? Math.min(1, width / DOC_WIDTH_PX) : 1
+}
+// Náhled se do stránky přidá až po načtení dokladu a dá se schovat — přeměř po každé změně.
+watch([showPreview, loading], () => void nextTick(fitPreview))
+onMounted(() => window.addEventListener('resize', fitPreview, { passive: true }))
+onUnmounted(() => window.removeEventListener('resize', fitPreview))
+
 async function onDownloadPdf() {
   if (!pdfDocEl.value) return
   downloadingPdf.value = true
@@ -303,16 +351,42 @@ async function onDownloadPdf() {
   }
 }
 
-// Převezme do editoru serverovou pravdu po uložení/přechodu (id, přidělené číslo, stav).
+// Převezme do editoru serverovou pravdu po uložení/přechodu (id, přidělené číslo, datumy, stav).
 function syncFromSaved(inv: Invoice): void {
   editingId.value = inv.id
   if (inv.invoiceNumber) invoiceNumber.value = inv.invoiceNumber
+  // Datum vystavení i splatnost doplňuje server při vystavení — bez převzetí by editor (a náhled
+  // i PDF) dál ukazoval svoji původní hodnotu, případně „Doplní se při vystavení“ u už vystavené faktury.
+  if (inv.issueDate) issueDate.value = inv.issueDate
+  if (inv.dueDate) dueDate.value = inv.dueDate
   status.value = inv.status
   paidAt.value = inv.paidAt
+  adoptServerLineIds(inv)
+}
+
+// Řádky si po uložení převezmou serverová id (pořadí odpovídá editoru). Bez toho by editor
+// držel klientská uuid a KAŽDÉ další uložení by existující řádky smazalo a založilo znovu —
+// při selhání toho DELETE by na dokladu zůstaly obě kopie (zdvojené částky).
+// Počet se liší jen když uživatel psal během ukládání; pak si server id vezme až příští uložení.
+function adoptServerLineIds(inv: Invoice): void {
+  if (!isApiMode() || inv.items.length !== items.value.length) return
+  // Párujeme podle pořadí, takže se musí shodovat i popisy — jinak by si řádek vzal cizí
+  // serverové id a příští uložení by přepsalo jiný řádek. Když to nesedí, id nepřebíráme.
+  const sameOrder = items.value.every((it, i) => inv.items[i]?.description === it.description)
+  if (!sameOrder) return
+  items.value.forEach((it, i) => {
+    const serverId = inv.items[i]?.id
+    if (serverId) it.id = serverId
+  })
 }
 
 // Uloží aktuální stav faktury (create nebo update konceptu). Bez toastu — řeší volající.
 async function persist(): Promise<void> {
+  // Server odběratele vyžaduje (CreateInvoiceRequest.ClientId). Bez tohoto guardu odešle editor
+  // clientId: null, backend vrátí nesrozumitelnou validační chybu a rozdělaný doklad se ztratí.
+  if (isApiMode() && !selectedClientId.value) {
+    throw new ApiError(422, 'Vyberte klienta — bez něj doklad nelze uložit.')
+  }
   // Z konceptových řádků dopočítej součty po řádcích (lib calcLine).
   const builtItems: InvoiceItem[] = normalizedItems().map((it) => {
     const line = calcLine(it, vatPayer.value)
@@ -345,27 +419,39 @@ async function persist(): Promise<void> {
   }
 
   if (editingId.value) {
-    syncFromSaved(await update(editingId.value, input, vatPayer.value))
-  } else {
-    const created = await create(input, vatPayer.value)
-    // Posuň pořadové číslo jen v mock režimu (vodítko pro předvyplnění příští faktury).
-    // V API režimu čísla vlastní server (přiděluje je při issue), klientský seq se nepoužívá.
-    const c = companyStore.company
-    // save() je async; mock-only fire-and-forget (seq je jen klientské vodítko).
-    if (!isApiMode() && c) void companyStore.save({ nextInvoiceSeq: (c.nextInvoiceSeq || 1) + 1 })
-    syncFromSaved(created)
-    // Převezmi id do URL, aby další uložení byla update (ne duplicitní faktura).
-    router.replace({ query: { id: created.id } })
+    try {
+      syncFromSaved(await update(editingId.value, input, vatPayer.value))
+      return
+    } catch (e) {
+      // Doklad mezitím někdo smazal (jiná záložka/terminál) → server nemá co upravit (404) a každé
+      // další uložení by selhalo napořád. Rozdělanou fakturu nezahazujeme — uložíme ji jako NOVOU.
+      if (!(e instanceof ApiError && e.status === 404)) throw e
+      editingId.value = null
+      toast.info('Původní doklad byl mezitím smazán — ukládáme ho znovu jako nový.')
+    }
   }
+
+  const created = await create(input, vatPayer.value)
+  // Posuň pořadové číslo jen v mock režimu (vodítko pro předvyplnění příští faktury).
+  // V API režimu čísla vlastní server (přiděluje je při issue), klientský seq se nepoužívá.
+  const c = companyStore.company
+  // save() je async; mock-only fire-and-forget (seq je jen klientské vodítko).
+  if (!isApiMode() && c) void companyStore.save({ nextInvoiceSeq: (c.nextInvoiceSeq || 1) + 1 })
+  syncFromSaved(created)
+  // Převezmi id do URL, aby další uložení byla update (ne duplicitní faktura).
+  router.replace({ query: { id: created.id } })
 }
 
-// Přeloží serverový konflikt stavu (409) na srozumitelnou hlášku; ostatní chyby propustí dál.
+// Přeloží serverový konflikt stavu (409) na srozumitelnou hlášku; ostatní chyby ohlásí obecně.
+// Chybu NIKDY nepropouštěj dál — nezachycená by skončila jen v konzoli a uživatel by
+// po kliknutí na Uložit neviděl vůbec nic (falešný dojem, že se doklad uložil).
 function handleLifecycleError(e: unknown, conflictMessage: string): void {
   if (e instanceof ApiError && e.status === 409) {
     toast.error(conflictMessage)
     return
   }
-  throw e
+  toast.error(saveErrorMessage(e, 'Fakturu se nepodařilo uložit.'))
+  console.error(e)
 }
 
 async function onSave() {
@@ -389,18 +475,68 @@ async function onSave() {
   }
 }
 
-// Odeslání faktury je prémiová akce — bez aktivního tarifu ukážeme paywall.
-function onSendClick(): void {
+// Vystavení = z rozdělaného konceptu se stane hotová faktura: uloží se a server jí přidělí číslo
+// z číselné řady i datum vystavení. Bez této akce zůstal doklad navždy konceptem bez čísla.
+async function onIssue(): Promise<void> {
   if (!hasAccess.value) {
     paywallOpen.value = true
     return
   }
+  saving.value = true
+  try {
+    await persist()
+    if (!editingId.value) return
+    syncFromSaved(await issue(editingId.value))
+    toast.success(
+      invoiceNumber.value ? `Faktura vystavena — č. ${invoiceNumber.value}.` : 'Faktura vystavena.',
+    )
+  } catch (e) {
+    if (e instanceof DuplicateInvoiceNumberError) {
+      toast.error('Faktura s tímto číslem už existuje. Změňte číslo faktury.')
+    } else {
+      handleLifecycleError(e, 'Fakturu se nepodařilo vystavit — zkuste to znovu.')
+    }
+  } finally {
+    saving.value = false
+  }
+}
+
+// Odeslání faktury je prémiová akce — bez aktivního tarifu ukážeme paywall.
+// V API režimu server odesílá jen VYSTAVENOU fakturu — koncept se před otevřením dialogu
+// uloží a vystaví (uživatel odesláním vystavení zjevně chce; mock flow to dělá stejně).
+async function onSendClick(): Promise<void> {
+  if (!hasAccess.value) {
+    paywallOpen.value = true
+    return
+  }
+  if (isApiMode() && status.value === 'draft' && editingId.value) {
+    saving.value = true
+    try {
+      await persist()
+      syncFromSaved(await issue(editingId.value))
+    } catch (e) {
+      handleLifecycleError(e, 'Fakturu se nepodařilo vystavit — zkuste to znovu.')
+      return
+    } finally {
+      saving.value = false
+    }
+  }
   sendOpen.value = true
 }
 
-// Mock odeslání proběhlo v dialogu — koncept vystavíme (server přidělí číslo, Draft→Issued).
+// Po odeslání: API režim přenačte doklad ze serveru (Issued→Sent); mock vystaví koncept jako dřív.
 async function onSent() {
-  if (status.value !== 'draft' || !editingId.value) return
+  if (!editingId.value) return
+  if (isApiMode()) {
+    try {
+      const fresh = await get(editingId.value)
+      if (fresh) syncFromSaved(fresh)
+    } catch (e) {
+      console.warn('Obnovení faktury po odeslání selhalo:', e)
+    }
+    return
+  }
+  if (status.value !== 'draft') return
   saving.value = true
   try {
     await persist() // ulož případné rozeditované změny konceptu
@@ -512,10 +648,20 @@ async function onCancelConfirm(reason: string) {
           <CheckCircle2 class="h-4 w-4 text-success" />
           <span class="hidden sm:inline">Uhrazeno</span>
         </Button>
-        <Button variant="coral" :disabled="saving || loading" @click="onSave">
+        <Button variant="outline" :disabled="saving || loading" @click="onSave">
           <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
           <Save v-else class="h-4 w-4" />
           Uložit koncept
+        </Button>
+        <Button
+          v-if="status === 'draft'"
+          variant="coral"
+          :disabled="saving || loading"
+          @click="onIssue"
+        >
+          <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
+          <FileCheck2 v-else class="h-4 w-4" />
+          Vystavit fakturu
         </Button>
       </div>
     </div>
@@ -581,11 +727,17 @@ async function onCancelConfirm(reason: string) {
           </div>
           <div class="space-y-2">
             <Label for="inv-number">Číslo faktury</Label>
-            <Input id="inv-number" v-model="invoiceNumber" />
+            <Input v-if="!serverOwnedFields" id="inv-number" v-model="invoiceNumber" />
+            <div
+              v-else
+              class="flex h-9 items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-muted-foreground"
+            >
+              {{ invoiceNumber || 'Přidělí se při vystavení' }}
+            </div>
           </div>
           <div class="space-y-2">
             <Label for="inv-payment">Způsob úhrady</Label>
-            <Select v-model="paymentMethod">
+            <Select v-if="!serverOwnedFields" v-model="paymentMethod">
               <SelectTrigger id="inv-payment">
                 <SelectValue />
               </SelectTrigger>
@@ -595,10 +747,22 @@ async function onCancelConfirm(reason: string) {
                 </SelectItem>
               </SelectContent>
             </Select>
+            <div
+              v-else
+              class="flex h-9 items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-muted-foreground"
+            >
+              Převodem
+            </div>
           </div>
           <div class="space-y-2">
             <Label for="inv-issue">Datum vystavení</Label>
-            <Input id="inv-issue" v-model="issueDate" type="date" />
+            <Input v-if="!serverOwnedFields" id="inv-issue" v-model="issueDate" type="date" />
+            <div
+              v-else
+              class="flex h-9 items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-muted-foreground"
+            >
+              {{ issueDate ? formatDate(issueDate) : 'Doplní se při vystavení' }}
+            </div>
           </div>
           <div class="space-y-2">
             <Label for="inv-due">Datum splatnosti</Label>
@@ -606,7 +770,18 @@ async function onCancelConfirm(reason: string) {
           </div>
           <div class="space-y-2">
             <Label for="inv-vs">Variabilní symbol</Label>
-            <Input id="inv-vs" v-model="variableSymbol" inputmode="numeric" />
+            <Input
+              v-if="!serverOwnedFields"
+              id="inv-vs"
+              v-model="variableSymbol"
+              inputmode="numeric"
+            />
+            <div
+              v-else
+              class="flex h-9 items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-muted-foreground"
+            >
+              {{ variableSymbolDisplay || 'Odvodí se z čísla faktury' }}
+            </div>
           </div>
         </div>
       </div>
@@ -730,22 +905,24 @@ async function onCancelConfirm(reason: string) {
         </div>
       </div>
 
-      <!-- Živý náhled faktury -->
-      <div
-        v-if="showPreview"
-        class="overflow-x-auto rounded-xl border border-border bg-muted/30 p-4"
-      >
-        <InvoiceDocument
-          :supplier="supplierSnapshot"
-          :client="clientSnapshot"
-          :items="previewItems"
-          :invoice-number="invoiceNumber"
-          :issue-date="issueDate"
-          :due-date="dueDate"
-          :taxable-date="issueDate"
-          :variable-symbol="variableSymbol"
-          :payment-method="paymentMethod"
-        />
+      <!-- Živý náhled faktury. Doklad má pevnou šířku A4 (794 px) — na mobilu se do obrazovky
+           nevešel a byla vidět jen jeho levá část, proto ho zmenšíme na dostupnou šířku a
+           klepnutím se otevře přes celou obrazovku v čitelné velikosti. -->
+      <div v-if="showPreview" class="rounded-xl border border-border bg-muted/30 p-4">
+        <button
+          ref="previewBox"
+          type="button"
+          class="block w-full overflow-hidden rounded-lg"
+          aria-label="Zobrazit fakturu přes celou obrazovku"
+          @click="fullPreviewOpen = true"
+        >
+          <div :style="{ zoom: previewZoom }">
+            <InvoiceDocument v-bind="documentProps" />
+          </div>
+        </button>
+        <p class="mt-3 text-center text-xs text-muted-foreground">
+          Klepnutím zobrazíte fakturu přes celou obrazovku
+        </p>
       </div>
     </div>
 
@@ -753,6 +930,7 @@ async function onCancelConfirm(reason: string) {
 
     <SendInvoiceDialog
       v-model:open="sendOpen"
+      :invoice-id="editingId"
       :recipient-email="clientSnapshot.email"
       :invoice-number="invoiceNumber"
       :supplier-name="supplierSnapshot.companyName"
@@ -768,19 +946,27 @@ async function onCancelConfirm(reason: string) {
 
     <PaywallDialog v-model:open="paywallOpen" />
 
+    <!-- Faktura přes celou obrazovku — hlavně pro mobil, kde se A4 do šířky nevejde.
+         Doklad je tu v plné velikosti a scrolluje se v obou osách, aby šel přečíst. -->
+    <Dialog v-model:open="fullPreviewOpen">
+      <DialogContent
+        class="flex h-[100dvh] w-screen max-w-none flex-col gap-0 rounded-none p-0 sm:h-[90vh] sm:max-w-4xl sm:rounded-lg"
+      >
+        <DialogHeader class="border-b border-border px-4 py-3 pr-14 text-left">
+          <DialogTitle class="text-base">Náhled faktury</DialogTitle>
+          <DialogDescription class="text-xs">
+            Doklad je ve skutečné velikosti — posunutím si prohlédnete celou stranu.
+          </DialogDescription>
+        </DialogHeader>
+        <div class="min-h-0 flex-1 overflow-auto bg-muted/30 p-4">
+          <InvoiceDocument v-if="fullPreviewOpen" v-bind="documentProps" />
+        </div>
+      </DialogContent>
+    </Dialog>
+
     <!-- Skrytý off-screen render dokumentu pro PDF export (vždy v DOM kvůli QR). -->
     <div ref="pdfDocEl" aria-hidden="true" style="position: fixed; left: -10000px; top: 0">
-      <InvoiceDocument
-        :supplier="supplierSnapshot"
-        :client="clientSnapshot"
-        :items="previewItems"
-        :invoice-number="invoiceNumber"
-        :issue-date="issueDate"
-        :due-date="dueDate"
-        :taxable-date="issueDate"
-        :variable-symbol="variableSymbol"
-        :payment-method="paymentMethod"
-      />
+      <InvoiceDocument v-bind="documentProps" />
     </div>
   </div>
 </template>

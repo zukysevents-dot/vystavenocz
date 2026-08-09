@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 import { Cookie, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
@@ -10,6 +10,14 @@ import { CONSENT_RESET_EVENT, getCookieConsent, saveCookieConsent } from '@/lib/
 
 const visible = ref(false)
 const analyticsOn = ref(false)
+const route = useRoute()
+// Provozní obrazovky (POS/KDS): banner překrýval ovládání (filtry sekcí v Kuchyni, horní lištu
+// Pokladny) a blokoval obsluhu. Souhlas se odloží na první neprovozní obrazovku — do rozhodnutí
+// zůstává analytika vypnutá (opt-in default), takže odklad je z pohledu soukromí bezpečný.
+const isPosScreen = computed(() =>
+  ['/app/pokladna', '/app/restaurace', '/app/kuchyne'].some((path) => route.path.startsWith(path)),
+)
+const shown = computed(() => visible.value && !isPosScreen.value)
 
 function check() {
   const existing = getCookieConsent()
@@ -48,7 +56,7 @@ function handleNecessaryOnly() {
 
 <template>
   <div
-    v-if="visible"
+    v-if="shown"
     role="dialog"
     aria-labelledby="cookie-banner-title"
     aria-describedby="cookie-banner-desc"
@@ -69,10 +77,10 @@ function handleNecessaryOnly() {
             <button
               type="button"
               aria-label="Zavřít a uložit pouze nezbytné"
-              class="-mr-1 -mt-1 rounded-md p-1 text-muted-foreground hover:bg-surface-soft hover:text-foreground"
+              class="-mr-2 -mt-2 grid h-11 w-11 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-surface-soft hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               @click="handleNecessaryOnly"
             >
-              <X class="h-4 w-4" />
+              <X class="h-5 w-5" />
             </button>
           </div>
           <p id="cookie-banner-desc" class="mt-1 text-xs text-muted-foreground">
@@ -97,7 +105,7 @@ function handleNecessaryOnly() {
                   Analytika
                 </Label>
                 <div class="text-[11px] text-muted-foreground">
-                  Google Analytics & Plausible — měření návštěvnosti.
+                  Měření návštěvnosti — zapneme jen s vaším souhlasem; zatím žádné neběží.
                 </div>
               </div>
               <Switch

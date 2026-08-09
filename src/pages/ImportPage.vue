@@ -105,7 +105,7 @@ async function submitSalesImport(dryRun: boolean): Promise<void> {
     )
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) {
-      toast.error('Backend import historických tržeb ještě není nasazený.')
+      toast.error('Import historických tržeb zatím není v tomto prostředí dostupný.')
     } else {
       toast.error(e instanceof Error ? e.message : 'Import tržeb selhal.')
     }
@@ -220,7 +220,7 @@ function formatDateTime(value: string): string {
         class="mb-4 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
       >
         <AlertTriangle class="h-4 w-4" />
-        Import historických tržeb funguje jen proti API.
+        Import historických tržeb je dostupný po přihlášení do online aplikace.
       </div>
 
       <div
@@ -302,10 +302,10 @@ function formatDateTime(value: string): string {
     <!-- Bez souboru → nahrání s autodetekcí typu. -->
     <section v-if="!selectedFile" class="mx-auto max-w-4xl p-4 sm:p-6 md:p-8">
       <div class="mb-6">
-        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Import dat</h1>
+        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Nahrát data</h1>
         <p class="mt-1 text-muted-foreground">
-          Nahrajte CSV nebo XLSX — pro klienty a produkty appka typ pozná sama, historické tržby
-          vyberte přepínačem.
+          Nahrajte tabulku CSV nebo Excel. Aplikace pozná klienty a produkty sama; historické tržby
+          vyberte nahoře.
         </p>
       </div>
       <div v-if="entity === 'sales'" class="mb-4 grid gap-2 sm:max-w-xs">
@@ -318,7 +318,7 @@ function formatDateTime(value: string): string {
           <option value="dotykacka">Dotykačka</option>
           <option value="storyous">Storyous / Teya</option>
           <option value="ikelp">iKelp</option>
-          <option value="generic-pos">Obecný POS export</option>
+          <option value="generic-pos">Jiný pokladní systém</option>
         </select>
       </div>
       <label
@@ -332,11 +332,9 @@ function formatDateTime(value: string): string {
         <Loader2 v-if="parsing" class="h-10 w-10 animate-spin text-primary" />
         <Upload v-else class="h-10 w-10 text-muted-foreground" />
         <div>
-          <div class="font-semibold">
-            Přetáhněte sem soubor (CSV, XLSX, Fakturoid XML) nebo klikněte
-          </div>
+          <div class="font-semibold">Přetáhněte sem exportovaný soubor nebo klikněte</div>
           <p class="mt-1 text-sm text-muted-foreground">
-            Export z Fakturoidu, Dotykačky, Storyous/Teya, iKelp nebo libovolné tabulky.
+            Podporujeme CSV, Excel a XML z Fakturoidu, Dotykačky, Storyous/Teya nebo iKelp.
           </p>
         </div>
       </label>

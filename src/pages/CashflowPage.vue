@@ -55,7 +55,7 @@ function exportDebtors() {
   <div class="mx-auto max-w-6xl p-4 sm:p-6 md:p-8">
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Cashflow &amp; upomínky</h1>
+        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Pohledávky a peníze</h1>
         <p class="mt-1 text-muted-foreground">
           Kdo ti dluží, co je po splatnosti a komu připomenout.
         </p>

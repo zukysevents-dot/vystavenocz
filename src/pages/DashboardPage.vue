@@ -38,6 +38,7 @@ const companyStore = useCompanyStore()
 // tenant (jen pos/gastro) proto fakturační část vůbec nevolá ani nezobrazuje; POS provoz jede dál.
 const auth = useAuthStore()
 const hasInvoicing = computed(() => auth.hasModule('invoicing'))
+const hasPosModule = computed(() => auth.hasModule('pos'))
 const salesApi = useApi<Sale>('sales')
 const { locations, load: loadLocations } = useLocations()
 
@@ -129,7 +130,13 @@ onMounted(loadAll)
 // zbytek dashboardu, proto vlastní try/catch a graceful prázdný stav.
 async function loadPos(): Promise<void> {
   try {
-    const [sales] = await Promise.all([salesApi.list(), loadLocations()])
+    // Bez modulu `pos` vrací backend na /sales 403 — firma bez pokladny (typicky živnostník
+    // na profilu core+invoicing) by ho dostávala při každém otevření Přehledu. Stejné gatování
+    // jako u fakturační části výš.
+    const [sales] = await Promise.all([
+      hasPosModule.value ? salesApi.list() : Promise.resolve([] as Sale[]),
+      loadLocations(),
+    ])
     posSales.value = sales
   } catch (e) {
     console.warn('Načtení POS provozu selhalo:', e)
@@ -187,7 +194,8 @@ async function loadFromApi(): Promise<void> {
     overdueAmount: summary.overdueAmount,
     overdueCount: summary.overdueCount,
   }
-  revenue.value = rev.series.map((b) => ({
+  // Neúplná odpověď (chybějící `series`) nesmí shodit celý Přehled na „server nedostupný".
+  revenue.value = (rev.series ?? []).map((b) => ({
     label: CZ_MONTHS[new Date(b.periodStart).getMonth()],
     total: b.invoicedAmount,
   }))
@@ -303,7 +311,7 @@ function statusMeta(s: string): { label: string; variant: BadgeVariant } {
   <div class="mx-auto max-w-6xl p-4 sm:p-6 md:p-8">
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Přehled</h1>
+        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Dnes ve firmě</h1>
         <p class="mt-1 text-muted-foreground">
           {{ companyStore.company?.companyName || 'Vítejte ve Vystaveno' }}
         </p>

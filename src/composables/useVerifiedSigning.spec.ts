@@ -13,6 +13,25 @@ beforeEach(() => {
   localStorage.clear()
 })
 
+// Backendové DTO obálky (ploché SignerName/ProviderKey/Title, enum PascalCase) — FE adapter je mapuje na FE tvar.
+const apiEnvelope = {
+  id: 'e1',
+  status: 'Sent',
+  title: 'Smlouva o dílo',
+  documentHash: 'a'.repeat(64),
+  signerName: 'Jan Novák',
+  signerEmail: 'jan@example.cz',
+  signerPhone: null,
+  providerKey: 'bankid',
+  providerReference: 'ref-1',
+  documentType: 'contract',
+  externalReference: 'ORDER-1',
+  createdAt: '2026-01-01T00:00:00Z',
+  sentAt: '2026-01-02T00:00:00Z',
+  signedAt: null,
+  expiresAt: null,
+}
+
 describe('useVerifiedSigning — API kontrakt /verified-signing/*', () => {
   it('listEnvelopes volá výpis obálek', async () => {
     vi.mocked(http.get).mockResolvedValue([] as never)
@@ -26,40 +45,61 @@ describe('useVerifiedSigning — API kontrakt /verified-signing/*', () => {
     expect(http.get).toHaveBeenCalledWith('/verified-signing/envelopes?status=sent')
   })
 
-  it('listEnvelopes umí i stránkovanou odpověď (items)', async () => {
-    vi.mocked(http.get).mockResolvedValue({ items: [{ id: 'e1' }], total: 1 } as never)
+  it('listEnvelopes mapuje stránkované backend DTO na FE tvar (signer, provider, lowercase stav)', async () => {
+    vi.mocked(http.get).mockResolvedValue({ items: [apiEnvelope], total: 1 } as never)
     const result = await useVerifiedSigning().listEnvelopes()
-    expect(result).toEqual([{ id: 'e1' }])
+    expect(result).toHaveLength(1)
+    expect(result[0]).toMatchObject({
+      id: 'e1',
+      documentName: 'Smlouva o dílo',
+      status: 'sent',
+      provider: 'bankid',
+      signer: { name: 'Jan Novák', email: 'jan@example.cz', phone: null },
+      evidenceHash: 'a'.repeat(64),
+      providerReference: 'ref-1',
+    })
   })
 
-  it('getEnvelope volá detail obálky', async () => {
-    vi.mocked(http.get).mockResolvedValue({ id: 'e1' } as never)
-    await useVerifiedSigning().getEnvelope('e1')
+  it('getEnvelope volá detail obálky a mapuje DTO', async () => {
+    vi.mocked(http.get).mockResolvedValue(apiEnvelope as never)
+    const envelope = await useVerifiedSigning().getEnvelope('e1')
     expect(http.get).toHaveBeenCalledWith('/verified-signing/envelopes/e1')
+    expect(envelope.signer.name).toBe('Jan Novák')
+    expect(envelope.status).toBe('sent')
   })
 
-  it('createEnvelope posílá provider-neutral payload', async () => {
-    vi.mocked(http.post).mockResolvedValue({ id: 'e1' } as never)
-    const input = {
+  it('createEnvelope překládá FE input na backend payload (title/signerName/providerKey/documentHash)', async () => {
+    vi.mocked(http.post).mockResolvedValue(apiEnvelope as never)
+    await useVerifiedSigning().createEnvelope({
       documentName: 'Smlouva',
       documentType: 'contract',
       externalReference: 'ORDER-1',
       provider: 'bankid',
       signer: { name: 'Jan Novák', email: null, phone: null },
       expiresAt: null,
-    }
-    await useVerifiedSigning().createEnvelope(input)
-    expect(http.post).toHaveBeenCalledWith('/verified-signing/envelopes', input)
+      documentHash: 'b'.repeat(64),
+    })
+    expect(http.post).toHaveBeenCalledWith('/verified-signing/envelopes', {
+      title: 'Smlouva',
+      documentHash: 'b'.repeat(64),
+      documentType: 'contract',
+      externalReference: 'ORDER-1',
+      providerKey: 'bankid',
+      signerName: 'Jan Novák',
+      signerEmail: null,
+      signerPhone: null,
+      expiresAt: null,
+    })
   })
 
   it('sendEnvelope bez konfigurace posílá prázdné tělo (foundation odeslání)', async () => {
-    vi.mocked(http.post).mockResolvedValue({ id: 'e1' } as never)
+    vi.mocked(http.post).mockResolvedValue(apiEnvelope as never)
     await useVerifiedSigning().sendEnvelope('e1')
     expect(http.post).toHaveBeenCalledWith('/verified-signing/envelopes/e1/send', {})
   })
 
   it('sendEnvelope s providerConnectionId nasměruje odeslání přes konfiguraci', async () => {
-    vi.mocked(http.post).mockResolvedValue({ id: 'e1' } as never)
+    vi.mocked(http.post).mockResolvedValue(apiEnvelope as never)
     await useVerifiedSigning().sendEnvelope('e1', 'conn-9')
     expect(http.post).toHaveBeenCalledWith('/verified-signing/envelopes/e1/send', {
       providerConnectionId: 'conn-9',
@@ -67,9 +107,26 @@ describe('useVerifiedSigning — API kontrakt /verified-signing/*', () => {
   })
 
   it('cancelEnvelope volá cancel akci', async () => {
-    vi.mocked(http.post).mockResolvedValue({ id: 'e1' } as never)
+    vi.mocked(http.post).mockResolvedValue(apiEnvelope as never)
     await useVerifiedSigning().cancelEnvelope('e1')
     expect(http.post).toHaveBeenCalledWith('/verified-signing/envelopes/e1/cancel', {})
+  })
+
+  it('getEvidence mapuje backend events na FE entries', async () => {
+    vi.mocked(http.get).mockResolvedValue({
+      envelopeId: 'e1',
+      title: 'Smlouva o dílo',
+      documentHash: 'a'.repeat(64),
+      providerKey: 'bankid',
+      events: [
+        { type: 'Created', note: null, evidenceHash: null, createdAt: '2026-01-01T00:00:00Z' },
+      ],
+    } as never)
+    const evidence = await useVerifiedSigning().getEvidence('e1')
+    expect(evidence.documentName).toBe('Smlouva o dílo')
+    expect(evidence.entries).toEqual([
+      { timestamp: '2026-01-01T00:00:00Z', event: 'Created', detail: null, hash: null },
+    ])
   })
 
   it('getEvidence volá evidence obálky', async () => {
@@ -140,27 +197,64 @@ describe('useVerifiedSigning — nastavení poskytovatelů + credential trezor',
     expect(http.get).toHaveBeenCalledWith('/verified-signing/provider-connections')
   })
 
-  it('getProviderConnection volá detail konfigurace', async () => {
-    vi.mocked(http.get).mockResolvedValue({ id: 'c1' } as never)
-    await useVerifiedSigning().getProviderConnection('c1')
+  it('getProviderConnection mapuje backend DTO (displayName → name, WaitingForCredentials → awaiting_credentials)', async () => {
+    vi.mocked(http.get).mockResolvedValue({
+      id: 'c1',
+      providerKey: 'bankid',
+      displayName: 'BankID produkce',
+      mode: 'Production',
+      status: 'WaitingForCredentials',
+      configuredFields: ['clientId'],
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    } as never)
+    const connection = await useVerifiedSigning().getProviderConnection('c1')
     expect(http.get).toHaveBeenCalledWith('/verified-signing/provider-connections/c1')
+    expect(connection).toMatchObject({
+      name: 'BankID produkce',
+      mode: 'production',
+      status: 'awaiting_credentials',
+    })
   })
 
-  it('createProviderConnection posílá metadata bez tajných hodnot', async () => {
-    vi.mocked(http.post).mockResolvedValue({ id: 'c1' } as never)
-    const payload = {
+  it('createProviderConnection překládá FE payload na backend tvar (bez tajných hodnot)', async () => {
+    vi.mocked(http.post).mockResolvedValue({
+      id: 'c1',
+      providerKey: 'bankid',
+      displayName: 'BankID produkce',
+      mode: 'Production',
+      status: 'WaitingForCredentials',
+      configuredFields: ['clientId'],
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    } as never)
+    await useVerifiedSigning().createProviderConnection({
       providerKey: 'bankid',
       name: 'BankID produkce',
-      mode: 'production' as const,
-      status: 'awaiting_credentials' as const,
+      mode: 'production',
+      status: 'awaiting_credentials',
       configuredFields: ['clientId'],
-    }
-    await useVerifiedSigning().createProviderConnection(payload)
-    expect(http.post).toHaveBeenCalledWith('/verified-signing/provider-connections', payload)
+    })
+    expect(http.post).toHaveBeenCalledWith('/verified-signing/provider-connections', {
+      providerKey: 'bankid',
+      displayName: 'BankID produkce',
+      mode: 'production',
+      status: 'WaitingForCredentials',
+      configuredFields: ['clientId'],
+    })
   })
 
-  it('updateProviderConnection volá PUT s id konfigurace', async () => {
-    vi.mocked(http.put).mockResolvedValue({ id: 'c1' } as never)
+  it('updateProviderConnection volá PUT s id konfigurace a backend tvarem', async () => {
+    vi.mocked(http.put).mockResolvedValue({
+      id: 'c1',
+      providerKey: 'bankid',
+      displayName: 'BankID',
+      mode: 'Sandbox',
+      status: 'Ready',
+      configuredFields: [],
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    } as never)
     await useVerifiedSigning().updateProviderConnection('c1', {
       providerKey: 'bankid',
       name: 'BankID',
@@ -169,9 +263,10 @@ describe('useVerifiedSigning — nastavení poskytovatelů + credential trezor',
     })
     expect(http.put).toHaveBeenCalledWith('/verified-signing/provider-connections/c1', {
       providerKey: 'bankid',
-      name: 'BankID',
+      displayName: 'BankID',
       mode: 'sandbox',
       status: 'ready',
+      configuredFields: [],
     })
   })
 

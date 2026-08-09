@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures/test'
+import { dismissCookies } from './helpers/cookies'
 import { seedApp } from './helpers/seed'
 import type { Route } from '@playwright/test'
 
@@ -278,6 +279,24 @@ test('nastavení v API režimu ukáže živý stav integrací a stáhne účetn�
       })
     }
 
+    // Growth + subscription claims (Nastavení je načítá vždy): overview 200, „zatím nic" = 204
+    // (designový prázdný stav — 404 by shodil console-error gate).
+    if (method === 'GET' && path === '/growth/referrals/me') {
+      return route.fulfill({
+        json: {
+          activeInvitations: 0,
+          capturedInvitations: 0,
+          qualifiedInvitations: 0,
+          availableFreeMonths: 0,
+        },
+      })
+    }
+    if (
+      method === 'GET' &&
+      (path === '/growth/partner-profile' || path === '/subscription-claims/me')
+    ) {
+      return route.fulfill({ status: 204 })
+    }
     return route.fulfill({ status: 404, json: { title: `Unhandled ${method} ${path}` } })
   })
 
@@ -288,12 +307,12 @@ test('nastavení v API režimu ukáže živý stav integrací a stáhne účetn�
   await expect(page.getByText('1 tisků čeká')).toBeVisible()
   await expect(page.getByText('209,00 Kč')).toBeVisible()
   await expect(page.getByText('Bon', { exact: true })).toBeVisible()
-  await expect(page.getByText('Tiskoví agenti')).toBeVisible()
+  await expect(page.getByText('Pomocné aplikace pro tisk')).toBeVisible()
   await expect(page.getByText('Kuchyně tiskárna')).toBeVisible()
-  await expect(page.getByText('Online', { exact: true })).toBeVisible()
+  await expect(page.getByText('Připojeno', { exact: true })).toBeVisible()
 
   // Platební provideri — provider-neutral marketplace (ČSOB/NFCTRON jako cíle, ne Stripe-first, bez "zaplatit").
-  await expect(page.getByText('Platební provideri')).toBeVisible()
+  await expect(page.getByText('Poskytovatelé plateb')).toBeVisible()
   await expect(page.getByText('ČSOB', { exact: true })).toBeVisible() // název karty (ne úvodní text/poznámka)
   await expect(page.getByText('NFCTRON', { exact: true })).toBeVisible()
   await expect(page.getByText('Aktivní', { exact: true })).toHaveCount(1) // jen manuální terminál je operational
@@ -306,7 +325,7 @@ test('nastavení v API režimu ukáže živý stav integrací a stáhne účetn�
   // Konfigurace providera — dialog bez ukládání tajných hodnot (ČSOB je 2. v katalogu: manual, csob, nfctron).
   await page.getByRole('button', { name: 'Nastavit' }).nth(1).click()
   await expect(page.getByRole('heading', { name: 'Nastavit ČSOB' })).toBeVisible()
-  await expect(page.getByText('Tajné klíče se do aplikace neukládají')).toBeVisible()
+  await expect(page.getByText('Tajné klíče se ukládají pouze zabezpečeně')).toBeVisible()
   await page.locator('#conn-name').fill('ČSOB terminál Praha')
   // Zaškrtnout jen jedno setup pole (merchantId); hodnota se nikam nezadává (placeholder input je disabled).
   await page.getByRole('dialog').getByRole('checkbox').first().click()
@@ -327,11 +346,11 @@ test('nastavení v API režimu ukáže živý stav integrací a stáhne účetn�
 
   await page.locator('#print-agent-name').fill('Bar tiskárna')
   await page.getByRole('button', { name: 'Přidat' }).click()
-  await expect(page.getByText('Token pro Bar tiskárna')).toBeVisible()
+  await expect(page.getByText('Přístupový kód pro Bar tiskárna')).toBeVisible()
   await expect(page.locator('#print-agent-token')).toHaveValue('pat_test_print_agent_token')
   expect(registeredPrintAgentBody).toEqual({ name: 'Bar tiskárna', locationId: null })
 
-  await page.getByRole('button', { name: 'Zrušit agenta' }).first().click()
+  await page.getByRole('button', { name: 'Zrušit připojení' }).first().click()
   expect(revokedPrintAgentId).toBe('agent-1')
 
   await page.locator('#integration-export-target').click()
@@ -347,6 +366,8 @@ test('nastavení v API režimu ukáže živý stav integrací a stáhne účetn�
 })
 
 test('veřejný slug se normalizuje pro online objednávky a QR stoly', async ({ page }) => {
+  // Bez odbaveného souhlasu překrývá cookie banner tlačítko Uložit nastavení.
+  await dismissCookies(page)
   await seedApp(page, { subscription: 'pro' })
   await page.goto('/app/nastaveni')
 
@@ -366,9 +387,7 @@ test('veřejný slug se normalizuje pro online objednávky a QR stoly', async ({
   expect(storedSlug).toBe('zlutoucky-bistro-2026')
 })
 
-test('platební provideri — trezor credentialů: stav, uložení (vyčistí input) a smazání', async ({
-  page,
-}) => {
+test('poskytovatelé plateb — bezpečné uložení klíčů: stav, uložení a smazání', async ({ page }) => {
   await seedApiMode(page)
   const secrets: Record<string, string> = {} // uložené klíče konfigurace conn-1 (fieldName → updatedAt)
   await routeCredentialVault(page, secrets)
@@ -379,7 +398,7 @@ test('platební provideri — trezor credentialů: stav, uložení (vyčistí in
   await expect(page.getByRole('heading', { name: 'Nastavit ČSOB' })).toBeVisible()
   await page.getByTitle('Upravit konfiguraci').click()
 
-  await expect(page.getByText('Zabezpečený trezor credentialů')).toBeVisible()
+  await expect(page.getByText('Zabezpečené uložení klíčů')).toBeVisible()
   const apiField = page.getByTestId('secret-field-apiKeyRef')
   await expect(apiField.getByTestId('secret-state-apiKeyRef')).toHaveText('Chybí')
   await expect(page.getByTestId('secret-field-privateKeyRef')).toBeVisible()
@@ -396,7 +415,7 @@ test('platební provideri — trezor credentialů: stav, uložení (vyčistí in
   await expect(apiField.getByTestId('secret-state-apiKeyRef')).toHaveText('Chybí')
 })
 
-test('platební provideri — trezor: 503 hláška při chybějícím serverovém šifrovacím klíči', async ({
+test('poskytovatelé plateb — hláška při chybějícím serverovém šifrovacím klíči', async ({
   page,
 }) => {
   // 503 z PUT secret schválně → prohlížeč zaloguje network chybu; povolíme ji (test ověřuje UI hlášku, ne absenci 503).
@@ -413,7 +432,7 @@ test('platební provideri — trezor: 503 hláška při chybějícím serverové
     .getByRole('button', { name: 'Uložit klíč' })
     .click()
 
-  await expect(page.getByText(/šifrovací klíč na VPS/i)).toBeVisible()
+  await expect(page.getByText(/zabezpečené ukládání tajných klíčů není nastavené/i)).toBeVisible()
 })
 
 // Mock backendu credential vaultu (#225): jedna existující konfigurace conn-1 (ČSOB) + stavové secret endpointy.
@@ -562,6 +581,24 @@ async function routeCredentialVault(
       return route.fulfill({ json: { id: 'conn-1', ...(request.postDataJSON() as object) } })
     }
 
+    // Growth + subscription claims (Nastavení je načítá vždy): overview 200, „zatím nic" = 204
+    // (designový prázdný stav — 404 by shodil console-error gate).
+    if (method === 'GET' && path === '/growth/referrals/me') {
+      return route.fulfill({
+        json: {
+          activeInvitations: 0,
+          capturedInvitations: 0,
+          qualifiedInvitations: 0,
+          availableFreeMonths: 0,
+        },
+      })
+    }
+    if (
+      method === 'GET' &&
+      (path === '/growth/partner-profile' || path === '/subscription-claims/me')
+    ) {
+      return route.fulfill({ status: 204 })
+    }
     return route.fulfill({ status: 404, json: { title: `Unhandled ${method} ${path}` } })
   })
 }

@@ -11,6 +11,7 @@ require_command flock
 require_command curl
 
 RETENTION_DAYS="${VYSTAVENO_BACKUP_RETENTION_DAYS:-14}"
+WAL_ARCHIVE_DIR="$(wal_archive_dir)"
 TIMESTAMP="${VYSTAVENO_BACKUP_TIMESTAMP:-$(date -u +'%Y%m%dT%H%M%SZ')}"
 FINAL_DIR="$BACKUP_ROOT/$TIMESTAMP"
 STAGING_DIR="$BACKUP_ROOT/.partial-$TIMESTAMP-$$"
@@ -72,6 +73,19 @@ delete_valid_backup() {
   rm -rf -- "$canonical"
 }
 
+# WAL archiv pro PITR. Drží se o den déle než balíky, protože nejstarší držená base záloha je nanejvýš
+# RETENTION_DAYS stará a bez svého WAL by se z ní na konkrétní čas obnovit nedalo.
+# ponytail: retence podle stáří souboru, ne pg_archivecleanup podle backup_label nejstarší base zálohy.
+# Base zálohy jsou denní, takže den rezervy pokryje i jeden vynechaný běh. Až budou base zálohy řidší
+# (nebo poběží víc než jednou denně), přepnout na pg_archivecleanup.
+prune_wal_archive() {
+  local dir="$WAL_ARCHIVE_DIR"
+  [[ -d "$dir" && ! -L "$dir" ]] || return 0
+  # Nedopsané segmenty po pádu archivace: jméno .%f.tmp nikdy neblokuje nový pokus, ale ať se nehromadí.
+  find "$dir" -xdev -mindepth 1 -maxdepth 1 -type f -name '.*.tmp' -mmin +60 -delete
+  find "$dir" -xdev -mindepth 1 -maxdepth 1 -type f ! -name '.*.tmp' -mtime "+$((RETENTION_DAYS + 1))" -delete
+}
+
 prune_backups() {
   local now cutoff latest_target='' directory mtime count
   now="$(date +%s)"
@@ -110,8 +124,10 @@ if [[ -L "$BACKUP_ROOT/latest" ]]; then
   latest_dir="$(resolve_backup_dir "$BACKUP_ROOT/latest")"
   db_bytes="$(sed -n 's/^DATABASE_BYTES=//p' "$latest_dir/manifest.env" | tail -n 1)"
   files_bytes="$(sed -n 's/^API_FILES_BYTES=//p' "$latest_dir/manifest.env" | tail -n 1)"
+  base_bytes="$(sed -n 's/^BASEBACKUP_BYTES=//p' "$latest_dir/manifest.env" | tail -n 1)"
+  [[ "$base_bytes" =~ ^[0-9]+$ ]] || base_bytes=0 # starší balík base zálohu nemá
   if [[ "$db_bytes" =~ ^[0-9]+$ && "$files_bytes" =~ ^[0-9]+$ ]]; then
-    previous_payload=$((db_bytes + files_bytes))
+    previous_payload=$((db_bytes + files_bytes + base_bytes))
   fi
 fi
 REQUIRED_FREE_BYTES="$MIN_FREE_BYTES"
@@ -119,6 +135,7 @@ if ((previous_payload * 2 > REQUIRED_FREE_BYTES)); then
   REQUIRED_FREE_BYTES=$((previous_payload * 2))
 fi
 prune_backups
+prune_wal_archive
 (( $(available_bytes "$BACKUP_ROOT") >= REQUIRED_FREE_BYTES )) || die "Na backup disku není dost místa pro bezpečný nový snapshot."
 
 find "$BACKUP_ROOT" -xdev -mindepth 1 -maxdepth 1 -type d -name '.partial-*' -mtime +1 -print0 |
@@ -188,16 +205,48 @@ if [[ "$API_WAS_RUNNING" == "1" ]]; then
   rm -f -- "$QUIESCE_MARKER"
 fi
 
+# Base záloha je FYZICKÁ kopie clusteru — jediný možný start PITR. Logický pg_dump výše zůstává (je nezávislý
+# na verzi PostgreSQL a drží dosavadní runbook obnovy), base záloha přidává obnovu na konkrétní čas.
+# Běží až po nastartování API, takže neprodlužuje výpadek při snapshotu.
+log "Vytvářím fyzickou base zálohu pro PITR."
+compose exec -T db pg_basebackup -U vystaveno -D - -Ft -z -X fetch --checkpoint=fast \
+  >"$STAGING_DIR/basebackup.tar.gz"
+[[ -s "$STAGING_DIR/basebackup.tar.gz" ]] || die "Base záloha pro PITR je prázdná."
+
+# Cíl PITR fixujeme TEĎ a vynutíme přepnutí WAL segmentu. Obnova na tenhle čas je pak prokazatelně možná:
+# je za koncem base zálohy a všechen WAL k němu je v archivu. Bez toho by ověření PITR bylo loterie.
+log "Fixuji cíl PITR a čekám na doarchivování WAL."
+pitr_target="$(compose exec -T db psql -U vystaveno -d vystaveno -Atc \
+  "select to_char(now() at time zone 'UTC', 'YYYY-MM-DD HH24:MI:SS')" | tr -d '\r')"
+[[ "$pitr_target" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9]{2}:[0-9]{2}:[0-9]{2}$ ]] ||
+  die "Nepodařilo se zjistit čas databáze pro PITR."
+compose exec -T db psql -U vystaveno -d vystaveno -Atc 'select pg_switch_wal()' >/dev/null
+wal_archived=0
+for _ in $(seq 1 30); do
+  if [[ "$(compose exec -T db psql -U vystaveno -d vystaveno -Atc \
+    "select coalesce(last_archived_time > timestamptz '$pitr_target+00', false) from pg_stat_archiver" |
+    tr -d '\r')" == "t" ]]; then
+    wal_archived=1
+    break
+  fi
+  sleep 2
+done
+[[ "$wal_archived" == "1" ]] || die "WAL se nedoarchivoval; obnova na konkrétní čas by nebyla prokazatelná."
+
 log "Ověřuji čitelnost obou archivů."
 compose exec -T db pg_restore --list <"$STAGING_DIR/database.dump" >/dev/null
+docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
+  --user "$(id -u):$(id -g)" --tmpfs /tmp:rw,noexec,nosuid,size=16m \
+  -v "$STAGING_DIR:/backup:ro" "$HELPER_IMAGE" tar -tzf /backup/basebackup.tar.gz >/dev/null
 docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
   --user "$(id -u):$(id -g)" --tmpfs /tmp:rw,noexec,nosuid,size=16m \
   -v "$STAGING_DIR:/backup:ro" "$HELPER_IMAGE" tar -tzf /backup/api-files.tar.gz >/dev/null
 
 db_size="$(wc -c <"$STAGING_DIR/database.dump" | tr -d ' ')"
 files_size="$(wc -c <"$STAGING_DIR/api-files.tar.gz" | tr -d ' ')"
+base_size="$(wc -c <"$STAGING_DIR/basebackup.tar.gz" | tr -d ' ')"
 cat >"$STAGING_DIR/manifest.env" <<EOF
-BACKUP_FORMAT_VERSION=1
+BACKUP_FORMAT_VERSION=2
 CREATED_AT_UTC=$TIMESTAMP
 COMPLETED_AT_UTC=$(date -u +'%Y%m%dT%H%M%SZ')
 CONSISTENCY_MODE=application-quiesced
@@ -209,9 +258,12 @@ POSTGRES_VERSION=$postgres_version
 API_FILES_VOLUME=$volume_name
 DATABASE_BYTES=$db_size
 API_FILES_BYTES=$files_size
+BASEBACKUP_BYTES=$base_size
+WAL_ARCHIVE_DIR=$WAL_ARCHIVE_DIR
+PITR_TARGET_UTC=$pitr_target
 EOF
 
-write_checksums "$STAGING_DIR" database.dump api-files.tar.gz manifest.env >"$STAGING_DIR/SHA256SUMS"
+write_checksums "$STAGING_DIR" database.dump api-files.tar.gz basebackup.tar.gz manifest.env >"$STAGING_DIR/SHA256SUMS"
 chmod 600 "$STAGING_DIR"/*
 verify_checksums "$STAGING_DIR" >/dev/null
 
@@ -233,7 +285,7 @@ if [[ -n "${VYSTAVENO_BACKUP_MIRROR_DIR:-}" ]]; then
       [[ "$(canonical_path "$partial")" == "$mirror"/*.partial ]] || continue
       rm -rf -- "$partial"
     done
-  mirror_required=$((db_size + files_size + 67108864))
+  mirror_required=$((db_size + files_size + base_size + 67108864))
   # Prune before measuring capacity: a full mirror must be able to recover by dropping only old valid bundles.
   mirror_cutoff=$(($(date +%s) - RETENTION_DAYS * 86400))
   mirror_latest_target=''

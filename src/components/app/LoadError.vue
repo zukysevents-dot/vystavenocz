@@ -19,9 +19,9 @@ defineEmits<{ retry: [] }>()
 <template>
   <div class="rounded-2xl border border-border bg-card p-8 text-center sm:p-12">
     <ServerCrash class="mx-auto h-12 w-12 text-muted-foreground" />
-    <h2 class="mt-4 text-lg font-semibold">Server je momentálně nedostupný</h2>
+    <h2 class="mt-4 text-lg font-semibold">Obsah se nepodařilo načíst</h2>
     <p class="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-      {{ message || 'Data se nepodařilo načíst. Zkontrolujte připojení a zkuste to znovu.' }}
+      {{ message || 'Zkontrolujte internetové připojení a zkuste to znovu.' }}
     </p>
     <Button variant="outline" class="mt-4" :disabled="retrying" @click="$emit('retry')">
       <Loader2 v-if="retrying" class="h-4 w-4 animate-spin" />

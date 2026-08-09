@@ -16,6 +16,7 @@ import { useKitchen } from '@/composables/useKitchen'
 import { ApiError, isApiMode } from '@/lib/http'
 import { toast } from '@/components/ui/sonner'
 import LoadError from '@/components/app/LoadError.vue'
+import { groupItemsByCourse } from '@/lib/order-courses'
 import type { CategoryKitchenSection, KitchenQueueItem } from '@/lib/types'
 
 const kitchen = useKitchen()
@@ -110,18 +111,33 @@ async function refresh() {
   }
 }
 
-async function setAll(t: Ticket, status: 'Preparing' | 'Ready' | 'Served') {
+function courseIsReady(courseItems: KitchenQueueItem[]): boolean {
+  return courseItems.every((item) => item.kitchenStatus === 'Ready')
+}
+
+function courseIsPreparing(courseItems: KitchenQueueItem[]): boolean {
+  return courseItems.some((item) => item.kitchenStatus === 'Preparing')
+}
+
+async function setCourseStatus(
+  t: Ticket,
+  courseItems: KitchenQueueItem[],
+  courseLabel: string | null,
+  status: 'Preparing' | 'Ready' | 'Served',
+) {
   if (busy.value || mode.value === 'history') return
   busy.value = true
   try {
     const targets =
       status === 'Preparing'
-        ? t.items.filter((i) => i.kitchenStatus === 'Sent')
+        ? courseItems.filter((i) => i.kitchenStatus === 'Sent')
         : status === 'Ready'
-          ? t.items.filter((i) => i.kitchenStatus !== 'Ready')
-          : t.items
+          ? courseItems.filter((i) => i.kitchenStatus !== 'Ready')
+          : courseItems
     await Promise.all(targets.map((i) => kitchen.setStatus(i.itemId, status)))
-    if (status === 'Served') toast.success(`Vydáno: ${ticketTitle(t)}`)
+    if (status === 'Served') {
+      toast.success(`Vydáno: ${ticketTitle(t)}${courseLabel ? ` · ${courseLabel}` : ''}`)
+    }
     await refresh()
   } catch (e) {
     // Bon mezitím posunul/vydal jiný terminál — backend odmítne neplatný přechod (409). Ukaž jasnou hlášku
@@ -183,14 +199,17 @@ function printTicket(t: Ticket) {
     toast.error('Tisk zablokoval prohlížeč (povolte vyskakovací okna).')
     return
   }
-  const rows = t.items
+  const rows = groupItemsByCourse(t.items)
     .map(
-      (i) =>
-        `<div class="row"><b>${i.quantity}×</b> ${escapeHtml(i.productName)}${
-          i.variantName ? ` · ${escapeHtml(i.variantName)}` : ''
-        }${
-          i.course ? ` <span class="course">[${escapeHtml(i.course)}]</span>` : ''
-        }${modifierRows(i)}${i.note ? `<div class="note">↳ ${escapeHtml(i.note)}</div>` : ''}</div>`,
+      (group) =>
+        `${group.label ? `<div class="course-separator"><span>${escapeHtml(group.label)}</span></div>` : ''}${group.items
+          .map(
+            (i) =>
+              `<div class="row"><b>${i.quantity}×</b> ${escapeHtml(i.productName)}${
+                i.variantName ? ` · ${escapeHtml(i.variantName)}` : ''
+              }${modifierRows(i)}${i.note ? `<div class="note">↳ ${escapeHtml(i.note)}</div>` : ''}</div>`,
+          )
+          .join('')}`,
     )
     .join('')
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Bon</title>
@@ -201,7 +220,8 @@ function printTicket(t: Ticket) {
       .sub{text-align:center;font-size:12px;margin-bottom:6px}
       hr{border:none;border-top:1px dashed #000}
       .row{font-size:16px;margin:6px 0}
-      .course{font-weight:bold}
+      .course-separator{display:flex;align-items:center;gap:6px;margin:10px 0 4px;font-size:12px;font-weight:bold;text-transform:uppercase}
+      .course-separator:after{content:'';height:1px;flex:1;background:#000}
       .note{font-size:13px;padding-left:18px}
     </style></head><body>
     <h2>${SECTION_LABEL[t.section].toUpperCase()}</h2>
@@ -261,13 +281,13 @@ onUnmounted(() => {
       class="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground"
     >
       <ChefHat class="mx-auto h-10 w-10" />
-      <p class="mt-3 font-semibold text-foreground">Stanice potřebuje připojení k serveru</p>
+      <p class="mt-3 font-semibold text-foreground">Kuchyňské objednávky teď nejsou dostupné</p>
     </div>
 
     <template v-else>
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 class="text-2xl font-bold tracking-tight">Bony — kuchyně & bar</h1>
+          <h1 class="text-2xl font-bold tracking-tight">Kuchyňské objednávky</h1>
           <p class="text-sm text-muted-foreground">
             Objednávky z účtů. Po odeslání číšníkem sem „vyjede" lísteček.
           </p>
@@ -276,7 +296,7 @@ onUnmounted(() => {
           <div class="flex gap-1 rounded-lg bg-muted p-1">
             <button
               type="button"
-              class="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+              class="inline-flex h-12 items-center gap-1 rounded-md px-4 text-sm font-medium transition-colors"
               :class="
                 mode === 'live'
                   ? 'bg-background text-foreground shadow-sm'
@@ -288,7 +308,7 @@ onUnmounted(() => {
             </button>
             <button
               type="button"
-              class="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+              class="inline-flex h-12 items-center gap-1 rounded-md px-4 text-sm font-medium transition-colors"
               :class="
                 mode === 'history'
                   ? 'bg-background text-foreground shadow-sm'
@@ -303,7 +323,7 @@ onUnmounted(() => {
             v-for="s in STATIONS"
             :key="s.value"
             type="button"
-            class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+            class="h-12 rounded-lg px-4 text-sm font-medium transition-colors"
             :class="
               station === s.value
                 ? 'bg-primary text-primary-foreground'
@@ -318,7 +338,7 @@ onUnmounted(() => {
 
       <LoadError
         v-if="loadError && !tickets.length"
-        message="Bony se nepodařilo načíst — zkontrolujte připojení k serveru."
+        message="Kuchyňské objednávky se nepodařilo načíst. Zkontrolujte připojení."
         @retry="refresh"
       />
 
@@ -373,26 +393,72 @@ onUnmounted(() => {
             </span>
           </div>
 
-          <ul class="flex-1 space-y-1.5 py-2 text-sm">
-            <li v-for="i in t.items" :key="i.itemId">
-              <span class="font-bold tabular-nums">{{ i.quantity }}×</span> {{ i.productName
-              }}<span v-if="i.variantName"> · {{ i.variantName }}</span>
-              <span
-                v-if="i.course"
-                class="ml-1 rounded bg-muted px-1 py-0.5 text-[10px] font-semibold text-foreground"
-                >{{ i.course }}</span
+          <div class="flex-1 py-2 text-sm">
+            <section v-for="group in groupItemsByCourse(t.items)" :key="group.key">
+              <div
+                v-if="group.label"
+                class="my-2 flex items-center gap-2 first:mt-0"
+                :data-testid="'kitchen-course-' + group.key"
               >
-              <div v-if="i.note" class="pl-4 text-xs text-muted-foreground">↳ {{ i.note }}</div>
-              <div v-if="i.modifiers?.length" class="pl-4 text-xs text-muted-foreground">
-                <div
-                  v-for="(modifier, index) in i.modifiers"
-                  :key="`${i.itemId}-${modifier.groupName}-${modifier.name}-${index}`"
-                >
-                  ↳ {{ modifier.groupName }}: {{ modifier.name }}
-                </div>
+                <span class="shrink-0 text-[11px] font-black uppercase tracking-[0.12em]">
+                  {{ group.label }}
+                </span>
+                <span class="h-px flex-1 bg-border" aria-hidden="true" />
               </div>
-            </li>
-          </ul>
+              <ul class="space-y-1.5">
+                <li v-for="i in group.items" :key="i.itemId">
+                  <span class="font-bold tabular-nums">{{ i.quantity }}×</span> {{ i.productName
+                  }}<span v-if="i.variantName"> · {{ i.variantName }}</span>
+                  <div
+                    v-if="i.note"
+                    class="mt-1 rounded-lg border border-sun bg-sun/10 px-2 py-1.5 text-xs font-bold text-foreground"
+                  >
+                    Poznámka: {{ i.note }}
+                  </div>
+                  <div v-if="i.modifiers?.length" class="pl-4 text-xs text-muted-foreground">
+                    <div
+                      v-for="(modifier, index) in i.modifiers"
+                      :key="`${i.itemId}-${modifier.groupName}-${modifier.name}-${index}`"
+                    >
+                      ↳ {{ modifier.groupName }}: {{ modifier.name }}
+                    </div>
+                  </div>
+                </li>
+              </ul>
+              <div v-if="mode === 'live'" class="mt-3">
+                <Button
+                  v-if="!courseIsPreparing(group.items) && !courseIsReady(group.items)"
+                  variant="outline"
+                  class="h-12 w-full"
+                  :aria-label="`Začít přípravu${group.label ? ` — ${group.label}` : ''}`"
+                  :disabled="busy"
+                  @click="setCourseStatus(t, group.items, group.label, 'Preparing')"
+                >
+                  <Flame class="h-4 w-4" /> Začít přípravu
+                </Button>
+                <Button
+                  v-else-if="courseIsPreparing(group.items) && !courseIsReady(group.items)"
+                  variant="outline"
+                  class="h-12 w-full"
+                  :aria-label="`Označit jako hotové${group.label ? ` — ${group.label}` : ''}`"
+                  :disabled="busy"
+                  @click="setCourseStatus(t, group.items, group.label, 'Ready')"
+                >
+                  <Check class="h-4 w-4" /> Označit jako hotové
+                </Button>
+                <Button
+                  v-else
+                  variant="coral"
+                  class="h-12 w-full"
+                  :aria-label="`Vydáno hostovi${group.label ? ` — ${group.label}` : ''}`"
+                  :disabled="busy"
+                  @click="setCourseStatus(t, group.items, group.label, 'Served')"
+                >
+                  <Check class="h-4 w-4" /> Vydáno hostovi
+                </Button>
+              </div>
+            </section>
+          </div>
 
           <div
             v-if="mode === 'history'"
@@ -408,41 +474,12 @@ onUnmounted(() => {
           </div>
 
           <div class="flex gap-2">
-            <Button variant="ghost" size="icon" title="Tisk bonu" @click="printTicket(t)">
+            <Button variant="ghost" class="h-12 w-12" title="Tisk bonu" @click="printTicket(t)">
               <Printer class="h-4 w-4" />
             </Button>
             <Button v-if="mode === 'history'" variant="outline" class="flex-1" disabled>
               <Check class="h-4 w-4" /> Vydáno
             </Button>
-            <template v-else>
-              <Button
-                v-if="!t.preparing && !t.ready"
-                variant="outline"
-                class="flex-1"
-                :disabled="busy"
-                @click="setAll(t, 'Preparing')"
-              >
-                <Flame class="h-4 w-4" /> Připravit
-              </Button>
-              <Button
-                v-else-if="t.preparing && !t.ready"
-                variant="outline"
-                class="flex-1"
-                :disabled="busy"
-                @click="setAll(t, 'Ready')"
-              >
-                <Check class="h-4 w-4" /> Hotovo
-              </Button>
-              <Button
-                v-else
-                variant="coral"
-                class="flex-1"
-                :disabled="busy"
-                @click="setAll(t, 'Served')"
-              >
-                <Check class="h-4 w-4" /> Vydat
-              </Button>
-            </template>
           </div>
         </div>
       </div>

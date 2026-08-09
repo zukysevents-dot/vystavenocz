@@ -41,6 +41,8 @@ withDefaults(
     cashChange?: number
     loyaltyEarnedPoints?: number
     loyaltyRedeemedPoints?: number
+    /** Prodej pořízený bez připojení — doklad NESMÍ vypadat jako hotová účtenka. */
+    pendingSettlement?: boolean
     footer?: string
   }>(),
   { footer: 'Děkujeme za návštěvu' },
@@ -94,6 +96,17 @@ const money = (n: number) =>
     </div>
 
     <div class="my-3 text-center text-[10px] tracking-[0.3em] text-zinc-400">✻ ✻ ✻ ✻ ✻ ✻ ✻ ✻ ✻</div>
+
+    <!-- Prodej pořízený bez připojení: doklad k doúčtování, ne potvrzená účtenka. -->
+    <div
+      v-if="pendingSettlement"
+      class="my-3 border-2 border-dashed border-zinc-900 px-2 py-2 text-center text-[10px] font-bold uppercase"
+    >
+      Doklad k doúčtování<br />
+      <span class="font-normal normal-case">
+        Pořízeno bez připojení. Účtenka se doplní po odeslání do systému.
+      </span>
+    </div>
 
     <!-- Meta -->
     <div class="space-y-0.5 text-[10px] text-zinc-700">

@@ -152,7 +152,7 @@ function exportOperationalComparison() {
       'Průměr',
       'Hrubá marže',
       'Marže %',
-      'Food cost %',
+      'Nákladovost jídla %',
       'Ztráty',
       'Mrtvý sklad',
       'Marže po ztrátách',
@@ -179,7 +179,7 @@ function exportOperationalComparison() {
   <div class="mx-auto max-w-6xl p-4 sm:p-6 md:p-8">
     <div class="flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Konsolidace poboček</h1>
+        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Porovnání poboček</h1>
         <p class="mt-1 text-muted-foreground">Tržby a výkon poboček na jednom místě.</p>
       </div>
       <div class="flex items-end gap-2">
@@ -346,7 +346,7 @@ function exportOperationalComparison() {
           <div>
             <h2 class="text-lg font-semibold">Provozní srovnání poboček</h2>
             <p class="mt-1 text-sm text-muted-foreground">
-              Marže, food cost, ztráty a mrtvý sklad za stejné období.
+              Marže, nákladovost jídel, ztráty a neprodejné zásoby za stejné období.
             </p>
           </div>
           <Button
@@ -382,7 +382,7 @@ function exportOperationalComparison() {
                 </div>
                 <div>
                   <div class="flex items-center gap-1.5 text-muted-foreground">
-                    <Percent class="h-4 w-4" /> Food cost
+                    <Percent class="h-4 w-4" /> Nákladovost jídel
                   </div>
                   <div class="mt-0.5 font-semibold">{{ formatPercent(r.foodCostPercent) }}</div>
                 </div>
@@ -418,7 +418,7 @@ function exportOperationalComparison() {
                   <th class="px-4 py-3 text-right">Průměr</th>
                   <th class="px-4 py-3 text-right">Marže</th>
                   <th class="px-4 py-3 text-right">Marže %</th>
-                  <th class="px-4 py-3 text-right">Food cost</th>
+                  <th class="px-4 py-3 text-right">Nákladovost</th>
                   <th class="px-4 py-3 text-right">Ztráty</th>
                   <th class="px-4 py-3 text-right">Mrtvý sklad</th>
                   <th class="px-4 py-3 text-right">Po ztrátách</th>

@@ -81,7 +81,7 @@ test('Mapa stolů vygeneruje QR odkaz pro konkrétní stůl a veřejný slug', a
 
   await page.goto('/app/mapa-stolu')
 
-  await expect(page.getByRole('heading', { name: 'Mapa stolů' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Nastavení stolů' })).toBeVisible()
   await page.getByText('Terasa 12').click()
   await page.getByRole('button', { name: 'QR objednávka' }).click()
 

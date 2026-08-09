@@ -24,10 +24,29 @@ export interface OrderItemPaymentShare {
   quantity: number
 }
 
+export interface PayOrderItemsResult {
+  order: Order
+  saleId: string
+}
+
 // Otevřené účty na stole (gastro). Jen API mód (restaurační provoz proti reálnému backendu).
 export function useOrders() {
   async function listOpen(): Promise<Order[]> {
-    return (await http.get<PagedResult<Order>>('/orders?status=Open&pageSize=200')).items
+    const pageSize = 100
+    const first = await http.get<PagedResult<Order>>(
+      `/orders?status=Open&page=1&pageSize=${pageSize}`,
+    )
+    const orders = [...first.items]
+    const totalPages = Math.ceil(first.total / Math.max(first.pageSize, 1))
+
+    for (let page = 2; page <= totalPages; page++) {
+      const next = await http.get<PagedResult<Order>>(
+        `/orders?status=Open&page=${page}&pageSize=${pageSize}`,
+      )
+      orders.push(...next.items)
+    }
+
+    return orders
   }
   function get(id: string): Promise<Order> {
     return http.get<Order>(`/orders/${id}`)
@@ -100,12 +119,14 @@ export function useOrders() {
     orderId: string,
     method: PaymentMethod,
     items: OrderItemPaymentShare[],
+    idempotencyKey: string,
     cashReceived?: number | null,
     priceLevelId?: string | null,
-  ): Promise<Order> {
-    return http.post<Order>(`/orders/${orderId}/pay-items`, {
+  ): Promise<PayOrderItemsResult> {
+    return http.post<PayOrderItemsResult>(`/orders/${orderId}/pay-items`, {
       paymentMethod: method,
       items,
+      idempotencyKey,
       cashReceived: cashReceived ?? null,
       priceLevelId: priceLevelId ?? null,
     })

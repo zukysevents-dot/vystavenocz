@@ -2,7 +2,19 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { User } from '@/lib/types'
 import { http, isApiMode, getTokens, setTokens, ApiError, type Tokens } from '@/lib/http'
-import { DEFAULT_ENABLED_MODULES, normalizeModules, type AppModuleId } from '@/lib/modules'
+import {
+  clearBusinessProfile,
+  DEFAULT_ENABLED_MODULES,
+  normalizeModules,
+  type AppModuleId,
+} from '@/lib/modules'
+import { permissiveSnapshot, type AccessMode, type EntitlementSnapshot } from '@/lib/entitlements'
+import {
+  safeRedirect,
+  type OauthCallbackResponse,
+  type OauthLinkRequired,
+  type OauthStartResponse,
+} from '@/lib/oauth'
 
 // Dva režimy podle VITE_API_URL (viz http.ts):
 //  - mock (prázdné URL): účty + session žijí v localStorage (vývoj / e2e seed).
@@ -11,10 +23,19 @@ import { DEFAULT_ENABLED_MODULES, normalizeModules, type AppModuleId } from '@/l
 const USER_KEY = 'vystaveno.auth.user.v1' // mock session
 const USERS_KEY = 'vystaveno.auth.users.v1' // mock "databáze" účtů
 const SESSION_KEY = 'vystaveno.auth.session.v1' // API: cache identity vedle tokenů (sync init po reloadu)
+// MOCK režim (náhled/e2e) nemá server, takže ani tarif — tímhle klíčem se dá stav předplatného
+// nasimulovat pro demo a testy. V API režimu se NEČTE: tam snapshot vždy přichází z /me.
+const MOCK_ENTITLEMENT_KEY = 'vystaveno.entitlement.mock.v1'
 
-type StoredUser = User & { password: string }
+type StoredUser = User & { password: string; modules?: AppModuleId[] }
 type AuthResult = { ok: true } | { ok: false; error: string }
 
+export interface AccessibleCompany {
+  id: string
+  name: string
+  role: string
+  locationId: string | null
+}
 interface MeResponse {
   userId?: string
   id?: string
@@ -24,6 +45,8 @@ interface MeResponse {
   role: string | null
   modules?: string[]
   features?: string[]
+  companies?: AccessibleCompany[]
+  entitlement?: EntitlementSnapshot
 }
 interface Session {
   user: User
@@ -31,6 +54,7 @@ interface Session {
   role: string | null
   modules: AppModuleId[]
   features: string[]
+  entitlement?: EntitlementSnapshot
 }
 
 function loadUsers(): StoredUser[] {
@@ -56,12 +80,50 @@ export const useAuthStore = defineStore('auth', () => {
   const role = ref<string | null>(null)
   const modules = ref<AppModuleId[]>(DEFAULT_ENABLED_MODULES)
   const features = ref<string[]>([])
+  // Entitlement snapshot ze serveru. Fallback je záměrně povolující — dokud /me nedorazí, UI neblokujeme
+  // (server odmítne sám). Po každém /me se PŘEPÍŠE serverovým stavem, takže cache nemůže odemknout modul.
+  const entitlement = ref<EntitlementSnapshot>(permissiveSnapshot(DEFAULT_ENABLED_MODULES))
+  // Firmy, kam má účet přístup (z /me) — jen runtime stav pro přepínač, nepersistuje se.
+  const companies = ref<AccessibleCompany[]>([])
   const initialized = ref(false)
   const isAuthenticated = computed(() => user.value !== null)
+
+  function clearApiSession(): void {
+    setTokens(null)
+    user.value = null
+    companyId.value = null
+    role.value = null
+    modules.value = DEFAULT_ENABLED_MODULES
+    features.value = []
+    entitlement.value = permissiveSnapshot(DEFAULT_ENABLED_MODULES)
+    companies.value = []
+    clearBusinessProfile()
+    persistSession()
+  }
 
   function persistMock(): void {
     if (user.value) localStorage.setItem(USER_KEY, JSON.stringify(user.value))
     else localStorage.removeItem(USER_KEY)
+  }
+
+  /**
+   * Jediné místo, kudy se mění zapnuté moduly (onboarding, Nastavení).
+   *
+   * MOCK režim nemá server, odkud by se po reloadu/přihlášení vzaly — volba se proto ukládá k
+   * mock ÚČTU, ne do session: jinak by se menu po refreshi vrátilo ke všem modulům a po
+   * odhlášení a novém přihlášení by výběr z onboardingu zmizel. V API režimu je zdroj `/me`.
+   */
+  function setModules(next: AppModuleId[]): AppModuleId[] {
+    modules.value = normalizeModules(next)
+    if (!isApiMode() && user.value) {
+      const users = loadUsers()
+      const stored = users.find((u) => u.id === user.value!.id)
+      if (stored) {
+        stored.modules = modules.value
+        saveUsers(users)
+      }
+    }
+    return modules.value
   }
 
   function persistSession(): void {
@@ -72,6 +134,7 @@ export const useAuthStore = defineStore('auth', () => {
         role: role.value,
         modules: modules.value,
         features: features.value,
+        entitlement: entitlement.value,
       }
       localStorage.setItem(SESSION_KEY, JSON.stringify(session))
     } else {
@@ -95,6 +158,9 @@ export const useAuthStore = defineStore('auth', () => {
             role.value = s.role
             modules.value = normalizeModules(s.modules)
             features.value = s.features ?? []
+            // Cache smí jen zrychlit první render; jakmile /me odpoví, přepíše ji server. Bez snapshotu
+            // radši povolující fallback než starý (možná už neplatný) stav.
+            entitlement.value = s.entitlement ?? permissiveSnapshot(modules.value)
           }
         } catch {
           /* poškozená session → nepřihlášen */
@@ -108,6 +174,10 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const raw = localStorage.getItem(USER_KEY)
       user.value = raw ? (JSON.parse(raw) as User) : null
+      const mock = localStorage.getItem(MOCK_ENTITLEMENT_KEY)
+      if (mock) entitlement.value = JSON.parse(mock) as EntitlementSnapshot
+      const stored = user.value && loadUsers().find((u) => u.id === user.value!.id)
+      if (stored?.modules) modules.value = normalizeModules(stored.modules)
     } catch {
       user.value = null
       modules.value = DEFAULT_ENABLED_MODULES
@@ -126,13 +196,94 @@ export const useAuthStore = defineStore('auth', () => {
     role.value = me.role
     modules.value = normalizeModules(me.modules)
     features.value = me.features ?? []
+    companies.value = me.companies ?? []
+    entitlement.value = me.entitlement ?? permissiveSnapshot(modules.value)
     persistSession()
+  }
+
+  // Přepnutí aktivní firmy (multi-company účet): server vydá nový token pár s cílovou companyId,
+  // pak se přenačte identita. Volající po úspěchu přejde na /app (stará data stránek neplatí).
+  async function switchCompany(targetCompanyId: string): Promise<boolean> {
+    if (!isApiMode() || !user.value) return false
+    try {
+      const tokens = await http.post<Tokens>(`/companies/${targetCompanyId}/switch`)
+      setTokens(tokens)
+      // Data PŘEDCHOZÍ firmy nesmí v nové firmě zůstat ani na chvíli. Místo invalidace desítek storů
+      // (jeden zapomenutý = únik cizích dat) zahodíme všechny tenant cache a necháme app nastartovat
+      // znovu — volající pak jen udělá hard redirect na /app.
+      clearTenantCaches()
+      await loadMe(user.value.email, user.value.fullName)
+      return true
+    } catch (e) {
+      console.error('Přepnutí firmy selhalo:', e)
+      return false
+    }
+  }
+
+  // Smaže lokální cache vázané na firmu (profily, seznamy, rozpracovaná data). Přihlášení a session
+  // zůstávají — přepínáme firmu, ne uživatele.
+  function clearTenantCaches(): void {
+    const keep = new Set([SESSION_KEY, USER_KEY, USERS_KEY])
+    for (const key of Object.keys(localStorage)) {
+      if (keep.has(key)) continue
+      if (key.startsWith('vystaveno.') || key.startsWith('vystaveno:')) localStorage.removeItem(key)
+    }
   }
 
   // Po změně tenant kontextu (založení firmy vydá nové tokeny s companyId) přenačti identitu.
   async function reloadMe(): Promise<void> {
     if (!isApiMode() || !user.value) return
-    await loadMe(user.value.email, user.value.fullName)
+    try {
+      await loadMe(user.value.email, user.value.fullName)
+    } catch {
+      // Síť/výpadek — necháme dosavadní stav. Přístup je stejně vynucený serverem, takže zastaralý
+      // snapshot může nejvýš zobrazit položku, kterou server odmítne; shodit appku by bylo horší.
+    }
+  }
+
+  // ── Přihlášení přes poskytovatele identity (Google) ─────────────────────────
+  // Server je jediný zdroj pravdy: vydává state/nonce/PKCE, ověřuje id_token a vrací NAŠE tokeny.
+  // Store se chová stejně jako u e-mailového přihlášení — tokeny + `/me` + persistovaná session.
+
+  /** Krok 1: vyžádá si od serveru authorize URL. `returnTo` je jen relativní cesta (open-redirect). */
+  async function startExternalLogin(provider: string, returnTo?: string | null): Promise<string> {
+    const res = await http.post<OauthStartResponse>(`/auth/external/${provider}/start`, {
+      returnTo: returnTo ? safeRedirect(returnTo, '') || null : null,
+      platform: 'web',
+    })
+    return res.authorizeUrl
+  }
+
+  /**
+   * Krok 2: vymění `code`+`state` za naši session. Vrací buď hotové přihlášení, nebo požadavek na
+   * propojení s existujícím účtem — auto-propojení podle e-mailu server záměrně nedělá.
+   */
+  async function completeExternalLogin(
+    provider: string,
+    code: string,
+    state: string,
+  ): Promise<
+    | { ok: true; returnTo: string | null; isNewCompany: boolean }
+    | { ok: false; linkRequired: OauthLinkRequired }
+  > {
+    const res = await http.post<OauthCallbackResponse>(`/auth/external/${provider}/callback`, {
+      code,
+      state,
+    })
+    if (!res.tokens) {
+      if (res.linkRequired) return { ok: false, linkRequired: res.linkRequired }
+      throw new Error('external-callback-empty')
+    }
+    setTokens(res.tokens)
+    await loadMe('', null)
+    return { ok: true, returnTo: res.returnTo, isNewCompany: !companyId.value }
+  }
+
+  /** Krok 3 (jen při `linkRequired`): propojení potvrzené heslem k existujícímu účtu. */
+  async function confirmExternalLink(ticket: string, password: string): Promise<void> {
+    const tokens = await http.post<Tokens>('/auth/external/link/confirm', { ticket, password })
+    setTokens(tokens)
+    await loadMe('', null)
   }
 
   async function login(email: string, password: string): Promise<AuthResult> {
@@ -143,7 +294,7 @@ export const useAuthStore = defineStore('auth', () => {
         await loadMe(email, null)
         return { ok: true }
       } catch (e) {
-        setTokens(null)
+        clearApiSession()
         const msg =
           e instanceof ApiError && e.status === 401
             ? 'Špatný e-mail nebo heslo.'
@@ -157,6 +308,7 @@ export const useAuthStore = defineStore('auth', () => {
       return { ok: false, error: 'Špatný e-mail nebo heslo.' }
     }
     user.value = { id: found.id, email: found.email, fullName: found.fullName }
+    modules.value = found.modules ? normalizeModules(found.modules) : DEFAULT_ENABLED_MODULES
     persistMock()
     return { ok: true }
   }
@@ -207,19 +359,17 @@ export const useAuthStore = defineStore('auth', () => {
           /* best-effort — odhlásit i při výpadku sítě */
         }
       }
-      setTokens(null)
-      user.value = null
-      companyId.value = null
-      role.value = null
-      modules.value = DEFAULT_ENABLED_MODULES
-      features.value = []
-      persistSession()
+      clearApiSession()
       return
     }
 
     user.value = null
     modules.value = DEFAULT_ENABLED_MODULES
     features.value = []
+    entitlement.value = permissiveSnapshot(DEFAULT_ENABLED_MODULES)
+    // Obor je nápověda vázaná na účet — další uživatel na stejném prohlížeči nesmí zdědit cizí
+    // doporučení. Volba modulů zůstává uložená u mock účtu, takže se po přihlášení vrátí.
+    clearBusinessProfile()
     persistMock()
   }
 
@@ -239,21 +389,43 @@ export const useAuthStore = defineStore('auth', () => {
     return features.value.includes(feature)
   }
 
+  // Režim přístupu ze serveru. `read_only` = předplatné skončilo (data zůstávají ke čtení a exportu),
+  // `locked` = přístup pozastavený. Zápisové akce v UI se podle toho schovají; server je blokuje vždy.
+  const accessMode = computed<AccessMode>(() => entitlement.value.accessMode)
+  const isReadOnly = computed(() => accessMode.value !== 'full')
+  const plan = computed(() => entitlement.value.plan)
+  const lockedModules = computed(() => entitlement.value.lockedModules)
+  const canManageSubscription = computed(() => entitlement.value.plan.canManageSubscription)
+
   return {
     user,
     companyId,
     role,
     modules,
     features,
+    companies,
+    entitlement,
+    accessMode,
+    isReadOnly,
+    plan,
+    lockedModules,
+    canManageSubscription,
     initialized,
     isAuthenticated,
     init,
+    clearInvalidSession: clearApiSession,
     login,
+    startExternalLogin,
+    completeExternalLogin,
+    confirmExternalLink,
     register,
     logout,
     reloadMe,
+    switchCompany,
+    setModules,
     hasRole,
     hasModule,
     hasFeature,
+    clearTenantCaches,
   }
 })

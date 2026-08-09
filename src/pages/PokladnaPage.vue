@@ -58,11 +58,14 @@ import { usePromotions } from '@/composables/usePromotions'
 import { useCustomers, type LoyaltyCustomer } from '@/composables/useCustomers'
 import { useLoyalty, type LoyaltySettings } from '@/composables/useLoyalty'
 import { useProductVariants } from '@/composables/useProductVariants'
+import { useOfflineSales } from '@/composables/useOfflineSales'
+import { loadCatalog, saveCatalog } from '@/lib/offline-db'
+import { offlineBlockReason, type QueuedSalePayload } from '@/lib/offline-sales'
 import { formatCZK, round2 } from '@/lib/invoice'
 import { findByEan } from '@/lib/reorder'
 import { buildReceipt, type ReceiptInfo } from '@/lib/receipt'
 import { calcPosTotals, clampAmount, clampPercent } from '@/lib/posCalc'
-import { ApiError, isApiMode } from '@/lib/http'
+import { ApiError, isApiMode, logUnlessForbidden } from '@/lib/http'
 import { isApprovalRequest } from '@/lib/types'
 import type { PriceLevel, PromotionCalculation, PromotionLineInput } from '@/lib/promotions'
 import { useCompanyStore } from '@/stores/company'
@@ -80,6 +83,23 @@ const loyaltyApi = useLoyalty()
 const variantsApi = useProductVariants()
 const companyStore = useCompanyStore()
 const auth = useAuthStore()
+const offlineSales = useOfflineSales()
+
+// Stáří uloženého ceníku — obsluha musí vidět, podle čeho offline účtuje.
+const catalogSavedAt = ref<string | null>(null)
+const catalogSavedAtLabel = computed(() =>
+  catalogSavedAt.value
+    ? new Date(catalogSavedAt.value).toLocaleTimeString('cs-CZ', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null,
+)
+const offlineAvailable = offlineSales.available
+const offlineMode = computed(() => offlineAvailable && !offlineSales.online.value)
+const pendingSalesCount = computed(() => offlineSales.pending.value.length)
+const failedSalesCount = computed(() => offlineSales.failed.value.length)
+const queueSyncing = computed(() => offlineSales.syncing.value)
 
 // Provozovna, na které pokladna prodává (kvůli uzávěrce per pobočku). Jedna pobočka → automaticky,
 // víc → pokladní vybere, žádná → prodává se „bez pobočky" (uzávěrka po provozovnách pak nic neukáže).
@@ -155,6 +175,9 @@ const redeemPoints = ref(0)
 const pricePreview = ref<PromotionCalculation | null>(null)
 const pricePreviewLoading = ref(false)
 const pricePreviewError = ref(false)
+// 403 = role nemá loyalty.read (např. Obsluha) — náhled ceny prostě není k dispozici,
+// ale platba NESMÍ být zablokovaná: výslednou cenu autoritativně spočítá server při prodeji.
+const pricePreviewForbidden = ref(false)
 let pricePreviewSeq = 0
 
 const selectedPriceLevel = computed(
@@ -194,10 +217,10 @@ const earnedPointsPreview = computed(() => {
   if (!selectedCustomer.value || rate <= 0) return 0
   return Math.max(0, Math.floor((checkoutTotal.value - clampAmount(tipAmount.value)) / rate))
 })
-const pricingReady = computed(
-  () =>
-    !apiMode || !loyaltyEnabled.value || (!pricePreviewLoading.value && !pricePreviewError.value),
-)
+// Pozn.: náhled ceny je jen informace pro obsluhu — účtovanou cenu autoritativně počítá server při
+// prodeji. Tlačítko „Zaplatit“ se proto blokuje jen po dobu načítání (`pricePreviewLoading`);
+// SELHÁNÍ náhledu (403 i výpadek sítě) platbu nezastaví, jen se na něj upozorní (warnIfPreviewFailed).
+// Dřív tu byl `pricingReady`, který při síťové chybě platbu blokoval → na slabé síti nešlo prodávat.
 const priceLevelAdjustment = computed(() =>
   pricePreview.value
     ? round2(pricePreview.value.subtotalOriginal - pricePreview.value.subtotalAfterPriceLevel)
@@ -241,7 +264,7 @@ async function loadPriceLevels() {
     priceLevels.value = await promotions.listPriceLevels()
   } catch (e) {
     priceLevels.value = []
-    console.error(e)
+    logUnlessForbidden(e)
   }
 }
 
@@ -263,12 +286,20 @@ async function loadLoyaltyCheckoutData() {
   } catch (e) {
     loyaltyCustomers.value = []
     loyaltySettings.value = null
-    console.error(e)
+    logUnlessForbidden(e)
   }
 }
 
 async function refreshPricePreview() {
-  if (!apiMode || !loyaltyEnabled.value || !cart.value.length) {
+  // Offline nemá cenu se ptát serveru na akce — spočítá je až při doúčtování a UI o rozdílu řekne.
+  if (offlineMode.value) {
+    pricePreviewSeq++
+    pricePreview.value = null
+    pricePreviewLoading.value = false
+    pricePreviewError.value = false
+    return
+  }
+  if (!apiMode || !loyaltyEnabled.value || !cart.value.length || pricePreviewForbidden.value) {
     pricePreviewSeq++
     pricePreview.value = null
     pricePreviewLoading.value = false
@@ -290,7 +321,9 @@ async function refreshPricePreview() {
   } catch (e) {
     if (seq === pricePreviewSeq) {
       pricePreview.value = null
-      pricePreviewError.value = true
+      // Chybějící oprávnění není chyba náhledu — platba pokračuje bez něj (a už se znovu nezkouší).
+      if (e instanceof ApiError && e.status === 403) pricePreviewForbidden.value = true
+      else pricePreviewError.value = true
     }
     console.error(e)
   } finally {
@@ -332,6 +365,11 @@ onMounted(async () => {
     return
   }
   loading.value = true
+  await offlineSales.init()
+  // Zapamatovanou provozovnu nastavíme UŽ TEĎ: bez sítě se seznam poboček nenačte a uložený ceník
+  // je klíčovaný právě pobočkou — jinak by pokladna offline nenašla svůj ceník.
+  const stored = localStorage.getItem(POS_LOCATION_KEY)
+  if (stored) currentLocationId.value = stored
   await Promise.all([load(), loadLocations(), loadPriceLevels(), loadLoyaltyCheckoutData()])
   try {
     categories.value = await categoriesApi.list()
@@ -339,12 +377,65 @@ onMounted(async () => {
     console.error(e)
   }
   // Výběr provozovny: zapamatovaná (pokud stále existuje) → jinak první → jinak žádná.
-  const stored = localStorage.getItem(POS_LOCATION_KEY)
   if (stored && locations.value.some((l) => l.id === stored)) currentLocationId.value = stored
   else if (locations.value.length) currentLocationId.value = locations.value[0].id
+  await syncOfflineCatalog()
   loading.value = false
   focusScan()
+  void settleQueue()
 })
+
+/**
+ * Ceník do IndexedDB, ať bar prodává i bez sítě. Když se katalog nenačetl (výpadek), sáhne se
+ * pro uložený a UI ukáže jeho stáří — offline se NIKDY nepočítá z vymyšlených cen.
+ */
+async function syncOfflineCatalog(): Promise<void> {
+  if (!offlineSales.available) return
+  try {
+    if (products.value.length) {
+      const savedAt = new Date().toISOString()
+      await saveCatalog(currentLocationId.value || null, {
+        savedAt,
+        products: products.value,
+        categories: categories.value,
+      })
+      catalogSavedAt.value = savedAt
+      return
+    }
+    const cached = await loadCatalog<Product, Category>(currentLocationId.value || null)
+    if (!cached) return
+    products.value = cached.products
+    categories.value = cached.categories
+    catalogSavedAt.value = cached.savedAt
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+/** Odešle frontu a poctivě řekne, co se stalo — včetně rozdílu proti offline vytištěné částce. */
+async function settleQueue(): Promise<void> {
+  if (!offlineAvailable || !offlineSales.queue.value.length) return
+  const summary = await offlineSales.sync()
+  if (summary.synced > 0) {
+    toast.success(
+      summary.synced === 1
+        ? 'Účtenka z offline provozu byla doúčtována.'
+        : `Doúčtováno ${summary.synced} účtenek z offline provozu.`,
+    )
+  }
+  for (const difference of summary.differences) {
+    toast.warning(
+      difference > 0
+        ? `Server napočítal o ${formatCZK(difference)} víc než doklad vytištěný offline (akce nebo cenová hladina).`
+        : `Server napočítal o ${formatCZK(Math.abs(difference))} míň než doklad vytištěný offline (akce nebo cenová hladina).`,
+    )
+  }
+  if (summary.failed > 0) {
+    toast.error(
+      `${summary.failed} účtenek server odmítl. Zůstávají ve frontě a potřebují rozhodnutí vedoucího.`,
+    )
+  }
+}
 
 function addToCart(p: Product, variant: SelectableProductVariant | null = null) {
   const line = cart.value.find((l) => l.product.id === p.id && l.variant?.id === variant?.id)
@@ -393,9 +484,9 @@ function handleCode(raw: string) {
   if (!code) return
   const product = findByEan(products.value, code)
   if (!product) {
-    toast.error(`EAN „${code}“ nenalezen v katalogu.`)
+    toast.error(`Čárový kód „${code}“ nebyl v katalogu nalezen.`)
   } else if (products.value.filter((p) => p.ean === code).length > 1) {
-    toast.error(`Víc produktů se stejným EAN „${code}“ — vyberte položku ručně.`)
+    toast.error(`Více produktů má čárový kód „${code}“. Vyberte položku ručně.`)
   } else {
     void chooseProduct(product)
   }
@@ -441,24 +532,101 @@ watch(
 // --- Jednotný platební dialog (hotově s výpočtem vrácení / karta přes terminálový krok) ---
 const paymentOpen = ref(false)
 
+// Náhled ceny selhal → platbu NEZASTAVUJEME (server cenu spočítá sám), jen obsluhu upozorníme,
+// že zobrazený součet nemusí obsahovat probíhající akci. Tichý rozdíl by byl horší než varování.
+function warnIfPreviewFailed(): void {
+  if (pricePreviewError.value) {
+    toast.warning('Náhled akcí se nenačetl. Konečnou cenu spočítá server — může být nižší.')
+  }
+}
+
 async function openPaymentDialog() {
   if (!cart.value.length || paying.value) return
   await refreshPricePreview()
-  if (!pricingReady.value) {
-    toast.error('Cenu se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
-    return
-  }
+  warnIfPreviewFailed()
   paymentOpen.value = true
 }
 
 async function confirmPayment(payment: { method: PaymentMethod; cashReceived: number | null }) {
-  await refreshPricePreview()
-  if (!pricingReady.value) {
-    toast.error('Cenu se nepodařilo ověřit na serveru. Zkuste platbu znovu.')
-    return
+  // Poslední pojistka k tomu, co UI blokuje předem: offline nesmí projít karta ani věrnostní body.
+  if (offlineMode.value) {
+    const blocked = offlineBlockReason({
+      paymentMethod: payment.method,
+      customerId: activeCustomerId.value,
+      redeemPoints: appliedRedeemPoints.value,
+    })
+    if (blocked) {
+      toast.error(blocked)
+      return
+    }
   }
+  await refreshPricePreview()
   const ok = await pay(payment.method, payment.cashReceived)
   if (ok) paymentOpen.value = false // při chybě zůstává otevřený, obsluha může zkusit znovu
+}
+
+// Klíč posledního NEDOKONČENÉHO pokusu o zaplacení. Retry po timeoutu/výpadku sítě pošle stejný klíč,
+// takže server vrátí původní účtenku místo druhého naúčtování; jakákoli změna košíku dá klíč nový.
+// Stejný mechanismus jako mobilní pokladna (PosScreenModel.checkout).
+let pendingCheckout: { key: string; payload: string } | null = null
+
+type CheckoutItems = QueuedSalePayload['items']
+interface CheckoutOptions {
+  discountPercent: number
+  tipAmount: number
+  locationId: string | null
+  cashReceived: number | null
+  priceLevelId: string | null
+  customerId: string | null
+  redeemPoints: number
+}
+
+/**
+ * Uloží prodej do offline fronty a vytiskne DOKLAD K DOÚČTOVÁNÍ. Nikdy netvrdí, že je zaplaceno
+ * a odesláno — v systému prodej ještě není a obsluha to musí vědět.
+ */
+async function queueOfflineSale(
+  method: PaymentMethod,
+  items: CheckoutItems,
+  options: CheckoutOptions,
+  idempotencyKey: string,
+  discountAmountSnapshot: number,
+): Promise<void> {
+  const total = checkoutTotal.value
+  const queued = await offlineSales.enqueue(
+    {
+      paymentMethod: method,
+      locationId: options.locationId,
+      items,
+      discountPercent: options.discountPercent,
+      tipAmount: options.tipAmount,
+      cashReceived: options.cashReceived,
+      priceLevelId: options.priceLevelId,
+      idempotencyKey,
+    },
+    { total, itemCount: itemCount.value, catalogSavedAt: catalogSavedAt.value },
+  )
+  pendingCheckout = null
+  receiptData.value = buildReceipt({
+    company: companyStore.company,
+    items: cart.value.map((l) => ({ name: l.product.name, qty: l.quantity, total: lineTotal(l) })),
+    discountPercent: options.discountPercent,
+    discountAmount: discountAmountSnapshot,
+    tipAmount: options.tipAmount,
+    total,
+    method,
+    id: queued.id,
+    cashReceived: options.cashReceived,
+    cashChange:
+      options.cashReceived != null ? round2(Math.max(0, options.cashReceived - total)) : null,
+    pendingSettlement: true,
+  })
+  paymentOpen.value = false
+  receiptOpen.value = true
+  toast.warning(
+    `Bez připojení: prodej za ${formatCZK(total)} čeká ve frontě (${pendingSalesCount.value}). Odešle se sám, jakmile bude síť.`,
+  )
+  clearCart()
 }
 
 async function pay(method: PaymentMethod, cashReceived: number | null = null): Promise<boolean> {
@@ -477,7 +645,7 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
     // Kč hodnota slevy na účet nejde odvodit ze Sale response (ta nese jen totaly PO slevě),
     // proto se bere z FE snapshotu před odesláním — jen pro zobrazení na účtence.
     const discountAmountSnapshot = receiptDiscountAmount()
-    const sale = await sales.create(method, items, {
+    const options = {
       discountPercent: clampPercent(accountDiscountPercent.value),
       tipAmount: clampAmount(tipAmount.value),
       locationId: currentLocationId.value || null,
@@ -485,7 +653,40 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
       priceLevelId: activePriceLevelId.value,
       customerId: activeCustomerId.value,
       redeemPoints: appliedRedeemPoints.value,
-    })
+    }
+    const payload = JSON.stringify({ method, items, options })
+    const idempotencyKey =
+      pendingCheckout?.payload === payload ? pendingCheckout.key : crypto.randomUUID()
+    pendingCheckout = { key: idempotencyKey, payload }
+
+    // Bez připojení se prodej NEODESÍLÁ — uloží se do fronty a bar účtuje dál. Doklad se vytiskne
+    // jako „k doúčtování"; cenu, akce i sklad dopočítá server až při synchronizaci.
+    if (offlineMode.value) {
+      await queueOfflineSale(method, items, options, idempotencyKey, discountAmountSnapshot)
+      return true
+    }
+
+    let sale: Sale
+    try {
+      sale = await sales.create(method, items, { ...options, idempotencyKey })
+    } catch (e) {
+      // Požadavek vůbec neodešel (spadlá Wi-Fi uprostřed platby). Hotovost je v zásuvce, prodej
+      // proto putuje do fronty se STEJNÝM klíčem — kdyby přece jen doletěl, server vrátí původní účtenku.
+      // Do fronty smí JEN to, co offline projde: karta se takhle „doúčtovat" nesmí (peníze nikdo
+      // nestrhl), takže u ní zůstává původní chování — chyba a dialog otevřený pro nový pokus.
+      const queueable = !offlineBlockReason({
+        paymentMethod: method,
+        customerId: activeCustomerId.value,
+        redeemPoints: appliedRedeemPoints.value,
+      })
+      if (offlineSales.available && queueable && !(e instanceof ApiError)) {
+        offlineSales.online.value = false
+        await queueOfflineSale(method, items, options, idempotencyKey, discountAmountSnapshot)
+        return true
+      }
+      throw e
+    }
+    pendingCheckout = null
     const receiptLines = sale.items?.length
       ? sale.items.map((item) => ({
           name: [item.description ?? 'Položka', item.variantName].filter(Boolean).join(' · '),
@@ -527,7 +728,7 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
     if (e instanceof ApiError && e.status === 422 && cashReceived != null) {
       toast.error('Přijatá hotovost nepokrývá částku k úhradě. Zadejte vyšší částku.')
     } else {
-      toast.error('Prodej se nepodařilo dokončit. Zkontrolujte připojení k serveru.')
+      toast.error('Prodej se nepodařilo dokončit. Zkontrolujte připojení a zkuste to znovu.')
     }
     console.error(e)
     return false
@@ -606,7 +807,8 @@ function saleTime(iso: string): string {
   <div class="p-4 sm:p-6">
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold tracking-tight">Pokladna</h1>
-      <div v-if="apiMode" class="flex items-center gap-2">
+      <!-- flex-wrap: s výběrem provozovny se akce na mobilu zalomí místo overflow celé stránky -->
+      <div v-if="apiMode" class="flex flex-wrap items-center gap-2">
         <!-- Výběr provozovny (jen když jich má klient víc) — určuje, kam prodej spadne v uzávěrce. -->
         <Select v-if="locations.length > 1" v-model="currentLocationId">
           <SelectTrigger class="h-9 w-48" aria-label="Provozovna">
@@ -623,6 +825,42 @@ function saleTime(iso: string): string {
           <RouterLink to="/app/uzaverka"> <FileClock class="h-5 w-5" /> Uzávěrka </RouterLink>
         </Button>
       </div>
+    </div>
+
+    <!-- Offline provoz musí být vidět nezaměnitelně, ne jen ikonkou: obsluha potřebuje vědět, že
+         účtenka ještě není v systému, a kolik jich čeká na doúčtování. -->
+    <div
+      v-if="offlineMode"
+      data-testid="pos-offline-banner"
+      class="mb-4 rounded-lg border-2 border-destructive bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive"
+    >
+      Bez připojení — účtujete offline. Prodeje čekají ve frontě a odešlou se samy, jakmile bude
+      síť. Kartou ani věrnostními body teď platit nejde.
+      <span v-if="catalogSavedAtLabel" class="font-normal">
+        Ceník z {{ catalogSavedAtLabel }}.
+      </span>
+    </div>
+    <div
+      v-if="offlineAvailable && (pendingSalesCount > 0 || failedSalesCount > 0)"
+      data-testid="pos-queue-status"
+      class="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/60 bg-amber-500/10 px-3 py-2 text-sm"
+    >
+      <span v-if="pendingSalesCount > 0">
+        Čeká na doúčtování: <strong>{{ pendingSalesCount }}</strong> účtenek.
+      </span>
+      <span v-if="failedSalesCount > 0" class="text-destructive">
+        Server odmítl <strong>{{ failedSalesCount }}</strong> účtenek — potřebují rozhodnutí
+        vedoucího.
+      </span>
+      <Button
+        v-if="!offlineMode"
+        variant="outline"
+        size="sm"
+        :disabled="queueSyncing"
+        @click="settleQueue"
+      >
+        Odeslat teď
+      </Button>
     </div>
 
     <!-- Klient nemá žádnou provozovnu → uzávěrka po provozovnách nebude mít co ukázat. -->
@@ -648,10 +886,8 @@ function saleTime(iso: string): string {
       class="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground"
     >
       <ShoppingCart class="mx-auto h-10 w-10" />
-      <p class="mt-3 font-semibold text-foreground">Pokladna potřebuje připojení k serveru</p>
-      <p class="mt-1 text-sm">
-        Nastavte <code>VITE_API_URL</code> a spusťte backend (vystaveno-api).
-      </p>
+      <p class="mt-3 font-semibold text-foreground">Pokladna teď není dostupná</p>
+      <p class="mt-1 text-sm">Zkontrolujte připojení nebo se obraťte na správce.</p>
     </div>
 
     <div v-else class="grid gap-4 lg:grid-cols-[1fr_360px]">
@@ -674,7 +910,7 @@ function saleTime(iso: string): string {
         <template v-else>
           <div class="mb-3 rounded-xl border border-border bg-muted/30 p-3">
             <label class="mb-1.5 flex items-center gap-1.5 text-sm font-medium" for="pos-scan">
-              <ScanBarcode class="h-4 w-4 text-primary" /> Sken / EAN
+              <ScanBarcode class="h-4 w-4 text-primary" /> Načíst čárový kód
             </label>
             <div class="flex gap-2">
               <Input
@@ -683,7 +919,7 @@ function saleTime(iso: string): string {
                 v-model="scanEan"
                 inputmode="numeric"
                 autocomplete="off"
-                placeholder="Naskenujte kód nebo zadejte EAN a Enter"
+                placeholder="Naskenujte nebo zadejte čárový kód"
                 class="flex-1"
                 @keyup.enter="onScan"
               />
@@ -707,7 +943,7 @@ function saleTime(iso: string): string {
               id="pos-search"
               v-model="productSearch"
               autocomplete="off"
-              placeholder="Název, SKU nebo EAN"
+              placeholder="Název, skladový nebo čárový kód"
             />
           </div>
 
@@ -970,6 +1206,7 @@ function saleTime(iso: string): string {
             v-if="
               pricePreviewLoading ||
               pricePreviewError ||
+              pricePreviewForbidden ||
               selectedPriceLevel ||
               priceLevelAdjustment ||
               promoDiscount
@@ -977,7 +1214,7 @@ function saleTime(iso: string): string {
             class="mb-3 space-y-1 rounded-lg border border-border bg-muted/30 p-2 text-xs"
           >
             <div v-if="pricePreviewLoading" class="text-muted-foreground">
-              Počítám cenu na serveru…
+              Ověřuji výslednou cenu…
             </div>
             <div v-if="selectedPriceLevel" class="flex items-center justify-between gap-2">
               <span class="text-muted-foreground">{{ selectedPriceLevel.name }}</span>
@@ -1000,8 +1237,8 @@ function saleTime(iso: string): string {
               <span class="text-muted-foreground">Získá bodů</span>
               <span class="tabular-nums">+{{ earnedPointsPreview }}</span>
             </div>
-            <div v-if="pricePreviewError" class="text-muted-foreground">
-              Náhled ceny není dostupný, finální cenu dopočítá server při platbě.
+            <div v-if="pricePreviewError || pricePreviewForbidden" class="text-muted-foreground">
+              Náhled ceny není dostupný. Výsledná cena se ověří při platbě.
             </div>
           </div>
           <div v-if="totals.discountAmount" class="mb-1 flex items-center justify-between text-sm">
@@ -1120,6 +1357,7 @@ function saleTime(iso: string): string {
       v-model:open="paymentOpen"
       :total="checkoutTotal"
       :busy="paying || pricePreviewLoading"
+      :card-unavailable-reason="offlineMode ? 'Bez připojení jde přijmout jen hotovost.' : null"
       @confirm="confirmPayment"
     />
 

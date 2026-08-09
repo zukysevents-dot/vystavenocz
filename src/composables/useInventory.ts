@@ -2,6 +2,7 @@ import { http } from '@/lib/http'
 import type {
   ApprovalRequest,
   CreatePurchaseReceiptRequest,
+  CreateStockDocumentRequest,
   PurchaseReceipt,
   PurchaseSuggestionsResponse,
   StockByLocationResponse,
@@ -9,6 +10,9 @@ import type {
   StockMirror,
   StockMovement,
   StockMovementType,
+  StockDocument,
+  StockDocumentStatus,
+  StockDocumentType,
   Stocktake,
   ProductionBatch,
 } from '@/lib/types'
@@ -42,6 +46,15 @@ export interface CreateProductionBatchRequest {
   producedQuantity: number
   locationId?: string | null
   note?: string | null
+}
+
+export interface StockDocumentQuery {
+  page?: number
+  pageSize?: number
+  type?: StockDocumentType
+  status?: StockDocumentStatus
+  locationId?: string | null
+  search?: string
 }
 
 // Sklad / zásoby (gastro/retail). Jen API mód — nad existujícím inventory backendem.
@@ -82,6 +95,29 @@ export function useInventory() {
   }
   function createPurchaseReceipt(request: CreatePurchaseReceiptRequest): Promise<PurchaseReceipt> {
     return http.post('/inventory/purchase-receipts', request)
+  }
+  function stockDocuments(query: StockDocumentQuery = {}): Promise<PagedResult<StockDocument>> {
+    const params = new URLSearchParams({
+      page: String(query.page ?? 1),
+      pageSize: String(query.pageSize ?? 50),
+    })
+    if (query.type) params.set('type', query.type)
+    if (query.status) params.set('status', query.status)
+    if (query.locationId) params.set('locationId', query.locationId)
+    if (query.search?.trim()) params.set('search', query.search.trim())
+    return http.get(`/stock-documents?${params}`)
+  }
+  function createStockDocument(request: CreateStockDocumentRequest): Promise<StockDocument> {
+    return http.post('/stock-documents', request)
+  }
+  function confirmStockDocument(id: string): Promise<StockDocument> {
+    return http.post(`/stock-documents/${id}/confirm`)
+  }
+  function cancelStockDocument(id: string): Promise<void> {
+    return http.post(`/stock-documents/${id}/cancel`)
+  }
+  function downloadStockDocumentPdf(id: string) {
+    return http.download(`/stock-documents/${id}/pdf`)
   }
   function issue(
     productId: string,
@@ -163,6 +199,11 @@ export function useInventory() {
     receive,
     purchaseReceipts,
     createPurchaseReceipt,
+    stockDocuments,
+    createStockDocument,
+    confirmStockDocument,
+    cancelStockDocument,
+    downloadStockDocumentPdf,
     issue,
     correct,
     transfer,

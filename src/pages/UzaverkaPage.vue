@@ -20,6 +20,7 @@ import { isApiMode } from '@/lib/http'
 import { useSalesReport } from '@/composables/useSalesReport'
 import { useDayClose, DayCloseError } from '@/composables/useDayClose'
 import { useLocations } from '@/composables/useLocations'
+import { useOfflineSales } from '@/composables/useOfflineSales'
 import { downloadCsv } from '@/lib/csv-export'
 import {
   buildShiftHandoverRowsFromDayClose,
@@ -54,6 +55,9 @@ import {
 import type { DayCloseResponse } from '@/lib/types'
 
 const apiMode = isApiMode()
+const offlineSales = useOfflineSales()
+// Účtenky pořízené offline, které ještě nedoletěly na server (včetně odmítnutých — ty taky patří do dne).
+const unsentSalesCount = computed(() => offlineSales.queue.value.length)
 
 const { loading, error, summary, vatBreakdown, soldProducts, byCategory, reload } = useSalesReport()
 const { listDayCloses, getDayClose, closeDay } = useDayClose()
@@ -131,6 +135,14 @@ const cashCounted = ref<string>('')
 const cashDrop = ref<string>('')
 
 function askClose(): void {
+  // Neodeslané offline účtenky patří do TOHO dne. Zavřít ho dřív, než doletí, by je vyhodilo
+  // z Z-reportu (server je pak odmítne s 409) — tržba by chyběla v uzávěrce i ve skladu.
+  if (unsentSalesCount.value > 0) {
+    toast.error(
+      `Nejdřív odešlete ${unsentSalesCount.value} účtenek z offline provozu. Do té doby den zavřít nejde.`,
+    )
+    return
+  }
   cashOpening.value = ''
   cashPayIns.value = ''
   cashPayOuts.value = ''
@@ -304,6 +316,7 @@ async function exportMonthlySummaryCsv(): Promise<void> {
 }
 
 onMounted(async () => {
+  await offlineSales.init()
   if (apiMode) {
     await loadLocations()
     locationsLoaded.value = true
@@ -325,7 +338,7 @@ watch([selectedDate, selectedLocationId], () => {
 <template>
   <div class="mx-auto max-w-6xl p-4 sm:p-6 md:p-8">
     <div>
-      <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Uzávěrka</h1>
+      <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Denní uzávěrka</h1>
       <p class="mt-1 text-muted-foreground">Přehled tržeb a zavření obchodního dne.</p>
     </div>
 
@@ -336,7 +349,7 @@ watch([selectedDate, selectedLocationId], () => {
     >
       <Info class="mt-0.5 h-4 w-4 shrink-0" />
       <span>
-        Zavření dne a Z-report jsou dostupné jen proti serveru. Níže je
+        Zavření dne a denní uzávěrka jsou dostupné po přihlášení do online aplikace. Níže je
         <strong class="font-medium text-foreground">orientační</strong> přehled dneška.
       </span>
     </div>
@@ -410,7 +423,7 @@ watch([selectedDate, selectedLocationId], () => {
           <div>
             <div class="text-lg font-semibold">Z-report č. {{ zReport.zReportNumber }}</div>
             <div class="text-sm text-muted-foreground">
-              Den {{ zReport.date }} je uzavřený (read-only).
+              Den {{ zReport.date }} je uzavřený a nelze ho upravovat.
               <template v-if="zReport.closedAt">
                 Zavřeno {{ new Date(zReport.closedAt).toLocaleString('cs-CZ') }}.
               </template>
@@ -706,6 +719,14 @@ watch([selectedDate, selectedLocationId], () => {
               čísla se ještě mění. Zavřením dne se vygeneruje Z-report a den se uzamkne.
             </span>
           </div>
+          <p
+            v-if="unsentSalesCount > 0"
+            data-testid="uzaverka-unsent-sales"
+            class="w-full text-sm font-medium text-destructive"
+          >
+            Čeká {{ unsentSalesCount }} účtenek z offline provozu. Než se odešlou, den zavřít nejde
+            — jinak by tržba chyběla v Z-reportu.
+          </p>
           <Button :disabled="closing" @click="askClose">
             <Loader2 v-if="closing" class="h-4 w-4 animate-spin" />
             <Lock v-else class="h-4 w-4" />

@@ -28,6 +28,10 @@ export interface SaleOptions {
   // Věrnostní zákazník + počet uplatněných bodů. Backend počítá slevu i earn ledger.
   customerId?: string | null
   redeemPoints?: number
+  // Klíč pokusu o zaplacení. Opakované odeslání TÉHOŽ klíče vrátí PŮVODNÍ prodej místo druhého
+  // naúčtování (backend: advisory lock + filtered unique na Sale.IdempotencyKey). Bez něj vytvoří
+  // retry po timeoutu duplicitní účtenku i skladový výdej.
+  idempotencyKey?: string | null
 }
 
 export function useSales() {
@@ -48,6 +52,7 @@ export function useSales() {
       priceLevelId: options?.priceLevelId ?? null,
       customerId: options?.customerId ?? null,
       redeemPoints: options?.redeemPoints ?? 0,
+      idempotencyKey: options?.idempotencyKey ?? null,
     })
     lastSale.value = sale
     return sale

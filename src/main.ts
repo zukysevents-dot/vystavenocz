@@ -10,11 +10,26 @@ import App from '@/App.vue'
 import router from '@/router'
 import { seedMockData } from '@/lib/seed'
 import { isApiMode } from '@/lib/http'
+import { useAuthStore } from '@/stores/auth'
 
 // MVP: demo data do mock vrstvy (idempotentní) — jen v mock režimu. Na reálném API se neseeduje.
 if (!isApiMode()) void seedMockData()
 
 const app = createApp(App)
+const pinia = createPinia()
+
+// Pokud backend po neúspěšném refreshi odmítne starou relaci (např. účet byl resetován),
+// nenecháme obrazovku čekat na data, která už nelze načíst.
+window.addEventListener('vystaveno:unauthorized', () => {
+  useAuthStore(pinia).clearInvalidSession()
+  void router.replace({ name: 'prihlaseni' })
+})
+
+// Server odmítl akci kvůli tarifu → náš snapshot je zastaralý (firma o modul přišla, předplatné
+// skončilo, podpora zasáhla). Přenačteme identitu, aby navigace i bannery hned odpovídaly realitě.
+window.addEventListener('vystaveno:entitlement-stale', () => {
+  void useAuthStore(pinia).reloadMe()
+})
 
 // Sledování chyb přes Sentry (aktivní jen když je nastaven VITE_SENTRY_DSN).
 const sentryDsn = (import.meta.env as Record<string, string | undefined>).VITE_SENTRY_DSN
@@ -30,4 +45,4 @@ Sentry.init({
   },
 })
 
-app.use(createPinia()).use(router).use(createHead()).mount('#app')
+app.use(pinia).use(router).use(createHead()).mount('#app')

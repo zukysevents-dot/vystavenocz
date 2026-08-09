@@ -14,8 +14,14 @@ dist-ssr
 
 # Test artefakty
 coverage
-playwright-report
+playwright-report*
 test-results
+# E2E audit: uložená session (JWT tokeny) — nikdy necommitovat
+e2e/audit/.auth
+e2e/persistence/.auth/
+
+# Instalátory desktop appky servírované z VPS (bind mount, viz docker-compose.prod.yml)
+/downloads/
 
 # Editor directories and files
 .vscode/*
@@ -42,3 +48,4 @@ globalize-mcp.mjs
 set-figma-token.cmd
 setup-claude-mcp.cmd
 NEXT-SESSION.md
+e2e/personas/.auth/

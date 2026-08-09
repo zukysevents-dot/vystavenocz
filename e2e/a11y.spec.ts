@@ -9,7 +9,13 @@ async function blockingViolations(page: Page) {
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
   return results.violations
     .filter((v) => BLOCKING.includes(v.impact ?? ''))
-    .map((v) => ({ id: v.id, impact: v.impact, nodes: v.nodes.length, help: v.help }))
+    .map((v) => ({
+      id: v.id,
+      impact: v.impact,
+      nodes: v.nodes.length,
+      targets: v.nodes.map((node) => node.target),
+      help: v.help,
+    }))
 }
 
 // Pozn.: scope na stabilní produktové obrazovky (app + auth). Landing má animovaný AiDemo
@@ -48,6 +54,12 @@ test.describe('a11y (axe) — bez serious/critical porušení', () => {
   test('nastavení', async ({ page }) => {
     await seedApp(page, { subscription: 'pro' })
     await page.goto('/app/nastaveni')
+    expect(await blockingViolations(page)).toEqual([])
+  })
+
+  test('moduly', async ({ page }) => {
+    await seedApp(page, { subscription: 'pro' })
+    await page.goto('/app/moduly')
     expect(await blockingViolations(page)).toEqual([])
   })
 

@@ -155,15 +155,13 @@ function selectPreset(id: PosReportPreset): void {
       class="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground"
     >
       <Package class="mx-auto h-10 w-10" />
-      <p class="mt-3 font-semibold text-foreground">
-        Provozní přehled potřebuje připojení k serveru
-      </p>
+      <p class="mt-3 font-semibold text-foreground">Výsledky provozu teď nejsou dostupné</p>
     </div>
 
     <template v-else>
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Provozní přehled</h1>
+          <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Výsledky provozu</h1>
           <p class="mt-1 text-muted-foreground">
             Tržby, platby, marže a nejprodávanější položky za období.
           </p>
@@ -277,7 +275,7 @@ function selectPreset(id: PosReportPreset): void {
           <div class="flex items-center gap-2">
             <Percent class="h-4 w-4 text-primary" />
             <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Marže a food cost
+              Marže a nákladovost jídel
             </h2>
           </div>
 
@@ -295,7 +293,7 @@ function selectPreset(id: PosReportPreset): void {
             </div>
             <div class="rounded-xl border border-border bg-card p-4">
               <div class="flex items-center gap-2 text-sm text-muted-foreground">
-                <Percent class="h-4 w-4" /> Food cost
+                <Percent class="h-4 w-4" /> Nákladovost jídel
               </div>
               <div class="mt-1 text-xl font-semibold tabular-nums">
                 {{ formatPercent(costs.foodCostPercent) }}
@@ -328,7 +326,7 @@ function selectPreset(id: PosReportPreset): void {
 
           <div class="mt-4 rounded-xl border border-border bg-card p-4 sm:p-6">
             <h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Produkty s nejvyšším food costem
+              Produkty s nejvyšší nákladovostí
             </h3>
             <p v-if="costs.missingCostProductCount > 0" class="mt-1 text-xs text-muted-foreground">
               {{ costs.missingCostProductCount }} produktů nemá kompletní nákupní cenu.
@@ -355,7 +353,7 @@ function selectPreset(id: PosReportPreset): void {
                   {{ formatCZK(p.grossMargin) }}
                 </div>
                 <div class="font-semibold tabular-nums md:text-right">
-                  <span class="text-muted-foreground md:hidden">Food cost </span>
+                  <span class="text-muted-foreground md:hidden">Nákladovost </span>
                   {{ formatPercent(p.foodCostPercent) }}
                 </div>
               </div>
@@ -420,7 +418,7 @@ function selectPreset(id: PosReportPreset): void {
                   <td class="py-3 pr-4">
                     <div class="max-w-[260px] truncate font-medium">{{ p.name }}</div>
                     <div class="text-xs text-muted-foreground tabular-nums">
-                      {{ p.sku || 'bez SKU' }}
+                      {{ p.sku || 'bez skladového kódu' }}
                       <span v-if="p.unitCost === null"> · chybí nákupní cena</span>
                     </div>
                   </td>
