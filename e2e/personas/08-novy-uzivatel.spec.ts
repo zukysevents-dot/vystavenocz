@@ -84,11 +84,11 @@ test.describe(() => {
     page,
   }, testInfo) => {
     test.skip(test.info().project.name === 'mobile', 'Navazuje na serial registraci (desktop).')
-    // NÁLEZ: dashboard nové firmy (profil služby, bez modulu pos) volá GET /sales → 403 šum.
+    // Dřívější nález (dashboard bez modulu `pos` volal /sales → 403) je opravený — DashboardPage
+    // volá prodeje jen při `auth.hasModule('pos')`. Ponecháváme jen záznam o ověření.
     testInfo.annotations.push({
       type: 'nález',
-      description:
-        'Dashboard nové firmy bez modulu pos volá GET /api/v1/sales → 403 (P2 — chybí gating jako u invoicing).',
+      description: 'Dashboard nové firmy bez modulu pos prodeje nevolá (gating ověřen).',
     })
     // Session ze serial testu se nepřenáší (nový context) → přihlásíme se čerstvým účtem.
     await go(page, '/prihlaseni')

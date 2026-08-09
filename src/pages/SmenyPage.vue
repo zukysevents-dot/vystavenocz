@@ -195,7 +195,7 @@ async function loadEmployees(): Promise<void> {
 // Provize je doplněk (potřebuje prodeje s employeeId, prakticky jen API režim) — výpadek nesmí shodit stránku.
 async function loadCommission(): Promise<void> {
   try {
-    sales.value = isApiMode() ? await salesApi.listAll() : []
+    sales.value = isApiMode() ? await salesApi.list() : []
   } catch {
     sales.value = []
   }

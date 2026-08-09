@@ -45,7 +45,7 @@ import { http, isApiMode, saveErrorMessage } from '@/lib/http'
 import type { Client } from '@/lib/types'
 
 const router = useRouter()
-const { clients, loadError, load, create, update, remove } = useClients()
+const { clients, loadError, loadErrorText, load, create, update, remove } = useClients()
 const ares = useAres()
 
 const apiMode = isApiMode()
@@ -295,7 +295,7 @@ async function onDelete() {
       <Input v-model="search" class="pl-9" placeholder="Hledat podle jména, IČO nebo e-mailu…" />
     </div>
 
-    <LoadError v-if="loadError && !loading" class="mt-6" @retry="reload" />
+    <LoadError v-if="loadError && !loading" class="mt-6" :message="loadErrorText" @retry="reload" />
 
     <div v-else class="mt-6 rounded-2xl border border-border bg-card">
       <div v-if="loading" class="flex justify-center p-12">

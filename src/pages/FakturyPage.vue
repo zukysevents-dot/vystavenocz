@@ -35,7 +35,8 @@ import LoadError from '@/components/app/LoadError.vue'
 import type { DocumentType, InvoiceStatus } from '@/lib/types'
 
 const router = useRouter()
-const { invoices, loadError, load, remove, creditNote, convertToInvoice } = useInvoices()
+const { invoices, loadError, loadErrorText, load, remove, creditNote, convertToInvoice } =
+  useInvoices()
 const { hasAccess } = useSubscription()
 
 const loading = ref(true)
@@ -202,7 +203,7 @@ async function onDelete() {
       <Loader2 class="h-6 w-6 animate-spin text-primary" />
     </div>
 
-    <LoadError v-else-if="loadError" class="mt-12" @retry="reload" />
+    <LoadError v-else-if="loadError" class="mt-12" :message="loadErrorText" @retry="reload" />
 
     <div
       v-else-if="filtered.length === 0"

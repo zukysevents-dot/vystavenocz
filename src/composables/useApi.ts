@@ -38,30 +38,27 @@ export interface PagedResult<T> {
 }
 
 export interface ResourceApi<T extends Identifiable> {
+  /** Celá kolekce (projde všechny stránky do stropu `LIST_ALL_MAX`). */
   list(): Promise<T[]>
-  /** Projde všechny stránky (do rozumného stropu). Pro agregace, kde 1 stránka nestačí. */
-  listAll(): Promise<T[]>
   get(id: string): Promise<T | null>
   create(item: T): Promise<T>
   update(id: string, patch: Partial<T>): Promise<T>
   remove(id: string): Promise<void>
 }
 
-/** Strop stránkování `listAll` — pojistka proti obřím datasetům. */
+/** Strop stránkování `list` — pojistka proti obřím datasetům. */
 const LIST_ALL_MAX_PAGES = 50
 const LIST_ALL_PAGE_SIZE = 100
-/** Max. počet záznamů, které `listAll` načte (nad tím jen varuje). Sdílené s UI (KonsolidacePage). */
+/** Max. počet záznamů, které `list` načte (nad tím jen varuje). Sdílené s UI (KonsolidacePage). */
 export const LIST_ALL_MAX = LIST_ALL_MAX_PAGES * LIST_ALL_PAGE_SIZE
 
 function httpApi<T extends Identifiable>(collection: string): ResourceApi<T> {
   const base = `/${collection}`
   return {
+    // Vždy CELÁ kolekce: dřív se brala jen první stránka (100 záznamů), takže firma se stovkou
+    // dokladů neviděla zbytek — Účtárna hlásila „žádné doklady k exportu" a Pohledávky „vše
+    // zaplaceno", i když faktury čekaly na úhradu. Kolekce do 100 záznamů stojí stejně jeden request.
     async list() {
-      // MVP: jedna stránka (strop backendu 100). Plné stránkování přijde s UI potřebou.
-      const res = await http.get<PagedResult<T>>(`${base}?pageSize=100`)
-      return res.items
-    },
-    async listAll() {
       const ps = LIST_ALL_PAGE_SIZE
       const first = await http.get<PagedResult<T>>(`${base}?page=1&pageSize=${ps}`)
       const all = [...first.items]
@@ -101,9 +98,6 @@ function httpApi<T extends Identifiable>(collection: string): ResourceApi<T> {
 function localApi<T extends Identifiable>(collection: string): ResourceApi<T> {
   return {
     async list() {
-      return read<T>(collection)
-    },
-    async listAll() {
       return read<T>(collection)
     },
     async get(id) {

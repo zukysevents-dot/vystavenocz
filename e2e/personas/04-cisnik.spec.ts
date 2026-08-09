@@ -122,8 +122,9 @@ test('mapa stolů → účet → položky → poznámka → odeslání do kuchyn
   await payDialog.getByRole('button', { name: /Zaplatit hotově/ }).click()
   // Potvrzení platby (toast „Zaplaceno … hotově, vrátit …").
   await expect(page.getByText(/Zaplaceno/).first()).toBeVisible({ timeout: 15_000 })
+  // Po platbě se otevře dialog „Účtenka" s akcí „Vytisknout / PDF" — hledáme obojí, ne jen slovo Tisk.
   const receipt = await page
-    .getByRole('button', { name: /Účtenka|Tisk/ })
+    .getByRole('button', { name: /Vytisknout|Účtenka|Tisk/i })
     .first()
     .isVisible()
     .catch(() => false)

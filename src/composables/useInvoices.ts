@@ -10,7 +10,7 @@ import {
   type InvoiceApiResponse,
   type InvoiceApiLine,
 } from '@/lib/invoice-api'
-import { http, isApiMode } from '@/lib/http'
+import { http, isApiMode, loadErrorMessage } from '@/lib/http'
 import type { VatSummary } from '@/lib/dph'
 import type { Invoice } from '@/lib/types'
 
@@ -98,7 +98,7 @@ export class DuplicateInvoiceNumberError extends Error {
 
 export function useInvoices() {
   const store = useInvoicesStore()
-  const { invoices, loadError } = storeToRefs(store)
+  const { invoices, loadError, loadErrorMessage: loadErrorText } = storeToRefs(store)
 
   // Zapíše čerstvý stav faktury (typicky ze serveru) do storu — insert nebo replace dle id.
   // Tím se ve store drží serverová pravda (id, číslo, součty, stav), ne klientská kopie.
@@ -111,6 +111,7 @@ export function useInvoices() {
 
   async function load(): Promise<void> {
     store.loadError = false
+    store.loadErrorMessage = ''
     try {
       // API režim: list vrací backend DTO (summary) → přemapuj na FE Invoice.
       // Mock režim: localStorage už drží FE tvar, jde rovnou do storu.
@@ -124,6 +125,7 @@ export function useInvoices() {
       console.warn('Načtení faktur selhalo:', e)
       store.invoices = []
       store.loadError = true
+      store.loadErrorMessage = loadErrorMessage(e)
     }
   }
 
@@ -360,6 +362,7 @@ export function useInvoices() {
   return {
     invoices,
     loadError,
+    loadErrorText,
     load,
     create,
     update,
