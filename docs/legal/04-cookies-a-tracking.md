@@ -6,16 +6,16 @@
 
 ## 1. Skutečný stav produktu (k 20. 7. 2026 — deklarovat jen tohle)
 
-| Úložiště / SDK | Kategorie | Účel | Souhlas? |
-|---|---|---|---|
-| `vystaveno.auth.tokens.v1` + session (localStorage) | nezbytné | přihlášení (JWT + refresh) | ne — nezbytné pro službu vyžádanou uživatelem |
-| `vystaveno.cookieConsent.v1` (localStorage) | nezbytné | uložení volby souhlasu | ne |
-| provozní klíče aplikace (nastavení UI, mock data v demo režimu) | nezbytné/funkční | fungování aplikace | ne |
-| Stripe cookies při platbě (checkout/portál Stripe) | nezbytné pro platbu | zpracování platby Stripe | řeší Stripe na svých doménách; zmínit v policy |
-| Sentry (web) | funkční/diagnostické | hlášení chyb | `[POKUD JE DSN AKTIVNÍ — otázka F2]` — bez cookies, ale jde o předání údajů; uvést v policy |
-| **Analytika (GA/Plausible)** | analytické | — | **ŽÁDNÁ SE NENAČÍTÁ** — `applyAnalyticsConsent` je no-op |
-| Marketingové cookies | marketingové | — | **nepoužívají se** |
-| Mobilní aplikace | — | žádné analytics/crash/tracking SDK | — |
+| Úložiště / SDK                                                  | Kategorie            | Účel                               | Souhlas?                                                                                    |
+| --------------------------------------------------------------- | -------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------- |
+| `vystaveno.auth.tokens.v1` + session (localStorage)             | nezbytné             | přihlášení (JWT + refresh)         | ne — nezbytné pro službu vyžádanou uživatelem                                               |
+| `vystaveno.cookieConsent.v1` (localStorage)                     | nezbytné             | uložení volby souhlasu             | ne                                                                                          |
+| provozní klíče aplikace (nastavení UI, mock data v demo režimu) | nezbytné/funkční     | fungování aplikace                 | ne                                                                                          |
+| Stripe cookies při platbě (checkout/portál Stripe)              | nezbytné pro platbu  | zpracování platby Stripe           | řeší Stripe na svých doménách; zmínit v policy                                              |
+| Sentry (web)                                                    | funkční/diagnostické | hlášení chyb                       | `[POKUD JE DSN AKTIVNÍ — otázka F2]` — bez cookies, ale jde o předání údajů; uvést v policy |
+| **Analytika (GA/Plausible)**                                    | analytické           | —                                  | **ŽÁDNÁ SE NENAČÍTÁ** — `applyAnalyticsConsent` je no-op                                    |
+| Marketingové cookies                                            | marketingové         | —                                  | **nepoužívají se**                                                                          |
+| Mobilní aplikace                                                | —                    | žádné analytics/crash/tracking SDK | —                                                                                           |
 
 **Nesoulad k opravě (mezera G-02):** cookie banner dnes tvrdí „Google Analytics & Plausible —
 měření návštěvnosti", ale žádná analytika neexistuje. Banner buď (a) přepsat na pravdivý stav

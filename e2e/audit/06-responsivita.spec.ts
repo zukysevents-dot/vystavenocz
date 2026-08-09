@@ -13,7 +13,14 @@ const VIEWPORTS = [
 ]
 
 // Reprezentativní stránky (list, formulářová, operativní, reportová, nastavení).
-const ROUTES = ['/app', '/app/faktury', '/app/pokladna', '/app/zasoby', '/app/nastaveni', '/app/uzaverka']
+const ROUTES = [
+  '/app',
+  '/app/faktury',
+  '/app/pokladna',
+  '/app/zasoby',
+  '/app/nastaveni',
+  '/app/uzaverka',
+]
 
 for (const vp of VIEWPORTS) {
   for (const route of ROUTES) {

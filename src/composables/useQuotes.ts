@@ -110,10 +110,16 @@ export function useQuotes() {
     return updated
   }
 
-  async function sendEmail(id: string, input: { to?: string | null; message?: string | null } = {}): Promise<Quote> {
+  async function sendEmail(
+    id: string,
+    input: { to?: string | null; message?: string | null } = {},
+  ): Promise<Quote> {
     if (isApiMode()) return http.post<Quote>(`/quotes/${id}/send-email`, input)
     // Náhled nemá SMTP. Stav se proto nesmí změnit na „odesláno“ jen kvůli demonstraci.
-    throw new ApiError(503, 'Odesílání e-mailů je dostupné až v připojené aplikaci se SMTP nastavením.')
+    throw new ApiError(
+      503,
+      'Odesílání e-mailů je dostupné až v připojené aplikaci se SMTP nastavením.',
+    )
   }
 
   /**

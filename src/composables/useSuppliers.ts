@@ -24,7 +24,8 @@ export function useSuppliers() {
     return (await http.get<PagedResult<Supplier>>(`/suppliers?${query}`)).items
   }
   const create = (input: SupplierInput): Promise<Supplier> => http.post('/suppliers', input)
-  const update = (id: string, input: SupplierInput): Promise<Supplier> => http.put(`/suppliers/${id}`, input)
+  const update = (id: string, input: SupplierInput): Promise<Supplier> =>
+    http.put(`/suppliers/${id}`, input)
   const archive = (id: string): Promise<void> => http.del(`/suppliers/${id}`)
   return { list, create, update, archive }
 }

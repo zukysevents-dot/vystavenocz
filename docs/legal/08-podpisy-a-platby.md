@@ -16,11 +16,11 @@
 
 ### Právní rozlišení (eIDAS, nařízení (EU) č. 910/2014, čl. 3 a 25–26)
 
-| Typ | Co to je | Kdy ho Vystaveno může zmínit |
-|---|---|---|
-| **Prostý elektronický podpis** | data připojená k dokumentu (i jméno v PDF) | ano — to, co evidence obálek podporuje už dnes |
-| **Zaručený el. podpis** (čl. 26) | jednoznačná vazba na podepisujícího, detekce změn | jen s reálným providerem, který ho poskytuje |
-| **Kvalifikovaný el. podpis** | zaručený + kvalifikovaný prostředek a certifikát; právní účinek vlastnoručního podpisu (čl. 25/2) | jen s kvalifikovaným poskytovatelem dle EU seznamu důvěryhodných služeb |
+| Typ                              | Co to je                                                                                          | Kdy ho Vystaveno může zmínit                                            |
+| -------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| **Prostý elektronický podpis**   | data připojená k dokumentu (i jméno v PDF)                                                        | ano — to, co evidence obálek podporuje už dnes                          |
+| **Zaručený el. podpis** (čl. 26) | jednoznačná vazba na podepisujícího, detekce změn                                                 | jen s reálným providerem, který ho poskytuje                            |
+| **Kvalifikovaný el. podpis**     | zaručený + kvalifikovaný prostředek a certifikát; právní účinek vlastnoručního podpisu (čl. 25/2) | jen s kvalifikovaným poskytovatelem dle EU seznamu důvěryhodných služeb |
 
 Podle čl. 25/1 eIDAS nesmí být el. podpisu upřen právní účinek jen proto, že je elektronický —
 ale **konkrétní právní sílu určuje typ podpisu a kontext**. Proto v UI a marketingu nepoužívat
@@ -44,9 +44,9 @@ ukládáme v šifrovaném trezoru a lze je kdykoli odvolat.
 - Předplatné Vystavena a volitelná online úhrada faktury zákazníkem uživatele běží přes **Stripe**
   (licencovaná platební instituce). **Vystaveno platební údaje karet nepřijímá, neukládá ani
   nezpracovává** — uživatel je zadává přímo Stripe. Vystaveno není poskytovatelem platebních
-  služeb dle zákona č. 370/2017 Sb. ⚖️ *(potvrdit hranici — Vystaveno nesmí vstupovat do toku
+  služeb dle zákona č. 370/2017 Sb. ⚖️ _(potvrdit hranici — Vystaveno nesmí vstupovat do toku
   peněz; při online úhradě faktur jde platba na účet uživatele přes jeho vlastní Stripe? —
-  `[OVĚŘIT MODEL: čí Stripe účet přijímá úhrady faktur — otázka F2]`)*
+  `[OVĚŘIT MODEL: čí Stripe účet přijímá úhrady faktur — otázka F2]`)_
 
 ### POS „platba kartou"
 

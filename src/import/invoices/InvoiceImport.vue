@@ -9,6 +9,8 @@ import {
   FileSpreadsheet,
   TriangleAlert,
   Building2,
+  ListOrdered,
+  FileWarning,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import {
@@ -32,16 +34,19 @@ import { toast } from '@/components/ui/sonner'
 import { isApiMode } from '@/lib/http'
 import { formatCZK } from '@/lib/invoice'
 import { useInvoiceImport } from './useInvoiceImport'
+import { SOURCE_LABEL } from './types'
 
 const router = useRouter()
-const { state, pickFile, commit, applySupplierToProfile, rollbackLast, reset } = useInvoiceImport()
+const { state, pickFiles, commit, applySeries, applySupplierToProfile, rollbackLast, reset } =
+  useInvoiceImport()
 const dragOver = ref(false)
 const rollingBack = ref(false)
 const applyingProfile = ref(false)
+const applyingSeries = ref(false)
 const stepHeading = ref<HTMLElement | null>(null)
 
 const STEP_TITLE: Record<string, string> = {
-  upload: 'Krok 1 ze 3: Nahrajte XML export',
+  upload: 'Krok 1 ze 3: Nahrajte faktury z původního programu',
   preview: 'Krok 2 ze 3: Náhled faktur',
   result: 'Krok 3 ze 3: Výsledek importu',
 }
@@ -70,6 +75,18 @@ async function onApplyProfile(): Promise<void> {
   }
 }
 
+async function onApplySeries(): Promise<void> {
+  applyingSeries.value = true
+  try {
+    const preview = await applySeries()
+    if (preview) toast.success(`Hotovo — příští faktura dostane číslo ${preview}.`)
+  } catch {
+    toast.error('Číselnou řadu se nepodařilo nastavit.')
+  } finally {
+    applyingSeries.value = false
+  }
+}
+
 const STATUS_LABEL: Record<string, string> = {
   paid: 'Uhrazená',
   issued: 'Vystavená',
@@ -80,25 +97,26 @@ const STATUS_LABEL: Record<string, string> = {
 
 const willCreate = computed(() => state.rows.filter((r) => r.decision === 'create').length)
 const willSkip = computed(() => state.rows.filter((r) => r.decision === 'skip').length)
+const needsReview = computed(() => state.rows.filter((r) => r.needsReview).length)
 
-async function handleFile(file: File | undefined): Promise<void> {
-  if (!file) return
+async function handleFiles(files: File[]): Promise<void> {
+  if (!files.length) return
   try {
-    await pickFile(file)
+    await pickFiles(files)
   } catch (e) {
-    toast.error(e instanceof Error ? e.message : 'Soubor se nepodařilo načíst.')
+    toast.error(e instanceof Error ? e.message : 'Soubory se nepodařilo načíst.')
   }
 }
 
 function onFileChange(e: Event): void {
   const input = e.target as HTMLInputElement
-  void handleFile(input.files?.[0])
+  void handleFiles(Array.from(input.files ?? []))
   input.value = ''
 }
 
 function onDrop(e: DragEvent): void {
   dragOver.value = false
-  void handleFile(e.dataTransfer?.files?.[0])
+  void handleFiles(Array.from(e.dataTransfer?.files ?? []))
 }
 
 async function onCommit(): Promise<void> {
@@ -121,11 +139,12 @@ async function onRollback(): Promise<void> {
 </script>
 
 <template>
-  <div class="mx-auto max-w-4xl p-4 sm:p-6 md:p-8">
+  <div class="mx-auto max-w-5xl p-4 sm:p-6 md:p-8">
     <div class="mb-6">
-      <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Import faktur z Fakturoidu</h1>
+      <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Import faktur z jiného programu</h1>
       <p class="mt-1 text-muted-foreground">
-        Nahrajte XML export faktur z Fakturoidu — zachováme čísla, datumy i stav úhrady.
+        Nahrajte faktury z původního účetního programu — zachováme čísla, datumy i stav úhrady a
+        navážeme na ně číselnou řadu.
       </p>
     </div>
 
@@ -160,17 +179,37 @@ async function onRollback(): Promise<void> {
         <Loader2 v-if="state.parsing" class="h-10 w-10 animate-spin text-primary" />
         <Upload v-else class="h-10 w-10 text-muted-foreground" />
         <div>
-          <div class="font-semibold">Přetáhněte sem XML export z Fakturoidu nebo klikněte</div>
-          <p class="mt-1 text-sm text-muted-foreground">Nastavení → Export → Faktury (XML).</p>
+          <div class="font-semibold">Přetáhněte sem faktury nebo celý ZIP — nebo klikněte</div>
+          <p class="mt-1 text-sm text-muted-foreground">
+            ISDOC, ISDOCX, XML, PDF nebo ZIP s dávkou faktur. Můžete vybrat víc souborů najednou.
+          </p>
         </div>
       </label>
       <input
         id="invoice-file"
         type="file"
-        accept=".xml,application/xml,text/xml"
+        multiple
+        accept=".xml,.isdoc,.isdocx,.pdf,.zip,application/xml,text/xml,application/pdf,application/zip"
         class="sr-only"
         @change="onFileChange"
       />
+
+      <div class="mt-4 grid gap-3 sm:grid-cols-2">
+        <div class="rounded-lg border border-border bg-card p-3 text-sm">
+          <div class="font-medium">Nejlepší výsledek: ISDOC</div>
+          <p class="mt-1 text-muted-foreground">
+            Český standard e-fakturace. Umí ho vyexportovat Pohoda, Money, ABRA, Helios i iDoklad —
+            data jsou přesná, nic se neodhaduje.
+          </p>
+        </div>
+        <div class="rounded-lg border border-border bg-card p-3 text-sm">
+          <div class="font-medium">Když máte jen PDF</div>
+          <p class="mt-1 text-muted-foreground">
+            Údaje z faktury přečteme z textu. U dokladů, kde si nejsme jistí, řádek označíme ke
+            kontrole. Naskenované PDF (obrázek) přečíst neumíme.
+          </p>
+        </div>
+      </div>
     </section>
 
     <!-- KROK 2: Náhled -->
@@ -179,6 +218,53 @@ async function onRollback(): Promise<void> {
         <FileSpreadsheet class="h-4 w-4 text-primary" />
         <span class="font-medium">{{ state.fileName }}</span>
         <span class="text-muted-foreground">· {{ state.rows.length }} faktur</span>
+      </div>
+
+      <!-- Soubory, které se nepodařilo přečíst — zbytek dávky jede dál. -->
+      <div
+        v-if="state.fileErrors.length"
+        class="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm"
+      >
+        <div class="flex items-center gap-2 font-medium">
+          <FileWarning class="h-4 w-4 text-destructive" />
+          {{ state.fileErrors.length }} souborů se nepodařilo přečíst
+        </div>
+        <ul class="mt-2 space-y-1 text-muted-foreground">
+          <li v-for="(err, i) in state.fileErrors" :key="i">
+            <strong class="font-medium">{{ err.fileName }}</strong> — {{ err.message }}
+          </li>
+        </ul>
+      </div>
+
+      <!-- Navázání číselné řady — hlavní důvod, proč se historie přenáší. -->
+      <div
+        v-if="state.series"
+        class="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-3 text-sm"
+      >
+        <ListOrdered class="h-4 w-4 shrink-0 text-primary" />
+        <span v-if="state.series.resetForNewYear">
+          Nejvyšší importované číslo je <strong>{{ state.series.basedOn }}</strong> z roku
+          {{ state.series.year }}. Pořadí se každý rok vrací na začátek, takže příští faktura
+          dostane číslo <strong>{{ state.series.preview }}</strong
+          >.
+        </span>
+        <span v-else>
+          Nejvyšší importované číslo je <strong>{{ state.series.basedOn }}</strong
+          >. Příští vystavená faktura může navázat číslem <strong>{{ state.series.preview }}</strong
+          >.
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          class="ml-auto"
+          :disabled="applyingSeries || state.seriesApplied"
+          @click="onApplySeries"
+        >
+          <Loader2 v-if="applyingSeries" class="h-4 w-4 animate-spin" />
+          <Check v-else-if="state.seriesApplied" class="h-4 w-4" />
+          <ListOrdered v-else class="h-4 w-4" />
+          {{ state.seriesApplied ? 'Číselná řada nastavena' : 'Navázat číselnou řadu' }}
+        </Button>
       </div>
 
       <!-- Tvoje údaje z exportu → profil firmy -->
@@ -206,6 +292,7 @@ async function onRollback(): Promise<void> {
       <div class="flex flex-wrap gap-2 text-sm">
         <Badge variant="default">{{ willCreate }} importuje</Badge>
         <Badge variant="outline">{{ willSkip }} přeskočí</Badge>
+        <Badge v-if="needsReview" variant="destructive">{{ needsReview }} ke kontrole</Badge>
       </div>
       <div class="overflow-x-auto rounded-2xl border border-border bg-card">
         <Table>
@@ -215,36 +302,60 @@ async function onRollback(): Promise<void> {
               <TableHead>Klient</TableHead>
               <TableHead>Vystaveno</TableHead>
               <TableHead class="text-right">Částka</TableHead>
+              <TableHead>Zdroj</TableHead>
               <TableHead>Stav</TableHead>
               <TableHead>Akce</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             <TableRow v-for="(r, i) in state.rows" :key="i">
-              <TableCell class="font-medium">{{ r.input.invoiceNumber || '—' }}</TableCell>
+              <TableCell class="font-medium">
+                {{ r.input.invoiceNumber || '—' }}
+                <div v-if="r.sourceFile" class="text-xs font-normal text-muted-foreground">
+                  {{ r.sourceFile }}
+                </div>
+              </TableCell>
               <TableCell>{{ r.input.clientSnapshot.name || '—' }}</TableCell>
               <TableCell>{{ r.input.issueDate || '—' }}</TableCell>
               <TableCell class="text-right tabular-nums">{{ formatCZK(r.previewTotal) }}</TableCell>
               <TableCell>
+                <Badge variant="outline">{{ SOURCE_LABEL[r.source] }}</Badge>
+              </TableCell>
+              <TableCell>
                 <Badge
                   :variant="
-                    r.duplicate ? 'secondary' : r.warnings.length ? 'destructive' : 'outline'
+                    r.blocking.length
+                      ? 'destructive'
+                      : r.duplicate
+                        ? 'secondary'
+                        : r.warnings.length
+                          ? 'destructive'
+                          : 'outline'
                   "
                 >
                   {{
-                    r.duplicate
-                      ? 'Duplicita'
-                      : r.warnings.length
-                        ? 'Varování'
-                        : (STATUS_LABEL[r.input.status] ?? r.input.status)
+                    r.blocking.length
+                      ? 'Nelze uložit'
+                      : r.duplicate
+                        ? 'Duplicita'
+                        : r.warnings.length
+                          ? 'Varování'
+                          : (STATUS_LABEL[r.input.status] ?? r.input.status)
                   }}
                 </Badge>
-                <div v-if="r.warnings.length" class="mt-1 max-w-xs text-xs text-destructive">
+                <div v-if="r.blocking.length" class="mt-1 max-w-xs text-xs text-destructive">
+                  Doklad {{ r.blocking.join(', ') }} — doplňte ho ručně.
+                </div>
+                <div v-else-if="r.warnings.length" class="mt-1 max-w-xs text-xs text-destructive">
                   <div v-for="(w, wi) in r.warnings" :key="wi">{{ w }}</div>
                 </div>
               </TableCell>
               <TableCell>
-                <Select v-model="r.decision">
+                <!-- Doklad bez povinných polí server odmítne → volba se ani nenabízí. -->
+                <span v-if="r.blocking.length" class="text-xs text-muted-foreground">
+                  Přeskočí se
+                </span>
+                <Select v-else v-model="r.decision">
                   <SelectTrigger
                     class="h-8 w-32"
                     :aria-label="`Akce pro fakturu ${r.input.invoiceNumber || r.input.clientSnapshot.name || i + 1}`"
@@ -294,6 +405,24 @@ async function onRollback(): Promise<void> {
             Selhalo {{ state.result?.batch.counts.failed }}.
           </template>
         </p>
+
+        <!-- Připomenutí, když se řada ještě nenavázala — jinak další faktura -->
+        <!-- dostane číslo z původní řady a vznikne díra nebo duplicita. -->
+        <div
+          v-if="state.series && !state.seriesApplied"
+          class="mt-2 flex flex-wrap items-center justify-center gap-2 rounded-lg border border-border bg-muted/30 p-3 text-sm"
+        >
+          <ListOrdered class="h-4 w-4 shrink-0 text-primary" />
+          <span>
+            Chcete, aby další faktura navázala číslem <strong>{{ state.series.preview }}</strong
+            >?
+          </span>
+          <Button variant="outline" size="sm" :disabled="applyingSeries" @click="onApplySeries">
+            <Loader2 v-if="applyingSeries" class="h-4 w-4 animate-spin" />
+            Navázat číselnou řadu
+          </Button>
+        </div>
+
         <div class="mt-2 flex flex-wrap justify-center gap-2">
           <Button variant="coral" @click="router.push('/app/faktury')">Zobrazit faktury</Button>
           <Button

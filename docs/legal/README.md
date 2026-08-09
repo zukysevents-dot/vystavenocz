@@ -3,21 +3,21 @@
 Návrhy k 20. 7. 2026, psané podle **skutečného chování produktu**. Žádný dokument není právní
 rada; před zveřejněním je nutné advokátní review (viz postup níže).
 
-| Soubor | Obsah | Zveřejnit |
-|---|---|---|
-| `00-chybejici-fakta.md` | otázky F1–F21 (co doplnit, rozdělené dle naléhavosti) | interní |
-| `01-obchodni-podminky.md` | OP SaaS (trial, Stripe, promo, limitace, spotřebitel) | po F1–F4 + review |
-| `02-zasady-ochrany-osobnich-udaju.md` | Privacy Policy (správce/zpracovatel) — náhrada `/gdpr` | po F1–F2 + review |
-| `03-zpracovatelska-smlouva-dpa.md` | DPA čl. 28 + 4 přílohy | po F1 + review |
-| `04-cookies-a-tracking.md` | cookie policy + pravdivý banner + preference | banner hned (G-02), policy po review |
-| `05-retention-a-mazani-uctu.md` | retenční tabulky + proces smazání účtu | po F7–F8 + review |
-| `06-bezpecnostni-priloha.md` | veřejná TOM příloha (jen ověřená opatření) | téměř hned (po F6) |
-| `07-ai-mcp-podminky.md` | AI terms „do šuplíku" — NEzveřejňovat (žádná AI neexistuje) | s první AI funkcí |
-| `08-podpisy-a-platby.md` | eIDAS rozlišení, Stripe/POS hranice, budoucí provideri | interní; dodatky až se smlouvami |
-| `09-compliance-matice.md` | 27 oblastí, stav, riziko, vlastník, zdroj | interní |
-| `10-implementacni-mezery.md` | G-01…G-17 s prioritami + P0 blocker list | interní |
-| `11-store-deklarace-a-ui-texty.md` | Data Safety / App Privacy odpovědi, checkboxy, privacy centrum, deletion screen | při submitu |
-| `12-pravni-zdroje.md` | primární zdroje s odkazy | interní |
+| Soubor                                | Obsah                                                                           | Zveřejnit                            |
+| ------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------ |
+| `00-chybejici-fakta.md`               | otázky F1–F21 (co doplnit, rozdělené dle naléhavosti)                           | interní                              |
+| `01-obchodni-podminky.md`             | OP SaaS (trial, Stripe, promo, limitace, spotřebitel)                           | po F1–F4 + review                    |
+| `02-zasady-ochrany-osobnich-udaju.md` | Privacy Policy (správce/zpracovatel) — náhrada `/gdpr`                          | po F1–F2 + review                    |
+| `03-zpracovatelska-smlouva-dpa.md`    | DPA čl. 28 + 4 přílohy                                                          | po F1 + review                       |
+| `04-cookies-a-tracking.md`            | cookie policy + pravdivý banner + preference                                    | banner hned (G-02), policy po review |
+| `05-retention-a-mazani-uctu.md`       | retenční tabulky + proces smazání účtu                                          | po F7–F8 + review                    |
+| `06-bezpecnostni-priloha.md`          | veřejná TOM příloha (jen ověřená opatření)                                      | téměř hned (po F6)                   |
+| `07-ai-mcp-podminky.md`               | AI terms „do šuplíku" — NEzveřejňovat (žádná AI neexistuje)                     | s první AI funkcí                    |
+| `08-podpisy-a-platby.md`              | eIDAS rozlišení, Stripe/POS hranice, budoucí provideri                          | interní; dodatky až se smlouvami     |
+| `09-compliance-matice.md`             | 27 oblastí, stav, riziko, vlastník, zdroj                                       | interní                              |
+| `10-implementacni-mezery.md`          | G-01…G-17 s prioritami + P0 blocker list                                        | interní                              |
+| `11-store-deklarace-a-ui-texty.md`    | Data Safety / App Privacy odpovědi, checkboxy, privacy centrum, deletion screen | při submitu                          |
+| `12-pravni-zdroje.md`                 | primární zdroje s odkazy                                                        | interní                              |
 
 ## Co může ven ihned (bez doplnění firemních údajů)
 

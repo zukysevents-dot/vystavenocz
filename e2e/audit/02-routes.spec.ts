@@ -21,7 +21,9 @@ for (const route of APP_ROUTES) {
     await expect(page.getByText('Obsah se nepodařilo načíst')).toHaveCount(0)
 
     // Aplikace se nezasekla v loading stavu (globální spinner zmizel).
-    await expect(page.locator('.animate-spin')).toHaveCount(0, { timeout: 15_000 }).catch(() => {})
+    await expect(page.locator('.animate-spin'))
+      .toHaveCount(0, { timeout: 15_000 })
+      .catch(() => {})
 
     await attachWatch(testInfo, watch)
     expect(watch.consoleErrors, 'chyby konzole').toEqual([])
@@ -30,7 +32,9 @@ for (const route of APP_ROUTES) {
   })
 }
 
-test('deep link na detail neexistující zakázky je bezpečně odmítnut', async ({ page }, testInfo) => {
+test('deep link na detail neexistující zakázky je bezpečně odmítnut', async ({
+  page,
+}, testInfo) => {
   const watch = watchPage(page, { allowStatus: [404] })
   await page.goto('/app/zakazky/00000000-0000-0000-0000-000000000000')
   await settle(page)

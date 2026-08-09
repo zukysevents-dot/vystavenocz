@@ -30,7 +30,13 @@ test('desktopová navigace: každá položka vede na funkční stránku', async 
     await expect(page, `navigace na ${href}`).toHaveURL(new RegExp(href.replace(/\//g, '\\/')))
     await expect(page.getByText('Obsah se nepodařilo načíst')).toHaveCount(0)
     // Operativní stránky (restaurace) sidebar schovávají — vrať se přes URL.
-    if (!(await page.locator('aside a[href="/app"], nav a[href="/app"]').first().isVisible().catch(() => false))) {
+    if (
+      !(await page
+        .locator('aside a[href="/app"], nav a[href="/app"]')
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       await page.goto('/app')
       await settle(page)
     }
@@ -62,10 +68,13 @@ test('mobilní menu: otevření, navigace, zavření', async ({ page }, testInfo
   const closeBtn = page.getByRole('button', { name: 'Zavřít menu' })
   await closeBtn.click()
   await expect
-    .poll(async () => {
-      const box = await closeBtn.boundingBox()
-      return box ? box.x + box.width <= 0 : true
-    }, { message: 'drawer se musí odsunout mimo viewport' })
+    .poll(
+      async () => {
+        const box = await closeBtn.boundingBox()
+        return box ? box.x + box.width <= 0 : true
+      },
+      { message: 'drawer se musí odsunout mimo viewport' },
+    )
     .toBe(true)
 
   await attachWatch(testInfo, watch)

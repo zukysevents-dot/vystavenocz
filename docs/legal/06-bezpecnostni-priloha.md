@@ -41,7 +41,7 @@
   append-only, dostupný rolím Owner/Admin v aplikaci.
 - **Zálohy:** pravidelné konzistentní zálohy databáze i souborů, atomická publikace balíku,
   **týdenní automatické ověření obnovitelnosti** v izolovaném prostředí, monitoring stáří záloh a
-  místa na disku. *(Off-site kopie: v přípravě — do jejího zřízení netvrdit.)* `[AKTUALIZOVAT PO F19]`
+  místa na disku. _(Off-site kopie: v přípravě — do jejího zřízení netvrdit.)_ `[AKTUALIZOVAT PO F19]`
 - Oddělení prostředí, tajemství výhradně v serverové konfiguraci (nikdy v repozitáři), deployment
   se zámkem proti souběhu se zálohou.
 - Chybová hlášení webu (je-li zapnuto Sentry) neobsahují těla API odpovědí — před odesláním se

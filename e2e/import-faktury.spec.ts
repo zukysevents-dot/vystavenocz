@@ -10,7 +10,7 @@ test('import faktur z Fakturoid XML: náhled → import → faktury v seznamu', 
   await dismissCookies(page)
   await page.goto('/app/import/faktury')
 
-  await expect(page.getByRole('heading', { name: 'Import faktur z Fakturoidu' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Import faktur z jiného programu' })).toBeVisible()
   await page.locator('#invoice-file').setInputFiles('e2e/fixtures/fakturoid-faktury.xml')
 
   await expect(page.getByText('2 importuje')).toBeVisible()

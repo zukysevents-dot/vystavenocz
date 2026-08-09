@@ -16,12 +16,10 @@ test('faktury: seznam, filtry, po splatnosti', async ({ page }) => {
     .first()
     .isVisible()
     .catch(() => false)
-  test
-    .info()
-    .annotations.push({
-      type: 'nález',
-      description: `Štítek/filtr „po splatnosti": ${overdue ? 'ano' : 'NE'}`,
-    })
+  test.info().annotations.push({
+    type: 'nález',
+    description: `Štítek/filtr „po splatnosti": ${overdue ? 'ano' : 'NE'}`,
+  })
   // Prázdný výsledek filtru musí mít srozumitelný prázdný stav (ne prázdnou tabulku bez vysvětlení).
   const search = page.getByPlaceholder(/Hledat|Vyhledat/i).first()
   if (await search.isVisible().catch(() => false)) {

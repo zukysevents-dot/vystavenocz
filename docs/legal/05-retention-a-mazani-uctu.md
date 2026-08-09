@@ -15,29 +15,29 @@
 
 ## 2. Retenční tabulka — Vystaveno jako správce
 
-| Data | Při běžícím účtu | Po smazání účtu |
-|---|---|---|
-| Uživatelský účet (e-mail, jméno, hash hesla) | po dobu účtu | anonymizace bez zbytečného odkladu; nezbytné minimum pro obranu nároků `[DOPLNIT — návrh 1 rok]` |
-| OAuth vazby (Google/Apple ID) | po dobu účtu | výmaz spolu s účtem |
-| Refresh tokeny | 14 dní klouzavě, revokace při odhlášení | okamžitá revokace |
-| Přístupové/bezpečnostní logy | `[DOPLNIT — otázka F7, návrh 90 dnů]` | dožití retence |
-| Doklady o předplatném (naše účetnictví) | — | **archivace 10 let (DPH), mimo dosah mazání účtu** — uživateli to říct předem |
-| Support komunikace | `[DOPLNIT — návrh 2 roky]` | dožití retence |
-| Promo/referral evidence | kampaň + `[DOPLNIT — návrh 3 roky]` | anonymizace kódů, nároky zůstávají doložitelné |
-| Marketingové souhlasy (až budou) | do odvolání | výmaz; evidence odvolání `[návrh 3 roky]` |
+| Data                                         | Při běžícím účtu                        | Po smazání účtu                                                                                  |
+| -------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Uživatelský účet (e-mail, jméno, hash hesla) | po dobu účtu                            | anonymizace bez zbytečného odkladu; nezbytné minimum pro obranu nároků `[DOPLNIT — návrh 1 rok]` |
+| OAuth vazby (Google/Apple ID)                | po dobu účtu                            | výmaz spolu s účtem                                                                              |
+| Refresh tokeny                               | 14 dní klouzavě, revokace při odhlášení | okamžitá revokace                                                                                |
+| Přístupové/bezpečnostní logy                 | `[DOPLNIT — otázka F7, návrh 90 dnů]`   | dožití retence                                                                                   |
+| Doklady o předplatném (naše účetnictví)      | —                                       | **archivace 10 let (DPH), mimo dosah mazání účtu** — uživateli to říct předem                    |
+| Support komunikace                           | `[DOPLNIT — návrh 2 roky]`              | dožití retence                                                                                   |
+| Promo/referral evidence                      | kampaň + `[DOPLNIT — návrh 3 roky]`     | anonymizace kódů, nároky zůstávají doložitelné                                                   |
+| Marketingové souhlasy (až budou)             | do odvolání                             | výmaz; evidence odvolání `[návrh 3 roky]`                                                        |
 
 ## 3. Retenční tabulka — firemní data (Vystaveno jako zpracovatel)
 
-| Data | Za života firmy | Po smazání firmy/účtu |
-|---|---|---|
-| Klienti, dodavatelé, CRM | řídí Uživatel (může mazat průběžně) | výmaz |
-| Faktury a doklady | řídí Uživatel; Služba je nemaže | výmaz — **před smazáním musí Uživatel exportovat**; zákonná archivace je JEHO povinnost |
-| Prodeje, uzávěrky, objednávky, rezervace | řídí Uživatel | výmaz |
-| Zaměstnanci, docházka, směny, mzdové sazby | řídí Uživatel | výmaz |
-| Přílohy a dokumenty | řídí Uživatel | výmaz souborů z úložiště |
-| Auditní log firmy | append-only po dobu firmy | výmaz spolu s firmou |
-| API tokeny, webhooky (vč. historie doručení) | revokace kdykoli; historie doručení zatím bez retence → mezera G-09 | výmaz |
-| Věrnostní účty zákazníků | řídí Uživatel | výmaz |
+| Data                                         | Za života firmy                                                     | Po smazání firmy/účtu                                                                   |
+| -------------------------------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Klienti, dodavatelé, CRM                     | řídí Uživatel (může mazat průběžně)                                 | výmaz                                                                                   |
+| Faktury a doklady                            | řídí Uživatel; Služba je nemaže                                     | výmaz — **před smazáním musí Uživatel exportovat**; zákonná archivace je JEHO povinnost |
+| Prodeje, uzávěrky, objednávky, rezervace     | řídí Uživatel                                                       | výmaz                                                                                   |
+| Zaměstnanci, docházka, směny, mzdové sazby   | řídí Uživatel                                                       | výmaz                                                                                   |
+| Přílohy a dokumenty                          | řídí Uživatel                                                       | výmaz souborů z úložiště                                                                |
+| Auditní log firmy                            | append-only po dobu firmy                                           | výmaz spolu s firmou                                                                    |
+| API tokeny, webhooky (vč. historie doručení) | revokace kdykoli; historie doručení zatím bez retence → mezera G-09 | výmaz                                                                                   |
+| Věrnostní účty zákazníků                     | řídí Uživatel                                                       | výmaz                                                                                   |
 
 ## 4. Zálohy
 
@@ -59,13 +59,14 @@ firmy s dalšími členy dostane pokyn nejdřív předat vlastnictví nebo firmu
 **Text obrazovky před potvrzením (návrh):**
 
 > **Smazání účtu je nevratné.**
+>
 > - Ztratíte přístup ke všem svým firmám a dokladům. Data si nejdřív exportujte.
 > - Osobní údaje smažeme nebo anonymizujeme bez zbytečného odkladu; ze záloh zmizí do
 >   `[DOPLNIT]` dnů jejich rotací.
 > - Doklady o vašem předplatném musíme ze zákona uchovat 10 let (zákon o DPH) — bez vazby na
 >   váš další provoz.
 > - Jste-li poslední vlastník firmy s dalšími členy, nejdřív předejte vlastnictví, nebo firmu smažte.
-> **Nikdy neslibujeme „smažeme úplně vše" — zákonné archivace se smazání netýká.**
+>   **Nikdy neslibujeme „smažeme úplně vše" — zákonné archivace se smazání netýká.**
 
 ## 6. Zrušení předplatného ≠ smazání účtu
 

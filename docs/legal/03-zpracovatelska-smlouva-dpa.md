@@ -3,7 +3,7 @@
 > Uzavírá se dle **čl. 28 odst. 3 GDPR** mezi firmou užívající Vystaveno („**Správce**") a
 > provozovatelem Vystavena („**Zpracovatel**": Patrik Zukal, IČO 24991686, Brodská 1914/40,
 > 591 01 Žďár nad Sázavou). Je nedílnou součástí Obchodních podmínek; akceptuje se spolu s nimi.
-> ⚖️ *Mechanismus akceptace (checkbox při založení firmy) je implementační mezera G-07.*
+> ⚖️ _Mechanismus akceptace (checkbox při založení firmy) je implementační mezera G-07._
 
 ## 1. Předmět a doba
 
@@ -81,14 +81,14 @@ než při havárii celé Služby.
 
 ## Příloha 1 — Kategorie zpracování
 
-| Kategorie subjektů | Typy údajů |
-|---|---|
-| Klienti/odběratelé Správce | identifikační a fakturační údaje (název/jméno, IČO, DIČ, adresa), e-mail, telefon, obsah dokladů, poznámky |
-| Zákazníci/hosté (gastro, rezervace, veřejné objednávky) | jméno, kontakt, obsah objednávky/rezervace, stůl, věrnostní body |
-| Zaměstnanci a členové týmu Správce | jméno, e-mail, role, pobočka, pozice, hodinová sazba, docházka, směny |
-| Dodavatelé | identifikační a kontaktní údaje, objednávky, příjemky |
-| Osoby v dokumentech | jakékoli údaje obsažené v přílohách (PDF/JPEG/PNG/WebP) a volných polích — jejich vkládání řídí výhradně Správce |
-| Podepisující osoby (modul Podpisy) | jméno, e-mail, telefon, otisk dokumentu (SHA-256), evidenční záznamy |
+| Kategorie subjektů                                      | Typy údajů                                                                                                       |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Klienti/odběratelé Správce                              | identifikační a fakturační údaje (název/jméno, IČO, DIČ, adresa), e-mail, telefon, obsah dokladů, poznámky       |
+| Zákazníci/hosté (gastro, rezervace, veřejné objednávky) | jméno, kontakt, obsah objednávky/rezervace, stůl, věrnostní body                                                 |
+| Zaměstnanci a členové týmu Správce                      | jméno, e-mail, role, pobočka, pozice, hodinová sazba, docházka, směny                                            |
+| Dodavatelé                                              | identifikační a kontaktní údaje, objednávky, příjemky                                                            |
+| Osoby v dokumentech                                     | jakékoli údaje obsažené v přílohách (PDF/JPEG/PNG/WebP) a volných polích — jejich vkládání řídí výhradně Správce |
+| Podepisující osoby (modul Podpisy)                      | jméno, e-mail, telefon, otisk dokumentu (SHA-256), evidenční záznamy                                             |
 
 Zvláštní kategorie údajů (čl. 9) nejsou Službou vyžadovány ani cíleně zpracovávány; Správce je
 nesmí vkládat bez vlastního právního základu.

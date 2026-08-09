@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { CheckCircle2, Download, FilePlus2, Loader2, PackageSearch, Paperclip, Plus, Trash2, XCircle } from 'lucide-vue-next'
+import {
+  CheckCircle2,
+  Download,
+  FilePlus2,
+  Loader2,
+  PackageSearch,
+  Paperclip,
+  Plus,
+  Trash2,
+  XCircle,
+} from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -37,12 +47,36 @@ const selectedDocument = ref<StockDocument | null>(null)
 const productSearch = ref('')
 
 const documentTypes: { value: StockDocumentType; label: string; description: string }[] = [
-  { value: 'PurchaseReceipt', label: 'Příjemka', description: 'Přijmout zboží od dodavatele na sklad.' },
-  { value: 'IssueNote', label: 'Výdejka', description: 'Vydat materiál ze skladu například na středisko nebo zakázku.' },
-  { value: 'TransferNote', label: 'Převodka', description: 'Přesunout položky mezi dvěma sklady nebo provozovnami.' },
-  { value: 'ReturnToSupplier', label: 'Vratka dodavateli', description: 'Vrátit zboží zpět dodavateli.' },
-  { value: 'CustomerReturn', label: 'Vratka od zákazníka', description: 'Vrátit položky zákazníkem zpět na sklad.' },
-  { value: 'DeliveryNote', label: 'Dodací list', description: 'Potvrdit výdej zboží pro odběratele.' },
+  {
+    value: 'PurchaseReceipt',
+    label: 'Příjemka',
+    description: 'Přijmout zboží od dodavatele na sklad.',
+  },
+  {
+    value: 'IssueNote',
+    label: 'Výdejka',
+    description: 'Vydat materiál ze skladu například na středisko nebo zakázku.',
+  },
+  {
+    value: 'TransferNote',
+    label: 'Převodka',
+    description: 'Přesunout položky mezi dvěma sklady nebo provozovnami.',
+  },
+  {
+    value: 'ReturnToSupplier',
+    label: 'Vratka dodavateli',
+    description: 'Vrátit zboží zpět dodavateli.',
+  },
+  {
+    value: 'CustomerReturn',
+    label: 'Vratka od zákazníka',
+    description: 'Vrátit položky zákazníkem zpět na sklad.',
+  },
+  {
+    value: 'DeliveryNote',
+    label: 'Dodací list',
+    description: 'Potvrdit výdej zboží pro odběratele.',
+  },
 ]
 
 const form = reactive({
@@ -57,13 +91,20 @@ const form = reactive({
 })
 
 const selectedType = computed(() => documentTypes.find((item) => item.value === form.type)!)
-const needsSource = computed(() => ['IssueNote', 'ReturnToSupplier', 'DeliveryNote', 'TransferNote'].includes(form.type))
-const needsDestination = computed(() => ['PurchaseReceipt', 'CustomerReturn', 'TransferNote'].includes(form.type))
+const needsSource = computed(() =>
+  ['IssueNote', 'ReturnToSupplier', 'DeliveryNote', 'TransferNote'].includes(form.type),
+)
+const needsDestination = computed(() =>
+  ['PurchaseReceipt', 'CustomerReturn', 'TransferNote'].includes(form.type),
+)
 const productResults = computed(() => {
   const query = productSearch.value.trim().toLowerCase()
   if (!query) return []
   return products.value
-    .filter((product) => product.name.toLowerCase().includes(query) || product.sku.toLowerCase().includes(query))
+    .filter(
+      (product) =>
+        product.name.toLowerCase().includes(query) || product.sku.toLowerCase().includes(query),
+    )
     .filter((product) => !form.lines.some((line) => line.productId === product.id))
     .slice(0, 8)
 })
@@ -238,8 +279,8 @@ async function downloadPdf(document: StockDocument) {
       <div>
         <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Skladové doklady</h1>
         <p class="mt-1 max-w-2xl text-muted-foreground">
-          Příjemky, výdejky, převodky, vratky a dodací listy. Nejdřív je uložte jako koncept;
-          až potvrzení změní skutečný stav skladu.
+          Příjemky, výdejky, převodky, vratky a dodací listy. Nejdřív je uložte jako koncept; až
+          potvrzení změní skutečný stav skladu.
         </p>
       </div>
       <Button variant="coral" :disabled="!apiMode" @click="openCreate">
@@ -249,43 +290,87 @@ async function downloadPdf(document: StockDocument) {
 
     <div class="mt-6 grid gap-3 rounded-xl border border-border bg-card p-4 text-sm md:grid-cols-3">
       <p><strong>Koncept</strong> můžete zkontrolovat nebo zrušit. Zásoba se ještě nemění.</p>
-      <p><strong>Potvrzeno</strong> má číslo a atomicky zapíše všechny položky do historie skladu.</p>
-      <p><strong>Výdejka ani dodací list nejsou faktura.</strong> Fakturu vystavte v modulu Faktury.</p>
+      <p>
+        <strong>Potvrzeno</strong> má číslo a atomicky zapíše všechny položky do historie skladu.
+      </p>
+      <p>
+        <strong>Výdejka ani dodací list nejsou faktura.</strong> Fakturu vystavte v modulu Faktury.
+      </p>
     </div>
 
     <div v-if="!apiMode" class="mt-6 rounded-xl border border-warning/40 bg-warning/10 p-5 text-sm">
-      Skladové doklady jsou dostupné po přihlášení do vaší firmy. Ukázka je nezobrazuje, aby nevytvářela dojem trvalého uložení.
+      Skladové doklady jsou dostupné po přihlášení do vaší firmy. Ukázka je nezobrazuje, aby
+      nevytvářela dojem trvalého uložení.
     </div>
-    <div v-else-if="loading" class="flex justify-center p-12"><Loader2 class="h-6 w-6 animate-spin text-primary" /></div>
-    <LoadError v-else-if="loadError" class="mt-6" message="Skladové doklady se nepodařilo načíst." @retry="reload" />
+    <div v-else-if="loading" class="flex justify-center p-12">
+      <Loader2 class="h-6 w-6 animate-spin text-primary" />
+    </div>
+    <LoadError
+      v-else-if="loadError"
+      class="mt-6"
+      message="Skladové doklady se nepodařilo načíst."
+      @retry="reload"
+    />
     <div v-else class="mt-6 overflow-hidden rounded-xl border border-border bg-card">
       <div v-if="documents.length === 0" class="flex flex-col items-center p-12 text-center">
         <PackageSearch class="h-10 w-10 text-muted-foreground" />
         <h2 class="mt-3 font-semibold">Zatím žádné skladové doklady</h2>
-        <p class="mt-1 max-w-md text-sm text-muted-foreground">Začněte příjemkou nebo výdejkou. Nejprve se uloží koncept, který můžete před potvrzením zkontrolovat.</p>
+        <p class="mt-1 max-w-md text-sm text-muted-foreground">
+          Začněte příjemkou nebo výdejkou. Nejprve se uloží koncept, který můžete před potvrzením
+          zkontrolovat.
+        </p>
       </div>
       <div v-else class="divide-y divide-border">
-        <article v-for="document in documents" :key="document.id" class="flex flex-wrap items-center justify-between gap-4 p-4">
+        <article
+          v-for="document in documents"
+          :key="document.id"
+          class="flex flex-wrap items-center justify-between gap-4 p-4"
+        >
           <div>
             <div class="flex flex-wrap items-center gap-2">
               <strong>{{ document.number ?? 'Koncept bez čísla' }}</strong>
-              <span class="rounded-full bg-muted px-2 py-0.5 text-xs">{{ typeLabel(document.type) }}</span>
-              <span class="rounded-full px-2 py-0.5 text-xs" :class="document.status === 'Confirmed' ? 'bg-success/15 text-success' : document.status === 'Cancelled' ? 'bg-muted text-muted-foreground' : 'bg-warning/15 text-warning'">{{ statusLabel(document) }}</span>
+              <span class="rounded-full bg-muted px-2 py-0.5 text-xs">{{
+                typeLabel(document.type)
+              }}</span>
+              <span
+                class="rounded-full px-2 py-0.5 text-xs"
+                :class="
+                  document.status === 'Confirmed'
+                    ? 'bg-success/15 text-success'
+                    : document.status === 'Cancelled'
+                      ? 'bg-muted text-muted-foreground'
+                      : 'bg-warning/15 text-warning'
+                "
+                >{{ statusLabel(document) }}</span
+              >
             </div>
             <p class="mt-1 text-sm text-muted-foreground">
               {{ document.documentDate }} · {{ document.items.length }} položek ·
-              {{ locationName(document.sourceLocationId) }} → {{ locationName(document.destinationLocationId) }}
+              {{ locationName(document.sourceLocationId) }} →
+              {{ locationName(document.destinationLocationId) }}
             </p>
-            <p v-if="document.counterpartyName || document.externalReference" class="mt-1 text-xs text-muted-foreground">
-              {{ document.counterpartyName ?? 'Bez protistrany' }}<span v-if="document.externalReference"> · {{ document.externalReference }}</span>
+            <p
+              v-if="document.counterpartyName || document.externalReference"
+              class="mt-1 text-xs text-muted-foreground"
+            >
+              {{ document.counterpartyName ?? 'Bez protistrany'
+              }}<span v-if="document.externalReference"> · {{ document.externalReference }}</span>
             </p>
           </div>
           <div class="flex gap-2">
-            <Button variant="outline" size="sm" @click="downloadPdf(document)"><Download class="h-4 w-4" /> PDF</Button>
-            <Button variant="outline" size="sm" @click="openAttachments(document)"><Paperclip class="h-4 w-4" /> Přílohy</Button>
+            <Button variant="outline" size="sm" @click="downloadPdf(document)"
+              ><Download class="h-4 w-4" /> PDF</Button
+            >
+            <Button variant="outline" size="sm" @click="openAttachments(document)"
+              ><Paperclip class="h-4 w-4" /> Přílohy</Button
+            >
             <template v-if="document.status === 'Draft'">
-              <Button variant="outline" size="sm" :disabled="submitting" @click="cancel(document)"><XCircle class="h-4 w-4" /> Zrušit</Button>
-              <Button variant="coral" size="sm" :disabled="submitting" @click="confirm(document)"><CheckCircle2 class="h-4 w-4" /> Potvrdit</Button>
+              <Button variant="outline" size="sm" :disabled="submitting" @click="cancel(document)"
+                ><XCircle class="h-4 w-4" /> Zrušit</Button
+              >
+              <Button variant="coral" size="sm" :disabled="submitting" @click="confirm(document)"
+                ><CheckCircle2 class="h-4 w-4" /> Potvrdit</Button
+              >
             </template>
           </div>
         </article>
@@ -296,23 +381,141 @@ async function downloadPdf(document: StockDocument) {
       <DialogContent class="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nový skladový doklad</DialogTitle>
-          <DialogDescription>{{ selectedType.description }} Doklad vytvoříte jako koncept; sklad se změní až potvrzením.</DialogDescription>
+          <DialogDescription
+            >{{ selectedType.description }} Doklad vytvoříte jako koncept; sklad se změní až
+            potvrzením.</DialogDescription
+          >
         </DialogHeader>
         <form class="space-y-5" @submit.prevent="saveDraft">
-          <div class="space-y-2"><Label for="document-type">Typ dokladu</Label><select id="document-type" v-model="form.type" class="flex h-10 w-full rounded-md border border-border bg-background px-3 text-sm"><option v-for="item in documentTypes" :key="item.value" :value="item.value">{{ item.label }}</option></select></div>
-          <div class="grid gap-4 sm:grid-cols-2">
-            <div class="space-y-2"><Label for="document-date">Datum</Label><Input id="document-date" v-model="form.documentDate" type="date" required /></div>
-            <div class="space-y-2"><Label for="document-reference">Externí číslo</Label><Input id="document-reference" v-model="form.externalReference" placeholder="např. DL-2026-15" /></div>
+          <div class="space-y-2">
+            <Label for="document-type">Typ dokladu</Label
+            ><select
+              id="document-type"
+              v-model="form.type"
+              class="flex h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+            >
+              <option v-for="item in documentTypes" :key="item.value" :value="item.value">
+                {{ item.label }}
+              </option>
+            </select>
           </div>
           <div class="grid gap-4 sm:grid-cols-2">
-            <div v-if="needsSource" class="space-y-2"><Label for="document-source">Zdrojový sklad</Label><select id="document-source" v-model="form.sourceLocationId" class="flex h-10 w-full rounded-md border border-border bg-background px-3 text-sm"><option value="">Nezařazený sklad</option><option v-for="location in locations" :key="location.id" :value="location.id">{{ location.name }}</option></select></div>
-            <div v-if="needsDestination" class="space-y-2"><Label for="document-destination">Cílový sklad</Label><select id="document-destination" v-model="form.destinationLocationId" class="flex h-10 w-full rounded-md border border-border bg-background px-3 text-sm"><option value="">Nezařazený sklad</option><option v-for="location in locations" :key="location.id" :value="location.id">{{ location.name }}</option></select></div>
+            <div class="space-y-2">
+              <Label for="document-date">Datum</Label
+              ><Input id="document-date" v-model="form.documentDate" type="date" required />
+            </div>
+            <div class="space-y-2">
+              <Label for="document-reference">Externí číslo</Label
+              ><Input
+                id="document-reference"
+                v-model="form.externalReference"
+                placeholder="např. DL-2026-15"
+              />
+            </div>
           </div>
-          <div class="space-y-2"><Label for="document-counterparty">Dodavatel / odběratel</Label><Input id="document-counterparty" v-model="form.counterpartyName" placeholder="volitelné" /></div>
-          <div class="space-y-2"><Label for="document-products">Přidat položku</Label><Input id="document-products" v-model="productSearch" placeholder="Hledejte podle názvu nebo skladového kódu" /><div v-if="productResults.length" class="rounded-md border border-border"><button v-for="product in productResults" :key="product.id" type="button" class="block w-full px-3 py-2 text-left text-sm hover:bg-muted" @click="addProduct(product.id)">{{ product.name }} · {{ product.sku }}</button></div></div>
-          <div v-if="form.lines.length" class="space-y-2"><div v-for="(line, index) in form.lines" :key="line.productId" class="grid items-center gap-2 rounded-md border border-border p-3 sm:grid-cols-[1fr_110px_130px_auto]"><span class="text-sm font-medium">{{ productName(line.productId) }}</span><Input v-model.number="line.quantity" min="0.001" step="0.001" type="number" required /><Input v-model.number="line.unitCost" min="0" step="0.01" type="number" placeholder="Nákupní cena" /><Button variant="ghost" size="icon" type="button" title="Odebrat položku" @click="form.lines.splice(index, 1)"><Trash2 class="h-4 w-4 text-destructive" /></Button></div></div>
-          <div class="space-y-2"><Label for="document-note">Poznámka</Label><textarea id="document-note" v-model="form.note" class="min-h-20 w-full rounded-md border border-border bg-background px-3 py-2 text-sm" placeholder="volitelné" /></div>
-          <DialogFooter><Button type="button" variant="ghost" @click="dialogOpen = false">Zrušit</Button><Button type="submit" variant="coral" :disabled="submitting || !form.lines.length"><Loader2 v-if="submitting" class="h-4 w-4 animate-spin" /><Plus v-else class="h-4 w-4" /> Uložit koncept</Button></DialogFooter>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div v-if="needsSource" class="space-y-2">
+              <Label for="document-source">Zdrojový sklad</Label
+              ><select
+                id="document-source"
+                v-model="form.sourceLocationId"
+                class="flex h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+              >
+                <option value="">Nezařazený sklad</option>
+                <option v-for="location in locations" :key="location.id" :value="location.id">
+                  {{ location.name }}
+                </option>
+              </select>
+            </div>
+            <div v-if="needsDestination" class="space-y-2">
+              <Label for="document-destination">Cílový sklad</Label
+              ><select
+                id="document-destination"
+                v-model="form.destinationLocationId"
+                class="flex h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+              >
+                <option value="">Nezařazený sklad</option>
+                <option v-for="location in locations" :key="location.id" :value="location.id">
+                  {{ location.name }}
+                </option>
+              </select>
+            </div>
+          </div>
+          <div class="space-y-2">
+            <Label for="document-counterparty">Dodavatel / odběratel</Label
+            ><Input
+              id="document-counterparty"
+              v-model="form.counterpartyName"
+              placeholder="volitelné"
+            />
+          </div>
+          <div class="space-y-2">
+            <Label for="document-products">Přidat položku</Label
+            ><Input
+              id="document-products"
+              v-model="productSearch"
+              placeholder="Hledejte podle názvu nebo skladového kódu"
+            />
+            <div v-if="productResults.length" class="rounded-md border border-border">
+              <button
+                v-for="product in productResults"
+                :key="product.id"
+                type="button"
+                class="block w-full px-3 py-2 text-left text-sm hover:bg-muted"
+                @click="addProduct(product.id)"
+              >
+                {{ product.name }} · {{ product.sku }}
+              </button>
+            </div>
+          </div>
+          <div v-if="form.lines.length" class="space-y-2">
+            <div
+              v-for="(line, index) in form.lines"
+              :key="line.productId"
+              class="grid items-center gap-2 rounded-md border border-border p-3 sm:grid-cols-[1fr_110px_130px_auto]"
+            >
+              <span class="text-sm font-medium">{{ productName(line.productId) }}</span
+              ><Input
+                v-model.number="line.quantity"
+                min="0.001"
+                step="0.001"
+                type="number"
+                required
+              /><Input
+                v-model.number="line.unitCost"
+                min="0"
+                step="0.01"
+                type="number"
+                placeholder="Nákupní cena"
+              /><Button
+                variant="ghost"
+                size="icon"
+                type="button"
+                title="Odebrat položku"
+                @click="form.lines.splice(index, 1)"
+                ><Trash2 class="h-4 w-4 text-destructive"
+              /></Button>
+            </div>
+          </div>
+          <div class="space-y-2">
+            <Label for="document-note">Poznámka</Label
+            ><textarea
+              id="document-note"
+              v-model="form.note"
+              class="min-h-20 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              placeholder="volitelné"
+            />
+          </div>
+          <DialogFooter
+            ><Button type="button" variant="ghost" @click="dialogOpen = false">Zrušit</Button
+            ><Button type="submit" variant="coral" :disabled="submitting || !form.lines.length"
+              ><Loader2 v-if="submitting" class="h-4 w-4 animate-spin" /><Plus
+                v-else
+                class="h-4 w-4"
+              />
+              Uložit koncept</Button
+            ></DialogFooter
+          >
         </form>
       </DialogContent>
     </Dialog>
@@ -322,7 +525,8 @@ async function downloadPdf(document: StockDocument) {
         <DialogHeader>
           <DialogTitle>Přílohy skladového dokladu</DialogTitle>
           <DialogDescription>
-            Připojte například dodací list, přijatou fakturu nebo fotodokumentaci. Příloha sama nemění zásobu ani nevystavuje fakturu.
+            Připojte například dodací list, přijatou fakturu nebo fotodokumentaci. Příloha sama
+            nemění zásobu ani nevystavuje fakturu.
           </DialogDescription>
         </DialogHeader>
         <EntityAttachmentsPanel

@@ -7,22 +7,22 @@ zveřejněním projít českým advokátem (IT/GDPR/obchodní právo).
 
 ## Co už je zjištěno z produktu (ověřit, ne vymýšlet)
 
-| Fakt | Zdroj | Stav |
-|---|---|---|
-| Provozovatel: Patrik Zukal, IČO 24991686, Brodská 1914/40, 591 01 Žďár nad Sázavou, OSVČ, patrik@vystaveno.cz, neplátce DPH | stávající `/gdpr` a `/podminky` | **ověřit v ARES/RŽP, potvrdit aktuálnost** |
-| Ceník: Vystaveno Pro 159 Kč/měs / 1 200 Kč/rok, trial 14 dní, Stripe, automatická obnova | `/podminky`, `src/lib/pricing.ts` | potvrdit, že platí pro launch |
-| Architektura: jeden VPS, Docker (Caddy → nginx → ASP.NET API + PostgreSQL), soubory na lokálním volume `api_files` | `docs/deployment-vps.md`, `docker-compose*` | ✅ z kódu |
-| E-mail: vlastní SMTP přes env (`EMAIL_HOST` …), odesílá faktury/nabídky/pozvánky/rezervace | backend `IEmailSender` | provider = otázka F1 |
-| Web error tracking: Sentry (jen s `VITE_SENTRY_DSN`, `tracesSampleRate 0`, `event.extra` se maže) | `src/main.ts` | je DSN v produkci nastavené? → F2 |
-| Analytika: **žádná** — `applyAnalyticsConsent` je no-op, GA/Plausible se nenačítá | `src/lib/analytics.ts` | ✅ z kódu (banner ale GA/Plausible slibuje → mezera G-02) |
-| Mobil: žádné analytics/crash SDK, tokeny v Keychain/Keystore | `docs/release/DATA_SAFETY.md`, kód | ✅ z kódu |
-| OAuth: Google + Apple, server-side flow, PKCE/state, redirect allowlist | `feat/mobile-oauth`, `web-identity.md` | ✅ z kódu |
-| Smazání účtu: in-app `DELETE /api/v1/me` (anonymizace + archivace účetních dat), web `/smazani-uctu` | `docs/backend/account-deletion.md` | ✅ z kódu |
-| Referral V1: kódy + evidence, **žádný automatický payout/měsíc zdarma** (`termsVersion: growth-referral-v1`) | `docs/backend/growth-referral-partner-v1.md` | ✅ z kódu |
-| AI: modul `ai` existuje jen jako přepínač, **žádná reálná AI integrace v kódu** | grep obou repo | ✅ z kódu |
-| Podpisy: foundation + trezor credentialů, BankID „připraveno k napojení", nic ostrého | `verified-signing` kód | ✅ z kódu |
-| POS platby: `manual`/`mock`, žádná karta se neukládá; Stripe jen předplatné + online úhrada faktury | `PaymentTerminalService`, katalog | ✅ z kódu |
-| Zálohy: na tomtéž VPS, min. 2 kompletní, týdenní restore-check; **off-site kopie zatím chybí** | `docs/vps-reliability.md` | ✅ z kódu |
+| Fakt                                                                                                                        | Zdroj                                        | Stav                                                      |
+| --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | --------------------------------------------------------- |
+| Provozovatel: Patrik Zukal, IČO 24991686, Brodská 1914/40, 591 01 Žďár nad Sázavou, OSVČ, patrik@vystaveno.cz, neplátce DPH | stávající `/gdpr` a `/podminky`              | **ověřit v ARES/RŽP, potvrdit aktuálnost**                |
+| Ceník: Vystaveno Pro 159 Kč/měs / 1 200 Kč/rok, trial 14 dní, Stripe, automatická obnova                                    | `/podminky`, `src/lib/pricing.ts`            | potvrdit, že platí pro launch                             |
+| Architektura: jeden VPS, Docker (Caddy → nginx → ASP.NET API + PostgreSQL), soubory na lokálním volume `api_files`          | `docs/deployment-vps.md`, `docker-compose*`  | ✅ z kódu                                                 |
+| E-mail: vlastní SMTP přes env (`EMAIL_HOST` …), odesílá faktury/nabídky/pozvánky/rezervace                                  | backend `IEmailSender`                       | provider = otázka F1                                      |
+| Web error tracking: Sentry (jen s `VITE_SENTRY_DSN`, `tracesSampleRate 0`, `event.extra` se maže)                           | `src/main.ts`                                | je DSN v produkci nastavené? → F2                         |
+| Analytika: **žádná** — `applyAnalyticsConsent` je no-op, GA/Plausible se nenačítá                                           | `src/lib/analytics.ts`                       | ✅ z kódu (banner ale GA/Plausible slibuje → mezera G-02) |
+| Mobil: žádné analytics/crash SDK, tokeny v Keychain/Keystore                                                                | `docs/release/DATA_SAFETY.md`, kód           | ✅ z kódu                                                 |
+| OAuth: Google + Apple, server-side flow, PKCE/state, redirect allowlist                                                     | `feat/mobile-oauth`, `web-identity.md`       | ✅ z kódu                                                 |
+| Smazání účtu: in-app `DELETE /api/v1/me` (anonymizace + archivace účetních dat), web `/smazani-uctu`                        | `docs/backend/account-deletion.md`           | ✅ z kódu                                                 |
+| Referral V1: kódy + evidence, **žádný automatický payout/měsíc zdarma** (`termsVersion: growth-referral-v1`)                | `docs/backend/growth-referral-partner-v1.md` | ✅ z kódu                                                 |
+| AI: modul `ai` existuje jen jako přepínač, **žádná reálná AI integrace v kódu**                                             | grep obou repo                               | ✅ z kódu                                                 |
+| Podpisy: foundation + trezor credentialů, BankID „připraveno k napojení", nic ostrého                                       | `verified-signing` kód                       | ✅ z kódu                                                 |
+| POS platby: `manual`/`mock`, žádná karta se neukládá; Stripe jen předplatné + online úhrada faktury                         | `PaymentTerminalService`, katalog            | ✅ z kódu                                                 |
+| Zálohy: na tomtéž VPS, min. 2 kompletní, týdenní restore-check; **off-site kopie zatím chybí**                              | `docs/vps-reliability.md`                    | ✅ z kódu                                                 |
 
 ## 1. Nutné pro právně použitelnou první verzi
 

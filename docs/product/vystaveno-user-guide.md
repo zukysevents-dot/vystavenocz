@@ -12,6 +12,18 @@ Tento návod je pro běžnou práci v aplikaci. Než začnete, zkontrolujte v **
 
 V **Klientech** založte odběratele a ve **Fakturách** vystavte doklad. Pro zálohy použijte proformu, po úhradě ji převeďte na daňový doklad. Dobropis vždy založte z původní faktury. Pro pravidelné platby slouží **Opakované faktury**.
 
+### Přechod z jiného programu
+
+Ve **Fakturách** klikněte na **Import faktur**. Nahrajte, co máte z původního programu — jednotlivé soubory, nebo rovnou celý ZIP.
+
+- **Nejlepší je ISDOC** (přípona `.isdoc` nebo `.isdocx`). Umí ho vyexportovat Pohoda, Money, ABRA, Helios i iDoklad. Údaje jsou přesné, protože se čtou jako data.
+- **Máte jen PDF?** Také to jde — údaje z faktury přečteme z textu. Doklady, u kterých si nejsme jistí, označíme **Varování** a ve výchozím stavu je přeskočíme, abyste je mohli zkontrolovat. **Naskenované faktury (obrázek) přečíst neumíme.**
+- U PDF se do faktury uloží jedna souhrnná položka, ne jednotlivé řádky. Celková částka i DPH ale sedí na originál.
+
+Před importem uvidíte náhled: číslo, klienta, datum, částku a zdroj. U každého řádku můžete zvolit **Importovat**, nebo **Přeskočit**. Import jde vrátit tlačítkem **Vrátit import**.
+
+**Navázání číselné řady** je to hlavní. Aplikace najde nejvyšší importované číslo a nabídne, jakým číslem má pokračovat vaše příští faktura — stačí kliknout na **Navázat číselnou řadu**. Pozor: pořadí faktur se každý rok vrací na začátek, takže když importujete starší roky, nová řada začne od jedničky s letošním rokem. Číslo, které dostane příští faktura, vidíte vždy dopředu i v **Nastavení**.
+
 ## Gastro a obchod
 
 Na začátku nastavte produkty, kategorie a sklad. V gastru připravte stoly, menu, receptury a modifikátory. Obsluha pracuje přes **Pokladnu** nebo **Restauraci**, kuchyně vidí bony v samostatné frontě. Po prodeji se propíše tržba a sklad; den končí **Uzávěrkou**.

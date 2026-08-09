@@ -22,17 +22,17 @@ zaměstnancích, dodavatelích a zákaznících — jejich správcem jste vy a z
 
 ## 3. Vystaveno jako správce
 
-| Agenda | Údaje | Účel | Právní titul (čl. 6/1 GDPR) | Doba uchování |
-|---|---|---|---|---|
-| Registrace a účet | e-mail, jméno, heslo (jen bcrypt/argon hash), Google/Apple identifikátor | vedení účtu, přihlášení | b) smlouva | po dobu účtu + `[DOPLNIT — návrh 1 rok]` po smazání (jen nezbytné minimum pro obranu nároků) |
-| Firemní profil | název, IČO, DIČ, adresa, bankovní spojení, logo | provoz Služby, hlavičky dokladů | b) smlouva | po dobu účtu (poté režim zpracovatele / výmaz dle `05`) |
-| Předplatné | tarif, stav, historie plateb (bez čísel karet — drží Stripe) | fakturace Služby | b) smlouva; c) zákonné povinnosti (účetní a daňové doklady) | doklady 10 let dle § 35 zákona o DPH, resp. 5 let dle zákona o účetnictví |
-| Podpora | obsah komunikace, e-mail | vyřízení požadavku | b) smlouva; f) oprávněný zájem | `[DOPLNIT — návrh 2 roky]` |
-| Promo/referral | uplatněné kódy, verze podmínek, stav nároku | doložení a vyhodnocení kampaní, prevence zneužití | b) smlouva; f) oprávněný zájem | po dobu kampaně + `[DOPLNIT — návrh 3 roky]` |
-| Bezpečnost a logy | IP adresa, čas přihlášení, auditní záznamy akcí, technické logy | zabezpečení, prokazatelnost akcí, prevence podvodů | f) oprávněný zájem; c) (audit) | provozní logy `[DOPLNIT — otázka F7, návrh 90 dnů]`; auditní záznamy po dobu účtu |
-| Chybová hlášení webu | technická data o chybě (bez obsahu dokladů — tělo odpovědí se před odesláním odstraňuje) | oprava chyb Služby | f) oprávněný zájem | dle retence Sentry `[DOPLNIT — otázka F2; pokud DSN není nasazen, celý řádek vypustit]` |
-| Marketing | e-mail | obchodní sdělení o Službě | vlastním zákazníkům dle § 7 odst. 3 zák. č. 480/2004 Sb. s možností kdykoli se odhlásit; ostatním jen na základě souhlasu a) | do odhlášení / odvolání souhlasu |
-| Cookies | viz Zásady cookies (`docs/legal/04`) | — | nezbytné: f)/b); analytické a marketingové: a) souhlas | dle `04` |
+| Agenda               | Údaje                                                                                    | Účel                                               | Právní titul (čl. 6/1 GDPR)                                                                                                  | Doba uchování                                                                                |
+| -------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Registrace a účet    | e-mail, jméno, heslo (jen bcrypt/argon hash), Google/Apple identifikátor                 | vedení účtu, přihlášení                            | b) smlouva                                                                                                                   | po dobu účtu + `[DOPLNIT — návrh 1 rok]` po smazání (jen nezbytné minimum pro obranu nároků) |
+| Firemní profil       | název, IČO, DIČ, adresa, bankovní spojení, logo                                          | provoz Služby, hlavičky dokladů                    | b) smlouva                                                                                                                   | po dobu účtu (poté režim zpracovatele / výmaz dle `05`)                                      |
+| Předplatné           | tarif, stav, historie plateb (bez čísel karet — drží Stripe)                             | fakturace Služby                                   | b) smlouva; c) zákonné povinnosti (účetní a daňové doklady)                                                                  | doklady 10 let dle § 35 zákona o DPH, resp. 5 let dle zákona o účetnictví                    |
+| Podpora              | obsah komunikace, e-mail                                                                 | vyřízení požadavku                                 | b) smlouva; f) oprávněný zájem                                                                                               | `[DOPLNIT — návrh 2 roky]`                                                                   |
+| Promo/referral       | uplatněné kódy, verze podmínek, stav nároku                                              | doložení a vyhodnocení kampaní, prevence zneužití  | b) smlouva; f) oprávněný zájem                                                                                               | po dobu kampaně + `[DOPLNIT — návrh 3 roky]`                                                 |
+| Bezpečnost a logy    | IP adresa, čas přihlášení, auditní záznamy akcí, technické logy                          | zabezpečení, prokazatelnost akcí, prevence podvodů | f) oprávněný zájem; c) (audit)                                                                                               | provozní logy `[DOPLNIT — otázka F7, návrh 90 dnů]`; auditní záznamy po dobu účtu            |
+| Chybová hlášení webu | technická data o chybě (bez obsahu dokladů — tělo odpovědí se před odesláním odstraňuje) | oprava chyb Služby                                 | f) oprávněný zájem                                                                                                           | dle retence Sentry `[DOPLNIT — otázka F2; pokud DSN není nasazen, celý řádek vypustit]`      |
+| Marketing            | e-mail                                                                                   | obchodní sdělení o Službě                          | vlastním zákazníkům dle § 7 odst. 3 zák. č. 480/2004 Sb. s možností kdykoli se odhlásit; ostatním jen na základě souhlasu a) | do odhlášení / odvolání souhlasu                                                             |
+| Cookies              | viz Zásady cookies (`docs/legal/04`)                                                     | —                                                  | nezbytné: f)/b); analytické a marketingové: a) souhlas                                                                       | dle `04`                                                                                     |
 
 **Poznámka k marketingu:** dnes žádná marketingová sdělení neposíláme a žádný marketingový souhlas
 nesbíráme. Tento oddíl se aktivuje až se skutečným mechanismem (double opt-in + odhlášení v každé
@@ -58,13 +58,13 @@ technické limity a výchozí chování popisují **Zásady uchovávání dat** 
 `[DOPLNIT POSKYTOVATELE VPS + ZEMI DC — otázka F1]` s databází PostgreSQL a úložištěm souborů
 tamtéž. Dále využíváme:
 
-| Subprocesor | Účel | Sídlo / lokalita dat | Přenos mimo EHP |
-|---|---|---|---|
-| `[DOPLNIT VPS provider]` | hosting (server, DB, soubory, zálohy) | `[DOPLNIT]` | `[DOPLNIT — očekává se: ne]` |
-| Stripe Payments Europe, Ltd. | platby předplatného a online úhrady faktur | Irsko | dílčí přenosy v rámci skupiny Stripe dle SCC/DPF |
-| `[DOPLNIT SMTP provider — otázka F1]` | odesílání e-mailů (doklady, pozvánky, upozornění) | `[DOPLNIT]` | `[DOPLNIT]` |
-| Google Ireland Ltd. / Apple Distribution International Ltd. | pouze přihlášení účtem Google/Apple (OAuth) | Irsko | dle podmínek poskytovatelů; EU-US DPF |
-| Functional Software, Inc. (Sentry) | chybová hlášení webové aplikace | USA `[POKUD JE DSN AKTIVNÍ — otázka F2; jinak vypustit]` | EU-US Data Privacy Framework |
+| Subprocesor                                                 | Účel                                              | Sídlo / lokalita dat                                     | Přenos mimo EHP                                  |
+| ----------------------------------------------------------- | ------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------ |
+| `[DOPLNIT VPS provider]`                                    | hosting (server, DB, soubory, zálohy)             | `[DOPLNIT]`                                              | `[DOPLNIT — očekává se: ne]`                     |
+| Stripe Payments Europe, Ltd.                                | platby předplatného a online úhrady faktur        | Irsko                                                    | dílčí přenosy v rámci skupiny Stripe dle SCC/DPF |
+| `[DOPLNIT SMTP provider — otázka F1]`                       | odesílání e-mailů (doklady, pozvánky, upozornění) | `[DOPLNIT]`                                              | `[DOPLNIT]`                                      |
+| Google Ireland Ltd. / Apple Distribution International Ltd. | pouze přihlášení účtem Google/Apple (OAuth)       | Irsko                                                    | dle podmínek poskytovatelů; EU-US DPF            |
+| Functional Software, Inc. (Sentry)                          | chybová hlášení webové aplikace                   | USA `[POKUD JE DSN AKTIVNÍ — otázka F2; jinak vypustit]` | EU-US Data Privacy Framework                     |
 
 Případné předání mimo EHP se opírá o rozhodnutí o odpovídající ochraně (EU-US Data Privacy
 Framework, rozhodnutí Komise (EU) 2023/1795) nebo standardní smluvní doložky (čl. 46 GDPR).

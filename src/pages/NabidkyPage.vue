@@ -746,13 +746,15 @@ async function convertToInvoice(q: Quote) {
             @keydown.enter.prevent="sendEmail"
           />
           <p class="text-xs text-muted-foreground">
-            Nemá-li klient uložený e-mail, jednoduše jej napište sem. Pro příště ho můžete doplnit
-            v kartě klienta.
+            Nemá-li klient uložený e-mail, jednoduše jej napište sem. Pro příště ho můžete doplnit v
+            kartě klienta.
           </p>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" :disabled="!!busyId" @click="emailDialogOpen = false">Zrušit</Button>
+          <Button variant="outline" :disabled="!!busyId" @click="emailDialogOpen = false"
+            >Zrušit</Button
+          >
           <Button variant="coral" :disabled="!!busyId || !recipientEmail.trim()" @click="sendEmail">
             <Send class="h-4 w-4" /> Odeslat e-mail
           </Button>

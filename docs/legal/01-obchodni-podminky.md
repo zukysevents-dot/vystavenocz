@@ -34,8 +34,8 @@ prováděny podle zadání Uživatele a Uživatel je povinen si je před použit
 činnosti. Registrací Uživatel prohlašuje, že Službu užívá jako podnikatel v rámci svého podnikání.
 
 3.2 Pokud Službu výjimečně uzavře spotřebitel, platí pro něj ustanovení § 13 (spotřebitelská
-ustanovení). ⚖️ *Rozhodnout, zda spotřebitele vůbec připustit (otázka F4) — pokud ne, doplnit
-technickou i smluvní zábranu a § 13 zjednodušit.*
+ustanovení). ⚖️ _Rozhodnout, zda spotřebitele vůbec připustit (otázka F4) — pokud ne, doplnit
+technickou i smluvní zábranu a § 13 zjednodušit._
 
 ## 4. Vznik smlouvy a účet
 
@@ -92,8 +92,8 @@ nestanoví-li kampaň jinak.
 kódů nebo obcházení limitů je zakázáno; Provozovatel může v takovém případě výhodu odebrat a při
 závažném zneužití postupovat dle § 9. Evidence uplatnění se uchovává pro doložení nároku.
 
-6.4 ⚖️ *Aktuální stav produktu: referral V1 odměny pouze eviduje, automaticky nic nepřipisuje
-(otázka F11). Kampaňové podmínky zveřejnit až se skutečným mechanismem odměn.*
+6.4 ⚖️ _Aktuální stav produktu: referral V1 odměny pouze eviduje, automaticky nic nepřipisuje
+(otázka F11). Kampaňové podmínky zveřejnit až se skutečným mechanismem odměn._
 
 ## 7. Dostupnost, údržba a změny Služby
 
@@ -130,13 +130,13 @@ Nejde-li o neodkladný případ, nejprve Uživatele vyzve k nápravě s přimě�
 
 9.2 Uživatel může smlouvu kdykoli ukončit smazáním účtu v aplikaci (Nastavení → Smazat účet) nebo
 žádostí dle stránky `/smazani-uctu`. Předplacené období se nevrací, nestanoví-li zákon nebo § 13
-jinak. ⚖️ *(politika refundací — otázka F9)*
+jinak. ⚖️ _(politika refundací — otázka F9)_
 
 ## 10. Export dat a ukončení
 
 10.1 Uživatel může svá data průběžně exportovat funkcemi Služby (CSV/XML exporty dokladů, ISDOC,
-účetní exporty, stažení příloh). ⚖️ *Kompletní strojový export „vše najednou" zatím neexistuje —
-viz implementační mezera G-04; do jeho dodání nepsat do OP víc, než Služba umí.*
+účetní exporty, stažení příloh). ⚖️ _Kompletní strojový export „vše najednou" zatím neexistuje —
+viz implementační mezera G-04; do jeho dodání nepsat do OP víc, než Služba umí._
 
 10.2 Po zániku smlouvy Provozovatel data smaže nebo anonymizuje postupem a ve lhůtách dle
 **Zásad uchovávání dat** (`docs/legal/05`), s výjimkou údajů, které je povinen uchovat ze zákona
@@ -150,8 +150,8 @@ právními předpisy. **Nevylučuje se odpovědnost, kterou vyloučit nelze** (�
 právech člověka, újma způsobená úmyslně nebo z hrubé nedbalosti — § 2898 občanského zákoníku).
 
 11.2 V ostatních případech je náhrada újmy vůči podnikateli omezena částkou rovnající se
-předplatnému zaplacenému Uživatelem za posledních **12 měsíců**. ⚖️ *Výši limitu posoudí advokát
-(přiměřenost, pojištění — otázka F13).*
+předplatnému zaplacenému Uživatelem za posledních **12 měsíců**. ⚖️ _Výši limitu posoudí advokát
+(přiměřenost, pojištění — otázka F13)._
 
 11.3 Provozovatel neodpovídá za: (a) obsah a správnost dat zadaných Uživatelem; (b) škody z
 nesplnění zákonných povinností Uživatele (daně, účetnictví, pracovní právo); (c) výpadky způsobené
@@ -198,7 +198,7 @@ změnu přijímá. ⚖️
 ## 16. Závěrečná ustanovení
 
 16.1 Právní vztahy se řídí právem České republiky. Pro spory s podnikateli je místně příslušný
-obecný soud Provozovatele. ⚖️ *(prorogace — posoudit)*
+obecný soud Provozovatele. ⚖️ _(prorogace — posoudit)_
 
 16.2 Součástí smlouvy jsou: **Zásady ochrany osobních údajů** (`/gdpr`), **Zpracovatelská smlouva**
 (příloha pro firmy zpracovávající osobní údaje třetích osob), **Zásady cookies** a **Zásady

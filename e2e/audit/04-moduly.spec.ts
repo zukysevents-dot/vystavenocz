@@ -21,7 +21,9 @@ async function closeDialog(page: Page) {
   const cancel = page.getByRole('button', { name: /Zrušit|Zavřít|Storno/ }).first()
   if (await cancel.isVisible().catch(() => false)) await cancel.click()
   else await page.keyboard.press('Escape')
-  await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 5_000 }).catch(() => {})
+  await expect(page.getByRole('dialog'))
+    .toHaveCount(0, { timeout: 5_000 })
+    .catch(() => {})
 }
 
 test.describe('Faktury', () => {
@@ -55,7 +57,11 @@ test.describe('Faktury', () => {
     }
 
     // Editor nové faktury — otevřít a odejít BEZ uložení.
-    await page.getByRole('button', { name: 'Nová faktura' }).or(page.getByRole('link', { name: 'Nová faktura' })).first().click()
+    await page
+      .getByRole('button', { name: 'Nová faktura' })
+      .or(page.getByRole('link', { name: 'Nová faktura' }))
+      .first()
+      .click()
     await expect(page).toHaveURL(/editor/)
     await settle(page)
     await page.goBack()
@@ -65,7 +71,9 @@ test.describe('Faktury', () => {
     expectClean(watch)
   })
 
-  test('smazání faktury: potvrzovací dialog + zrušení (nic se nesmaže)', async ({ page }, testInfo) => {
+  test('smazání faktury: potvrzovací dialog + zrušení (nic se nesmaže)', async ({
+    page,
+  }, testInfo) => {
     const watch = await open(page, '/app/faktury')
     // Akční menu prvního řádku.
     const menuBtn = page.locator('tbody tr').first().getByRole('button').last()
@@ -86,7 +94,9 @@ test.describe('Faktury', () => {
 })
 
 test.describe('Klienti', () => {
-  test('seznam, hledání, detail, formulář nového klienta bez uložení', async ({ page }, testInfo) => {
+  test('seznam, hledání, detail, formulář nového klienta bez uložení', async ({
+    page,
+  }, testInfo) => {
     const watch = await open(page, '/app/klienti')
     const search = page.getByPlaceholder('Hledat podle jména, IČO nebo e-mailu…')
     await expect(search).toBeVisible()
@@ -119,7 +129,10 @@ test.describe('Sklad a zásoby', () => {
     await search.fill('káva')
     await settle(page)
     await search.fill('')
-    await page.getByRole('button', { name: /Nový produkt/ }).first().click()
+    await page
+      .getByRole('button', { name: /Nový produkt/ })
+      .first()
+      .click()
     await expect(page.getByRole('dialog').first()).toBeVisible()
     await closeDialog(page)
     await attachWatch(testInfo, watch)
@@ -165,7 +178,10 @@ test.describe('Gastro provoz (read-only)', () => {
         await settle(page)
       }
     }
-    const history = page.getByRole('button', { name: /Historie/ }).or(page.getByRole('tab', { name: /Historie/ })).first()
+    const history = page
+      .getByRole('button', { name: /Historie/ })
+      .or(page.getByRole('tab', { name: /Historie/ }))
+      .first()
     if (await history.isVisible().catch(() => false)) {
       await history.click()
       await settle(page)
@@ -176,7 +192,12 @@ test.describe('Gastro provoz (read-only)', () => {
 
   test('pokladna: přidání do košíku a vyprázdnění (bez prodeje)', async ({ page }, testInfo) => {
     const watch = await open(page, '/app/pokladna')
-    await expect(page.getByPlaceholder(/Hledat produkt/i).or(page.getByText(/Hledat produkt/i)).first()).toBeVisible({ timeout: 15_000 })
+    await expect(
+      page
+        .getByPlaceholder(/Hledat produkt/i)
+        .or(page.getByText(/Hledat produkt/i))
+        .first(),
+    ).toBeVisible({ timeout: 15_000 })
     await attachWatch(testInfo, watch)
     expectClean(watch)
   })
@@ -192,7 +213,9 @@ test.describe('Gastro provoz (read-only)', () => {
 test.describe('Reporty a peníze', () => {
   test('uzávěrka: přehled dne se načte (den se NEZAVÍRÁ)', async ({ page }, testInfo) => {
     const watch = await open(page, '/app/uzaverka')
-    await expect(page.getByText(/uzávěrka|Tržby|hotovost/i).first()).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText(/uzávěrka|Tržby|hotovost/i).first()).toBeVisible({
+      timeout: 15_000,
+    })
     await attachWatch(testInfo, watch)
     expectClean(watch)
   })

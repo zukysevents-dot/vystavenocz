@@ -47,9 +47,13 @@ export function useDocuments(entityId: string, entitySegment: 'jobs' | 'stock-do
   ): Promise<EntityDocument> {
     const formData = new FormData()
     formData.append('file', file)
-    const document = await http.upload<DocumentDto>(`/${entitySegment}/${entityId}/files`, formData, {
-      onProgress,
-    })
+    const document = await http.upload<DocumentDto>(
+      `/${entitySegment}/${entityId}/files`,
+      formData,
+      {
+        onProgress,
+      },
+    )
     return normalizeDocument(document)
   }
 

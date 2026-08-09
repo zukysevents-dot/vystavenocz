@@ -1,6 +1,7 @@
 # Právní zdroje (primární, ověřeno 20. 7. 2026)
 
 ## EU
+
 - **GDPR** — nařízení (EU) 2016/679: [EUR-Lex CELEX 32016R0679](https://eur-lex.europa.eu/legal-content/CS/TXT/?uri=CELEX:32016R0679)
 - **eIDAS** — nařízení (EU) č. 910/2014: [CELEX 32014R0910](https://eur-lex.europa.eu/legal-content/CS/TXT/?uri=CELEX:32014R0910); novela **eIDAS 2** — nařízení (EU) 2024/1183: [CELEX 32024R1183](https://eur-lex.europa.eu/legal-content/CS/TXT/?uri=CELEX:32024R1183)
 - **EU-US Data Privacy Framework** — prováděcí rozhodnutí Komise (EU) 2023/1795: [EUR-Lex](https://eur-lex.europa.eu/eli/dec_impl/2023/1795/oj)
@@ -8,6 +9,7 @@
 - **DSA** — nařízení (EU) 2022/2065: [CELEX 32022R2065](https://eur-lex.europa.eu/legal-content/CS/TXT/?uri=CELEX:32022R2065)
 
 ## ČR
+
 - **Občanský zákoník** č. 89/2012 Sb. (§ 1751–1752 OP a změny, § 1829 odstoupení, § 1837 písm. l) digitální obsah, § 2898 limity náhrady újmy): [zakonyprolidi.cz/cs/2012-89](https://www.zakonyprolidi.cz/cs/2012-89); výklad odstoupení u digitálního obsahu: [ČOI FAQ](https://coi.gov.cz/faq/8-odstoupeni-od-smlouvy-do-14-dnu-u-digitalniho-obsahu/)
 - **Zákon o zpracování osobních údajů** č. 110/2019 Sb.: [zakonyprolidi.cz/cs/2019-110](https://www.zakonyprolidi.cz/cs/2019-110)
 - **Zákon o elektronických komunikacích** č. 127/2005 Sb., § 89 odst. 3 (cookies opt-in od 1. 1. 2022, novela č. 374/2021 Sb.): [zakonyprolidi.cz/cs/2005-127](https://www.zakonyprolidi.cz/cs/2005-127); výklad: [ÚOOÚ — Cookies](https://uoou.gov.cz/verejnost/qa-otazky-a-odpovedi/cookies)
@@ -20,6 +22,7 @@
 - **Zákon o platebním styku** č. 370/2017 Sb.: [zakonyprolidi.cz/cs/2017-370](https://www.zakonyprolidi.cz/cs/2017-370)
 
 ## Obchody s aplikacemi
+
 - Apple **App Review Guidelines** (4.8 Login Services, 5.1.1(v) Account deletion): [developer.apple.com/app-store/review/guidelines](https://developer.apple.com/app-store/review/guidelines/)
 - Apple **Offering account deletion**: [developer.apple.com/support/offering-account-deletion-in-your-app](https://developer.apple.com/support/offering-account-deletion-in-your-app/)
 - Apple **App privacy details**: [developer.apple.com/app-store/app-privacy-details](https://developer.apple.com/app-store/app-privacy-details/)
@@ -27,7 +30,8 @@
 - Google Play **Data safety**: [support.google.com/googleplay/android-developer/answer/10787469](https://support.google.com/googleplay/android-developer/answer/10787469)
 
 ## Provideri
+
 - Stripe DPA/subprocesoři: [stripe.com/legal/dpa](https://stripe.com/legal/dpa) `[OVĚŘIT AKTUÁLNÍ VERZI PŘI PODPISU]`
 - Sentry DPA: [sentry.io/legal/dpa](https://sentry.io/legal/dpa/) `[JEN JE-LI AKTIVNÍ]`
 
-*Pozn.: zakonyprolidi.cz je konsolidované znění; autoritativní je e-Sbírka ([e-sbirka.cz](https://www.e-sbirka.cz)). Advokát cituje z e-Sbírky.*
+_Pozn.: zakonyprolidi.cz je konsolidované znění; autoritativní je e-Sbírka ([e-sbirka.cz](https://www.e-sbirka.cz)). Advokát cituje z e-Sbírky._
