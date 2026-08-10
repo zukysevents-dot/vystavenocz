@@ -206,6 +206,89 @@ test('selhání náhledu akcí NEZABLOKUJE platbu (cenu autoritativně počítá
   expect(keys).toHaveLength(1)
 })
 
+test('po zrušené platbě dostane STEJNĚ vypadající nákup NOVÝ klíč (nespojí se s cizí účtenkou)', async ({
+  page,
+}) => {
+  // Nejnebezpečnější festivalový případ: platba spadne, obsluha účtenku zahodí a další host si
+  // koupí PŘESNĚ TOTÉŽ. Když by se recykloval klíč z neúspěšného pokusu, server by vrátil původní
+  // prodej — pokladní vidí „Zaplaceno", ale druhá tržba nikde není a sklad se neodečte.
+  test.info().annotations.push({ type: 'allowConsoleError', description: 'ERR_CONNECTION_FAILED' })
+  test.info().annotations.push({ type: 'allowConsoleError', description: 'Failed to fetch' })
+
+  await seedApiMode(page)
+  await dismissCookies(page)
+  const keys = await routeApi(page, { failFirstSale: true })
+
+  await page.goto('/app/pokladna')
+  await addPivo(page, 1)
+
+  await payCard(page)
+  await expect(page.getByText(/nepodařilo dokončit/i)).toBeVisible()
+
+  // Obsluha pokus vzdá a účtenku zahodí.
+  await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: 'Vyprázdnit' }).click()
+  await expect(page.getByRole('button', { name: 'Vyprázdnit' })).toBeHidden()
+
+  // Další host, shodná objednávka → musí to být NOVÁ účtenka, ne recyklovaný pokus.
+  await addPivo(page, 1)
+  await payCard(page)
+  await expect(page.getByText(/Zaplaceno/)).toBeVisible()
+
+  expect(keys).toHaveLength(2)
+  expect(keys[1]).not.toBe(keys[0])
+})
+
+test('platba s nejistým koncem přežije refresh a pošle obsluhu tržbu ověřit', async ({ page }) => {
+  // Tablet se může zavřít přesně ve chvíli, kdy prodej na serveru vzniká. Klíč pokusu žije jen
+  // v paměti stránky, takže po refreshi už opakování NEJDE zachytit idempotencí — obsluha musí
+  // dostat varování, ne prázdnou pokladnu, do které naúčtuje podruhé.
+  test.info().annotations.push({ type: 'allowConsoleError', description: 'ApiError: Server error' })
+  test
+    .info()
+    .annotations.push({ type: 'allowConsoleError', description: 'Failed to load resource' })
+
+  await seedApiMode(page)
+  await dismissCookies(page)
+  await routeApi(page, { failFirstSale: false })
+  // Server odpoví 500 — prodej mohl vzniknout, ale odpověď se ztratila.
+  await page.route('**/api/v1/sales', async (route) => {
+    if (route.request().method() !== 'POST') return route.fallback()
+    return route.fulfill({ status: 500, json: { title: 'Server error' } })
+  })
+
+  await page.goto('/app/pokladna')
+  await addPivo(page, 1)
+  await payCard(page)
+  await expect(page.getByText(/nepodařilo dokončit/i)).toBeVisible()
+
+  // Obsluha (nebo prohlížeč) stránku obnoví — košík je pryč, ale varování musí zůstat.
+  await page.reload()
+  const banner = page.getByTestId('pos-unresolved-payment')
+  await expect(banner).toBeVisible()
+  await expect(banner).toContainText(/nevíme, jestli se zapsala/i)
+
+  // Když to obsluha vyřeší, varování zmizí i po dalším načtení.
+  await banner.getByRole('button', { name: 'Vyřešeno' }).click()
+  await expect(banner).toBeHidden()
+  await page.reload()
+  await expect(page.getByTestId('pos-unresolved-payment')).toBeHidden()
+})
+
+test('dokončený prodej po refreshi ŽÁDNÉ varování nenechá', async ({ page }) => {
+  await seedApiMode(page)
+  await dismissCookies(page)
+  await routeApi(page, { failFirstSale: false })
+
+  await page.goto('/app/pokladna')
+  await addPivo(page, 1)
+  await payCard(page)
+  await expect(page.getByText(/Zaplaceno/)).toBeVisible()
+
+  await page.reload()
+  await expect(page.getByTestId('pos-unresolved-payment')).toBeHidden()
+})
+
 test('nový prodej dostane NOVÝ idempotency klíč (dva různé nákupy se nesloučí)', async ({
   page,
 }) => {
