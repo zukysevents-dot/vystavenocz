@@ -173,8 +173,12 @@ function confirmCard() {
       <div v-else class="space-y-3">
         <div class="rounded-lg border border-border p-3 text-sm">
           <p>Zadejte {{ formatCZK(total) }} na platebním terminálu a dokončete platbu.</p>
+          <!-- Ruční potvrzení je jediný důkaz, že karta prošla — proto musí být jasně napsané,
+               že se mačká AŽ po schválení na terminálu. Předčasný klik = tržba bez peněz. -->
           <p class="mt-1 text-xs text-muted-foreground">
-            Terminál zatím není propojený — potvrďte výsledek platby ručně.
+            Terminál zatím není propojený. Potvrďte
+            <strong class="text-foreground">až po schválení na displeji terminálu</strong>; při
+            nejasném výsledku platbu neopakujte a zavolejte vedoucího.
           </p>
         </div>
         <div class="grid grid-cols-[auto_1fr] gap-2">

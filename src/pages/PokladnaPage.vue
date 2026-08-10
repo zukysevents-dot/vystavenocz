@@ -159,6 +159,12 @@ function cartUnitPrice(l: CartLine): number {
 }
 
 const itemCount = computed(() => cart.value.reduce((sum, l) => sum + l.quantity, 0))
+// České skloňování: 1 položka / 2–4 položky / 5+ položek.
+const itemCountLabel = computed(() => {
+  const n = itemCount.value
+  if (n === 1) return '1 položka'
+  return `${n} ${n >= 2 && n <= 4 ? 'položky' : 'položek'}`
+})
 
 // Sleva na účet (%) + spropitné (Kč) — nad rámec řádkové slevy, počítané společně přes posCalc.
 const accountDiscountPercent = ref(0)
@@ -381,6 +387,7 @@ onMounted(async () => {
   else if (locations.value.length) currentLocationId.value = locations.value[0].id
   await syncOfflineCatalog()
   loading.value = false
+  loadUnresolvedPayment()
   focusScan()
   void settleQueue()
 })
@@ -472,6 +479,11 @@ function confirmVariant(variant: SelectableProductVariant) {
   variantDialogOpen.value = false
 }
 
+/** Skok na účtenku ze sticky lišty (na tabletu na výšku je pod katalogem). */
+function scrollToCart() {
+  document.getElementById('pos-cart')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 function focusScan() {
   nextTick(() => {
     const el = scanInput.value?.$el as HTMLInputElement | undefined
@@ -522,6 +534,10 @@ function clearCart() {
 watch(
   [cart, activePriceLevelId, selectedCustomer, loyaltySettings],
   () => {
+    // Prázdný košík = konec jednoho nákupu. Klíč z nedokončeného pokusu se sem NESMÍ přenést:
+    // další host si může koupit přesně totéž, payload by se shodoval a server by místo nové
+    // tržby vrátil původní účtenku (peníze v zásuvce, prodej nikde, sklad neodečtený).
+    if (!cart.value.length) pendingCheckout = null
     if (!selectedCustomer.value) redeemPoints.value = 0
     if (redeemPoints.value > maxRedeemPoints.value) redeemPoints.value = maxRedeemPoints.value
     void refreshPricePreview()
@@ -569,6 +585,62 @@ async function confirmPayment(payment: { method: PaymentMethod; cashReceived: nu
 // takže server vrátí původní účtenku místo druhého naúčtování; jakákoli změna košíku dá klíč nový.
 // Stejný mechanismus jako mobilní pokladna (PosScreenModel.checkout).
 let pendingCheckout: { key: string; payload: string } | null = null
+
+// Nedokončený pokus o platbu musí přežít i zavření nebo refresh tabletu — prohlížeč se může zavřít
+// přesně v okamžiku, kdy prodej na serveru VZNIKÁ. Po návratu proto obsluze netvrdíme „zaplaceno"
+// ani „zamítnuto": řekneme, že stav není jistý, a pošleme ji ověřit tržbu. Bez toho by naúčtovala
+// podruhé (klíč pokusu žil jen v paměti stránky a refresh ho zahodil).
+const UNRESOLVED_PAYMENT_KEY = 'vystaveno.pos.unresolvedPayment'
+interface UnresolvedPayment {
+  total: number
+  method: PaymentMethod
+  at: string
+}
+const unresolvedPayment = ref<UnresolvedPayment | null>(null)
+const unresolvedPaymentLabel = computed(() => {
+  const p = unresolvedPayment.value
+  if (!p) return ''
+  const time = new Date(p.at).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })
+  return `${formatCZK(p.total)} ${p.method === 'Cash' ? 'hotově' : 'kartou'} v ${time}`
+})
+
+function markPaymentInFlight(total: number, method: PaymentMethod): void {
+  const record: UnresolvedPayment = { total, method, at: new Date().toISOString() }
+  try {
+    localStorage.setItem(UNRESOLVED_PAYMENT_KEY, JSON.stringify(record))
+  } catch {
+    /* privátní režim bez úložiště — upozornění po refreshi prostě nebude */
+  }
+}
+
+function clearPaymentInFlight(): void {
+  unresolvedPayment.value = null
+  try {
+    localStorage.removeItem(UNRESOLVED_PAYMENT_KEY)
+  } catch {
+    /* nevadí */
+  }
+}
+
+/** Server odpověděl jednoznačným odmítnutím → prodej nevznikl a není co dohledávat. */
+function isDefiniteRejection(e: unknown): boolean {
+  return (
+    e instanceof ApiError &&
+    e.status >= 400 &&
+    e.status < 500 &&
+    e.status !== 408 &&
+    e.status !== 429
+  )
+}
+
+function loadUnresolvedPayment(): void {
+  try {
+    const raw = localStorage.getItem(UNRESOLVED_PAYMENT_KEY)
+    unresolvedPayment.value = raw ? (JSON.parse(raw) as UnresolvedPayment) : null
+  } catch {
+    unresolvedPayment.value = null
+  }
+}
 
 type CheckoutItems = QueuedSalePayload['items']
 interface CheckoutOptions {
@@ -667,6 +739,7 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
     }
 
     let sale: Sale
+    markPaymentInFlight(checkoutTotal.value, method)
     try {
       sale = await sales.create(method, items, { ...options, idempotencyKey })
     } catch (e) {
@@ -681,12 +754,15 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
       })
       if (offlineSales.available && queueable && !(e instanceof ApiError)) {
         offlineSales.online.value = false
+        // Prodej je bezpečně ve frontě se stejným klíčem — není co dohledávat.
+        clearPaymentInFlight()
         await queueOfflineSale(method, items, options, idempotencyKey, discountAmountSnapshot)
         return true
       }
       throw e
     }
     pendingCheckout = null
+    clearPaymentInFlight()
     const receiptLines = sale.items?.length
       ? sale.items.map((item) => ({
           name: [item.description ?? 'Položka', item.variantName].filter(Boolean).join(' · '),
@@ -724,6 +800,9 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
     clearCart()
     return true
   } catch (e) {
+    // Jednoznačné odmítnutí = prodej nevznikl. Nejasný konec (5xx, timeout, spadlé spojení u karty)
+    // si značku PONECHÁ, aby po refreshi obsluha tržbu ověřila místo druhého naúčtování.
+    if (isDefiniteRejection(e)) clearPaymentInFlight()
     // 422 u hotovosti = přijatá částka nepokryla server-spočítaný Total; dialog zůstává otevřený.
     if (e instanceof ApiError && e.status === 422 && cashReceived != null) {
       toast.error('Přijatá hotovost nepokrývá částku k úhradě. Zadejte vyšší částku.')
@@ -804,7 +883,8 @@ function saleTime(iso: string): string {
 </script>
 
 <template>
-  <div class="p-4 sm:p-6">
+  <!-- pb-28 pod lg: sticky lišta s platbou překrývá spodek stránky, ať se dá dorolovat na konec. -->
+  <div class="p-4 sm:p-6" :class="cart.length ? 'pb-28 lg:pb-6' : ''">
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold tracking-tight">Pokladna</h1>
       <!-- flex-wrap: s výběrem provozovny se akce na mobilu zalomí místo overflow celé stránky -->
@@ -840,6 +920,22 @@ function saleTime(iso: string): string {
         Ceník z {{ catalogSavedAtLabel }}.
       </span>
     </div>
+    <!-- Platba, u které nevíme, jak dopadla (zavřený tablet / spadlý server uprostřed odesílání).
+         Netvrdíme zaplaceno ani zamítnuto — pošleme obsluhu ověřit tržbu, ať neúčtuje podruhé. -->
+    <div
+      v-if="unresolvedPayment"
+      data-testid="pos-unresolved-payment"
+      class="mb-4 flex flex-wrap items-center gap-2 rounded-lg border-2 border-amber-500 bg-amber-500/10 px-3 py-2 text-sm"
+    >
+      <span>
+        Poslední platba ({{ unresolvedPaymentLabel }}) se nedokončila a
+        <strong>nevíme, jestli se zapsala</strong>. Zkontrolujte ji v Tržbách, než ji naúčtujete
+        znovu.
+      </span>
+      <Button variant="outline" size="sm" @click="openSales">Zkontrolovat v Tržbách</Button>
+      <Button variant="ghost" size="sm" @click="clearPaymentInFlight">Vyřešeno</Button>
+    </div>
+
     <div
       v-if="offlineAvailable && (pendingSalesCount > 0 || failedSalesCount > 0)"
       data-testid="pos-queue-status"
@@ -999,7 +1095,10 @@ function saleTime(iso: string): string {
       </div>
 
       <!-- Košík -->
-      <div class="flex h-fit flex-col rounded-2xl border border-border bg-card lg:sticky lg:top-4">
+      <div
+        id="pos-cart"
+        class="flex h-fit flex-col rounded-2xl border border-border bg-card lg:sticky lg:top-4"
+      >
         <div class="flex items-center justify-between border-b border-border p-4">
           <div class="flex items-center gap-2 font-semibold">
             <ShoppingCart class="h-5 w-5" /> Účtenka
@@ -1249,10 +1348,12 @@ function saleTime(iso: string): string {
             <span class="text-sm text-muted-foreground">Celkem</span>
             <span class="text-2xl font-bold tabular-nums">{{ formatCZK(checkoutTotal) }}</span>
           </div>
+          <!-- h-14: `size="lg"` je 40 px, což je pod dotykovým minimem. Hlavní prodejní akce se na
+               tabletu mačká naslepo ve špičce, takže musí být pohodlně velká. -->
           <Button
             variant="coral"
             size="lg"
-            class="w-full"
+            class="h-14 w-full text-base"
             :disabled="!cart.length || paying || pricePreviewLoading"
             @click="openPaymentDialog"
           >
@@ -1260,6 +1361,46 @@ function saleTime(iso: string): string {
             <Banknote v-else class="h-4 w-4" /> Zaplatit
           </Button>
         </div>
+      </div>
+    </div>
+
+    <!-- Na tabletu na výšku (a na mobilu) je účtenka POD katalogem, takže by obsluha musela u každého
+         prodeje odrolovat dolů. Sticky lišta drží součet i platbu pořád na dosah; od lg výš je
+         účtenka vedle katalogu a lišta je zbytečná. Vzor převzatý z Restaurace. -->
+    <div
+      v-if="cart.length"
+      data-testid="pos-mobile-actions"
+      class="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 px-3 pt-2 shadow-2xl backdrop-blur lg:hidden"
+      style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom))"
+      role="region"
+      aria-label="Účtenka a platba"
+    >
+      <div class="mx-auto flex max-w-3xl items-center gap-2">
+        <button
+          type="button"
+          class="min-w-0 flex-1 rounded-xl px-2 py-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          @click="scrollToCart"
+        >
+          <span class="block truncate text-xs font-semibold text-muted-foreground">
+            Účtenka · {{ itemCountLabel }}
+          </span>
+          <span
+            data-testid="pos-total-mobile"
+            class="block truncate text-lg font-black tabular-nums"
+          >
+            {{ formatCZK(checkoutTotal) }}
+          </span>
+        </button>
+        <Button
+          type="button"
+          variant="coral"
+          class="h-14 shrink-0 px-6 text-base"
+          :disabled="paying || pricePreviewLoading"
+          @click="openPaymentDialog"
+        >
+          <Loader2 v-if="paying" class="h-5 w-5 animate-spin" />
+          <Banknote v-else class="h-5 w-5" /> Zaplatit
+        </Button>
       </div>
     </div>
 
