@@ -101,7 +101,11 @@ prepare_backup_root() {
 
 acquire_ops_lock() {
   prepare_backup_root
-  local fd fd_path target
+  local fd fd_path target wait_seconds
+  # Záloha i deploy na zámek POČKAJÍ. Health check drží týž zámek jen krátce, ale cron ho v 02:30 spouští
+  # ve stejnou vteřinu jako zálohu — nečekající flock proto zálohu rovnou zabil (11 nocí po sobě).
+  wait_seconds="${VYSTAVENO_LOCK_WAIT_SECONDS:-900}"
+  [[ "$wait_seconds" =~ ^[0-9]+$ ]] || die "Neplatný limit čekání na zámek."
 
   if [[ -n "${VYSTAVENO_LOCK_FD:-}" ]]; then
     fd="$VYSTAVENO_LOCK_FD"
@@ -111,13 +115,13 @@ acquire_ops_lock() {
     [[ -e "$fd_path" ]] || die "Předaný file descriptor zámku neexistuje."
     target="$(canonical_path "$(readlink "$fd_path")")"
     [[ "$target" == "$(canonical_path "$LOCK_FILE")" ]] || die "Předaný file descriptor nepatří provoznímu zámku."
-    flock -n "$fd" || die "Jiná záloha nebo deploy už běží."
+    flock -w "$wait_seconds" "$fd" || die "Jiná záloha nebo deploy běží déle než $wait_seconds s."
     return
   fi
 
   fd=9
   exec 9>"$LOCK_FILE"
-  flock -n "$fd" || die "Jiná záloha nebo deploy už běží."
+  flock -w "$wait_seconds" "$fd" || die "Jiná záloha nebo deploy běží déle než $wait_seconds s."
   VYSTAVENO_LOCK_FD="$fd"
   export VYSTAVENO_LOCK_FD
 }

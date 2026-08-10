@@ -15,7 +15,7 @@ PING_URL="${VYSTAVENO_MONITOR_PING_URL:-}"
 MAX_BACKUP_AGE_SECONDS="${VYSTAVENO_MAX_BACKUP_AGE_SECONDS:-108000}"
 MAX_RESTORE_CHECK_AGE_SECONDS="${VYSTAVENO_MAX_RESTORE_CHECK_AGE_SECONDS:-691200}"
 MIN_DISK_FREE_PERCENT="${VYSTAVENO_MIN_DISK_FREE_PERCENT:-10}"
-# archive_timeout je 300 s, takže i tichý provoz musí odeslat segment dávno pod tímhle limitem.
+# Jak dlouho smí hotový WAL segment čekat ve frontě na archivaci (archive_timeout je 300 s).
 MAX_WAL_ARCHIVE_AGE_SECONDS="${VYSTAVENO_MAX_WAL_ARCHIVE_AGE_SECONDS:-1800}"
 MAX_WAL_DIR_BYTES="${VYSTAVENO_MAX_WAL_DIR_BYTES:-2147483648}"
 REPLICA_ENABLED="${VYSTAVENO_REPLICA_ENABLED:-0}"
@@ -82,14 +82,16 @@ if [[ "${VYSTAVENO_HEALTH_CHECK_COMPOSE:-1}" == "1" ]]; then
 
   # Archivace WAL je podmínka PITR a je to TICHÁ porucha: databáze jede dál, ale nearchivovaný WAL se hromadí
   # v pg_wal a při zaplněném disku se PostgreSQL zastaví. Hlídáme poslední pokus, stáří archivu i objem pg_wal.
-  archiver="$(compose exec -T db psql -U vystaveno -d vystaveno -Atc "select case when last_failed_time is not null and (last_archived_time is null or last_failed_time > last_archived_time) then 'failing' else 'ok' end || '|' || coalesce(extract(epoch from now() - last_archived_time)::bigint::text, '-1') from pg_stat_archiver;" | tr -d '\r')" ||
+  # Měří se FRONTA (pg_wal/archive_status/*.ready), ne stáří poslední archivace: na tiché databázi
+  # PostgreSQL segment nepřepíná, takže „poslední archivovaný WAL" legitimně stárne a starý test
+  # kvůli tomu hlásil poplach každých 5 minut. Prázdná fronta = není co archivovat = v pořádku.
+  archiver="$(compose exec -T db psql -U vystaveno -d vystaveno -Atc "select case when last_failed_time is not null and (last_archived_time is null or last_failed_time > last_archived_time) then 'failing' else 'ok' end || '|' || (select coalesce(max(extract(epoch from now() - (pg_stat_file('pg_wal/archive_status/' || name)).modification))::bigint, 0) from pg_ls_dir('pg_wal/archive_status') name where name like '%.ready') from pg_stat_archiver;" | tr -d '\r')" ||
     fail_monitor "Nelze přečíst stav archivace WAL"
   archiver_state="${archiver%%|*}"
-  archived_age="${archiver##*|}"
+  pending_age="${archiver##*|}"
   [[ "$archiver_state" == "ok" ]] || fail_monitor "Archivace WAL selhává — obnova na konkrétní čas by nebyla možná"
-  [[ "$archived_age" =~ ^-?[0-9]+$ ]] || fail_monitor "Nelze zjistit stáří posledního archivovaného WAL"
-  ((archived_age >= 0)) || fail_monitor "PostgreSQL zatím nearchivoval žádný WAL segment"
-  ((archived_age <= MAX_WAL_ARCHIVE_AGE_SECONDS)) || fail_monitor "Poslední archivovaný WAL je starší než povolený limit"
+  [[ "$pending_age" =~ ^[0-9]+$ ]] || fail_monitor "Nelze zjistit stáří nearchivovaného WAL"
+  ((pending_age <= MAX_WAL_ARCHIVE_AGE_SECONDS)) || fail_monitor "WAL čeká na archivaci déle než povolený limit ($pending_age s)"
 
   wal_bytes="$(compose exec -T db psql -U vystaveno -d vystaveno -Atc 'select coalesce(sum(size), 0)::bigint from pg_ls_waldir();' | tr -d '\r')" ||
     fail_monitor "Nelze zjistit velikost adresáře pg_wal"

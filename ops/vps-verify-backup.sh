@@ -89,7 +89,11 @@ archive_mode = off
 EOF
 
   docker volume create "$PITR_VOLUME" >/dev/null
-  docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges \
+  # Rozbalení base zálohy běží v kontejneru jako root: bez těchhle tří schopností NEPŘEČTE zálohu
+  # (0600 vlastní ubuntu) a neumí PGDATA přepsat na uid 70. Zbytek schopností zůstává odebraný.
+  docker run --rm --network none --cap-drop ALL \
+    --cap-add CHOWN --cap-add DAC_OVERRIDE --cap-add FOWNER \
+    --security-opt no-new-privileges \
     -v "$PITR_VOLUME:/target" -v "$BACKUP_DIR:/backup:ro" -v "$pitr_conf_dir:/conf:ro" \
     "$HELPER_IMAGE" sh -ec 'tar -C /target -xzf /backup/basebackup.tar.gz
 cat /conf/recovery.conf >>/target/postgresql.auto.conf

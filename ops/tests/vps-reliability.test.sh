@@ -137,6 +137,8 @@ if [[ "${1:-}" == "compose" ]]; then
         printf '%s\n' 'fixture-postgresql-basebackup'
       elif [[ "$*" == *"to_char(now()"* ]]; then
         printf '%s\n' '2026-07-11 12:00:00'
+      elif [[ "$*" == *"pg_current_xact_id"* ]]; then
+        printf '%s\n' '4242'
       elif [[ "$*" == *"pg_switch_wal"* ]]; then
         printf '%s\n' '0/3000000'
       elif [[ "$*" == *"last_archived_time >"* ]]; then
@@ -473,7 +475,7 @@ test_backup_lock_failure() {
   if run_backup 0 success success 1 >"$TMP_DIR/lock-failure.out" 2>&1; then
     fail "backup unexpectedly ignored an occupied lock"
   fi
-  assert_contains "$TMP_DIR/lock-failure.out" 'Jiná záloha nebo deploy už běží'
+  assert_contains "$TMP_DIR/lock-failure.out" 'Jiná záloha nebo deploy běží déle než'
   [[ ! -e "$backup_root/20260711T120000Z" ]] || fail "locked backup published data"
   [[ ! -s "$DOCKER_LOG" ]] || fail "locked backup reached Docker"
 }

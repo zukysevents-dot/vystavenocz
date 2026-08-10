@@ -220,6 +220,10 @@ pitr_target="$(compose exec -T db psql -U vystaveno -d vystaveno -Atc \
   "select to_char(now() at time zone 'UTC', 'YYYY-MM-DD HH24:MI:SS')" | tr -d '\r')"
 [[ "$pitr_target" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9]{2}:[0-9]{2}:[0-9]{2}$ ]] ||
   die "Nepodařilo se zjistit čas databáze pro PITR."
+# Obnova se zastaví až na commit záznamu s časem >= cíl. Tichá databáze po cíli nic nezapíše, obnova by
+# došla na konec WAL a skončila „recovery ended before configured recovery target was reached" — proto
+# jedna prázdná transakce: dá obnově prokazatelný bod zastavení hned za fixovaným cílem.
+compose exec -T db psql -U vystaveno -d vystaveno -Atc 'select pg_current_xact_id()' >/dev/null
 compose exec -T db psql -U vystaveno -d vystaveno -Atc 'select pg_switch_wal()' >/dev/null
 wal_archived=0
 for _ in $(seq 1 30); do
