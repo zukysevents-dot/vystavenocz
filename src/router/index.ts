@@ -690,4 +690,20 @@ router.beforeEach((to) => {
   return true
 })
 
+// Routy jsou lazy-loaded (per-page chunk). Otevřená karta na mobilu přežívá dny — po dalším
+// deploy najde starý bundle na nový hashovaný chunk, který už na serveru není (404), a klik
+// (např. na koncept faktury z Přehledu) tiše nic neudělá. Jeden automatický reload dotáhne
+// aktuální verzi; sessionStorage guard brání smyčce, kdyby cíl fakt neexistoval.
+router.onError((error, to) => {
+  const isChunkLoadError =
+    /failed to fetch dynamically imported module|error loading dynamically imported module|importing a module script failed/i.test(
+      error.message,
+    )
+  if (!isChunkLoadError) return
+  const key = 'vystaveno.chunk-reload-retried'
+  if (sessionStorage.getItem(key) === to.fullPath) return
+  sessionStorage.setItem(key, to.fullPath)
+  window.location.assign(to.fullPath)
+})
+
 export default router
