@@ -54,6 +54,14 @@ services:
       OAuth__Google__ClientId: ${OAUTH_GOOGLE_CLIENT_ID:-}
       OAuth__Google__ClientSecret: ${OAUTH_GOOGLE_CLIENT_SECRET:-}
       OAuth__RedirectUri: ${OAUTH_REDIRECT_URI:-}
+      # Rate limit. Festival má všechny bary za JEDNOU veřejnou IP, proto se přihlášený provoz počítá
+      # na firmu (ne na IP) a jde doladit bez rebuildu. Výchozí hodnoty stačí i na velkou akci —
+      # 3000/min je celofiremní strop a 120/min pokryje střídání obsluhy PINem na sdílených terminálech.
+      # POZOR: limity jsou za MINUTU, ne za hodinu. Snižovat je nemá smysl, tohle je pojistka proti
+      # rozběhlému klientovi. Limit `auth` (hádání hesel) tu ZÁMĚRNĚ není — heslové přihlášení nemá
+      # zámek účtu, takže per-IP limit je jeho jediná ochrana a nesmí se kvůli provozu povolovat.
+      RateLimit__Company: ${RATE_LIMIT_COMPANY:-3000}
+      RateLimit__Pin: ${RATE_LIMIT_PIN:-120}
       # Web je same-origin přes nginx; desktop (Tauri) volá cross-origin → povol jeho originy (ops).
       Cors__AllowedOrigins__0: 'tauri://localhost'
       Cors__AllowedOrigins__1: 'http://tauri.localhost'

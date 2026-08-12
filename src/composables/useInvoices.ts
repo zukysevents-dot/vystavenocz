@@ -114,7 +114,11 @@ export function useInvoices() {
     try {
       // API režim: list vrací backend DTO (summary) → přemapuj na FE Invoice.
       // Mock režim: localStorage už drží FE tvar, jde rovnou do storu.
-      const raw = await api.list()
+      // `listAll()` (ne `list()`): Účtárna, Pohledávky i nabídka období v DPH nad tímhle seznamem
+      // AGREGUJÍ, takže strop jedné stránky (100) je tiše zkreslí. Firma s víc než 100 doklady
+      // dostala neúplný účetní export a podhodnocené pohledávky — a když prvních 100 byly koncepty,
+      // Účtárna tvrdila „Žádné doklady k exportu" a export nešel spustit vůbec.
+      const raw = await api.listAll()
       store.invoices = isApiMode()
         ? (raw as unknown as InvoiceApiResponse[]).map(invoiceFromApi)
         : raw

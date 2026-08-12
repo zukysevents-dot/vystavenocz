@@ -310,3 +310,23 @@ test('nový prodej dostane NOVÝ idempotency klíč (dva různé nákupy se nesl
   expect(keys[0]).toBeTruthy()
   expect(keys[1]).not.toBe(keys[0])
 })
+
+// Sleva mimo rozsah: součty se ořezávaly vždycky, ale POLE si nechalo neplatnou hodnotu,
+// takže pokladní viděla „150 %" a účtovala 100 % (a „−50 %" = žádná sleva). Pole teď říká pravdu.
+test('sleva mimo rozsah 0–100 se v poli srovná na to, co se opravdu účtuje', async ({ page }) => {
+  await seedApiMode(page)
+  await dismissCookies(page)
+  await routeApi(page, { failFirstSale: false })
+
+  await page.goto('/app/pokladna')
+  await addPivo(page, 1)
+
+  const discount = page.getByLabel('Sleva na účet v procentech')
+  await discount.fill('150')
+  await discount.blur()
+  await expect(discount).toHaveValue('100')
+
+  await discount.fill('-50')
+  await discount.blur()
+  await expect(discount).toHaveValue('0')
+})

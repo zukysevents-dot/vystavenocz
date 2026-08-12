@@ -10,7 +10,12 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: 0,
-  workers: 4,
+  // 1 worker, ne 4: POS suity (08/09) ověřují „vznikl PRÁVĚ JEDEN prodej" proti CELOFIREMNÍMU
+  // počtu `GET /sales` a berou nejnovější prodej jako svůj (`items[0]`). Souběžný worker do téže
+  // demo firmy prodej přidá — a druhý test pak odstornuje cizí prodej, takže padají náhodně měnící
+  // se testy s hláškami typu „odmítnutá platba nesmí založit prodej". Sériově prochází celá suita
+  // (ověřeno). Stejný důvod, proč persistence i personas jedou na 2 workerech.
+  workers: 1,
   timeout: 60_000,
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'test-results/audit-report' }]],
   use: {

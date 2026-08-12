@@ -221,9 +221,12 @@
 
   --due: #ffb020;
 
-  /* L 0.55: bílý text (badge „po splatnosti") musí i v dark theme splnit WCAG AA 4.5:1 (axe serious) */
-  --destructive: oklch(0.55 0.22 25);
-  --destructive-foreground: #ffffff;
+  /* Na inku má červená DVĚ role a jedna hodnota je splnit nemůže: `text-destructive` (127 míst —
+     nízká zásoba, po splatnosti, storna) leží NA tmavém pozadí, `bg-destructive` je pozadí POD
+     textem. Tmavá L 0.55 dávala textu jen 3.4:1 (axe serious na /app/zasoby). Světlejší tón splní
+     obě role, protože foreground se přepne na ink — stejně jako u --coral a --success výš. */
+  --destructive: oklch(0.72 0.17 25);
+  --destructive-foreground: #0a0411;
 
   --border: color-mix(in srgb, #d7b8ff 14%, transparent);
   --input: color-mix(in srgb, #d7b8ff 16%, transparent);
@@ -464,8 +467,17 @@
   }
 }
 
-/* Tisk účtenky (termo 80 mm) — schová appku, zobrazí jen .receipt-printable. */
+/* Tisk účtenky (termo 80 mm) — schová appku, zobrazí jen .receipt-printable.
+   #app se schová přes display:none (ne jen visibility), jinak jeho výška zůstane
+   v dokumentu a tiskne se navíc prázdná stránka; @page zúží papír na 80 mm. */
 @media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+  #app {
+    display: none !important;
+  }
   body * {
     visibility: hidden;
   }
