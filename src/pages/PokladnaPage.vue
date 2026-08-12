@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import {
   Camera,
@@ -24,9 +24,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -73,7 +75,7 @@ import { useAuthStore } from '@/stores/auth'
 import { toast } from '@/components/ui/sonner'
 import type { Category, DailySalesSummary, PaymentMethod, Product, Sale } from '@/lib/types'
 
-const { products, load } = useProducts()
+const { products, load, create: createProduct } = useProducts()
 const categoriesApi = useCategories()
 const { locations, load: loadLocations } = useLocations()
 const sales = useSales()
@@ -441,6 +443,57 @@ async function settleQueue(): Promise<void> {
     toast.error(
       `${summary.failed} účtenek server odmítl. Zůstávají ve frontě a potřebují rozhodnutí vedoucího.`,
     )
+  }
+}
+
+/**
+ * Rychlé založení položky přímo od pokladny — bar za provozu zjistí, že v ceníku něco chybí,
+ * a nemá čas odcházet do katalogu. Stačí název a cena; zbytek (kód, kategorie, sklad) se doplní
+ * později v Produktech. Katalog smí měnit jen vedení (backend: catalog.manage), proto je akce
+ * skrytá obsluze — jinak by na ni spadla chyba přístupu až po vyplnění formuláře.
+ */
+const canManageCatalog = computed(() => auth.hasRole('Owner', 'Admin', 'Manager'))
+const quickAddOpen = ref(false)
+const quickAddSubmitting = ref(false)
+const quickAddForm = reactive({ name: '', salePrice: 0, vatRate: 21 })
+const QUICK_ADD_VAT_RATES = [0, 12, 21]
+
+watch(quickAddOpen, (open) => {
+  if (open) Object.assign(quickAddForm, { name: '', salePrice: 0, vatRate: 21 })
+})
+
+async function submitQuickAdd() {
+  const name = quickAddForm.name.trim()
+  if (!name) {
+    toast.error('Zadejte název položky.')
+    return
+  }
+  quickAddSubmitting.value = true
+  try {
+    const created = await createProduct({
+      name,
+      sku: '',
+      ean: null,
+      salePrice: Number(quickAddForm.salePrice) || 0,
+      vatRate: quickAddForm.vatRate,
+      purchasePrice: null,
+      minQuantity: 0,
+      categoryId: selectedCat.value || null,
+      allergens: [],
+      productKind: 'Standard',
+    })
+    quickAddOpen.value = false
+    addToCart(created) // rovnou na účtenku — kvůli tomu se položka zakládá uprostřed prodeje
+    void syncOfflineCatalog() // ať novinka přežije i výpadek sítě
+  } catch (e) {
+    toast.error(
+      e instanceof ApiError && e.message
+        ? e.message
+        : 'Položku se nepodařilo uložit. Zkontrolujte připojení a zkuste to znovu.',
+    )
+    console.error(e)
+  } finally {
+    quickAddSubmitting.value = false
   }
 }
 
@@ -997,10 +1050,15 @@ function saleTime(iso: string): string {
         >
           <Package class="h-10 w-10" />
           <p class="mt-3 font-semibold text-foreground">Zatím žádné produkty</p>
-          <p class="mt-1 text-sm">Nejdřív přidejte produkty do katalogu.</p>
-          <Button as-child variant="coral" class="mt-4">
-            <RouterLink to="/app/sklad"><Plus class="h-4 w-4" /> Přidat produkty</RouterLink>
-          </Button>
+          <p class="mt-1 text-sm">Přidejte první položku — stačí název a cena.</p>
+          <div class="mt-4 flex flex-wrap justify-center gap-2">
+            <Button v-if="canManageCatalog" variant="coral" @click="quickAddOpen = true">
+              <Plus class="h-4 w-4" /> Nová položka
+            </Button>
+            <Button as-child variant="outline">
+              <RouterLink to="/app/sklad">Otevřít katalog</RouterLink>
+            </Button>
+          </div>
         </div>
         <template v-else>
           <div class="mb-3 rounded-xl border border-border bg-muted/30 p-3">
@@ -1034,12 +1092,24 @@ function saleTime(iso: string): string {
             <label class="mb-1.5 flex items-center gap-1.5 text-sm font-medium" for="pos-search">
               <Search class="h-4 w-4 text-muted-foreground" /> Hledat produkt
             </label>
-            <Input
-              id="pos-search"
-              v-model="productSearch"
-              autocomplete="off"
-              placeholder="Název, skladový nebo čárový kód"
-            />
+            <div class="flex gap-2">
+              <Input
+                id="pos-search"
+                v-model="productSearch"
+                autocomplete="off"
+                placeholder="Název, skladový nebo čárový kód"
+                class="flex-1"
+              />
+              <Button
+                v-if="canManageCatalog"
+                type="button"
+                variant="outline"
+                class="shrink-0"
+                @click="quickAddOpen = true"
+              >
+                <Plus class="h-4 w-4" /> Nová položka
+              </Button>
+            </div>
           </div>
 
           <div v-if="categories.length" class="mb-3 flex flex-wrap gap-2">
@@ -1519,5 +1589,62 @@ function saleTime(iso: string): string {
       description="Namiř čárový kód na kameru — položka se přidá na účtenku automaticky."
       @detected="handleCode"
     />
+
+    <!-- Rychlé založení položky za provozu: název + cena, zbytek doplní vedení později v Produktech. -->
+    <Dialog v-model:open="quickAddOpen">
+      <DialogContent class="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Nová položka</DialogTitle>
+          <DialogDescription>
+            Stačí název a cena. Položka se uloží do katalogu a rovnou naskočí na účtenku.
+          </DialogDescription>
+        </DialogHeader>
+        <form class="space-y-4" @submit.prevent="submitQuickAdd">
+          <div class="space-y-2">
+            <Label for="pos-quick-name">Název *</Label>
+            <Input
+              id="pos-quick-name"
+              v-model="quickAddForm.name"
+              required
+              autocomplete="off"
+              placeholder="Pivo 0,5"
+            />
+          </div>
+          <div class="space-y-2">
+            <Label for="pos-quick-price">Cena vč. DPH (Kč)</Label>
+            <Input
+              id="pos-quick-price"
+              v-model.number="quickAddForm.salePrice"
+              type="number"
+              inputmode="decimal"
+              :min="0"
+              step="0.01"
+            />
+          </div>
+          <div class="space-y-2">
+            <Label>Sazba DPH</Label>
+            <div class="flex gap-2">
+              <Button
+                v-for="r in QUICK_ADD_VAT_RATES"
+                :key="r"
+                type="button"
+                :variant="quickAddForm.vatRate === r ? 'coral' : 'outline'"
+                class="flex-1"
+                @click="quickAddForm.vatRate = r"
+              >
+                {{ r }} %
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" @click="quickAddOpen = false">Zrušit</Button>
+            <Button type="submit" variant="coral" :disabled="quickAddSubmitting">
+              <Loader2 v-if="quickAddSubmitting" class="h-4 w-4 animate-spin" />
+              Přidat na účtenku
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
