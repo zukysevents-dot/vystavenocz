@@ -47,28 +47,22 @@ const isDesktopApp = '__TAURI_INTERNALS__' in window
             </Button>
           </div>
 
-          <!-- Windows build zatím nemáme: Tauri nekompiluje napříč platformami, takže .exe musí
-               vzniknout na Windows stroji. Do té doby tu NESMÍ být odkaz ke stažení — vedl by
-               na 404 a tvářil se, že aplikace existuje. -->
-          <div class="flex flex-col rounded-2xl border border-dashed border-border p-6">
+          <!-- Instalátor staví GitHub Actions na Windows runneru (.github/workflows/build-windows.yml
+               v repu vystaveno-desktop) — Tauri nekompiluje napříč platformami, na Macu .exe nevznikne. -->
+          <div class="flex flex-col rounded-2xl border border-border bg-background p-6">
             <div class="flex items-center gap-3">
-              <Monitor class="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+              <Monitor class="h-5 w-5 text-foreground" aria-hidden="true" />
               <h3 class="font-display text-lg font-bold text-foreground">Windows</h3>
-              <span
-                class="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
-              >
-                Připravujeme
-              </span>
             </div>
             <p class="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
-              Na Windows zatím instalátor nemáme. V prohlížeči funguje Vystaveno beze zbytku — a
-              když nám napíšete, ozveme se, jakmile bude verze pro Windows hotová.
+              Pro 64bitové Windows 10 a 11. Instalátor není podepsaný, takže SmartScreen napoprvé
+              ukáže varování — rozbalte
+              <span class="whitespace-nowrap">Více informací → Přesto spustit</span>.
             </p>
-            <Button variant="outline" size="lg" class="mt-5 w-full" as-child>
-              <a
-                href="mailto:patrik@vystaveno.cz?subject=Z%C3%A1jem%20o%20Vystaveno%20pro%20Windows"
-              >
-                Dejte mi vědět
+            <Button variant="default" size="lg" class="mt-5 w-full" as-child>
+              <a href="/download/vystaveno-windows.exe" download>
+                <Download class="h-4 w-4" />
+                Stáhnout pro Windows
               </a>
             </Button>
           </div>
