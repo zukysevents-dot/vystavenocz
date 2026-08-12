@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { toast } from '@/components/ui/sonner'
 import { useCompanyStore } from '@/stores/company'
 import { useAuthStore } from '@/stores/auth'
+import { ApiError } from '@/lib/http'
 import type { Company } from '@/lib/types'
 import { BUSINESS_PROFILES, saveBusinessProfile, type BusinessProfileId } from '@/lib/modules'
 import { upsellFor } from '@/lib/entitlements'
@@ -77,9 +78,15 @@ async function onSubmit() {
   }
   try {
     await companyStore.save(payload) // API režim: založí firmu (POST /companies) + uloží nastavení
-  } catch {
+  } catch (e) {
     submitting.value = false
-    toast.error('Profil firmy se nepodařilo uložit. Zkuste to znovu.')
+    // Server umí říct KTERÉ pole vadí (typicky „Neplatné IČO.“). Obecná hláška ho zahazovala,
+    // takže uživatel zůstal na formuláři a nevěděl, co opravit.
+    toast.error(
+      e instanceof ApiError && e.message
+        ? e.message
+        : 'Profil firmy se nepodařilo uložit. Zkuste to znovu.',
+    )
     return
   }
 

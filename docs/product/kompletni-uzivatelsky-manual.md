@@ -119,7 +119,7 @@ Otevřete Produkty a sklad → Produkty.
 
 ### 4.1 Samostatný sklad bez pokladny
 
-Pokud zboží jen přijímáte, vydáváte nebo převádíte, nepotřebujete pokladnu, menu ani prodejní cenu. U každé položky vyplňte hlavně název a jedinečný skladový kód; čárový kód a nákupní cenu doplňte, pokud je používáte. Prodejní cenu nastavte až ve chvíli, kdy položku prodáváte.
+Pokud zboží jen přijímáte, vydáváte nebo převádíte, nepotřebujete pokladnu, menu ani prodejní cenu. U každé položky vyplňte hlavně název; skladový kód je nepovinný, ale ve skladovém provozu se vyplatí — pak podle něj zboží najdete. Musí být jedinečný. Čárový kód a nákupní cenu doplňte, pokud je používáte. Prodejní cenu nastavte až ve chvíli, kdy položku prodáváte.
 
 Postup pro první den skladu:
 
@@ -147,10 +147,15 @@ Postup pro první den skladu:
 2. Vyplňte název, například „Svíčková“.
 3. Zadejte prodejní cenu včetně DPH.
 4. Vyberte sazbu DPH.
-5. Zadejte jedinečný skladový kód.
+5. Skladový kód je nepovinný — vyplňte ho, jen pokud si zboží podle kódu vedete. Musí být jedinečný.
 6. Čárový kód vyplňte, pokud produkt skenujete.
-7. Vyberte kategorii.
+7. Kategorie je nepovinná. Bez ní se položka na pokladně zobrazí pod volbou Vše.
 8. Podle potřeby doplňte alergeny a uložte.
+
+> **Rychlá položka od pokladny:** když za provozu zjistíte, že v ceníku něco chybí, použijte na
+> Pokladně tlačítko **Nová položka**. Stačí název a cena — položka se uloží do katalogu a rovnou
+> naskočí na účtenku. Kód, kategorii a sklad doplníte později v Produktech. Akci vidí majitel,
+> správce a vedoucí; obsluha katalog měnit nesmí.
 
 ### 4.2 Kategorie menu
 
