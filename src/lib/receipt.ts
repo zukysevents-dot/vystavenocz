@@ -10,7 +10,6 @@ export interface ReceiptInfo {
   receiptNumber: string
   dateTime: string
   table?: string
-  customerName?: string
   items: ReceiptLine[]
   discountPercent?: number
   discountAmount?: number
@@ -37,7 +36,6 @@ interface BuildReceiptArgs {
   /** Zdroj čísla účtenky (id prodeje/účtu) — zkrátí se na čitelný kód. */
   id: string
   table?: string
-  customerName?: string
   cashReceived?: number | null
   cashChange?: number | null
   loyaltyEarnedPoints?: number
@@ -55,7 +53,6 @@ export function buildReceipt({
   method,
   id,
   table,
-  customerName,
   cashReceived,
   cashChange,
   loyaltyEarnedPoints,
@@ -79,7 +76,6 @@ export function buildReceipt({
       minute: '2-digit',
     }),
     table,
-    customerName: customerName || undefined,
     items,
     discountPercent: discountPercent || undefined,
     discountAmount: discountAmount || undefined,

@@ -98,13 +98,23 @@ describe('summarizeSales', () => {
 describe('buildVatBreakdown', () => {
   it('seskupí míchané sazby (12 + 21), seřadí sestupně a součty sedí', () => {
     const rows = buildVatBreakdown([
+      // Součty prodeje musí sedět na řádky (bez slevy na účet) — jinak by fixture popisovala stav,
+      // který server nikdy nevrátí.
       sale({
+        totalNet: 200,
+        totalVat: 33,
+        total: 233,
         items: [
           line({ vatRate: 21, lineNet: 100, lineVat: 21, lineTotal: 121 }),
           line({ vatRate: 12, lineNet: 100, lineVat: 12, lineTotal: 112 }),
         ],
       }),
-      sale({ items: [line({ vatRate: 12, lineNet: 50, lineVat: 6, lineTotal: 56 })] }),
+      sale({
+        totalNet: 50,
+        totalVat: 6,
+        total: 56,
+        items: [line({ vatRate: 12, lineNet: 50, lineVat: 6, lineTotal: 56 })],
+      }),
     ])
     expect(rows).toHaveLength(2)
     // sestupně dle sazby → 21 první
@@ -115,6 +125,30 @@ describe('buildVatBreakdown', () => {
     expect(rows[1].net).toBe(150)
     expect(rows[1].vat).toBe(18)
     expect(rows[1].gross).toBe(168)
+  })
+
+  it('sleva na účet se rozdělí mezi sazby a součet sedí na prodej', () => {
+    // Regrese: řádky nesou částky PŘED slevou na účet (tu strhává server až na úrovni prodeje).
+    // Prostý součet řádků nadhodnocoval základ i daň, takže Uzávěrka u otevřeného dne ukazovala
+    // vyšší DPH, než se reálně vybralo — a než pak ukázal zavřený Z-report.
+    const rows = buildVatBreakdown([
+      sale({
+        discountPercent: 10,
+        totalNet: 180,
+        totalVat: 29.7,
+        total: 209.7,
+        items: [
+          line({ vatRate: 21, lineNet: 100, lineVat: 21, lineTotal: 121 }),
+          line({ vatRate: 12, lineNet: 100, lineVat: 12, lineTotal: 112 }),
+        ],
+      }),
+    ])
+
+    expect(round(rows.reduce((a, r) => a + r.net, 0))).toBe(180)
+    expect(round(rows.reduce((a, r) => a + r.vat, 0))).toBe(29.7)
+    expect(round(rows.reduce((a, r) => a + r.gross, 0))).toBe(209.7)
+    expect(rows[0].net).toBe(90)
+    expect(rows[1].net).toBe(90)
   })
 
   it('ignoruje stornované prodeje', () => {

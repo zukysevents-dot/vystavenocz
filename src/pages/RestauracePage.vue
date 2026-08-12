@@ -1467,7 +1467,6 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
       method,
       id: sale?.id ?? order.id,
       table: tableName,
-      customerName: selectedCustomer.value?.name,
       cashReceived: sale?.cashReceived ?? cashReceived,
       cashChange: change,
       loyaltyEarnedPoints: sale?.earnedPoints ?? earnedPointsPreview.value,
@@ -2297,6 +2296,7 @@ const currentOrderElapsed = computed(() =>
                   max="100"
                   class="h-12 pr-10 text-right text-base"
                   :disabled="busy"
+                  @change="accountDiscountPercent = clampPercent(accountDiscountPercent)"
                 />
                 <span
                   class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
@@ -2315,6 +2315,7 @@ const currentOrderElapsed = computed(() =>
                   min="0"
                   class="h-12 pr-12 text-right text-base"
                   :disabled="busy"
+                  @change="tipAmount = clampAmount(tipAmount)"
                 />
                 <span
                   class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"

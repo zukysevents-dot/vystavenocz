@@ -784,7 +784,6 @@ async function pay(method: PaymentMethod, cashReceived: number | null = null): P
       total: sale.total,
       method,
       id: sale.id,
-      customerName: selectedCustomer.value?.name,
       cashReceived: sale.cashReceived,
       cashChange: sale.cashChange,
       loyaltyEarnedPoints: sale.earnedPoints,
@@ -1164,6 +1163,7 @@ function saleTime(iso: string): string {
                   class="h-8 w-12 px-1 text-center"
                   title="Sleva v %"
                   aria-label="Sleva v procentech"
+                  @change="line.discountPercent = clampPct(line.discountPercent)"
                 />
                 <span class="ml-0.5 text-xs text-muted-foreground">%</span>
               </div>
@@ -1259,6 +1259,7 @@ function saleTime(iso: string): string {
                 max="100"
                 class="h-8 w-16 px-1 text-center"
                 aria-label="Sleva na účet v procentech"
+                @change="accountDiscountPercent = clampPercent(accountDiscountPercent)"
               />
               <span class="ml-1 text-xs text-muted-foreground">%</span>
             </div>
@@ -1272,6 +1273,7 @@ function saleTime(iso: string): string {
                 min="0"
                 class="h-8 w-20 px-1 text-right"
                 aria-label="Spropitné v Kč"
+                @change="tipAmount = clampAmount(tipAmount)"
               />
               <span class="text-xs text-muted-foreground">Kč</span>
             </div>

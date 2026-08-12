@@ -27,7 +27,6 @@ withDefaults(
     receiptNumber: string
     dateTime: string
     table?: string
-    customerName?: string
     cashier?: string
     items: ReceiptLine[]
     subtotal?: number
@@ -118,9 +117,6 @@ const money = (n: number) =>
       </div>
       <div v-if="table" class="flex justify-between">
         <span>Stůl</span><span>{{ table }}</span>
-      </div>
-      <div v-if="customerName" class="flex justify-between">
-        <span>Zákazník</span><span>{{ customerName }}</span>
       </div>
       <div v-if="cashier" class="flex justify-between">
         <span>Obsluha</span><span>{{ cashier }}</span>

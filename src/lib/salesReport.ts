@@ -101,20 +101,62 @@ export interface VatBreakdownRow {
 }
 
 /**
- * Rozpad DPH z dokončených prodejů: sečte `items[].lineNet/lineVat/lineTotal` seskupené
- * podle `vatRate`. Sazby se berou z dat (nehardcodují se). Řazeno sestupně dle vatRate.
+ * Rozdělí jednu částku mezi sazby poměrem vah; zbytek po zaokrouhlení připadne největší
+ * skupině, aby součet seděl na haléř. Zrcadlí serverový `SaleVatBreakdown.Allocate`.
+ */
+function distribute(weights: number[], target: number): number[] {
+  const sum = weights.reduce((a, w) => a + w, 0)
+  const out = new Array<number>(weights.length).fill(0)
+  if (weights.length === 0) return out
+  if (sum === 0) {
+    out[0] = round2(target)
+    return out
+  }
+  let allocated = 0
+  for (let i = 0; i < weights.length; i++) {
+    out[i] = round2((target * weights[i]) / sum)
+    allocated = round2(allocated + out[i])
+  }
+  const residual = round2(target - allocated)
+  if (residual !== 0) {
+    let largest = 0
+    for (let i = 1; i < weights.length; i++) if (weights[i] > weights[largest]) largest = i
+    out[largest] = round2(out[largest] + residual)
+  }
+  return out
+}
+
+/**
+ * Rozpad DPH z dokončených prodejů podle `vatRate`. Sazby se berou z dat (nehardcodují se),
+ * řazeno sestupně dle vatRate.
+ *
+ * Řádky (`lineNet`/`lineVat`) nesou částky PŘED slevou na celý účet a před uplatněním bodů — ty
+ * snižuje až server na úrovni prodeje. Prostý součet řádků proto nadhodnocoval základ i daň o celou
+ * slevu na účet a Uzávěrka ukazovala u otevřeného dne vyšší DPH, než se reálně vybralo (a než pak
+ * ukázal zavřený Z-report). Rozděluje se tedy skutečné `totalNet`/`totalVat` prodeje poměrem řádků.
  */
 export function buildVatBreakdown(sales: Sale[]): VatBreakdownRow[] {
   const map = new Map<number, { net: number; vat: number; gross: number }>()
   for (const s of sales) {
     if (!isCompleted(s)) continue
-    for (const it of s.items) {
-      const entry = map.get(it.vatRate) ?? { net: 0, vat: 0, gross: 0 }
-      entry.net += it.lineNet
-      entry.vat += it.lineVat
-      entry.gross += it.lineTotal
-      map.set(it.vatRate, entry)
-    }
+
+    const rates = [...new Set(s.items.map((it) => it.vatRate))]
+    const netWeights = rates.map((r) =>
+      s.items.filter((it) => it.vatRate === r).reduce((a, it) => a + it.lineNet, 0),
+    )
+    const vatWeights = rates.map((r) =>
+      s.items.filter((it) => it.vatRate === r).reduce((a, it) => a + it.lineVat, 0),
+    )
+    const nets = distribute(netWeights, s.totalNet)
+    const vats = distribute(vatWeights, s.totalVat)
+
+    rates.forEach((rate, i) => {
+      const entry = map.get(rate) ?? { net: 0, vat: 0, gross: 0 }
+      entry.net += nets[i]
+      entry.vat += vats[i]
+      entry.gross += nets[i] + vats[i]
+      map.set(rate, entry)
+    })
   }
   return [...map.entries()]
     .map(([vatRate, v]) => ({

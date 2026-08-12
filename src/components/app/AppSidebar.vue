@@ -40,6 +40,7 @@ import {
   ClipboardList,
   UserCog,
   Blocks,
+  Handshake,
 } from 'lucide-vue-next'
 import SiteLogo from '@/components/SiteLogo.vue'
 import { Button } from '@/components/ui/button'
@@ -84,6 +85,7 @@ const navIcons = {
   '/app/uctarna': Calculator,
   '/app/dph': Percent,
   '/app/klienti': Users,
+  '/app/crm': Handshake,
   '/app/import': Upload,
   '/app/vernost': Heart,
   '/app/akce-ceny': Percent,
@@ -145,6 +147,7 @@ function sectionForPath(path: string): SidebarSectionId {
       '/app/uctarna',
       '/app/dph',
       '/app/klienti',
+      '/app/crm',
     ].includes(path)
   )
     return 'finance'
