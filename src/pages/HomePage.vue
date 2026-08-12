@@ -7,6 +7,7 @@ import InlineCta from '@/components/landing/InlineCta.vue'
 import AudienceSection from '@/components/landing/AudienceSection.vue'
 import RapidUpdatesShort from '@/components/landing/RapidUpdatesShort.vue'
 import RoadmapSection from '@/components/landing/RoadmapSection.vue'
+import DownloadSection from '@/components/landing/DownloadSection.vue'
 import PricingTeaser from '@/components/landing/PricingTeaser.vue'
 import CtaSection from '@/components/landing/CtaSection.vue'
 </script>
@@ -27,6 +28,8 @@ import CtaSection from '@/components/landing/CtaSection.vue'
   <RapidUpdatesShort />
   <!-- Roadmapa — poctivě: co je hotové, co připravujeme. -->
   <RoadmapSection />
+  <!-- Aplikace na počítač — až po roadmapě, ať je jasné, že je to nadstavba nad webem, ne jiný produkt. -->
+  <DownloadSection />
   <!-- Ceník teaser před závěrečným CTA — cena až po hodnotě/důvěře; detail je na /cenik. -->
   <PricingTeaser />
   <CtaSection />
