@@ -44,7 +44,7 @@ import {
 import { useProducts, type ProductInput } from '@/composables/useProducts'
 import { useCategories } from '@/composables/useCategories'
 import { useAuthStore } from '@/stores/auth'
-import { isApiMode } from '@/lib/http'
+import { ApiError, isApiMode } from '@/lib/http'
 import { formatCZK } from '@/lib/invoice'
 import { ALLERGENS, formatAllergenCodes, normalizeAllergens } from '@/lib/allergens'
 import { toast } from '@/components/ui/sonner'
@@ -125,7 +125,7 @@ const filtered = computed(() => {
   const q = search.value.toLowerCase().trim()
   return products.value.filter((p) => {
     if (!q) return true
-    return p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)
+    return p.name.toLowerCase().includes(q) || (p.sku ?? '').toLowerCase().includes(q)
   })
 })
 
@@ -198,10 +198,6 @@ async function onSubmit() {
     toast.error('Zadejte název produktu.')
     return
   }
-  if (!form.sku.trim()) {
-    toast.error('Zadejte skladový kód produktu.')
-    return
-  }
   submitting.value = true
   const payload: ProductInput = {
     name: form.name.trim(),
@@ -225,7 +221,14 @@ async function onSubmit() {
     }
     dialogOpen.value = false
   } catch (e) {
-    toast.error('Produkt se nepodařilo uložit. Zkontrolujte připojení a zkuste to znovu.')
+    // Nejčastější reálný důvod je obsazený skladový kód — obecná hláška o připojení uživatele mátla.
+    if (e instanceof ApiError && e.status === 409) {
+      toast.error('Tento skladový kód už má jiný produkt. Změňte ho, nebo pole nechte prázdné.')
+    } else if (e instanceof ApiError && e.message) {
+      toast.error(e.message)
+    } else {
+      toast.error('Produkt se nepodařilo uložit. Zkontrolujte připojení a zkuste to znovu.')
+    }
     console.error(e)
   } finally {
     submitting.value = false
@@ -313,7 +316,7 @@ async function onDelete() {
             <div class="min-w-0">
               <div class="break-words font-semibold">{{ p.name }}</div>
               <div class="break-words text-sm text-muted-foreground">
-                {{ p.sku }} • DPH {{ p.vatRate }} %
+                <span v-if="p.sku">{{ p.sku }} • </span>DPH {{ p.vatRate }} %
                 <span v-if="p.allergens?.length">
                   • Alergeny {{ formatAllergenCodes(p.allergens) }}
                 </span>
@@ -380,7 +383,7 @@ async function onDelete() {
         <DialogHeader>
           <DialogTitle>{{ editing ? 'Upravit produkt' : 'Nový produkt' }}</DialogTitle>
           <DialogDescription>
-            Skladový kód je povinný. Prodejní cenu nastavte jen pokud produkt prodáváte.
+            Stačí název. Skladový kód i čárový kód jsou nepovinné.
           </DialogDescription>
         </DialogHeader>
 
@@ -447,8 +450,8 @@ async function onDelete() {
 
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="space-y-2">
-              <Label for="p-sku">Skladový kód *</Label>
-              <Input id="p-sku" v-model="form.sku" required placeholder="ESP" />
+              <Label for="p-sku">Skladový kód</Label>
+              <Input id="p-sku" v-model="form.sku" placeholder="volitelné" />
             </div>
             <div class="space-y-2">
               <Label for="p-ean">Čárový kód</Label>
