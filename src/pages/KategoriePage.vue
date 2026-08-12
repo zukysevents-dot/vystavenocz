@@ -23,7 +23,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useCategories, type CategoryInput } from '@/composables/useCategories'
-import { isApiMode } from '@/lib/http'
+import { ApiError, isApiMode } from '@/lib/http'
 import { toast } from '@/components/ui/sonner'
 import type { Category, CategoryKitchenSection } from '@/lib/types'
 
@@ -118,7 +118,8 @@ async function onSubmit() {
     }
     dialogOpen.value = false
   } catch (e) {
-    toast.error('Uložení kategorie selhalo.')
+    // Obecná hláška zakrývala i důvod, který uživatel umí sám opravit (např. příliš dlouhý název).
+    toast.error(e instanceof ApiError && e.message ? e.message : 'Uložení kategorie selhalo.')
     console.error(e)
   } finally {
     submitting.value = false

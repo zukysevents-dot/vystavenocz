@@ -73,9 +73,26 @@ test.describe('Produkty (katalog)', () => {
     await expect(page.locator('#p-price')).toHaveValue('333.3')
   })
 
-  test('produkt bez skladového kódu se neuloží', async ({ page }) => {
+  // Provoz (bar na festivalu) zakládá položky za pochodu a skladové kódy neřeší — stačí název.
+  test('produkt bez skladového kódu se uloží a přežije reload', async ({ page }) => {
+    const name = unique('E2E Bez SKU')
     await openNewProduct(page)
-    await page.locator('#p-name').fill(unique('E2E Bez SKU'))
+    await page.locator('#p-name').fill(name)
+    await page.locator('#p-price').fill('10')
+
+    const status = await expectWrite(page, 'POST', /\/products$/, () =>
+      page.getByRole('button', { name: 'Přidat produkt' }).click(),
+    )
+    expect(status, 'POST /products').toBeLessThan(300)
+    await expect(toast(page, 'Produkt přidán')).toBeVisible()
+
+    await page.reload()
+    await settle(page)
+    await expect(page.getByText(name).first()).toBeVisible()
+  })
+
+  test('produkt bez názvu se na server neposílá', async ({ page }) => {
+    await openNewProduct(page)
     await page.locator('#p-price').fill('10')
     let posted = false
     page.on('request', (r) => {
@@ -83,7 +100,7 @@ test.describe('Produkty (katalog)', () => {
     })
     await page.getByRole('button', { name: 'Přidat produkt' }).click()
     // Povinné pole hlídá prohlížeč (required) — formulář se neodešle a dialog zůstane otevřený.
-    await expect(page.locator('#p-sku')).toHaveJSProperty('validity.valid', false)
+    await expect(page.locator('#p-name')).toHaveJSProperty('validity.valid', false)
     await expect(page.getByRole('dialog')).toBeVisible()
     expect(posted, 'neúplný produkt se na server neposílá').toBe(false)
   })
