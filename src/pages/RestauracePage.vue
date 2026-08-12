@@ -51,6 +51,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import FullscreenToggle from '@/components/app/FullscreenToggle.vue'
 import PaymentDialog from '@/components/PaymentDialog.vue'
 import ReceiptDialog from '@/components/ReceiptDialog.vue'
 import LoadError from '@/components/app/LoadError.vue'
@@ -1631,6 +1632,10 @@ const currentOrderElapsed = computed(() =>
           <Wifi v-else class="h-4 w-4 text-success" />
           <span class="hidden sm:inline">{{ connectionLabel }}</span>
         </div>
+
+        <!-- Cockpit běží bez sidebaru, takže vlastní přepínač celé obrazovky. Obsluha, která na
+             tabletu začíná rovnou u stolů, se jinam pro něj nedostane. -->
+        <FullscreenToggle class="h-12 w-12" data-pos-target="secondary" />
       </header>
 
       <main class="min-h-0 flex-1 overflow-hidden">

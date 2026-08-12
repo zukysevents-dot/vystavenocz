@@ -45,6 +45,7 @@ import {
 import SiteLogo from '@/components/SiteLogo.vue'
 import { Button } from '@/components/ui/button'
 import ThemeToggle from '@/components/ThemeToggle.vue'
+import FullscreenToggle from '@/components/app/FullscreenToggle.vue'
 import { toast } from '@/components/ui/sonner'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -216,6 +217,7 @@ watch(
   >
     <SiteLogo />
     <div class="flex items-center gap-1">
+      <FullscreenToggle />
       <ThemeToggle />
       <Button variant="ghost" size="icon" aria-label="Otevřít menu" @click="mobileOpen = true">
         <Menu class="h-5 w-5" />
@@ -281,6 +283,7 @@ watch(
         <div class="flex-1 truncate">
           <div class="truncate text-xs font-medium">{{ auth.user?.email }}</div>
         </div>
+        <FullscreenToggle />
         <ThemeToggle />
         <Button variant="ghost" size="icon" title="Odhlásit se" @click="signOut">
           <LogOut class="h-4 w-4" />
@@ -363,6 +366,7 @@ watch(
         <div class="flex-1 truncate">
           <div class="truncate text-xs font-medium">{{ auth.user?.email }}</div>
         </div>
+        <FullscreenToggle />
         <ThemeToggle />
         <Button variant="ghost" size="icon" title="Odhlásit se" @click="signOut">
           <LogOut class="h-4 w-4" />
