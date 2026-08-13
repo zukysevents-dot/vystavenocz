@@ -10,6 +10,21 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
+// Odpověď backendu (PascalCase enumy, `displayName`) — ne FE tvar.
+function apiConnection() {
+  return {
+    id: 'conn-1',
+    providerKey: 'sumup',
+    displayName: 'SumUp — Bar A',
+    mode: 'Sandbox',
+    status: 'WaitingForCredentials',
+    locationId: null,
+    configuredFields: ['merchantCodeRef'],
+    createdAt: '2026-08-13T10:00:00Z',
+    updatedAt: '2026-08-13T10:00:00Z',
+  }
+}
+
 describe('useIntegrations - backend foundation contract', () => {
   it('listTerminalPayments volá stránkovaný endpoint terminálových plateb', async () => {
     vi.mocked(http.get).mockResolvedValue({ items: [], total: 0 } as never)
@@ -91,8 +106,10 @@ describe('useIntegrations - backend foundation contract', () => {
     expect(http.get).toHaveBeenCalledWith('/integrations/payment-provider-connections')
   })
 
-  it('createPaymentProviderConnection posílá metadata bez tajných hodnot', async () => {
-    vi.mocked(http.post).mockResolvedValue({ id: 'conn-1' } as never)
+  // Backend chce `displayName` a `WaitingForCredentials`. Dokud se posílalo FE `name`, vracel server 422
+  // (DisplayName prázdné) a konfiguraci platebního providera NEŠLO v produkci vůbec založit.
+  it('createPaymentProviderConnection překládá název a stav na tvar backendu', async () => {
+    vi.mocked(http.post).mockResolvedValue(apiConnection() as never)
     await useIntegrations().createPaymentProviderConnection({
       providerKey: 'csob',
       name: 'ČSOB terminál Praha',
@@ -103,16 +120,16 @@ describe('useIntegrations - backend foundation contract', () => {
     })
     expect(http.post).toHaveBeenCalledWith('/integrations/payment-provider-connections', {
       providerKey: 'csob',
-      name: 'ČSOB terminál Praha',
+      displayName: 'ČSOB terminál Praha',
       mode: 'sandbox',
-      status: 'awaiting_credentials',
+      status: 'WaitingForCredentials',
       locationId: 'loc-1',
       configuredFields: ['merchantId'],
     })
   })
 
   it('updatePaymentProviderConnection volá PUT s id konfigurace', async () => {
-    vi.mocked(http.put).mockResolvedValue({ id: 'conn-1' } as never)
+    vi.mocked(http.put).mockResolvedValue(apiConnection() as never)
     await useIntegrations().updatePaymentProviderConnection('conn-1', {
       providerKey: 'csob',
       name: 'ČSOB',
@@ -121,10 +138,20 @@ describe('useIntegrations - backend foundation contract', () => {
     })
     expect(http.put).toHaveBeenCalledWith('/integrations/payment-provider-connections/conn-1', {
       providerKey: 'csob',
-      name: 'ČSOB',
+      displayName: 'ČSOB',
       mode: 'production',
       status: 'ready',
+      locationId: null,
+      configuredFields: [],
     })
+  })
+
+  it('odpověď backendu se překládá zpět na tvar frontendu', async () => {
+    vi.mocked(http.get).mockResolvedValue([apiConnection()] as never)
+    const [conn] = await useIntegrations().listPaymentProviderConnections()
+    expect(conn.name).toBe('SumUp — Bar A')
+    expect(conn.mode).toBe('sandbox')
+    expect(conn.status).toBe('awaiting_credentials')
   })
 
   it('deletePaymentProviderConnection ruší konfiguraci podle id', async () => {

@@ -333,9 +333,10 @@ test('nastavení v API režimu ukáže živý stav integrací a stáhne účetn�
   await expect(page.getByText('ČSOB terminál Praha')).toBeVisible() // konfigurace se objeví v seznamu dialogu
 
   // Payload NIKDY nenese tajné hodnoty — jen metadata a checklist názvů připravených polí.
+  // Tvar je backendový (`displayName`), ne frontendový (`name`) — jinak server odmítne celý zápis 422.
   expect(createdConnectionBody).toEqual({
     providerKey: 'csob',
-    name: 'ČSOB terminál Praha',
+    displayName: 'ČSOB terminál Praha',
     mode: 'sandbox',
     status: 'draft',
     locationId: null,
@@ -545,9 +546,10 @@ async function routeCredentialVault(
           {
             id: 'conn-1',
             providerKey: 'csob',
-            name: 'ČSOB terminál',
-            mode: 'sandbox',
-            status: 'awaiting_credentials',
+            // Mock musí odpovídat SKUTEČNÉ odpovědi backendu (displayName + PascalCase stav).
+            displayName: 'ČSOB terminál',
+            mode: 'Sandbox',
+            status: 'WaitingForCredentials',
             locationId: null,
             configuredFields: ['merchantId'],
             requiredCredentialFields: ['apiKeyRef', 'privateKeyRef'],

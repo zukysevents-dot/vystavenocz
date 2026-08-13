@@ -112,8 +112,7 @@ export interface IntegrationSecretsStatus {
   allRequiredPresent: boolean
 }
 
-// Zápisový payload — vědomě BEZ tajných hodnot (jen names v `configuredFields`). Backend endpoint zatím neexistuje;
-// UI je připravené a v testech se mockuje (GET/POST/PUT/DELETE /integrations/payment-provider-connections).
+// Zápisový payload — vědomě BEZ tajných hodnot (jen names v `configuredFields`).
 export interface UpsertPaymentProviderConnectionRequest {
   providerKey: string
   name: string
@@ -174,6 +173,62 @@ export interface IntegrationListQuery<TStatus extends string> {
   status?: TStatus | null
 }
 
+// --- Mapování FE ↔ backend pro konfigurace platebních providerů ---
+// Backend nese `displayName` a stav `WaitingForCredentials`, FE pracuje s `name` a `awaiting_credentials`.
+// Bez tohohle překladu vracel POST/PUT 422 (`DisplayName` prázdné) a konfiguraci nešlo vůbec založit.
+// Stejný vzor má `useVerifiedSigning` pro podpisové konfigurace.
+interface ApiPaymentConnection {
+  id: string
+  providerKey: string
+  displayName: string
+  mode: string
+  status: string
+  locationId: string | null
+  configuredFields: string[]
+  requiredCredentialFields?: string[]
+  storedCredentialFields?: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+function paymentConnectionStatusFromApi(status: string): PaymentConnectionStatus {
+  const normalized = status.toLowerCase()
+  return normalized === 'waitingforcredentials'
+    ? 'awaiting_credentials'
+    : (normalized as PaymentConnectionStatus)
+}
+
+function paymentConnectionStatusToApi(status: PaymentConnectionStatus): string {
+  return status === 'awaiting_credentials' ? 'WaitingForCredentials' : status
+}
+
+function paymentConnectionFromApi(dto: ApiPaymentConnection): PaymentProviderConnection {
+  return {
+    id: dto.id,
+    providerKey: dto.providerKey,
+    name: dto.displayName,
+    mode: dto.mode.toLowerCase() as PaymentConnectionMode,
+    status: paymentConnectionStatusFromApi(dto.status),
+    locationId: dto.locationId ?? null,
+    configuredFields: dto.configuredFields ?? [],
+    requiredCredentialFields: dto.requiredCredentialFields,
+    storedCredentialFields: dto.storedCredentialFields,
+    createdAt: dto.createdAt,
+    updatedAt: dto.updatedAt,
+  }
+}
+
+function paymentConnectionRequestToApi(request: UpsertPaymentProviderConnectionRequest) {
+  return {
+    providerKey: request.providerKey,
+    displayName: request.name,
+    mode: request.mode,
+    status: paymentConnectionStatusToApi(request.status),
+    locationId: request.locationId ?? null,
+    configuredFields: request.configuredFields ?? [],
+  }
+}
+
 export function useIntegrations() {
   function listTerminalPayments(
     query: IntegrationListQuery<TerminalPaymentStatus> & { orderId?: string | null } = {},
@@ -231,28 +286,33 @@ export function useIntegrations() {
   }
 
   // Konfigurace napojení platebních providerů. Payload NIKDY neobsahuje tajné hodnoty (jen checklist `configuredFields`).
-  // Backend endpoint je zatím budoucí — UI je připravené, testy ho mockují.
   function listPaymentProviderConnections(): Promise<PaymentProviderConnection[]> {
-    return http.get<PaymentProviderConnection[]>('/integrations/payment-provider-connections')
+    return http
+      .get<ApiPaymentConnection[]>('/integrations/payment-provider-connections')
+      .then((list) => (list ?? []).map(paymentConnectionFromApi))
   }
 
   function createPaymentProviderConnection(
     request: UpsertPaymentProviderConnectionRequest,
   ): Promise<PaymentProviderConnection> {
-    return http.post<PaymentProviderConnection>(
-      '/integrations/payment-provider-connections',
-      request,
-    )
+    return http
+      .post<ApiPaymentConnection>(
+        '/integrations/payment-provider-connections',
+        paymentConnectionRequestToApi(request),
+      )
+      .then(paymentConnectionFromApi)
   }
 
   function updatePaymentProviderConnection(
     id: string,
     request: UpsertPaymentProviderConnectionRequest,
   ): Promise<PaymentProviderConnection> {
-    return http.put<PaymentProviderConnection>(
-      `/integrations/payment-provider-connections/${id}`,
-      request,
-    )
+    return http
+      .put<ApiPaymentConnection>(
+        `/integrations/payment-provider-connections/${id}`,
+        paymentConnectionRequestToApi(request),
+      )
+      .then(paymentConnectionFromApi)
   }
 
   function deletePaymentProviderConnection(id: string): Promise<void> {
