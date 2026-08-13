@@ -214,7 +214,11 @@ export const useAuthStore = defineStore('auth', () => {
   async function switchCompany(targetCompanyId: string): Promise<boolean> {
     if (!isApiMode() || !user.value) return false
     try {
-      const tokens = await http.post<Tokens>(`/companies/${targetCompanyId}/switch`)
+      // Odpověď je OBALENÁ (`SwitchCompanyResponse { company, tokens }`), ne holý token pár jako
+      // u loginu. Čtení `tokens` napřímo uložilo objekt bez accessToken → requesty odcházely bez
+      // hlavičky Authorization a přepnutí spadlo na 401 „Vyžaduje přihlášení".
+      const { tokens } = await http.post<{ tokens: Tokens }>(`/companies/${targetCompanyId}/switch`)
+      if (!tokens?.accessToken) throw new Error('Server nevrátil přihlašovací tokeny.')
       setTokens(tokens)
       // Data PŘEDCHOZÍ firmy nesmí v nové firmě zůstat ani na chvíli. Místo invalidace desítek storů
       // (jeden zapomenutý = únik cizích dat) zahodíme všechny tenant cache a necháme app nastartovat
