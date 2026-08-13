@@ -40,7 +40,8 @@ test('nastavení ukáže pravdivý stav integrací a exportů', async ({ page })
   await expect(page.getByText('Gastro Z-reporty')).toBeVisible()
   await expect(page.getByText('denní i měsíční účetní CSV')).toBeVisible()
 
-  await expect(page.getByText('Platební terminál')).toBeVisible()
+  // exact: v sekci je i odkaz „Platební terminály" (registr čteček) — volný locator by chytil obojí.
+  await expect(page.getByText('Platební terminál', { exact: true })).toBeVisible()
   await expect(page.getByText('Účtenky a kuchyňské bony')).toBeVisible()
   await expect(page.getByText('Manuální krok')).toHaveCount(2)
   await expect(page.getByText('Čeká na konektor')).toBeVisible()

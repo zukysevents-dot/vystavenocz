@@ -1018,6 +1018,21 @@ async function onSubmit(): Promise<void> {
           <ChevronRight class="h-4 w-4 shrink-0 text-muted-foreground" />
         </RouterLink>
 
+        <!-- Registr platebních čteček — párování kódem z displeje a rozdělení podle poboček. -->
+        <RouterLink
+          to="/app/nastaveni/terminaly"
+          class="mt-3 flex items-center justify-between gap-3 rounded-lg border border-border p-4 transition-colors hover:bg-muted/40"
+          data-testid="terminaly-link"
+        >
+          <span>
+            <span class="block text-sm font-semibold">Platební terminály</span>
+            <span class="mt-1 block text-xs text-muted-foreground">
+              Spárování čtečky a její přiřazení k pobočce.
+            </span>
+          </span>
+          <ChevronRight class="h-4 w-4 shrink-0 text-muted-foreground" />
+        </RouterLink>
+
         <div class="mt-4 grid gap-3 sm:grid-cols-3">
           <div class="rounded-lg border border-border bg-muted/30 p-3">
             <div class="text-xs text-muted-foreground">Použitelné v provozu</div>
