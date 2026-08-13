@@ -9,7 +9,9 @@
  */
 
 const API_URL = import.meta.env.VITE_API_URL as string | undefined
-const TOKENS_KEY = 'vystaveno.auth.tokens.v1'
+// Exportovaný, protože přepnutí firmy zahazuje tenant cache podle prefixu `vystaveno.` a tenhle
+// klíč musí přežít — jinak si aplikace smaže právě vydané tokeny a odhlásí se.
+export const TOKENS_KEY = 'vystaveno.auth.tokens.v1'
 
 declare global {
   interface Window {

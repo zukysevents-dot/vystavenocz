@@ -27,6 +27,19 @@ describe('auth store — hasRole (role gating)', () => {
   })
 })
 
+describe('auth store — clearTenantCaches (přepnutí firmy)', () => {
+  it('NEsmaže přihlašovací tokeny — jinak se přepnutí firmy samo odhlásí (401)', () => {
+    const s = useAuthStore()
+    localStorage.setItem('vystaveno.auth.tokens.v1', JSON.stringify({ accessToken: 'a' }))
+    localStorage.setItem('vystaveno.products.cache', '[]')
+
+    s.clearTenantCaches()
+
+    expect(localStorage.getItem('vystaveno.auth.tokens.v1')).not.toBeNull()
+    expect(localStorage.getItem('vystaveno.products.cache')).toBeNull()
+  })
+})
+
 describe('auth store — module and feature gating', () => {
   it('defaultně má zapnuté všechny moduly, aby se současná aplikace nezamkla', () => {
     const s = useAuthStore()
