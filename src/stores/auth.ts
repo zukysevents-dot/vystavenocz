@@ -1,7 +1,15 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { User } from '@/lib/types'
-import { http, isApiMode, getTokens, setTokens, ApiError, type Tokens } from '@/lib/http'
+import {
+  http,
+  isApiMode,
+  getTokens,
+  setTokens,
+  ApiError,
+  TOKENS_KEY,
+  type Tokens,
+} from '@/lib/http'
 import {
   clearBusinessProfile,
   DEFAULT_ENABLED_MODULES,
@@ -223,8 +231,17 @@ export const useAuthStore = defineStore('auth', () => {
   // Smaže lokální cache vázané na firmu (profily, seznamy, rozpracovaná data). Přihlášení a session
   // zůstávají — přepínáme firmu, ne uživatele.
   function clearTenantCaches(): void {
-    const keep = new Set([SESSION_KEY, USER_KEY, USERS_KEY])
-    for (const key of Object.keys(localStorage)) {
+    // TOKENS_KEY musí zůstat: switchCompany ho naplní novými tokeny TĚSNĚ PŘED touhle funkcí, takže
+    // bez výjimky si aplikace smaže vlastní přihlášení a každý další request skončí na 401.
+    const keep = new Set([SESSION_KEY, USER_KEY, USERS_KEY, TOKENS_KEY])
+    // Klíče se sbírají PŘED mazáním (a přes localStorage.key, ne Object.keys — to Storage objekt
+    // nemusí vypsat), aby mazání během iterace nepřeskočilo polovinu záznamů.
+    const keys: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key) keys.push(key)
+    }
+    for (const key of keys) {
       if (keep.has(key)) continue
       if (key.startsWith('vystaveno.') || key.startsWith('vystaveno:')) localStorage.removeItem(key)
     }
