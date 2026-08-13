@@ -414,6 +414,13 @@ test('poskytovatelé plateb — bezpečné uložení klíčů: stav, uložení a
   // Smazat klíč → zpět na Chybí.
   await apiField.getByTitle('Odstranit klíč z trezoru').click()
   await expect(apiField.getByTestId('secret-state-apiKeyRef')).toHaveText('Chybí')
+
+  // Na malém displeji je konfigurace + trezor delší než obrazovka. Dialog proto musí scrollovat —
+  // bez toho zůstane spodek (uložení klíčů, přepnutí na Ready) mimo obrazovku a nedosažitelný.
+  await page.setViewportSize({ width: 390, height: 480 })
+  const posledniPole = page.getByTestId('secret-field-privateKeyRef')
+  await posledniPole.scrollIntoViewIfNeeded()
+  await expect(posledniPole).toBeInViewport()
 })
 
 test('poskytovatelé plateb — hláška při chybějícím serverovém šifrovacím klíči', async ({

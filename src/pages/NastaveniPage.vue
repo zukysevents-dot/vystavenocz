@@ -1631,7 +1631,9 @@ async function onSubmit(): Promise<void> {
 
     <!-- Konfigurace platebního providera (bez ukládání tajných hodnot) -->
     <Dialog v-model:open="providerDialogOpen">
-      <DialogContent class="max-w-lg">
+      <!-- Konfigurace + trezor credentialů je delší než obrazovka (na mobilu i na tabletu v cockpitu),
+           takže dialog musí scrollovat — jinak se obsluha nedostane na uložení klíčů ani na Ready. -->
+      <DialogContent class="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nastavit {{ dialogProvider?.name }}</DialogTitle>
           <DialogDescription>

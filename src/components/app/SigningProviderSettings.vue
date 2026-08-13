@@ -400,7 +400,8 @@ function signingErrorMessage(e: unknown): string {
 
     <!-- Dialog konfigurace + credential trezor -->
     <Dialog v-model:open="providerDialogOpen">
-      <DialogContent class="max-w-lg">
+      <!-- Stejně jako u platebních providerů: obsah přeteče obrazovku, bez scrollu je uložení klíčů nedosažitelné. -->
+      <DialogContent class="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nastavit {{ dialogProvider?.name }}</DialogTitle>
           <DialogDescription>
