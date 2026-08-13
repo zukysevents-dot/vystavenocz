@@ -89,6 +89,10 @@ export interface PaymentProviderConnection {
   status: PaymentConnectionStatus
   locationId: string | null
   configuredFields: string[]
+  // Hodnoty NE-tajných setup polí (např. SumUp `merchantCode`, `deviceId`). Tajné klíče sem nikdy nepatří — backend
+  // do tohoto sloupce credential pole ani nepustí. Na rozdíl od trezoru se hodnoty vracejí, aby šlo v nastavení
+  // zkontrolovat, který terminál je vlastně spárovaný.
+  settings?: Record<string, string>
   // Souhrn credential trezoru (backend #225+): která credential pole provider vyžaduje a která už mají uložený klíč.
   requiredCredentialFields?: string[]
   storedCredentialFields?: string[]
@@ -112,8 +116,8 @@ export interface IntegrationSecretsStatus {
   allRequiredPresent: boolean
 }
 
-// Zápisový payload — vědomě BEZ tajných hodnot (jen names v `configuredFields`). Backend endpoint zatím neexistuje;
-// UI je připravené a v testech se mockuje (GET/POST/PUT/DELETE /integrations/payment-provider-connections).
+// Zápisový payload — vědomě BEZ tajných hodnot. `configuredFields` je checklist názvů, `settings` nese hodnoty
+// NE-tajných setup polí; tajné klíče jdou výhradně přes /secrets sub-resource do trezoru.
 export interface UpsertPaymentProviderConnectionRequest {
   providerKey: string
   name: string
@@ -121,6 +125,7 @@ export interface UpsertPaymentProviderConnectionRequest {
   status: PaymentConnectionStatus
   locationId?: string | null
   configuredFields?: string[]
+  settings?: Record<string, string>
 }
 
 export interface AccountingVatLine {

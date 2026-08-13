@@ -150,6 +150,8 @@ const connectionForm = reactive({
   status: 'draft' as PaymentConnectionStatus,
   locationId: 'all',
   configuredFields: [] as string[],
+  // Hodnoty ne-tajných setup polí (SumUp merchantCode / deviceId). Tajné klíče tudy nikdy nejdou — ty má trezor.
+  settings: {} as Record<string, string>,
 })
 // Zabezpečený trezor credentialů editované konfigurace: stav polí (bez hodnot) + rozepsané vstupy pro uložení/rotaci.
 const secretStatus = ref<IntegrationSecretsStatus | null>(null)
@@ -375,6 +377,7 @@ function resetConnectionForm(): void {
   connectionForm.status = 'draft'
   connectionForm.locationId = 'all'
   connectionForm.configuredFields = []
+  connectionForm.settings = {}
   clearSecretVaultState()
 }
 
@@ -400,6 +403,7 @@ function editConnection(conn: PaymentProviderConnection): void {
   connectionForm.status = conn.status
   connectionForm.locationId = conn.locationId ?? 'all'
   connectionForm.configuredFields = [...conn.configuredFields]
+  connectionForm.settings = { ...(conn.settings ?? {}) }
   clearSecretVaultState()
   void loadSecretStatus(conn.id) // načte stav trezoru credentialů (bez hodnot)
 }
@@ -412,6 +416,18 @@ function toggleConfiguredField(field: string, on: boolean | 'indeterminate' | un
     return
   }
   connectionForm.configuredFields = connectionForm.configuredFields.filter((f) => f !== field)
+}
+
+// Hodnota ne-tajného setup pole. Vyplněním se pole rovnou odškrtne jako připravené, ať obsluha nedělá dvě věci;
+// vymazání hodnoty checklist nemění (uživatel může mít údaj připravený mimo aplikaci).
+function setSettingValue(field: string, value: string): void {
+  const trimmed = value.trim()
+  if (trimmed) {
+    connectionForm.settings[field] = trimmed
+    toggleConfiguredField(field, true)
+    return
+  }
+  delete connectionForm.settings[field]
 }
 
 async function saveConnection(): Promise<void> {
@@ -432,6 +448,12 @@ async function saveConnection(): Promise<void> {
       locationId: connectionForm.locationId === 'all' ? null : connectionForm.locationId,
       configuredFields: connectionForm.configuredFields.filter((f) =>
         dialogProvider.value?.setupFields.includes(f),
+      ),
+      // Jen ne-tajná setup pole — tajemství by backend do tohoto sloupce stejně nepustil (422).
+      settings: Object.fromEntries(
+        Object.entries(connectionForm.settings).filter(([field]) =>
+          dialogChecklistFields.value.includes(field),
+        ),
       ),
     }
     if (connectionForm.id) {
@@ -478,6 +500,27 @@ const dialogChecklistFields = computed<string[]>(() =>
     (f) => !dialogCredentialFields.value.includes(f),
   ),
 )
+// Lidské názvy setup polí — v rozhraní nesmí svítit technické identifikátory z API. Neznámé pole zůstane
+// pod svým názvem (raději srozumitelné-jak-to-jde než skrytá položka, kterou obsluha nemá kde vyplnit).
+const SETTING_FIELD_LABELS: Record<string, string> = {
+  merchantCode: 'Identifikátor obchodníka',
+  deviceId: 'Identifikátor terminálu',
+  merchantId: 'Identifikátor obchodníka',
+  merchantNumber: 'Číslo obchodníka',
+  locationId: 'Provozovna u poskytovatele',
+  callbackUrl: 'Návratová adresa',
+  testMode: 'Testovací režim',
+}
+const SETTING_FIELD_PLACEHOLDERS: Record<string, string> = {
+  merchantCode: 'např. MCXXXXXX',
+  deviceId: 'získáte spárováním terminálu',
+}
+function settingFieldLabel(field: string): string {
+  return SETTING_FIELD_LABELS[field] ?? field
+}
+function settingFieldPlaceholder(field: string): string {
+  return SETTING_FIELD_PLACEHOLDERS[field] ?? ''
+}
 // Trezor ukazujeme, když provider má credential pole (katalog) nebo backend vrátil pole ke konkrétní konfiguraci.
 const showCredentialVault = computed<boolean>(
   () => dialogCredentialFields.value.length > 0 || (secretStatus.value?.fields.length ?? 0) > 0,
@@ -1766,16 +1809,25 @@ async function onSubmit(): Promise<void> {
               <div
                 v-for="field in dialogChecklistFields"
                 :key="field"
-                class="flex items-center gap-3 rounded-md border border-border px-3 py-2"
+                class="space-y-2 rounded-md border border-border px-3 py-2"
               >
-                <Checkbox
-                  :id="`conn-field-${field}`"
-                  :model-value="connectionForm.configuredFields.includes(field)"
-                  @update:model-value="(v) => toggleConfiguredField(field, v)"
+                <div class="flex items-center gap-3">
+                  <Checkbox
+                    :id="`conn-field-${field}`"
+                    :model-value="connectionForm.configuredFields.includes(field)"
+                    @update:model-value="(v) => toggleConfiguredField(field, v)"
+                  />
+                  <Label :for="`conn-field-${field}`" class="flex-1 text-sm font-medium">{{
+                    settingFieldLabel(field)
+                  }}</Label>
+                </div>
+                <Input
+                  :id="`conn-field-value-${field}`"
+                  :model-value="connectionForm.settings[field] ?? ''"
+                  :placeholder="settingFieldPlaceholder(field)"
+                  :aria-label="`Hodnota – ${settingFieldLabel(field)}`"
+                  @update:model-value="(v) => setSettingValue(field, String(v ?? ''))"
                 />
-                <Label :for="`conn-field-${field}`" class="flex-1 text-sm font-medium">{{
-                  field
-                }}</Label>
               </div>
             </div>
 
