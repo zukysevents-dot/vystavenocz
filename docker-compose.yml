@@ -62,6 +62,12 @@ services:
       # zámek účtu, takže per-IP limit je jeho jediná ochrana a nesmí se kvůli provozu povolovat.
       RateLimit__Company: ${RATE_LIMIT_COMPANY:-3000}
       RateLimit__Pin: ${RATE_LIMIT_PIN:-120}
+      # Veřejná HTTPS adresa, na kterou SumUp posílá oznámení o výsledku karetní platby
+      # (callback jde na {base}/api/v1/webhooks/sumup/{token}, tedy přes nginx na /api/).
+      # Prázdná hodnota NENÍ chyba: integrace funguje dál, jen se výsledek zjistí až dotazem
+      # do SumUp API — tedy o pár vteřin později. Nikdy z ní neděláme povinnou proměnnou.
+      # HTTP adresu backend ignoruje (callback musí být HTTPS).
+      SumUp__PublicBaseUrl: ${SUMUP_PUBLIC_BASE_URL:-}
       # Web je same-origin přes nginx; desktop (Tauri) volá cross-origin → povol jeho originy (ops).
       Cors__AllowedOrigins__0: 'tauri://localhost'
       Cors__AllowedOrigins__1: 'http://tauri.localhost'

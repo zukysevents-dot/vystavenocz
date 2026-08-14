@@ -44,6 +44,7 @@ STRIPE_SECRET_KEY=<produkční Stripe secret>
 INTEGRATIONS_SECRET_ENCRYPTION_KEY=<32B base64> # vygeneruj: openssl rand -base64 32
 AUTH_PIN_LOOKUP_KEY=<32B base64>   # vygeneruj: openssl rand -base64 32 — jen když používáte PINy na pokladně
 PAYMENTS_PORTAL_BASE_URL=https://fakturace.example.com
+SUMUP_PUBLIC_BASE_URL=https://vystaveno.cz # volitelné; bez něj se výsledek karetní platby zjistí až dotazem do SumUpu
 WAL_ARCHIVE_DIR=/home/deploy/backups/vystaveno/wal-archive # absolutní cesta, kam PostgreSQL archivuje WAL (PITR)
 # SMTP: použij údaje svého poskytovatele (např. Resend, Postmark, Mailgun nebo vlastní doménový SMTP).
 EMAIL_HOST=smtp.example.com
@@ -57,6 +58,8 @@ EMAIL_PASSWORD=<SMTP heslo nebo API klíč>
 `INTEGRATIONS_SECRET_ENCRYPTION_KEY` šifruje credential vault pro platební providery i ověřené podpisy; v API se mapuje na `Integrations__SecretEncryptionKey`. Bez něj backend bezpečně odmítne ukládání credentialů (`503`).
 `AUTH_PIN_LOOKUP_KEY` (v API `Auth__PinLookupKey`) je slepý index, kterým backend najde vlastníka PINu v rámci firmy. Bez něj je celá PIN vrstva fail-closed `503`: nejde nastavit PIN členovi týmu, přihlásit se PINem ani použít **manažerský override** u storna a slevy nad limit obsluhy. Je volitelný — nepoužíváte-li PINy, nechte ho prázdný. **Jakmile ho jednou nastavíte, už ho neměňte**: změnou se uložené PINy stanou nedohledatelnými a musely by se nastavit znovu.
 `PAYMENTS_PORTAL_BASE_URL` je veřejná HTTPS adresa aplikace bez lomítka na konci; API ji používá pro návrat zákazníka z online platby faktury. Na běžném VPS nasazení nastav stejnou hodnotu jako `https://$DOMAIN`.
+`SUMUP_PUBLIC_BASE_URL` (v API `SumUp__PublicBaseUrl`) je veřejná HTTPS adresa aplikace bez lomítka na konci — SumUp na ni posílá oznámení o výsledku karetní platby (`{base}/api/v1/webhooks/sumup/{token}`, tedy přes nginx na `/api/`). Je **volitelný**: bez něj integrace funguje dál, jen se výsledek zjistí až vlastním dotazem do SumUp API, tedy o pár vteřin později. HTTP adresu backend ignoruje. Na běžném VPS nasazení dej stejnou hodnotu jako `https://$DOMAIN`.
+
 `WAL_ARCHIVE_DIR` je **povinný** adresář na hostiteli, do kterého PostgreSQL archivuje WAL; díky němu jde obnovit na konkrétní čas, ne jen na noční snapshot. Bez něj `docker compose` s produkčním override souborem vědomě odmítne nastartovat (raději hlasitá chyba než tichý provoz bez archivace). Adresář založí a správně zpřístupní `./ops/install-vps-reliability.sh`; doporučená hodnota je `$HOME/backups/vystaveno/wal-archive`. Detaily, obnova na čas a hot standby replika: [docs/vps-reliability.md](vps-reliability.md).
 
 ## 4. Spuštění
