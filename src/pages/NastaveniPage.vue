@@ -1018,6 +1018,21 @@ async function onSubmit(): Promise<void> {
           <ChevronRight class="h-4 w-4 shrink-0 text-muted-foreground" />
         </RouterLink>
 
+        <!-- Registr platebních čteček — párování kódem z displeje a rozdělení podle poboček. -->
+        <RouterLink
+          to="/app/nastaveni/terminaly"
+          class="mt-3 flex items-center justify-between gap-3 rounded-lg border border-border p-4 transition-colors hover:bg-muted/40"
+          data-testid="terminaly-link"
+        >
+          <span>
+            <span class="block text-sm font-semibold">Platební terminály</span>
+            <span class="mt-1 block text-xs text-muted-foreground">
+              Spárování čtečky a její přiřazení k pobočce.
+            </span>
+          </span>
+          <ChevronRight class="h-4 w-4 shrink-0 text-muted-foreground" />
+        </RouterLink>
+
         <div class="mt-4 grid gap-3 sm:grid-cols-3">
           <div class="rounded-lg border border-border bg-muted/30 p-3">
             <div class="text-xs text-muted-foreground">Použitelné v provozu</div>
@@ -1631,7 +1646,9 @@ async function onSubmit(): Promise<void> {
 
     <!-- Konfigurace platebního providera (bez ukládání tajných hodnot) -->
     <Dialog v-model:open="providerDialogOpen">
-      <DialogContent class="max-w-lg">
+      <!-- Konfigurace + trezor credentialů je delší než obrazovka (na mobilu i na tabletu v cockpitu),
+           takže dialog musí scrollovat — jinak se obsluha nedostane na uložení klíčů ani na Ready. -->
+      <DialogContent class="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nastavit {{ dialogProvider?.name }}</DialogTitle>
           <DialogDescription>

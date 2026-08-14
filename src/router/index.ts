@@ -561,6 +561,19 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/app/nastaveni/terminaly',
+    name: 'app-nastaveni-terminaly',
+    component: () => import('@/pages/TerminalyPage.vue'),
+    // Registr platebních čteček — backend gate je integrations.terminals (jen Owner/Admin) + modul integrations;
+    // přeřazení terminálu mění tok tržby, proto se stránka gatuje i v UI (vzor Propojení pro vývojáře).
+    meta: {
+      title: 'Platební terminály',
+      layout: 'app',
+      requiresAuth: true,
+      requiresModule: 'integrations',
+    },
+  },
+  {
     path: '/app/moduly',
     name: 'app-moduly',
     component: () => import('@/pages/ModulyPage.vue'),
