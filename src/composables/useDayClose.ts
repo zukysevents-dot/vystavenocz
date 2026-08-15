@@ -57,6 +57,35 @@ function toDayCloseError(e: unknown): DayCloseError {
   return new DayCloseError(0, 'Zavření dne se nezdařilo. Zkontrolujte připojení k serveru.')
 }
 
+/**
+ * Chyby znovuotevření mají vlastní slovník — obecné „zavření dne se nezdařilo" by obsluze neřeklo,
+ * co se stalo. Blokující důvody (novější uzávěrka, už otevřená) posílá server v textu 409, ten se
+ * proto přebírá beze změny; u ostatních stavů nikdy netvrdíme, že se stav změnil.
+ */
+function toReopenError(e: unknown): DayCloseError {
+  if (e instanceof ApiError) {
+    switch (e.status) {
+      case 409:
+        return new DayCloseError(
+          409,
+          e.message || 'Uzávěrku nelze znovu otevřít, protože se mezitím změnil její stav.',
+        )
+      case 403:
+        return new DayCloseError(403, 'Na znovuotevření uzávěrky nemáte oprávnění.')
+      case 404:
+        return new DayCloseError(404, 'Uzávěrka nebyla nalezena.')
+      case 422:
+        return new DayCloseError(422, e.message || 'Vyplňte důvod znovuotevření uzávěrky.')
+      default:
+        return new DayCloseError(
+          e.status,
+          'Akci se nepodařilo dokončit. Stav uzávěrky se nezměnil.',
+        )
+    }
+  }
+  return new DayCloseError(0, 'Akci se nepodařilo dokončit. Stav uzávěrky se nezměnil.')
+}
+
 export function useDayClose() {
   /** Uzavřené Z-reporty v rozsahu. GET /day-close?from=…&to=…&locationId=… */
   async function listDayCloses(params: DayCloseListParams): Promise<DayCloseResponse[]> {
@@ -89,7 +118,21 @@ export function useDayClose() {
     })
   }
 
-  return { listDayCloses, getDayClose, closeDay }
+  /**
+   * Vrátí omylem zavřenou uzávěrku do rozpracovaného stavu. POST /day-close/{id}/reopen
+   *
+   * Autoritativní je server: rozhoduje o oprávnění i o blokujících podmínkách (novější uzávěrka,
+   * už znovuotevřená uzávěrka). Klient nesmí stav přepnout lokálně — UI se mění až z odpovědi.
+   */
+  function reopenDayClose(id: string, reason: string): Promise<DayCloseResponse> {
+    return http
+      .post<DayCloseResponse>(`/day-close/${encodeURIComponent(id)}/reopen`, { reason })
+      .catch((e) => {
+        throw toReopenError(e)
+      })
+  }
+
+  return { listDayCloses, getDayClose, closeDay, reopenDayClose }
 }
 
 function fetchDayClosePage(

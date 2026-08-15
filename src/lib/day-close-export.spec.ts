@@ -8,6 +8,7 @@ import {
   DAY_CLOSE_ACCOUNTING_COLUMNS,
   DAY_CLOSE_MONTHLY_SUMMARY_COLUMNS,
   SHIFT_HANDOVER_COLUMNS,
+  validDayCloses,
 } from '@/lib/day-close-export'
 import type { DayCloseResponse } from '@/lib/types'
 
@@ -170,6 +171,31 @@ describe('day-close accounting export', () => {
 
     expect(rows.some((r) => r[0] === '2026-07-05' && r[1] === 'Bistro Praha')).toBe(true)
     expect(rows.some((r) => r[0] === '2026-07-06' && r[1] === 'Bar zahrada')).toBe(true)
+  })
+
+  // Znovuotevřená uzávěrka zůstává v seznamu kvůli dohledatelnosti, ale den, který se po opravě
+  // zavřel znovu, by se v účetním exportu jinak vykázal DVAKRÁT (původní i nová revize).
+  it('vynechá znovuotevřenou revizi, aby se den nezapočítal dvakrát', () => {
+    const reopened: DayCloseResponse = {
+      ...CLOSED_REPORT,
+      status: 'Reopened',
+      reopenedAt: '2026-07-05T21:30:00Z',
+      reopenedByName: 'Jana Nováková',
+      reopenReason: 'Uzávěrka byla provedena omylem',
+    }
+    const newRevision: DayCloseResponse = { ...CLOSED_REPORT, zReportNumber: 13, total: 1500 }
+
+    expect(validDayCloses([reopened, newRevision])).toEqual([newRevision])
+
+    // Export dvou revizí téhož dne dá přesně tolik řádků jako export samotné platné uzávěrky.
+    expect(
+      buildDayCloseAccountingRowsForReports([reopened, newRevision], () => 'Bistro Praha'),
+    ).toEqual(buildDayCloseAccountingRows(newRevision, 'Bistro Praha'))
+
+    const summary = buildDayCloseMonthlySummaryRows([reopened, newRevision], () => 'Bistro Praha')
+    // 1 řádek uzávěrky + součtový řádek CELKEM (znovuotevřená revize se nepočítá)
+    expect(summary).toHaveLength(2)
+    expect(summary[0][2]).toBe(13)
   })
 
   it('má stabilní hlavičky pro měsíční souhrn uzávěrek', () => {

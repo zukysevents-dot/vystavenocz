@@ -14,6 +14,8 @@ import {
   Download,
   CalendarDays,
   ClipboardCheck,
+  LockOpen,
+  RotateCcw,
 } from 'lucide-vue-next'
 import { formatCZK } from '@/lib/invoice'
 import { isApiMode } from '@/lib/http'
@@ -29,8 +31,10 @@ import {
   downloadDayCloseAccountingCsvForReports,
   downloadDayCloseMonthlySummaryCsv,
   downloadShiftHandoverCsv,
+  validDayCloses,
 } from '@/lib/day-close-export'
 import { toast } from '@/components/ui/sonner'
+import { useAuthStore } from '@/stores/auth'
 import LoadError from '@/components/app/LoadError.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -55,12 +59,13 @@ import {
 import type { DayCloseResponse } from '@/lib/types'
 
 const apiMode = isApiMode()
+const auth = useAuthStore()
 const offlineSales = useOfflineSales()
 // Účtenky pořízené offline, které ještě nedoletěly na server (včetně odmítnutých — ty taky patří do dne).
 const unsentSalesCount = computed(() => offlineSales.queue.value.length)
 
 const { loading, error, summary, vatBreakdown, soldProducts, byCategory, reload } = useSalesReport()
-const { listDayCloses, getDayClose, closeDay } = useDayClose()
+const { listDayCloses, getDayClose, closeDay, reopenDayClose } = useDayClose()
 const { locations, load: loadLocations } = useLocations()
 
 // --- Výběr dne + pobočky (Fáze 2) ---
@@ -92,6 +97,12 @@ const handoverChecklist = [
 
 const isClosed = computed(() => dayState.value?.status === 'Closed')
 const zReport = computed(() => (isClosed.value ? dayState.value : null))
+// Den byl po chybném zavření vrácen do rozpracovaného stavu — čísla původní uzávěrky zůstávají
+// jako historický doklad, ale den se dá opravit a zavřít znovu.
+const reopened = computed(() => (dayState.value?.status === 'Reopened' ? dayState.value : null))
+// Znovuotevřít smí jen majitel/administrátor (server vynucuje pos.reopen_day; UI jen neukazuje
+// akci, na kterou by uživatel stejně dostal 403).
+const canReopen = computed(() => apiMode && auth.hasRole('Owner', 'Admin'))
 const hasCashClose = computed(
   () =>
     zReport.value != null &&
@@ -112,7 +123,9 @@ async function loadDay(): Promise<void> {
   try {
     const state = await getDayClose(selectedDate.value, selectedLocationId.value)
     dayState.value = state
-    if (state.status === 'Open') {
+    // Zafixovaná čísla má jen platná uzávěrka. Otevřený i znovuotevřený den se čte živě z prodejů,
+    // jinak by po znovuotevření zůstal přehled prázdný (a obsluha by neviděla, co má opravit).
+    if (state.status !== 'Closed') {
       await reload({ date: selectedDate.value, locationId: selectedLocationId.value })
     }
   } catch (e) {
@@ -186,6 +199,56 @@ async function confirmClose(): Promise<void> {
     }
   } finally {
     closing.value = false
+  }
+}
+
+// --- Znovuotevření omylem zavřené uzávěrky ---
+// Akce NIKDY neproběhne jedním kliknutím: nejdřív dialog s povinným důvodem, pak teprve request.
+// Odolnost proti dvojkliku: `reopening` deaktivuje potvrzení a `confirmReopen` se dřív než cokoli
+// jiného ujistí, že už neběží. Stav se v UI mění AŽ z odpovědi serveru (žádný lokální úspěch).
+const reopenOpen = ref(false)
+const reopening = ref(false)
+const reopenReason = ref('')
+const reopenReasonError = ref('')
+
+function askReopen(): void {
+  reopenReason.value = ''
+  reopenReasonError.value = ''
+  reopenOpen.value = true
+}
+
+async function confirmReopen(): Promise<void> {
+  if (reopening.value) return // dvojklik na potvrzení = jeden request
+  const id = zReport.value?.id
+  if (!id) return
+
+  const reason = reopenReason.value.trim()
+  if (reason.length < 5) {
+    reopenReasonError.value = 'Napište alespoň pěti znaky, proč se uzávěrka otevírá znovu.'
+    return
+  }
+
+  reopening.value = true
+  try {
+    const result = await reopenDayClose(id, reason)
+    reopenOpen.value = false
+    dayState.value = result
+    // Den je zase rozpracovaný → dotáhni živý přehled, ať uživatel nemusí ručně obnovovat stránku.
+    await loadDay()
+    toast.success('Uzávěrka byla znovu otevřena. Opravte data a proveďte novou uzávěrku.')
+  } catch (e) {
+    if (e instanceof DayCloseError) {
+      toast.error(e.message)
+      // Blokující/konfliktní stav mohl vzniknout jinde → ukaž skutečný stav ze serveru.
+      if (e.status === 409 || e.status === 404) {
+        reopenOpen.value = false
+        await loadDay()
+      }
+    } else {
+      toast.error('Akci se nepodařilo dokončit. Stav uzávěrky se nezměnil.')
+    }
+  } finally {
+    reopening.value = false
   }
 }
 
@@ -280,7 +343,10 @@ async function exportMonthlyAccountingCsv(): Promise<void> {
   const { month, from, to } = monthBounds(selectedDate.value)
   monthExporting.value = true
   try {
-    const reports = await listDayCloses({ from, to, locationId: selectedLocationId.value })
+    // Znovuotevřené revize do účetního exportu nepatří — jinak by den vyšel v měsíci dvakrát.
+    const reports = validDayCloses(
+      await listDayCloses({ from, to, locationId: selectedLocationId.value }),
+    )
     if (reports.length === 0) {
       toast.error('V tomto měsíci nejsou žádné uzavřené Z-reporty.')
       return
@@ -300,7 +366,9 @@ async function exportMonthlySummaryCsv(): Promise<void> {
   const { month, from, to } = monthBounds(selectedDate.value)
   monthSummaryExporting.value = true
   try {
-    const reports = await listDayCloses({ from, to, locationId: selectedLocationId.value })
+    const reports = validDayCloses(
+      await listDayCloses({ from, to, locationId: selectedLocationId.value }),
+    )
     if (reports.length === 0) {
       toast.error('V tomto měsíci nejsou žádné uzavřené Z-reporty.')
       return
@@ -436,6 +504,18 @@ watch([selectedDate, selectedLocationId], () => {
           </Button>
           <Button variant="outline" @click="exportAccountingCsv">
             <Download class="h-4 w-4" /> Export účetní CSV
+          </Button>
+          <!-- Znovuotevření vidí jen majitel/administrátor; server ho stejně vynucuje sám. -->
+          <Button
+            v-if="canReopen && zReport.id"
+            data-testid="uzaverka-reopen"
+            variant="outline"
+            :disabled="reopening"
+            @click="askReopen"
+          >
+            <Loader2 v-if="reopening" class="h-4 w-4 animate-spin" />
+            <LockOpen v-else class="h-4 w-4" />
+            Znovu otevřít uzávěrku
           </Button>
         </div>
       </div>
@@ -707,6 +787,37 @@ watch([selectedDate, selectedLocationId], () => {
       <LoadError v-else-if="error" class="mt-6" @retry="reload" />
 
       <template v-else>
+        <!-- Znovuotevřená uzávěrka: co se stalo, kdo a proč — a co má obsluha udělat dál. -->
+        <div
+          v-if="apiMode && reopened"
+          data-testid="uzaverka-reopened-banner"
+          class="mt-6 flex items-start gap-2 rounded-xl border border-primary/40 bg-primary/5 p-4"
+        >
+          <RotateCcw class="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+          <div class="text-sm">
+            <div class="text-base font-semibold">
+              Znovuotevřená &middot; Z-report č. {{ reopened.zReportNumber }}
+            </div>
+            <p class="mt-1 text-muted-foreground">
+              Uzávěrka dne {{ reopened.date }} byla vrácena do rozpracovaného stavu
+              <template v-if="reopened.reopenedAt">
+                {{ new Date(reopened.reopenedAt).toLocaleString('cs-CZ') }}
+              </template>
+              <template v-if="reopened.reopenedByName">
+                &middot; provedl(a) {{ reopened.reopenedByName }}</template
+              >. Původní Z-report zůstává dohledatelný v historii.
+            </p>
+            <p v-if="reopened.reopenReason" class="mt-1">
+              <span class="text-muted-foreground">Důvod:</span>
+              <span class="font-medium">{{ reopened.reopenReason }}</span>
+            </p>
+            <p class="mt-2 font-medium text-foreground">
+              Opravte provozní data (objednávky, platby, docházku) a proveďte novou uzávěrku
+              tlačítkem níž.
+            </p>
+          </div>
+        </div>
+
         <!-- Akční lišta: zavřít den (jen API + otevřený den + vybraná pobočka) -->
         <div
           v-if="apiMode && selectedLocationId"
@@ -714,7 +825,11 @@ watch([selectedDate, selectedLocationId], () => {
         >
           <div class="flex items-start gap-2 text-sm text-muted-foreground">
             <Info class="mt-0.5 h-4 w-4 shrink-0" />
-            <span>
+            <span v-if="reopened">
+              Den je zase <strong class="font-medium text-foreground">rozpracovaný</strong>. Po
+              opravě dat proveďte novou uzávěrku — vznikne nový Z-report, který navazuje na původní.
+            </span>
+            <span v-else>
               Den je <strong class="font-medium text-foreground">otevřený</strong>. Živý přehled,
               čísla se ještě mění. Zavřením dne se vygeneruje Z-report a den se uzamkne.
             </span>
@@ -730,7 +845,7 @@ watch([selectedDate, selectedLocationId], () => {
           <Button :disabled="closing" @click="askClose">
             <Loader2 v-if="closing" class="h-4 w-4 animate-spin" />
             <Lock v-else class="h-4 w-4" />
-            Zavřít den
+            {{ reopened ? 'Provést novou uzávěrku' : 'Zavřít den' }}
           </Button>
         </div>
 
@@ -1005,6 +1120,52 @@ watch([selectedDate, selectedLocationId], () => {
         <AlertDialogFooter>
           <AlertDialogCancel>Zrušit</AlertDialogCancel>
           <AlertDialogAction @click="confirmClose">Zavřít den</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <!-- Potvrzení znovuotevření uzávěrky. Dialog se NEZAVÍRÁ přes AlertDialogAction (ta zavírá dřív,
+         než akce doběhne) — zavře ho až potvrzená odpověď serveru, takže je vidět stav zpracování
+         a chyba zůstane u formuláře s vyplněným důvodem. -->
+    <AlertDialog :open="reopenOpen" @update:open="(o) => (reopenOpen = o)">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Znovu otevřít uzávěrku?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Uzávěrka se vrátí do rozpracovaného stavu. Budete moci opravit provozní data a uzávěrku
+            následně provést znovu. Původní Z-report se nemaže — zůstane dohledatelný v historii.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div class="grid gap-3 py-2">
+          <p class="text-sm text-muted-foreground">
+            Akce se zapíše do auditu včetně vašeho jména, času a důvodu.
+          </p>
+          <div class="grid gap-1.5">
+            <Label for="reopen-reason">Důvod znovuotevření</Label>
+            <Input
+              id="reopen-reason"
+              v-model="reopenReason"
+              data-testid="uzaverka-reopen-reason"
+              placeholder="Uzávěrka byla provedena omylem"
+              :disabled="reopening"
+              @input="reopenReasonError = ''"
+            />
+            <p v-if="reopenReasonError" class="text-sm text-destructive">
+              {{ reopenReasonError }}
+            </p>
+          </div>
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="reopening">Zrušit</AlertDialogCancel>
+          <Button
+            variant="destructive"
+            data-testid="uzaverka-reopen-confirm"
+            :disabled="reopening"
+            @click="confirmReopen"
+          >
+            <Loader2 v-if="reopening" class="h-4 w-4 animate-spin" />
+            {{ reopening ? 'Zpracovávám…' : 'Znovu otevřít uzávěrku' }}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

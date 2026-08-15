@@ -266,11 +266,21 @@ export function buildDayCloseAccountingRows(
   return rows
 }
 
+/**
+ * Do účetních výstupů patří jen PLATNÉ uzávěrky. Znovuotevřená revize zůstává v seznamu kvůli
+ * dohledatelnosti, ale v exportu by týž den vykázala dvakrát (původní i nová uzávěrka).
+ */
+export function validDayCloses(reports: DayCloseResponse[]): DayCloseResponse[] {
+  return reports.filter((z) => z.status !== 'Reopened')
+}
+
 export function buildDayCloseAccountingRowsForReports(
   reports: DayCloseResponse[],
   locationNameById: (locationId: string) => string,
 ): CsvValue[][] {
-  return reports.flatMap((z) => buildDayCloseAccountingRows(z, locationNameById(z.locationId)))
+  return validDayCloses(reports).flatMap((z) =>
+    buildDayCloseAccountingRows(z, locationNameById(z.locationId)),
+  )
 }
 
 export function downloadDayCloseAccountingCsv(z: DayCloseResponse, locationName: string): void {
@@ -297,7 +307,7 @@ export function buildDayCloseMonthlySummaryRows(
   reports: DayCloseResponse[],
   locationNameById: (locationId: string) => string,
 ): CsvValue[][] {
-  const rows = reports.map((z) => [
+  const rows = validDayCloses(reports).map((z) => [
     z.date,
     locationNameById(z.locationId),
     z.zReportNumber ?? '',

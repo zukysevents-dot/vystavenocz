@@ -557,6 +557,22 @@ Před uzavřením dne:
 
 Uzavřený den nelze běžně upravovat. Denní uzávěrka, někdy označovaná jako Z-report, shrnuje tržby a platby za pobočku.
 
+#### Zavřeli jste den omylem?
+
+Vlastník nebo správce může uzávěrku vrátit do rozpracovaného stavu. Na zavřeném dni je akce **Znovu otevřít uzávěrku**. Vedoucí směny, obsluha ani kuchyně ji nemají; kdyby ji zkusili vyvolat jinou cestou, systém je odmítne.
+
+1. Otevřete Uzávěrku, vyberte pobočku a den.
+2. Zvolte **Znovu otevřít uzávěrku** a vyplňte důvod, například „Uzávěrka byla provedena omylem“. Důvod je povinný.
+3. Potvrďte. Akce se zapíše do auditu spolu s vaším jménem a časem.
+4. Opravte provozní data — objednávku, platbu nebo docházku.
+5. Zvolte **Provést novou uzávěrku**.
+
+Původní Z-report se **nemaže**. Zůstane s původními čísly, časem zavření i jménem toho, kdo den zavřel, a v seznamu je označený jako **Znovuotevřená**. Nová uzávěrka je samostatná revize s vlastním číslem, která na tu původní navazuje. Do účetních exportů se počítá jen ta platná, takže se den nikdy nevykáže dvakrát.
+
+Znovu otevřít nejde uzávěrku, která už znovuotevřená je, ani starší den, pokud má pobočka novější uzávěrku — pak se nejdřív řeší ta novější. Systém vždy napíše konkrétní důvod odmítnutí a stav uzávěrky v takovém případě zůstane beze změny.
+
+Stejná akce je i v mobilní aplikaci (Uzávěrka dne). Odeslání dat účetní firmě systém neeviduje, takže znovuotevření sám nezakáže — po předání podkladů účetní změnu vždy nejdřív domluvte.
+
 ### 11.2 Výsledky provozu
 
 Sledujte období a pobočku. Přehled může obsahovat tržby, počet účtů, průměrný účet, způsob platby, slevy, storna, marži, nákladovost jídel a výkon obsluhy.
