@@ -58,13 +58,19 @@ export function useSales() {
     return sale
   }
 
-  function summaryToday(): Promise<DailySalesSummary> {
-    return http.get<DailySalesSummary>('/sales/summary')
+  // Dnešní tržba POKLADNÍ POBOČKY. locationId je povinné pro správnost: bez něj vrátí backend souhrn
+  // CELÉ firmy, takže by pokladna baru A ukazovala i tržby baru B a nesouhlasila by s vlastní uzávěrkou.
+  // Vedoucí pobočky ho stejně nemůže obejít — cizí pobočku backend odmítne (403).
+  function summaryToday(locationId?: string | null): Promise<DailySalesSummary> {
+    const loc = locationId ? `?locationId=${locationId}` : ''
+    return http.get<DailySalesSummary>(`/sales/summary${loc}`)
   }
 
-  // Historie prodejů (nejnovější první — řazení řeší backend defaultně).
-  function list(): Promise<Sale[]> {
-    return http.get<PagedResult<Sale>>('/sales?pageSize=50').then((r) => r.items)
+  // Historie prodejů (nejnovější první — řazení řeší backend defaultně). Bez locationId by v pokladně
+  // baru A svítily účtenky baru B včetně tlačítka Storno.
+  function list(locationId?: string | null): Promise<Sale[]> {
+    const loc = locationId ? `&locationId=${locationId}` : ''
+    return http.get<PagedResult<Sale>>(`/sales?pageSize=50${loc}`).then((r) => r.items)
   }
 
   function get(id: string): Promise<Sale> {

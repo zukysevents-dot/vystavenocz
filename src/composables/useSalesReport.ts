@@ -63,6 +63,21 @@ export function useSalesReport() {
     return summaryToday().catch(() => null)
   }
 
+  /**
+   * Účtenky pro report. V API režimu je filtruje SERVER (den + pobočka), ne klient: `list()` bere jen
+   * první stránku celofiremních prodejů, takže na rušném dni s víc pobočkami mohl rozpad DPH a prodané
+   * produkty pro Bar 1 vyjít prázdné, i když serverový souhrn tržbu hlásil (posledních 100 účtenek bylo
+   * z jiné pobočky). Mock režim zůstává na lokálním seznamu.
+   */
+  function fetchSales(filter?: ReportFilter): Promise<Sale[]> {
+    if (!isApiMode() || !filter?.date) return salesApi.list()
+    const loc = filter.locationId ? `&locationId=${encodeURIComponent(filter.locationId)}` : ''
+    return http
+      .get<{ items: Sale[] }>(`/sales?from=${filter.date}&to=${filter.date}&pageSize=100${loc}`)
+      .then((r) => r.items)
+      .catch(() => salesApi.list())
+  }
+
   function withServerSummary(local: SalesSummary, server: DailySalesSummary | null): SalesSummary {
     if (!server) return local
     return {
@@ -87,7 +102,7 @@ export function useSalesReport() {
     try {
       // summaryToday je jen orientační ozdoba KPI; kategorie mohou být v mocku prázdné.
       const [list_, summary_, , categories] = await Promise.all([
-        salesApi.list(),
+        fetchSales(filter),
         fetchSummary(filter),
         loadProducts(),
         listCategories().catch(() => []),
