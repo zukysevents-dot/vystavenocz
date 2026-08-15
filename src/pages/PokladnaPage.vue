@@ -883,7 +883,10 @@ function askStorno(id: string) {
 }
 
 async function loadSales() {
-  const [s, l] = await Promise.all([sales.summaryToday(), sales.list()])
+  // Vždy za AKTIVNÍ pobočku pokladny — čísla v „Tržby" musí sedět s uzávěrkou téže pobočky
+  // a obsluha nesmí vidět ani stornovat účtenky jiné prodejny.
+  const loc = currentLocationId.value || null
+  const [s, l] = await Promise.all([sales.summaryToday(loc), sales.list(loc)])
   summary.value = s
   salesList.value = l
 }

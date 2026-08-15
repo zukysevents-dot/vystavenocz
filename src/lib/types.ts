@@ -591,9 +591,14 @@ export interface DayCloseProductLine {
  * Stav obchodního dne pro danou pobočku. Když `status === 'Open'`, den ještě není
  * uzavřen a nese jen `date`/`locationId`. Když `'Closed'`, jsou vyplněná zafixovaná
  * čísla Z-reportu; hotovostní pole (`cash*`) můžou být null, pokud uzávěrka hotovosti neproběhla.
+ *
+ * `'Reopened'` = uzávěrka byla po chybném zavření vrácena do rozpracovaného stavu. Doklad si
+ * PONECHÁVÁ všechna zafixovaná čísla (historický záznam) a navíc nese kdo/kdy/proč ji otevřel;
+ * den se dá zavřít znovu a nová uzávěrka na tuhle odkáže přes `supersedesDayCloseId`.
  */
 export interface DayCloseResponse {
-  status: 'Open' | 'Closed'
+  status: 'Open' | 'Closed' | 'Reopened'
+  id?: string
   date: string
   locationId: string
   // Vyplněné jen když status === 'Closed':
@@ -618,6 +623,13 @@ export interface DayCloseResponse {
   cashDrop?: number | null
   cashExpectedClosing?: number | null
   cashDifference?: number | null
+  // Vyplněné jen když status === 'Reopened':
+  reopenedAt?: string | null
+  reopenedByUserId?: string | null
+  reopenedByName?: string | null
+  reopenReason?: string | null
+  // Na kterou znovuotevřenou uzávěrku tahle revize navazuje (jen u opakovaného zavření dne).
+  supersedesDayCloseId?: string | null
 }
 
 // --- Gastro: mapa stolů ---

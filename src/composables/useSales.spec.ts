@@ -177,4 +177,24 @@ describe('useSales — kontrakt volání', () => {
     await useSales().storno('s1')
     expect(http.post).toHaveBeenCalledWith('/sales/s1/storno')
   })
+
+  // Regrese produkčního nálezu (2026-08-15): pokladna baru A ukazovala v „Tržby" celofiremní čísla
+  // (5 000 Kč), zatímco její vlastní uzávěrka měla 0 Kč — modal posílal dotaz BEZ locationId.
+  it('summaryToday s pobočkou volá GET /sales/summary?locationId=', async () => {
+    vi.mocked(http.get).mockResolvedValue({} as never)
+    await useSales().summaryToday('loc1')
+    expect(http.get).toHaveBeenCalledWith('/sales/summary?locationId=loc1')
+  })
+
+  it('summaryToday bez pobočky zůstává celofiremní (firma bez provozoven)', async () => {
+    vi.mocked(http.get).mockResolvedValue({} as never)
+    await useSales().summaryToday(null)
+    expect(http.get).toHaveBeenCalledWith('/sales/summary')
+  })
+
+  it('list s pobočkou volá GET /sales?locationId= (obsluha nesmí stornovat účtenku jiné prodejny)', async () => {
+    vi.mocked(http.get).mockResolvedValue({ items: [{ id: 's1' }], total: 1 } as never)
+    await useSales().list('loc1')
+    expect(http.get).toHaveBeenCalledWith('/sales?pageSize=50&locationId=loc1')
+  })
 })

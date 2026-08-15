@@ -32,6 +32,37 @@ export interface PosSalesSummary {
   averageSale: number
   vatBreakdown: PosVatLine[]
   topProducts: PosProductLine[]
+  // Za KTEROU provozovnu čísla jsou (#111). locationId === null = souhrn firmy.
+  locationId: string | null
+  locationName: string
+}
+
+// Porovnání provozoven. INVARIANT (garantuje backend): total je přesný součet locations — nikdy nedopočítávat
+// v klientovi, autoritativní součet je serverový. Řádek s locationId === null je „Nezařazeno" (doklady bez pobočky).
+export interface PosLocationComparison {
+  from: string
+  to: string
+  currency: string
+  total: PosLocationLine
+  locations: PosLocationLine[]
+}
+
+export interface PosLocationLine {
+  locationId: string | null
+  locationName: string
+  saleCount: number
+  grossRevenue: number
+  discountTotal: number
+  totalNet: number
+  totalVat: number
+  tipTotal: number
+  netRevenue: number
+  cashTotal: number
+  cardTotal: number
+  cancelledCount: number
+  cancelledTotal: number
+  averageSale: number
+  vatBreakdown: PosVatLine[]
 }
 
 export interface PosRevenueBucket {

@@ -74,4 +74,12 @@ describe('usePosReports', () => {
       '/pos-reports/dead-items?from=2026-07-01&to=2026-07-05&locationId=loc1',
     )
   })
+
+  // Porovnání provozoven NIKDY neposílá locationId — rozsah poboček určuje backend podle oprávnění
+  // (vedoucí dostane jen svou). Kdyby FE parametr posílal, tvářil by se filtr jako bezpečnostní kontrola.
+  it('locations volá GET /pos-reports/locations bez locationId', async () => {
+    vi.mocked(http.get).mockResolvedValue({} as never)
+    await usePosReports().locations(range)
+    expect(http.get).toHaveBeenCalledWith('/pos-reports/locations?from=2026-07-01&to=2026-07-05')
+  })
 })
