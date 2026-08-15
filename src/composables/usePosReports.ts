@@ -3,6 +3,7 @@ import type {
   PosCostSummary,
   PosDateRange,
   PosDeadItems,
+  PosLocationComparison,
   PosLossSummary,
   PosRevenue,
   PosSalesSummary,
@@ -44,5 +45,11 @@ export function usePosReports() {
     const loc = locationId ? `&locationId=${locationId}` : ''
     return http.get<PosDeadItems>(`/pos-reports/dead-items?from=${range.from}&to=${range.to}${loc}`)
   }
-  return { summary, revenue, costs, staff, losses, deadItems }
+  // Porovnání provozoven + firemní souhrn. Vedoucí pobočky dostane od backendu jen svůj řádek.
+  function locations(range: PosDateRange): Promise<PosLocationComparison> {
+    return http.get<PosLocationComparison>(
+      `/pos-reports/locations?from=${range.from}&to=${range.to}`,
+    )
+  }
+  return { summary, revenue, costs, staff, losses, deadItems, locations }
 }

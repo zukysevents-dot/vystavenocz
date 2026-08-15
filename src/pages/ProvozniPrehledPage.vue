@@ -13,6 +13,7 @@ import {
   Package,
   Trophy,
   Users,
+  Store,
 } from 'lucide-vue-next'
 import { BarChart } from '@/components/ui/chart'
 import LoadError from '@/components/app/LoadError.vue'
@@ -24,6 +25,7 @@ import {
   posReportRange,
   type PosReportPreset,
   type PosSalesSummary,
+  type PosLocationComparison,
   type PosRevenue,
   type PosCostSummary,
   type PosStaffPerformance,
@@ -49,6 +51,7 @@ const preset = ref<PosReportPreset>('thisMonth')
 const locationId = ref<string>('') // '' = všechny provozovny
 
 const summary = ref<PosSalesSummary | null>(null)
+const locationComparison = ref<PosLocationComparison | null>(null)
 const revenue = ref<PosRevenue | null>(null)
 const costs = ref<PosCostSummary | null>(null)
 const staff = ref<PosStaffPerformance | null>(null)
@@ -114,15 +117,18 @@ async function load(): Promise<void> {
   try {
     const range = posReportRange(preset.value, new Date())
     const loc = locationId.value || undefined
-    const [sum, rev, cost, staffReport, lossReport, deadItemsReport] = await Promise.all([
-      reportsApi.summary(range, loc),
-      reportsApi.revenue(range, 'Day', loc),
-      reportsApi.costs(range, loc),
-      reportsApi.staff(range, loc),
-      reportsApi.losses(range, loc),
-      reportsApi.deadItems(range, loc),
-    ])
+    const [sum, rev, cost, staffReport, lossReport, deadItemsReport, comparison] =
+      await Promise.all([
+        reportsApi.summary(range, loc),
+        reportsApi.revenue(range, 'Day', loc),
+        reportsApi.costs(range, loc),
+        reportsApi.staff(range, loc),
+        reportsApi.losses(range, loc),
+        reportsApi.deadItems(range, loc),
+        reportsApi.locations(range),
+      ])
     summary.value = sum
+    locationComparison.value = comparison
     revenue.value = rev
     costs.value = cost
     staff.value = staffReport
@@ -203,6 +209,14 @@ function selectPreset(id: PosReportPreset): void {
       <LoadError v-else-if="loadError" class="mt-6" :retrying="loading" @retry="load" />
 
       <template v-else-if="summary">
+        <!-- Za KTEROU provozovnu čísla jsou. Zdroj je serverová odpověď (ne lokální filtr) — vedoucí pobočky
+             dostane od backendu vždy jen svou, i kdyby si v URL přepsal parametr. -->
+        <div class="mt-4 flex items-center gap-2 text-sm">
+          <Store class="h-4 w-4 text-muted-foreground" />
+          <span class="text-muted-foreground">Zobrazená čísla platí pro:</span>
+          <span class="font-semibold">{{ summary.locationName }}</span>
+        </div>
+
         <!-- KPI karty -->
         <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div class="rounded-xl border border-border bg-card p-4">
@@ -267,6 +281,88 @@ function selectPreset(id: PosReportPreset): void {
             </div>
             <div class="mt-1 text-xl font-semibold tabular-nums">{{ summary.cancelledCount }}</div>
             <div class="text-xs text-muted-foreground">{{ formatCZK(summary.cancelledTotal) }}</div>
+          </div>
+        </div>
+
+        <!-- Porovnání provozoven (majitel/admin). Řádek „Nezařazeno" = historické doklady bez pobočky.
+             Souhrn je serverový a z definice se rovná součtu řádků — v klientovi nic nesčítáme. -->
+        <div
+          v-if="locationComparison && locationComparison.locations.length > 1"
+          class="mt-6 rounded-xl border border-border bg-card p-4"
+        >
+          <div class="flex items-center gap-2 text-sm font-semibold">
+            <Store class="h-4 w-4 text-muted-foreground" /> Porovnání provozoven
+          </div>
+          <div class="mt-3 overflow-x-auto">
+            <table class="w-full min-w-[640px] text-sm">
+              <thead class="text-left text-xs uppercase text-muted-foreground">
+                <tr>
+                  <th class="py-2 pr-3 font-medium">Provozovna</th>
+                  <th class="py-2 pr-3 text-right font-medium">Účtů</th>
+                  <th class="py-2 pr-3 text-right font-medium">Hrubé tržby</th>
+                  <th class="py-2 pr-3 text-right font-medium">Slevy</th>
+                  <th class="py-2 pr-3 text-right font-medium">Storna / vratky</th>
+                  <th class="py-2 pr-3 text-right font-medium">Hotově</th>
+                  <th class="py-2 pr-3 text-right font-medium">Kartou</th>
+                  <th class="py-2 text-right font-medium">Čisté tržby</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="line in locationComparison.locations"
+                  :key="line.locationId ?? 'unassigned'"
+                  class="border-t border-border"
+                >
+                  <td class="py-2 pr-3">
+                    {{ line.locationName }}
+                    <span v-if="!line.locationId" class="text-xs text-muted-foreground">
+                      (doklady bez pobočky — nutné ručně dořešit)
+                    </span>
+                  </td>
+                  <td class="py-2 pr-3 text-right tabular-nums">{{ line.saleCount }}</td>
+                  <td class="py-2 pr-3 text-right tabular-nums">
+                    {{ formatCZK(line.grossRevenue) }}
+                  </td>
+                  <td class="py-2 pr-3 text-right tabular-nums">
+                    {{ formatCZK(line.discountTotal) }}
+                  </td>
+                  <td class="py-2 pr-3 text-right tabular-nums">
+                    {{ formatCZK(line.cancelledTotal) }}
+                  </td>
+                  <td class="py-2 pr-3 text-right tabular-nums">{{ formatCZK(line.cashTotal) }}</td>
+                  <td class="py-2 pr-3 text-right tabular-nums">{{ formatCZK(line.cardTotal) }}</td>
+                  <td class="py-2 text-right font-semibold tabular-nums">
+                    {{ formatCZK(line.netRevenue) }}
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="border-t-2 border-border font-semibold">
+                  <td class="py-2 pr-3">{{ locationComparison.total.locationName }}</td>
+                  <td class="py-2 pr-3 text-right tabular-nums">
+                    {{ locationComparison.total.saleCount }}
+                  </td>
+                  <td class="py-2 pr-3 text-right tabular-nums">
+                    {{ formatCZK(locationComparison.total.grossRevenue) }}
+                  </td>
+                  <td class="py-2 pr-3 text-right tabular-nums">
+                    {{ formatCZK(locationComparison.total.discountTotal) }}
+                  </td>
+                  <td class="py-2 pr-3 text-right tabular-nums">
+                    {{ formatCZK(locationComparison.total.cancelledTotal) }}
+                  </td>
+                  <td class="py-2 pr-3 text-right tabular-nums">
+                    {{ formatCZK(locationComparison.total.cashTotal) }}
+                  </td>
+                  <td class="py-2 pr-3 text-right tabular-nums">
+                    {{ formatCZK(locationComparison.total.cardTotal) }}
+                  </td>
+                  <td class="py-2 text-right tabular-nums">
+                    {{ formatCZK(locationComparison.total.netRevenue) }}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
         </div>
 
