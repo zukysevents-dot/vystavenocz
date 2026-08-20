@@ -1154,10 +1154,13 @@ function saleTime(iso: string): string {
               v-for="p in visibleProducts"
               :key="p.id"
               type="button"
-              class="flex min-h-24 flex-col justify-between rounded-xl border border-border bg-background p-3 text-left transition-colors hover:border-primary hover:bg-primary-soft active:scale-[0.98]"
+              class="flex min-h-24 min-w-0 flex-col justify-between rounded-xl border border-border bg-background p-3 text-left transition-colors hover:border-primary hover:bg-primary-soft active:scale-[0.98]"
               @click="chooseProduct(p)"
             >
-              <span class="font-semibold leading-tight">{{ p.name }}</span>
+              <!-- break-words + min-w-0: název bez mezer (např. dlouhý kód) jinak roztáhne dlaždici,
+                   stránka přeteče do šířky a mobil kvůli tomu odzoomuje — pak se ani tlačítko menu
+                   nedá trefit. Zalomit uvnitř slova je horší jen opticky, nedosažitelné menu vážně. -->
+              <span class="break-words font-semibold leading-tight">{{ p.name }}</span>
               <span class="mt-2 text-sm font-bold text-primary tabular-nums">{{
                 formatCZK(p.salePrice)
               }}</span>

@@ -44,13 +44,25 @@ export async function loginFresh(
   return { page, close: () => context.close() }
 }
 
+// Token se v rámci workeru přihlašuje JEDNOU. Každý test volal /auth/login znovu a backend má
+// na přihlašování rate limit (ochrana proti hádání hesla), takže delší běh spadl na 429 —
+// vypadalo to jako „neběží backend", i když backend dělal přesně to, co má.
+let cachedToken: Promise<string> | null = null
+
+async function demoAccessToken(): Promise<string> {
+  cachedToken ??= (async () => {
+    const { email, password } = demoCreds()
+    const api = await request.newContext()
+    const res = await api.post(`${API_URL}/auth/login`, { data: { email, password } })
+    expect(res.status(), 'login demo účtu (běží backend?)').toBe(200)
+    return (await res.json()).accessToken as string
+  })()
+  return cachedToken
+}
+
 /** Autorizovaný API kontext demo účtu — pro přípravu/úklid dat mimo UI. */
 export async function apiContext(): Promise<APIRequestContext> {
-  const { email, password } = demoCreds()
-  const api = await request.newContext()
-  const res = await api.post(`${API_URL}/auth/login`, { data: { email, password } })
-  expect(res.status(), 'login demo účtu (běží backend?)').toBe(200)
-  const { accessToken } = await res.json()
+  const accessToken = await demoAccessToken()
   // baseURL musí končit lomítkem, jinak by se relativní cesta zapsala přes /api/v1.
   return request.newContext({
     baseURL: `${API_URL.replace(/\/$/, '')}/`,
