@@ -51,7 +51,10 @@ async function expectNoOverflow(page: Page, kde: string): Promise<void> {
 }
 
 test('dlouhé názvy nerozbijí šířku seznamů', async ({ page }) => {
-  for (const path of ['/app/klienti', '/app/sklad']) {
+  // Pokladna je v seznamu schválně: dlaždice produktu nemá řádek k roztažení, ale dlouhý název
+  // bez mezer ji rozšířil stejně — stránka přetekla, mobil odzoomoval a číšník se nedoklikal
+  // ani na tlačítko menu. Chyběla tu právě tahle cesta, proto to nikdo nechytil.
+  for (const path of ['/app/klienti', '/app/sklad', '/app/pokladna']) {
     await page.goto(path)
     await settle(page)
     await expectNoOverflow(page, path)
