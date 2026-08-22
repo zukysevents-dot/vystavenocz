@@ -18,9 +18,7 @@ declare module 'vue-router' {
   }
 }
 
-// Skeleton: všechny routy zatím míří na sdílený PagePlaceholder.
-// Reálné stránky doplní tasky F2 (web), F3 (auth), F4–F7 (app).
-const PagePlaceholder = () => import('@/components/PagePlaceholder.vue')
+const NotFoundPage = () => import('@/pages/NotFoundPage.vue')
 
 const routes: RouteRecordRaw[] = [
   // --- Veřejné (PublicLayout) ---
@@ -631,7 +629,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
-    component: PagePlaceholder,
+    component: NotFoundPage,
     meta: { title: 'Stránka nenalezena', layout: 'public' },
   },
 ]

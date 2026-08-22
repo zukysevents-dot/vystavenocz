@@ -33,6 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import DateField from '@/components/app/DateField.vue'
 import QuickClientDialog, { type QuickClient } from '@/components/app/QuickClientDialog.vue'
 import InvoiceDocument from '@/components/app/InvoiceDocument.vue'
 import SendInvoiceDialog from '@/components/app/SendInvoiceDialog.vue'
@@ -49,6 +50,7 @@ import {
 import { useSubscription } from '@/composables/useSubscription'
 import { useCompanyStore } from '@/stores/company'
 import {
+  DEFAULT_INVOICE_NUMBER_FORMAT,
   buildInvoiceNumber,
   calcLine,
   calcTotals,
@@ -75,13 +77,19 @@ const { create, update, issue, pay, cancel, get, load: loadInvoices } = useInvoi
 const { hasAccess } = useSubscription()
 const companyStore = useCompanyStore()
 
+// Datum se skládá z MÍSTNÍCH složek, ne přes toISOString() — ten převádí do UTC, takže po půlnoci
+// (v létě do 02:00) vracel včerejší den a nová faktura se předvyplnila datem o den zpět.
+function toIsoDate(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
 function todayISO(): string {
-  return new Date().toISOString().slice(0, 10)
+  return toIsoDate(new Date())
 }
 function addDaysISO(days: number): string {
   const d = new Date()
   d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
+  return toIsoDate(d)
 }
 
 const paymentMethods = [
@@ -119,6 +127,22 @@ const documentTypeOptions = [
   { value: 'proforma', label: 'Zálohová faktura' },
 ] as const
 const canChooseType = computed(() => status.value === 'draft')
+
+// Vystavený doklad se needituje — číslo, částky i odběratel jsou daňově zmražené a server každou
+// změnu stejně odmítne. Editor proto přepne do čtení; změnu řeší storno a nové vystavení.
+const isLocked = computed(() => Boolean(editingId.value) && status.value !== 'draft')
+
+// Hlavičková pole (číslo, datum vystavení, VS, způsob úhrady) needituje ani vystavený doklad —
+// jinak by UI nabízelo změnu údaje, který je daňově zmražený a server ho stejně nepřijme.
+const headerReadOnly = computed(() => serverOwnedFields || isLocked.value)
+
+// V API režimu tiskne PDF vždy bankovní převod (entita způsob úhrady nemá); v mock režimu ukaž zvolený.
+const paymentMethodLabel = computed(
+  () =>
+    (serverOwnedFields
+      ? undefined
+      : paymentMethods.find((m) => m.value === paymentMethod.value)?.label) ?? 'Převodem',
+)
 
 // V ostrém režimu vlastní číslo dokladu, datum vystavení, variabilní symbol i způsob úhrady SERVER:
 // číslo se přiděluje z číselné řady až při vystavení, datum vystavení se doplní tamtéž, VS se odvozuje
@@ -240,8 +264,8 @@ onMounted(async () => {
     const c = companyStore.company
     if (!isApiMode()) {
       invoiceNumber.value = buildInvoiceNumber(
-        c?.invoiceNumberPrefix || 'FA',
-        c?.invoiceNumberFormat || '{prefix}-{year}-{seq}',
+        c?.invoiceNumberPrefix ?? '',
+        c?.invoiceNumberFormat ?? DEFAULT_INVOICE_NUMBER_FORMAT,
         c?.nextInvoiceSeq || 1,
       )
       variableSymbol.value = variableSymbolFromInvoiceNumber(invoiceNumber.value)
@@ -398,6 +422,9 @@ function adoptServerLineIds(inv: Invoice): void {
 
 // Uloží aktuální stav faktury (create nebo update konceptu). Bez toastu — řeší volající.
 async function persist(): Promise<void> {
+  // Pojistka ke skrytým tlačítkům: vystavený doklad se neukládá. Server by změnu stejně odmítl (409)
+  // a z konceptu vystaveného dokladu by se nechtěně přepočítaly zmražené částky.
+  if (isLocked.value) return
   // Server odběratele vyžaduje (CreateInvoiceRequest.ClientId). Bez tohoto guardu odešle editor
   // clientId: null, backend vrátí nesrozumitelnou validační chybu a rozdělaný doklad se ztratí.
   if (isApiMode() && !selectedClientId.value) {
@@ -664,7 +691,7 @@ async function onCancelConfirm(reason: string) {
           <CheckCircle2 class="h-4 w-4 text-success" />
           <span class="hidden sm:inline">Uhrazeno</span>
         </Button>
-        <Button variant="outline" :disabled="saving || loading" @click="onSave">
+        <Button v-if="!isLocked" variant="outline" :disabled="saving || loading" @click="onSave">
           <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
           <Save v-else class="h-4 w-4" />
           Uložit koncept
@@ -687,6 +714,15 @@ async function onCancelConfirm(reason: string) {
     </div>
 
     <div v-else class="mt-6 space-y-6">
+      <div
+        v-if="isLocked"
+        class="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground"
+      >
+        <span class="font-medium text-foreground">Doklad je vystavený, proto se už needituje.</span>
+        Údaje i částky jsou zmražené k datu vystavení. Potřebujete-li je změnit, doklad stornujte a
+        vystavte znovu.
+      </div>
+
       <!-- Odběratel -->
       <div class="rounded-xl border border-border bg-card p-6">
         <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -695,7 +731,7 @@ async function onCancelConfirm(reason: string) {
         <div class="mt-4 space-y-2">
           <Label for="inv-client">Klient</Label>
           <div class="flex gap-2">
-            <Select v-model="selectedClientId">
+            <Select v-model="selectedClientId" :disabled="isLocked">
               <SelectTrigger id="inv-client" class="flex-1">
                 <SelectValue placeholder="Vyberte klienta…" />
               </SelectTrigger>
@@ -705,7 +741,13 @@ async function onCancelConfirm(reason: string) {
                 </SelectItem>
               </SelectContent>
             </Select>
-            <Button type="button" variant="outline" class="shrink-0" @click="quickOpen = true">
+            <Button
+              v-if="!isLocked"
+              type="button"
+              variant="outline"
+              class="shrink-0"
+              @click="quickOpen = true"
+            >
               <UserPlus class="h-4 w-4" /> Nový
             </Button>
           </div>
@@ -743,17 +785,17 @@ async function onCancelConfirm(reason: string) {
           </div>
           <div class="space-y-2">
             <Label for="inv-number">Číslo faktury</Label>
-            <Input v-if="!serverOwnedFields" id="inv-number" v-model="invoiceNumber" />
+            <Input v-if="!headerReadOnly" id="inv-number" v-model="invoiceNumber" />
             <div
               v-else
               class="flex h-9 items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-muted-foreground"
             >
-              {{ invoiceNumber || 'Přidělí se při vystavení' }}
+              {{ invoiceNumber || (isLocked ? '—' : 'Přidělí se při vystavení') }}
             </div>
           </div>
           <div class="space-y-2">
             <Label for="inv-payment">Způsob úhrady</Label>
-            <Select v-if="!serverOwnedFields" v-model="paymentMethod">
+            <Select v-if="!headerReadOnly" v-model="paymentMethod">
               <SelectTrigger id="inv-payment">
                 <SelectValue />
               </SelectTrigger>
@@ -767,27 +809,43 @@ async function onCancelConfirm(reason: string) {
               v-else
               class="flex h-9 items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-muted-foreground"
             >
-              Převodem
+              {{ paymentMethodLabel }}
             </div>
           </div>
           <div class="space-y-2">
-            <Label for="inv-issue">Datum vystavení</Label>
-            <Input v-if="!serverOwnedFields" id="inv-issue" v-model="issueDate" type="date" />
+            <Label>Datum vystavení</Label>
+            <DateField
+              v-if="!headerReadOnly"
+              v-model="issueDate"
+              label="Datum vystavení"
+              test-id="inv-issue"
+            />
             <div
               v-else
               class="flex h-9 items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-muted-foreground"
             >
-              {{ issueDate ? formatDate(issueDate) : 'Doplní se při vystavení' }}
+              {{ issueDate ? formatDate(issueDate) : isLocked ? '—' : 'Doplní se při vystavení' }}
             </div>
           </div>
           <div class="space-y-2">
-            <Label for="inv-due">Datum splatnosti</Label>
-            <Input id="inv-due" v-model="dueDate" type="date" />
+            <Label>Datum splatnosti</Label>
+            <DateField
+              v-if="!isLocked"
+              v-model="dueDate"
+              label="Datum splatnosti"
+              test-id="inv-due"
+            />
+            <div
+              v-else
+              class="flex h-9 items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-muted-foreground"
+            >
+              {{ dueDate ? formatDate(dueDate) : '—' }}
+            </div>
           </div>
           <div class="space-y-2">
             <Label for="inv-vs">Variabilní symbol</Label>
             <Input
-              v-if="!serverOwnedFields"
+              v-if="!headerReadOnly"
               id="inv-vs"
               v-model="variableSymbol"
               inputmode="numeric"
@@ -796,7 +854,7 @@ async function onCancelConfirm(reason: string) {
               v-else
               class="flex h-9 items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-muted-foreground"
             >
-              {{ variableSymbolDisplay || 'Odvodí se z čísla faktury' }}
+              {{ variableSymbolDisplay || (isLocked ? '—' : 'Odvodí se z čísla faktury') }}
             </div>
           </div>
         </div>
@@ -808,7 +866,14 @@ async function onCancelConfirm(reason: string) {
           <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Položky
           </h2>
-          <Button type="button" variant="outline" size="sm" class="shrink-0" @click="addItem">
+          <Button
+            v-if="!isLocked"
+            type="button"
+            variant="outline"
+            size="sm"
+            class="shrink-0"
+            @click="addItem"
+          >
             <Plus class="h-4 w-4" /> Přidat položku
           </Button>
         </div>
@@ -818,6 +883,7 @@ async function onCancelConfirm(reason: string) {
             <div class="flex items-center justify-between gap-2">
               <span class="text-xs text-muted-foreground">#{{ idx + 1 }}</span>
               <Button
+                v-if="!isLocked"
                 variant="ghost"
                 size="icon"
                 title="Odebrat položku"
@@ -833,6 +899,7 @@ async function onCancelConfirm(reason: string) {
               v-model="it.description"
               placeholder="Popis položky"
               class="mt-2"
+              :disabled="isLocked"
             />
             <div
               class="mt-2 grid grid-cols-2 gap-2"
@@ -847,13 +914,14 @@ async function onCancelConfirm(reason: string) {
                   v-model.number="it.quantity"
                   type="number"
                   step="0.01"
+                  :disabled="isLocked"
                 />
               </div>
               <div class="space-y-1">
                 <Label :for="`inv-item-${it.id}-unit`" class="text-xs text-muted-foreground"
                   >MJ</Label
                 >
-                <Input :id="`inv-item-${it.id}-unit`" v-model="it.unit" />
+                <Input :id="`inv-item-${it.id}-unit`" v-model="it.unit" :disabled="isLocked" />
               </div>
               <div class="space-y-1">
                 <Label :for="`inv-item-${it.id}-price`" class="text-xs text-muted-foreground"
@@ -864,6 +932,7 @@ async function onCancelConfirm(reason: string) {
                   v-model.number="it.unitPrice"
                   type="number"
                   step="0.01"
+                  :disabled="isLocked"
                 />
               </div>
               <div v-if="vatPayer" class="space-y-1">
@@ -872,6 +941,7 @@ async function onCancelConfirm(reason: string) {
                 >
                 <Select
                   :model-value="String(it.vatRate)"
+                  :disabled="isLocked"
                   @update:model-value="(v) => (it.vatRate = Number(v) as VatRate)"
                 >
                   <SelectTrigger :id="`inv-item-${it.id}-vat`">

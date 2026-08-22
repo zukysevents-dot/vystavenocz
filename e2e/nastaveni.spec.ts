@@ -15,17 +15,24 @@ test('nastavení firmy se promítne do nové faktury (číslo + splatnost)', asy
   const year = new Date().getFullYear()
   await expect(page.locator('#inv-number')).toHaveValue(`TEST-${year}-0007`)
 
+  // Datum se vybírá českým date-pickerem (tlačítko s dd.MM.yyyy), ne nativním inputem v locale prohlížeče.
   const due = new Date()
   due.setDate(due.getDate() + 30)
-  await expect(page.locator('#inv-due')).toHaveValue(due.toISOString().slice(0, 10))
+  await expect(page.getByTestId('inv-due')).toHaveText(czDate(due))
 })
+
+/** Datum tak, jak ho vypisuje date-picker v editoru (dd.MM.yyyy). */
+function czDate(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`
+}
 
 test('výchozí splatnost 0 dní → splatnost = datum vystavení', async ({ page }) => {
   await seedApp(page, { subscription: 'pro', company: { defaultPaymentDays: 0 } })
   await page.goto('/app/faktury/editor')
 
-  const issue = await page.locator('#inv-issue').inputValue()
-  await expect(page.locator('#inv-due')).toHaveValue(issue)
+  const issue = await page.getByTestId('inv-issue').textContent()
+  await expect(page.getByTestId('inv-due')).toHaveText(issue!.trim())
 })
 
 test('nastavení ukáže pravdivý stav integrací a exportů', async ({ page }) => {

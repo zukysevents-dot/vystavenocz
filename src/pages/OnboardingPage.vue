@@ -10,6 +10,7 @@ import { toast } from '@/components/ui/sonner'
 import { useCompanyStore } from '@/stores/company'
 import { useAuthStore } from '@/stores/auth'
 import { ApiError } from '@/lib/http'
+import { buildInvoiceNumber } from '@/lib/invoice'
 import type { Company } from '@/lib/types'
 import { BUSINESS_PROFILES, saveBusinessProfile, type BusinessProfileId } from '@/lib/modules'
 import { upsellFor } from '@/lib/entitlements'
@@ -35,6 +36,16 @@ const form = reactive({
 
 const selectedProfile = computed(() =>
   BUSINESS_PROFILES.find((profile) => profile.id === form.business_profile),
+)
+
+// Formát řady: nová firma dostane čitelný „FA-2026-0001", firma s vlastním nastavením si svůj formát ponechá.
+const invoiceNumberFormat = computed(
+  () => companyStore.company?.invoiceNumberFormat ?? '{prefix}-{year}-{seq}',
+)
+
+// Ukázka musí sedět na číslo, které doklad DOOPRAVDY dostane — přiděluje ho server ze stejného formátu.
+const invoiceNumberExample = computed(() =>
+  buildInvoiceNumber(form.invoice_number_prefix.trim(), invoiceNumberFormat.value, 1),
 )
 
 // Co přesně se firmě zapne — ať výběr není slepý. `core` je vždy a nic v menu nepřidává.
@@ -71,7 +82,8 @@ async function onSubmit() {
     zip: form.zip,
     bankAccount: form.bank_account,
     iban: form.iban,
-    invoiceNumberPrefix: form.invoice_number_prefix,
+    invoiceNumberPrefix: form.invoice_number_prefix.trim(),
+    invoiceNumberFormat: invoiceNumberFormat.value,
     country: 'CZ',
     email: auth.user?.email ?? '',
     fullName: auth.user?.fullName ?? null,
@@ -268,7 +280,11 @@ async function onSubmit() {
                 placeholder="FA"
               />
             </div>
-            <p class="text-xs text-muted-foreground">Příklad: FA-2026-001</p>
+            <p class="text-xs text-muted-foreground">
+              První faktura dostane číslo
+              <span class="font-medium text-foreground">{{ invoiceNumberExample }}</span
+              >. Změnit jde kdykoli v Nastavení firmy.
+            </p>
           </div>
         </div>
 

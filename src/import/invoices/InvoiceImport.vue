@@ -31,7 +31,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { toast } from '@/components/ui/sonner'
-import { isApiMode } from '@/lib/http'
+import { ApiError, isApiMode } from '@/lib/http'
 import { formatCZK } from '@/lib/invoice'
 import { useInvoiceImport } from './useInvoiceImport'
 import { SOURCE_LABEL } from './types'
@@ -80,8 +80,11 @@ async function onApplySeries(): Promise<void> {
   try {
     const preview = await applySeries()
     if (preview) toast.success(`Hotovo — příští faktura dostane číslo ${preview}.`)
-  } catch {
-    toast.error('Číselnou řadu se nepodařilo nastavit.')
+  } catch (e) {
+    // Server umí říct KONKRÉTNĚ, co vadí (např. že řadu nelze snížit) — obecná hláška by tu radu zahodila.
+    toast.error(
+      e instanceof ApiError && e.message ? e.message : 'Číselnou řadu se nepodařilo nastavit.',
+    )
   } finally {
     applyingSeries.value = false
   }
@@ -253,6 +256,10 @@ async function onRollback(): Promise<void> {
           Nejvyšší importované číslo je <strong>{{ state.series.basedOn }}</strong
           >. Příští vystavená faktura může navázat číslem <strong>{{ state.series.preview }}</strong
           >.
+        </span>
+        <!-- Pořadí doplňuje systém vždy na čtyři místa; u kratší řady se tvar čísla změní. -->
+        <span v-if="state.series.seqWidthChanged" class="basis-full text-xs text-muted-foreground">
+          Pořadové číslo se doplňuje na čtyři místa, tvar čísla se proto oproti importu mírně změní.
         </span>
         <Button
           variant="outline"

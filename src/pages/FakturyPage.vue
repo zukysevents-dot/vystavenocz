@@ -107,6 +107,25 @@ function canCreditNote(inv: { documentType: DocumentType; status: InvoiceStatus 
   return inv.documentType === 'invoice' && (inv.status === 'issued' || inv.status === 'paid')
 }
 
+// Smazat lze POUZE koncept — vystavený doklad podléhá účetní retenci a server ho smazat odmítne.
+// Dokud se tlačítko nabízelo u všeho, končilo potvrzení chybou a jediná rada mířila na akci,
+// která u dokladu vůbec nebyla dostupná.
+function canDelete(inv: { status: InvoiceStatus }): boolean {
+  return inv.status === 'draft'
+}
+
+// Vystavený doklad se v editoru jen prohlíží, koncept se edituje — popisek to musí říct dopředu.
+function openLabel(inv: { status: InvoiceStatus }): string {
+  return inv.status === 'draft' ? 'Upravit' : 'Otevřít'
+}
+
+const deleteTarget = computed(() => invoices.value.find((inv) => inv.id === deleteId.value) ?? null)
+
+// Mazat lze jen koncept, a ten je vždy faktura nebo zálohová (dobropis vzniká rovnou vystavený).
+const deleteDialogTitle = computed(() =>
+  deleteTarget.value?.documentType === 'proforma' ? 'Smazat zálohovou fakturu?' : 'Smazat fakturu?',
+)
+
 /** Vystaví dobropis k faktuře — doklad vytvoří backend (záporné částky), FE ho jen zobrazí. */
 async function onCreditNote(id: string) {
   if (busyId.value) return
@@ -281,9 +300,9 @@ async function onDelete() {
               size="sm"
               @click="router.push('/app/faktury/editor?id=' + inv.id)"
             >
-              <Pencil class="h-4 w-4" /> Upravit
+              <Pencil class="h-4 w-4" /> {{ openLabel(inv) }}
             </Button>
-            <Button variant="ghost" size="sm" @click="askDelete(inv.id)">
+            <Button v-if="canDelete(inv)" variant="ghost" size="sm" @click="askDelete(inv.id)">
               <Trash2 class="h-4 w-4 text-destructive" /> Smazat
             </Button>
           </div>
@@ -357,12 +376,18 @@ async function onDelete() {
                     v-if="inv.documentType !== 'credit_note'"
                     variant="ghost"
                     size="icon"
-                    title="Upravit"
+                    :title="openLabel(inv)"
                     @click="router.push('/app/faktury/editor?id=' + inv.id)"
                   >
                     <Pencil class="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" title="Smazat" @click="askDelete(inv.id)">
+                  <Button
+                    v-if="canDelete(inv)"
+                    variant="ghost"
+                    size="icon"
+                    title="Smazat"
+                    @click="askDelete(inv.id)"
+                  >
                     <Trash2 class="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
@@ -377,7 +402,7 @@ async function onDelete() {
     <AlertDialog :open="deleteOpen" @update:open="(o) => (deleteOpen = o)">
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Smazat fakturu?</AlertDialogTitle>
+          <AlertDialogTitle>{{ deleteDialogTitle }}</AlertDialogTitle>
           <AlertDialogDescription>
             Tuto akci nelze vrátit. Faktura bude trvale smazána.
           </AlertDialogDescription>

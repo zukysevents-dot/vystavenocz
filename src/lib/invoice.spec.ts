@@ -69,10 +69,14 @@ describe('buildInvoiceNumber', () => {
     )
   })
 
-  it('prázdný prefix → fallback FA', () => {
-    expect(buildInvoiceNumber('', '{prefix}-{year}-{seq}', 1, new Date('2026-01-01'))).toBe(
-      'FA-2026-0001',
+  it('prázdný prefix zůstane prázdný (náhled nesmí slibovat jiné číslo, než přidělí server)', () => {
+    expect(buildInvoiceNumber('', '{prefix}{year}{seq}', 1, new Date('2026-01-01'))).toBe(
+      '20260001',
     )
+  })
+
+  it('prázdný formát spadne na výchozí řadu serveru', () => {
+    expect(buildInvoiceNumber('', '', 2, new Date('2026-01-01'))).toBe('20260002')
   })
 
   it('velké pořadové číslo se neořezává', () => {

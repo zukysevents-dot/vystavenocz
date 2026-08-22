@@ -11,9 +11,18 @@ import { cn } from '@/lib/utils'
 
 const modelValue = defineModel<DateValue>()
 
-withDefaults(defineProps<{ placeholder?: string }>(), {
-  placeholder: 'Vyber datum',
-})
+// `label` je název pole (např. „Datum splatnosti"), `testId` stabilní úchyt pro testy.
+// Vlastní `id` spouštěči ZÁMĚRNĚ nenastavujeme: přebilo by id, které mu generuje Popover, a otevřený
+// kalendář by pak přes aria-labelledby odkazoval na neexistující prvek.
+const props = withDefaults(
+  defineProps<{ placeholder?: string; triggerClass?: string; label?: string; testId?: string }>(),
+  {
+    placeholder: 'Vyber datum',
+    triggerClass: 'w-[240px]',
+    label: undefined,
+    testId: undefined,
+  },
+)
 
 // Po výběru data Popover zavřeme.
 const open = ref(false)
@@ -26,16 +35,25 @@ const formatted = computed(() =>
     ? format(modelValue.value.toDate(getLocalTimeZone()), 'dd.MM.yyyy', { locale: cs })
     : '',
 )
+
+// Odečítač obrazovky musí slyšet OBOJÍ — které datum se vybírá i jakou hodnotu pole má. Samotný obsah
+// tlačítka nese jen hodnotu, samotný popisek by naopak hodnotu zahodil.
+const ariaLabel = computed(() =>
+  props.label ? `${props.label}: ${formatted.value || props.placeholder}` : undefined,
+)
 </script>
 
 <template>
   <Popover v-model:open="open">
     <PopoverTrigger as-child>
       <Button
+        :aria-label="ariaLabel"
+        :data-testid="testId"
         variant="outline"
         :class="
           cn(
-            'w-[240px] justify-start text-left font-normal',
+            triggerClass,
+            'justify-start text-left font-normal',
             !modelValue && 'text-muted-foreground',
           )
         "

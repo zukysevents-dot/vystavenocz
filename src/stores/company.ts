@@ -38,6 +38,9 @@ interface CompanySettingsResponse {
   bankAccount: BankAccountDto | null
   publicSlug: string | null
   isVatPayer?: boolean
+  invoiceNumberPrefix?: string
+  invoiceNumberFormat?: string
+  nextInvoiceSeq?: number
 }
 interface CreateCompanyResponse {
   company: { id: string; name: string }
@@ -67,7 +70,7 @@ function emptyCompany(email: string, fullName: string | null): Company {
     invoiceColor: null,
     invoiceNumberPrefix: null,
     invoiceNumberFormat: null,
-    nextInvoiceSeq: 1,
+    nextInvoiceSeq: null, // onboarding řadu nenastavuje — čítač si vede server
     defaultPaymentDays: 14,
     publicSlug: null,
   }
@@ -104,6 +107,11 @@ function fromResponse(r: CompanySettingsResponse, current?: Company | null): Par
     iban: r.bankAccount?.iban ?? null,
     swift: r.bankAccount?.bic ?? null,
     publicSlug: r.publicSlug,
+    // Číselnou řadu vlastní server (přiděluje čísla při vystavení) — starší backend pole neposílá,
+    // pak zůstane lokální hodnota, aby se náhled nepřepsal na prázdno.
+    ...(r.invoiceNumberPrefix === undefined ? {} : { invoiceNumberPrefix: r.invoiceNumberPrefix }),
+    ...(r.invoiceNumberFormat === undefined ? {} : { invoiceNumberFormat: r.invoiceNumberFormat }),
+    ...(r.nextInvoiceSeq === undefined ? {} : { nextInvoiceSeq: r.nextInvoiceSeq }),
   }
 }
 
@@ -122,6 +130,11 @@ function toUpdateRequest(c: Company) {
     bankAccount: { accountNumber: c.bankAccount, iban: c.iban, bic: c.swift },
     publicSlug: c.publicSlug,
     isVatPayer: c.vatMode === 'payer',
+    // Číselná řada: null = nechat na serveru beze změny (onboarding a starší uložené profily řadu
+    // needitují). Prázdný řetězec je naopak platná volba „bez prefixu".
+    invoiceNumberPrefix: c.invoiceNumberPrefix,
+    invoiceNumberFormat: c.invoiceNumberFormat,
+    nextInvoiceSeq: c.nextInvoiceSeq ?? null,
   }
 }
 
@@ -152,9 +165,11 @@ export const useCompanyStore = defineStore('company', () => {
   }
 
   // API režim: načti profil ze serveru (jednou) a slož s lokálním overlayem; mock režim = jen cache.
-  async function load(): Promise<void> {
+  // `force` obchází jednorázovost — číselnou řadu posouvá server při každém vystavení, takže stránka
+  // Nastavení potřebuje čerstvý stav, jinak by ukazovala pořadové číslo z okamžiku přihlášení.
+  async function load(force = false): Promise<void> {
     init()
-    if (!isApiMode() || loaded.value) return
+    if (!isApiMode() || (loaded.value && !force)) return
     const auth = useAuthStore()
     if (!auth.companyId) return // uživatel ještě nemá firmu (před onboardingem)
     try {

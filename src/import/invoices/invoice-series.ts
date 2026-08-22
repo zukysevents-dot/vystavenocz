@@ -4,7 +4,12 @@
  * Zákazník přechází z jiného programu a přináší si faktury s vlastním
  * číslováním. Aby po importu mohl fakturovat dál bez díry a bez duplicity,
  * musí aplikace poznat, jak jeho čísla vypadají, a navázat na poslední z nich.
+ *
+ * Řadu ukládá server (`PUT /company`) a ten má vlastní pravidla — formát musí obsahovat
+ * {prefix}, {year} i {seq} a pořadí doplňuje vždy na čtyři místa. Návrh se jim proto přizpůsobí,
+ * jinak by uložení skončilo odmítnutím nebo by náhled slíbil jiné číslo, než doklad dostane.
  */
+import { buildInvoiceNumber } from '@/lib/invoice'
 
 /** Rozebrané číslo faktury na části, ze kterých jde složit další v řadě. */
 export interface NumberPattern {
@@ -112,6 +117,8 @@ export interface SeriesSuggestion {
    * UI to musí říct nahlas — jinak by uživatel čekal pokračování minulé řady.
    */
   resetForNewYear: boolean
+  /** Původní řada měla jinou šířku pořadí — nová čísla budou čtyřmístná. */
+  seqWidthChanged: boolean
 }
 
 /**
@@ -139,37 +146,37 @@ export function inferSeriesFromNumbers(
   const inScope = latestYear === null ? parsed : parsed.filter((p) => p.pattern.year === latestYear)
   const best = inScope.reduce((a, b) => (b.pattern.seq > a.pattern.seq ? b : a))
 
-  const { prefix, format } = best.pattern
+  const { prefix } = best.pattern
+  // Řadu ukládá server a ten přijme jen formát se všemi třemi značkami: bez {year} by se číslo po
+  // přelomu roku zopakovalo, bez {prefix} by zmizela značka zálohové faktury a dobropisu.
+  const format = serverCompatibleFormat(best.pattern.format)
   const resetForNewYear = latestYear !== null && latestYear < currentYear
   const nextSeq = resetForNewYear ? 1 : best.pattern.seq + 1
-  // Doklad vzniká dnes, takže rok v náhledu je letošní — ne ten z importu.
-  const previewYear = latestYear === null ? null : currentYear
 
   return {
     prefix,
     format,
     nextSeq,
-    preview: buildFromPattern(format, prefix, nextSeq, best.pattern.seqWidth, previewYear),
+    // Náhled skládá TÁŽ funkce, jakou použije server (pořadí vždy na čtyři místa) — jinak by slíbil
+    // jiný tvar čísla, než doklad doopravdy dostane. Rok je LETOŠNÍ: doklad vzniká dnes, ne v roce importu.
+    preview: buildInvoiceNumber(prefix, format, nextSeq, new Date(currentYear, 0, 1)),
     basedOn: best.raw,
     year: latestYear,
     resetForNewYear,
+    // Zákazník s jinou šířkou pořadí uvidí čtyřmístné číslo — je poctivé to říct dopředu.
+    seqWidthChanged: best.pattern.seqWidth !== 4,
   }
 }
 
-/**
- * Složí číslo ze vzoru. Vlastní varianta `buildInvoiceNumber` — ta doplňuje
- * pořadí vždy na čtyři místa, což by u zákazníka s třímístnou řadou tiše
- * změnilo tvar čísla. Náhled musí ukázat, co doopravdy vznikne.
- */
-export function buildFromPattern(
-  format: string,
-  prefix: string,
-  seq: number,
-  seqWidth: number,
-  year: number | null,
-): string {
-  return format
-    .replace('{prefix}', prefix)
-    .replace('{year}', String(year ?? new Date().getFullYear()))
-    .replace('{seq}', String(seq).padStart(seqWidth, '0'))
+/** Doplní do vzoru značky, které server vyžaduje, aniž by změnila to, co už ve vzoru je. */
+function serverCompatibleFormat(format: string): string {
+  let result = format
+  if (!result.includes('{prefix}')) result = `{prefix}${result}`
+  if (!result.includes('{year}')) {
+    // Rok patří před pořadí, aby číslo zůstalo čitelné (FA2026-0007, ne FA-00072026).
+    result = result.includes('{seq}')
+      ? result.replace('{seq}', '{year}-{seq}')
+      : `${result}{year}-{seq}`
+  }
+  return result
 }
