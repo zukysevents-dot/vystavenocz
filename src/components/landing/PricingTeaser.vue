@@ -2,11 +2,14 @@
 import { RouterLink } from 'vue-router'
 import { ArrowRight } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { PRICING_MODULES, MODULAR_PRICING } from '@/lib/pricing'
+import { PRICING_MODULES, MODULAR_PRICING, yearlyPerMonth } from '@/lib/pricing'
 import { EARLY_ACCESS_MAILTO } from '@/lib/landing-cta'
 import { vReveal } from '@/lib/reveal'
 
-const minPrice = Math.min(...PRICING_MODULES.map((m) => m.monthly))
+// Ceník se otevírá v roční variantě, takže i tenhle náhled musí ukazovat roční cenu za měsíc —
+// jinak návštěvník uvidí na webu jinou částku „od" než hned potom v ceníku.
+const minPrice = yearlyPerMonth(Math.min(...PRICING_MODULES.map((m) => m.monthly)))
+const bundlePrice = yearlyPerMonth(MODULAR_PRICING.bundleAllMonthly)
 const czk = (n: number) => n.toLocaleString('cs-CZ')
 </script>
 
@@ -48,10 +51,8 @@ const czk = (n: number) => n.toLocaleString('cs-CZ')
       <p class="mt-6 text-sm text-muted-foreground">
         Už od <span class="font-mono font-bold text-foreground">{{ czk(minPrice) }} Kč/měs</span> ·
         kompletní balík za
-        <span class="font-mono font-bold text-foreground"
-          >{{ czk(MODULAR_PRICING.bundleAllMonthly) }} Kč/měs</span
-        >
-        · ceny orientační do veřejného spuštění
+        <span class="font-mono font-bold text-foreground">{{ czk(bundlePrice) }} Kč/měs</span>
+        · při ročním účtování · ceny orientační do veřejného spuštění
       </p>
 
       <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">

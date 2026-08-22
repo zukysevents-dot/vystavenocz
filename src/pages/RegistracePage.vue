@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { Loader2 } from 'lucide-vue-next'
 import SiteLogo from '@/components/SiteLogo.vue'
@@ -20,18 +20,23 @@ const password = ref('')
 const agreed = ref(false)
 const submitting = ref(false)
 const error = ref('')
+// Chybějící souhlas se zvýrazní až po pokusu o odeslání — do té doby formulář nic nevyčítá.
+const termsMissing = ref(false)
+// Jakmile uživatel souhlas zaškrtne, výtka musí zmizet hned — ne až po dalším odeslání.
+watch(agreed, (checked) => {
+  if (checked) termsMissing.value = false
+})
 
 async function onSubmit() {
   error.value = ''
+  termsMissing.value = !agreed.value
   if (password.value.length < 8) {
     error.value = 'Heslo musí mít alespoň 8 znaků.'
     toast.error(error.value)
     return
   }
   if (!agreed.value) {
-    error.value =
-      'Pro registraci musíte souhlasit s obchodními podmínkami a zpracováním osobních údajů.'
-    toast.error(error.value)
+    toast.error('Ještě potvrďte souhlas s podmínkami.')
     return
   }
   submitting.value = true
@@ -85,8 +90,17 @@ async function onSubmit() {
             />
           </div>
 
-          <div class="flex items-start gap-2">
-            <Checkbox id="terms" v-model="agreed" class="mt-0.5" />
+          <div
+            class="flex items-start gap-2 rounded-lg transition-colors"
+            :class="termsMissing ? 'bg-destructive/10 p-2 ring-1 ring-destructive' : ''"
+          >
+            <Checkbox
+              id="terms"
+              v-model="agreed"
+              class="mt-0.5"
+              :aria-invalid="termsMissing"
+              :aria-describedby="termsMissing ? 'terms-hint' : undefined"
+            />
             <Label for="terms" class="text-sm font-normal leading-relaxed text-muted-foreground">
               Souhlasím s
               <RouterLink
@@ -110,22 +124,17 @@ async function onSubmit() {
             </Label>
           </div>
 
+          <p v-if="termsMissing" id="terms-hint" class="text-sm text-destructive">
+            Ještě potvrďte souhlas s podmínkami.
+          </p>
           <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
 
-          <Button
-            type="submit"
-            variant="coral"
-            size="lg"
-            class="w-full"
-            :disabled="submitting || !agreed"
-          >
+          <!-- Tlačítko zůstává aktivní i bez souhlasu: zašedlé tlačítko bez vysvětlení vypadalo jako
+               rozbitý formulář. Chybějící souhlas se ukáže až po odeslání, přímo u checkboxu. -->
+          <Button type="submit" variant="coral" size="lg" class="w-full" :disabled="submitting">
             <Loader2 v-if="submitting" class="h-4 w-4 animate-spin" />
             Vytvořit účet zdarma
           </Button>
-
-          <p class="text-center text-xs text-muted-foreground">
-            Registrací souhlasíte s podmínkami služby.
-          </p>
         </form>
 
         <GoogleSignInButton intent="register" />

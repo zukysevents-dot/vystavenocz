@@ -128,6 +128,12 @@ export function hasBusinessProfile(): boolean {
   return localStorage.getItem(PROFILE_STORAGE_KEY) !== null
 }
 
+/** Obor zvolený v onboardingu i s doporučenými kroky; null = uživatel obor nevybral. */
+export function savedBusinessProfile(): BusinessProfile | null {
+  const id = localStorage.getItem(PROFILE_STORAGE_KEY)
+  return BUSINESS_PROFILES.find((profile) => profile.id === id) ?? null
+}
+
 export function clearBusinessProfile(): void {
   localStorage.removeItem(PROFILE_STORAGE_KEY)
 }

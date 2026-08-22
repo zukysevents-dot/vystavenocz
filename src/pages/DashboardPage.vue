@@ -27,6 +27,7 @@ import { useAuthStore } from '@/stores/auth'
 import { http, isApiMode } from '@/lib/http'
 import { formatCZK, formatDate } from '@/lib/invoice'
 import { buildLocationRevenue, consolidationSummary } from '@/lib/consolidation'
+import { savedBusinessProfile } from '@/lib/modules'
 import type { InvoiceStatus, Sale } from '@/lib/types'
 
 const router = useRouter()
@@ -88,6 +89,19 @@ const posSummary = computed(() =>
   consolidationSummary(buildLocationRevenue(posSales.value, locations.value)),
 )
 const hasPos = computed(() => posSales.value.length > 0)
+
+// Doporučené kroky oboru zvoleného v onboardingu. Ukazují se jen dokud firma nic nevytvořila —
+// jakmile má první doklad, klienta nebo prodej, přehled mluví sám a checklist by jen překážel.
+const setupSteps = computed(() => savedBusinessProfile()?.setupSteps ?? [])
+const showSetupSteps = computed(
+  () => !loading.value && setupSteps.value.length > 0 && stats.value.count === 0 && !hasPos.value,
+)
+// Počet kroků se liší podle oboru (3 u OSVČ, 5 u gastra) — natvrdo napsané „Tři kroky" by lhalo.
+const setupStepsHint = computed(() => {
+  const count = setupSteps.value.length
+  const noun = count < 5 ? 'kroky' : 'kroků'
+  return `${count} ${noun}, kterými se systém rozjede pro váš obor.`
+})
 
 const CZ_MONTHS = [
   'Led',
@@ -495,9 +509,40 @@ function statusMeta(s: string): { label: string; variant: BadgeVariant } {
         </div>
       </div>
 
+      <!-- Doporučený start: kroky z onboardingu jsou po jeho dokončení jinak nedohledatelné a nováček
+           zůstal na Přehledu plném nul bez jediného vodítka. Mizí sám, jakmile firma začne pracovat. -->
+      <div
+        v-if="showSetupSteps"
+        class="mt-6 rounded-xl border border-border bg-card p-6"
+        data-testid="dashboard-setup-steps"
+      >
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Doporučený start
+        </h2>
+        <p class="mt-1 text-sm text-muted-foreground">{{ setupStepsHint }}</p>
+        <div class="mt-4 space-y-2">
+          <RouterLink
+            v-for="(step, index) in setupSteps"
+            :key="step.to"
+            :to="step.to"
+            class="flex gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50"
+          >
+            <span
+              class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
+            >
+              {{ index + 1 }}
+            </span>
+            <span class="min-w-0">
+              <span class="block text-sm font-medium text-foreground">{{ step.label }}</span>
+              <span class="block text-xs text-muted-foreground">{{ step.description }}</span>
+            </span>
+          </RouterLink>
+        </div>
+      </div>
+
       <!-- Prázdný stav: tenant bez fakturace a zatím bez POS provozu (aby Přehled nebyl prázdný). -->
       <div
-        v-if="!hasInvoicing && !hasPos && !loading"
+        v-if="!hasInvoicing && !hasPos && !loading && !showSetupSteps"
         class="mt-6 rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground"
       >
         Provozní přehled se naplní, jakmile začnete prodávat v Pokladně nebo Restauraci.

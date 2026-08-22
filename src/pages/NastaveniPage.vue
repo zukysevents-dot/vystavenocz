@@ -58,7 +58,7 @@ import {
   type UpsertPaymentProviderConnectionRequest,
 } from '@/composables/useIntegrations'
 import { ApiError, http, isApiMode } from '@/lib/http'
-import { buildInvoiceNumber, formatCZK } from '@/lib/invoice'
+import { DEFAULT_INVOICE_NUMBER_FORMAT, buildInvoiceNumber, formatCZK } from '@/lib/invoice'
 import {
   INTEGRATION_READINESS_ITEMS,
   integrationBadgeVariant,
@@ -182,15 +182,16 @@ const form = reactive({
   iban: '',
   swift: '',
   logoUrl: '',
-  invoiceNumberPrefix: 'FA',
-  invoiceNumberFormat: '{prefix}-{year}-{seq}',
+  invoiceNumberPrefix: '',
+  invoiceNumberFormat: DEFAULT_INVOICE_NUMBER_FORMAT,
   nextInvoiceSeq: 1,
   defaultPaymentDays: 14,
   publicSlug: '',
 })
 
 onMounted(async () => {
-  await companyStore.load()
+  // Vynucené načtení: čítač číselné řady se na serveru posouvá s každou vystavenou fakturou.
+  await companyStore.load(true)
   const c = companyStore.company
   if (!c) return
   form.companyName = c.companyName ?? ''
@@ -205,9 +206,7 @@ onMounted(async () => {
   form.iban = c.iban ?? ''
   form.swift = c.swift ?? ''
   form.logoUrl = c.logoUrl ?? ''
-  form.invoiceNumberPrefix = c.invoiceNumberPrefix ?? 'FA'
-  form.invoiceNumberFormat = c.invoiceNumberFormat ?? '{prefix}-{year}-{seq}'
-  form.nextInvoiceSeq = c.nextInvoiceSeq ?? 1
+  syncNumberingFromStore()
   form.defaultPaymentDays = c.defaultPaymentDays ?? 14
   form.publicSlug = c.publicSlug ?? ''
   if (apiMode) {
@@ -220,11 +219,52 @@ onMounted(async () => {
   }
 })
 
-// Živý náhled, jaké číslo dostane příští faktura.
+// Číselnou řadu vlastní server (přiděluje čísla při vystavení), takže formulář vždy zrcadlí uložený stav.
+// Snímek načtených hodnot slouží k rozpoznání, jestli řadu uživatel v tomhle formuláři vůbec měnil.
+const loadedNumbering = reactive({ prefix: '', format: DEFAULT_INVOICE_NUMBER_FORMAT, seq: 1 })
+
+function syncNumberingFromStore(): void {
+  const c = companyStore.company
+  form.invoiceNumberPrefix = c?.invoiceNumberPrefix ?? ''
+  form.invoiceNumberFormat = c?.invoiceNumberFormat ?? DEFAULT_INVOICE_NUMBER_FORMAT
+  form.nextInvoiceSeq = c?.nextInvoiceSeq ?? 1
+  loadedNumbering.prefix = form.invoiceNumberPrefix
+  loadedNumbering.format = form.invoiceNumberFormat
+  loadedNumbering.seq = form.nextInvoiceSeq
+}
+
+// Nedotčenou řadu neposíláme zpět: mezitím mohly vzniknout faktury a čítač povyskočit, takže hodnota
+// z načtení stránky je zastaralá a uložení jiného nastavení by na ní zbytečně ztroskotalo.
+function numberingPayload(): Partial<Company> {
+  const prefix = form.invoiceNumberPrefix.trim()
+  const format = form.invoiceNumberFormat.trim() || DEFAULT_INVOICE_NUMBER_FORMAT
+  // Vyprázdněné pole neznamená „začni od jedničky" — to by řadu posunulo zpět. Bereme ho jako beze změny.
+  const typedSeq = Number(form.nextInvoiceSeq)
+  const seq =
+    Number.isFinite(typedSeq) && typedSeq >= 1 ? Math.floor(typedSeq) : loadedNumbering.seq
+  const touched =
+    prefix !== loadedNumbering.prefix ||
+    format !== loadedNumbering.format ||
+    seq !== loadedNumbering.seq
+
+  // Mock režim server nemá — tam se hodnoty musí uložit vždy, jinak by se ztratily z profilu firmy.
+  if (!apiMode || touched) {
+    return {
+      // Prázdný prefix je platná volba („bez prefixu"), proto se posílá jako prázdný řetězec, ne null.
+      invoiceNumberPrefix: prefix,
+      invoiceNumberFormat: format,
+      nextInvoiceSeq: seq,
+    }
+  }
+  return { invoiceNumberPrefix: null, invoiceNumberFormat: null, nextInvoiceSeq: null }
+}
+
+// Živý náhled, jaké číslo dostane příští faktura. Počítá se stejnou funkcí jako na serveru,
+// takže náhled nemůže slíbit jiné číslo, než doklad doopravdy dostane.
 const numberPreview = computed(() =>
   buildInvoiceNumber(
-    form.invoiceNumberPrefix || 'FA',
-    form.invoiceNumberFormat || '{prefix}-{year}-{seq}',
+    form.invoiceNumberPrefix,
+    form.invoiceNumberFormat,
     Number(form.nextInvoiceSeq) || 1,
   ),
 )
@@ -840,9 +880,7 @@ async function onSubmit(): Promise<void> {
     iban: form.iban || null,
     swift: form.swift || null,
     logoUrl: form.logoUrl || null,
-    invoiceNumberPrefix: form.invoiceNumberPrefix || null,
-    invoiceNumberFormat: form.invoiceNumberFormat || null,
-    nextInvoiceSeq: Number(form.nextInvoiceSeq) || 1,
+    ...numberingPayload(),
     defaultPaymentDays: Number.isFinite(dueDays) && dueDays >= 0 ? Math.floor(dueDays) : 14,
     publicSlug: normalizePublicSlug(form.publicSlug),
     // Kontaktní e-mail firmy formulář needituje — musí vyhrát uložená hodnota. Účet přihlášeného
@@ -857,6 +895,7 @@ async function onSubmit(): Promise<void> {
     toast.error(companySaveErrorMessage(e))
     return
   }
+  syncNumberingFromStore() // server mohl řadu upravit (např. posunout čítač) — ukaž skutečný stav
   toast.success('Nastavení uloženo. Projeví se v nových fakturách.')
 }
 </script>
@@ -1555,7 +1594,8 @@ async function onSubmit(): Promise<void> {
             <Label for="inv_format">Formát čísla</Label>
             <Input id="inv_format" v-model="form.invoiceNumberFormat" />
             <p class="text-xs text-muted-foreground">
-              Zástupné značky: <code>{prefix}</code>, <code>{year}</code>, <code>{seq}</code>.
+              Zástupné značky: <code>{prefix}</code>, <code>{year}</code>, <code>{seq}</code>. Rok i
+              pořadové číslo jsou povinné, aby se čísla po přelomu roku neopakovala.
             </p>
           </div>
           <div class="rounded-lg bg-muted/40 px-3 py-2 text-sm">

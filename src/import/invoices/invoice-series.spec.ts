@@ -72,14 +72,23 @@ describe('inferSeriesFromNumbers', () => {
     })
   })
 
-  it('u čísel bez roku naváže pořadím bez ohledu na kalendář', () => {
+  it('u čísel bez roku doplní rok — bez něj by se řada po Novém roce opakovala', () => {
+    // Server formát bez {year} nepřijme: čítač se resetuje ročně, takže by se čísla zopakovala.
     const s = inferSeriesFromNumbers(['0042'], 2026)
-    expect(s).toMatchObject({ nextSeq: 43, preview: '0043', resetForNewYear: false })
+    expect(s).toMatchObject({ nextSeq: 43, preview: '2026-0043', resetForNewYear: false })
+    expect(s?.format).toContain('{year}')
   })
 
-  it('zachová šířku pořadí zákazníka', () => {
-    // Třímístná řada se nesmí tiše rozšířit na čtyři místa.
-    expect(inferSeriesFromNumbers(['FA2024009'], 2024)?.preview).toBe('FA2024010')
+  it('doplní {prefix} do vzoru, aby zůstala značka zálohové faktury a dobropisu', () => {
+    // Bez {prefix} by proforma i dobropis ztratily svou značku a složily shodné číslo jako faktura.
+    expect(inferSeriesFromNumbers(['2024-0042'], 2024)?.format).toContain('{prefix}')
+  })
+
+  it('pořadí se sjednotí na čtyři místa a řekne se to nahlas', () => {
+    // Čísla přiděluje server a ten doplňuje vždy na čtyři místa — třímístná řada se rozšíří.
+    const s = inferSeriesFromNumbers(['FA2024009'], 2024)
+    expect(s?.preview).toBe('FA20240010')
+    expect(s?.seqWidthChanged).toBe(true)
   })
 
   it('vrátí null, když čísla nemají rozpoznatelný tvar', () => {

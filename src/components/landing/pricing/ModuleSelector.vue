@@ -98,11 +98,15 @@ const czk = (n: number) => n.toLocaleString('cs-CZ')
       </ul>
 
       <!-- Cena -->
-      <div class="mt-4 flex items-baseline gap-1 border-t border-border pt-3">
-        <span class="font-mono text-lg font-bold text-foreground">{{
-          czk(yearly ? yearlyPerMonth(m.monthly) : m.monthly)
-        }}</span>
-        <span class="text-sm text-muted-foreground">Kč / měs</span>
+      <div class="mt-4 border-t border-border pt-3">
+        <div class="flex items-baseline gap-1">
+          <span class="font-mono text-lg font-bold text-foreground">{{
+            czk(yearly ? yearlyPerMonth(m.monthly) : m.monthly)
+          }}</span>
+          <span class="text-sm text-muted-foreground">Kč / měs</span>
+        </div>
+        <!-- Bez tohohle upřesnění vypadá roční cena za měsíc jako běžná měsíční sazba. -->
+        <p v-if="yearly" class="mt-0.5 text-xs text-muted-foreground">při ročním účtování</p>
       </div>
     </button>
   </div>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Check, Minus } from 'lucide-vue-next'
+import { PRICING_MODULES } from '@/lib/pricing'
 import { vReveal } from '@/lib/reveal'
 
 type Row = {
@@ -148,9 +149,10 @@ const honestFeatures: Row[] = [
   },
 ]
 
+// Cena se dopočítává z ceníku, ať se srovnání nerozejde s tím, co uživatel uvidí na /cenik.
 const priceRow: Row = {
   label: 'Cena od (měsíčně, orientační)',
-  us: '149 Kč',
+  us: `${Math.min(...PRICING_MODULES.map((m) => m.monthly)).toLocaleString('cs-CZ')} Kč`,
   dotykacka: 'dle balíčku',
   storyous: 'dle balíčku',
   fakturoid: '151 Kč',

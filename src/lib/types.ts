@@ -45,7 +45,8 @@ export interface Company {
   invoiceColor: string | null
   invoiceNumberPrefix: string | null
   invoiceNumberFormat: string | null
-  nextInvoiceSeq: number
+  /** Pořadové číslo příští faktury. null = neurčeno klientem (řadu vlastní server). */
+  nextInvoiceSeq: number | null
   defaultPaymentDays: number
   publicSlug: string | null
 }

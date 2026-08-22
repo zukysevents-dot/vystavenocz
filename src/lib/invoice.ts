@@ -86,7 +86,16 @@ export function variableSymbolFromInvoiceNumber(num: string): string {
   return num.replace(/\D/g, '').slice(-10)
 }
 
-/** Generování čísla faktury podle profilu firmy (formát s {prefix}/{year}/{seq}). */
+/** Výchozí formát číselné řady — shodný se serverem (`InvoiceNumbering.DefaultFormat`). */
+export const DEFAULT_INVOICE_NUMBER_FORMAT = '{prefix}{year}{seq}'
+
+/**
+ * Generování čísla faktury podle profilu firmy (formát s {prefix}/{year}/{seq}).
+ *
+ * Zrcadlí serverový `InvoiceNumbering.Build` — číslo vystavené faktuře přiděluje server, takže náhled
+ * v nastavení musí počítat úplně stejně. Prázdný prefix proto zůstává prázdný; dřívější tichý fallback
+ * na „FA" sliboval v náhledu jiné číslo, než jaké doklad doopravdy dostal.
+ */
 export function buildInvoiceNumber(
   prefix: string,
   format: string,
@@ -95,10 +104,10 @@ export function buildInvoiceNumber(
 ): string {
   const year = String(date.getFullYear())
   const seqStr = String(seq).padStart(4, '0')
-  return format
-    .replace('{prefix}', prefix || 'FA')
-    .replace('{year}', year)
-    .replace('{seq}', seqStr)
+  return (format.trim() || DEFAULT_INVOICE_NUMBER_FORMAT)
+    .replaceAll('{prefix}', prefix)
+    .replaceAll('{year}', year)
+    .replaceAll('{seq}', seqStr)
 }
 
 /** Formátuje částku jako české koruny (např. „12 100,00 Kč"). */
