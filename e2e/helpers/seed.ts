@@ -30,10 +30,13 @@ const DEFAULT_CLIENT = {
   updatedAt: '2026-01-01T00:00:00.000Z',
 }
 
-type SubState = 'trial' | 'pro' | 'expired'
+type SubState = 'trial' | 'pro' | 'expired' | 'suspended'
 
 export interface SeedOptions {
-  /** trial (výchozí, běžící), pro (zaplaceno), expired (bez přístupu). */
+  /**
+   * trial (výchozí, běžící), pro (zaplaceno), expired (předplatné doběhlo — čtení a export dál,
+   * fakturace taky, protože je podle ceníku zdarma navždy), suspended (ručně pozastavený přístup).
+   */
   subscription?: SubState
   /** Přepíše vybraná pole firmy (zbytek z výchozího profilu). */
   company?: Record<string, unknown>
@@ -77,7 +80,7 @@ export async function seedApp(page: Page, opts: SeedOptions = {}): Promise<void>
   const subscription =
     sub === 'pro'
       ? { active: true, plan: 'pro', trialEndsAt: null, subscriptionUntil: null }
-      : sub === 'expired'
+      : sub === 'expired' || sub === 'suspended'
         ? { active: false, plan: 'free', trialEndsAt: null, subscriptionUntil: null }
         : {
             active: true,
@@ -92,7 +95,14 @@ export async function seedApp(page: Page, opts: SeedOptions = {}): Promise<void>
     plan: {
       id: sub === 'pro' ? 'growth' : sub === 'expired' ? 'free' : 'growth',
       name: sub === 'pro' ? 'Růst' : sub === 'expired' ? 'Základ' : 'Růst',
-      status: sub === 'pro' ? 'active' : sub === 'expired' ? 'expired' : 'trial',
+      status:
+        sub === 'pro'
+          ? 'active'
+          : sub === 'expired'
+            ? 'expired'
+            : sub === 'suspended'
+              ? 'suspended'
+              : 'trial',
       renewsAt: sub === 'trial' ? new Date(now + 10 * day).toISOString() : null,
       graceEndsAt: null,
       canManageSubscription: true,
@@ -114,8 +124,8 @@ export async function seedApp(page: Page, opts: SeedOptions = {}): Promise<void>
     ],
     features: [],
     limits: {},
-    accessMode: sub === 'expired' ? 'read_only' : 'full',
-    lockedModules: sub === 'expired' ? [] : ['verified_signing'],
+    accessMode: sub === 'expired' ? 'read_only' : sub === 'suspended' ? 'locked' : 'full',
+    lockedModules: sub === 'expired' || sub === 'suspended' ? [] : ['verified_signing'],
   }
 
   await page.addInitScript(

@@ -37,7 +37,8 @@ function dayWord(n: number): string {
     <div class="flex items-center gap-2 text-coral">
       <AlertTriangle class="h-4 w-4 shrink-0" />
       <span class="font-medium">
-        Předplatné skončilo — data máte pořád k nahlédnutí i k exportu, nové zápisy ale nejdou.
+        Předplatné skončilo — fakturovat můžete dál zdarma, placené moduly zůstávají jen ke čtení a
+        exportu.
       </span>
     </div>
     <RouterLink

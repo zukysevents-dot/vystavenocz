@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import { RouterLink } from 'vue-router'
 import { PartyPopper } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { useSubscriptionStore } from '@/stores/subscription'
 
+// Název tarifu bere ze serveru, ne z natvrdo napsaného textu — dřív tu byl zrušený „Vystaveno Pro".
 const subStore = useSubscriptionStore()
+const { plan } = storeToRefs(subStore)
 
 onMounted(() => subStore.init())
 </script>
@@ -17,7 +20,7 @@ onMounted(() => subStore.init())
     </div>
     <h1 class="mt-6 text-3xl font-bold tracking-tight">Děkujeme!</h1>
     <p class="mt-2 text-muted-foreground">
-      Tarif <span class="font-semibold text-foreground">Vystaveno Pro</span> je aktivní. Můžete
+      Tarif <span class="font-semibold text-foreground">{{ plan.name }}</span> je aktivní. Můžete
       fakturovat bez omezení.
     </p>
 

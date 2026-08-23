@@ -61,17 +61,20 @@ import PageHeader from '@/components/landing/PageHeader.vue'
       <h2 class="text-2xl font-bold">4. Bezplatná zkušební doba</h2>
       <p class="mt-3 text-muted-foreground">
         Po registraci získává Uživatel bezplatnou 14denní zkušební dobu s plným přístupem ke všem
-        funkcím. Po jejím uplynutí je pro pokračování ve vystavování faktur nutné aktivní placené
-        předplatné.
+        funkcím. Po jejím uplynutí zůstává fakturace a evidence klientů dostupná zdarma; pro další
+        používání placených modulů je nutné aktivní předplatné. Ke svým dosavadním datům má Uživatel
+        i po skončení předplatného přístup pro čtení a export.
       </p>
     </section>
 
     <section>
       <h2 class="text-2xl font-bold">5. Předplatné a platební podmínky</h2>
       <p class="mt-3 text-muted-foreground">
-        Tarif <strong>Vystaveno Pro</strong> je dostupný v měsíční (159 Kč/měs) nebo roční variantě
-        (1 200 Kč/rok, tj. 100 Kč/měs). Provozovatel není plátcem DPH, uvedené ceny jsou konečné.
-        Doklady o platbě jsou vystavovány elektronicky.
+        Služba se prodává po modulech; Uživatel platí jen za ty, které používá. Rozsah modulů,
+        zvýhodněné balíky a aktuální ceny jsou uvedeny v
+        <a href="/#cenik" class="text-primary hover:underline">ceníku</a>, který je nedílnou
+        součástí těchto podmínek. Ceny jsou v ceníku uvedeny bez DPH. Předplatné lze hradit měsíčně
+        nebo ročně. Doklady o platbě jsou vystavovány elektronicky.
       </p>
       <p class="mt-3 text-muted-foreground">
         Online platby předplatného zatím nejsou spuštěné — aktivace tarifu probíhá individuální

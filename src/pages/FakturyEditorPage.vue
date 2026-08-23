@@ -74,7 +74,7 @@ const route = useRoute()
 const router = useRouter()
 const { clients, load: loadClients, getById: getClientById } = useClients()
 const { create, update, issue, pay, cancel, get, load: loadInvoices } = useInvoices()
-const { hasAccess } = useSubscription()
+const { canInvoice } = useSubscription()
 const companyStore = useCompanyStore()
 
 // Datum se skládá z MÍSTNÍCH složek, ne přes toISOString() — ten převádí do UTC, takže po půlnoci
@@ -274,8 +274,8 @@ onMounted(async () => {
     dueDate.value = addDaysISO(c?.defaultPaymentDays ?? 14)
     const clientIdQ = typeof route.query.clientId === 'string' ? route.query.clientId : null
     if (clientIdQ) selectedClientId.value = clientIdQ
-    // Nová faktura bez aktivního tarifu — paywall hned při otevření (i přímou URL).
-    if (!hasAccess.value) paywallOpen.value = true
+    // Pozastavený přístup — vysvětlení hned při otevření (i přímou URL).
+    if (!canInvoice.value) paywallOpen.value = true
   }
 
   loading.value = false
@@ -498,8 +498,8 @@ function handleLifecycleError(e: unknown, conflictMessage: string): void {
 }
 
 async function onSave() {
-  // Vytvoření/uložení faktury je prémiová akce — bez tarifu paywall (nelze obejít přímou URL).
-  if (!hasAccess.value) {
+  // Fakturace je zdarma navždy, zavírá ji až pozastavený přístup (nelze obejít přímou URL).
+  if (!canInvoice.value) {
     paywallOpen.value = true
     return
   }
@@ -521,7 +521,7 @@ async function onSave() {
 // Vystavení = z rozdělaného konceptu se stane hotová faktura: uloží se a server jí přidělí číslo
 // z číselné řady i datum vystavení. Bez této akce zůstal doklad navždy konceptem bez čísla.
 async function onIssue(): Promise<void> {
-  if (!hasAccess.value) {
+  if (!canInvoice.value) {
     paywallOpen.value = true
     return
   }
@@ -544,11 +544,11 @@ async function onIssue(): Promise<void> {
   }
 }
 
-// Odeslání faktury je prémiová akce — bez aktivního tarifu ukážeme paywall.
+// Odeslání faktury zavře jen pozastavený přístup — fakturace sama je podle ceníku zdarma.
 // V API režimu server odesílá jen VYSTAVENOU fakturu — koncept se před otevřením dialogu
 // uloží a vystaví (uživatel odesláním vystavení zjevně chce; mock flow to dělá stejně).
 async function onSendClick(): Promise<void> {
-  if (!hasAccess.value) {
+  if (!canInvoice.value) {
     paywallOpen.value = true
     return
   }
@@ -592,7 +592,7 @@ async function onSent() {
 }
 
 async function onMarkPaid() {
-  if (!hasAccess.value) {
+  if (!canInvoice.value) {
     paywallOpen.value = true
     return
   }
