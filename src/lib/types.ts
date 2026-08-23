@@ -768,6 +768,8 @@ export interface PublicMenuVariant {
 export interface PublicMenuResponse {
   categories: PublicMenuCategory[]
   products: PublicMenuProduct[]
+  /** Provoz používá kuchyňské bony. Starší server pole neposílá → host uvidí neutrální text. */
+  usesKitchenTickets?: boolean
 }
 
 export interface PublicOrderItemInput {

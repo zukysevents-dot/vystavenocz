@@ -16,4 +16,20 @@ describe('visibleHelpGuides', () => {
       visibleHelpGuides(['core', 'pos', 'gastro', 'stock'], 'Employee').map((guide) => guide.id),
     ).toEqual(['cash-register', 'restaurant'])
   })
+
+  // Provoz bez kuchyňských bonů nesmí dostat návod na tlačítko, které v jeho aplikaci není.
+  it('krok o odeslání na stanice zmizí, když provoz bony nepoužívá', () => {
+    const withTickets = visibleHelpGuides(['core', 'gastro'], 'Owner').find(
+      (guide) => guide.id === 'restaurant',
+    )!
+    const withoutTickets = visibleHelpGuides(['core', 'gastro'], 'Owner', false).find(
+      (guide) => guide.id === 'restaurant',
+    )!
+
+    expect(withTickets.steps.map((s) => s.title)).toContain('Odešlete na stanice a zaplaťte')
+    expect(withoutTickets.steps.map((s) => s.title)).not.toContain('Odešlete na stanice a zaplaťte')
+    expect(withoutTickets.steps.map((s) => s.title)).toContain('Zaplaťte účet')
+    // Počet kroků se nemění — jeden se jen vymění za druhý, návod nesmí zůstat useknutý.
+    expect(withoutTickets.steps).toHaveLength(withTickets.steps.length)
+  })
 })

@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { http, isApiMode, setTokens, type Tokens } from '@/lib/http'
 import { useAuthStore } from '@/stores/auth'
@@ -240,5 +240,19 @@ export const useCompanyStore = defineStore('company', () => {
     return auth.setModules(normalized) // mock: uloží volbu, ať ji reload nezahodí
   }
 
-  return { company, initialized, init, load, save, loadModules, saveModules }
+  // Používá provoz kuchyňské bony? Jedno místo s výchozí hodnotou — dokud profil nedorazí
+  // (nebo ho starší backend neposílá), platí dosavadní chování: bony ZAPNUTÉ. Opačný default by
+  // provozu s kuchyní na okamžik schoval tlačítko „Odeslat na stanice".
+  const usesKitchenTickets = computed(() => company.value?.usesKitchenTickets !== false)
+
+  return {
+    company,
+    initialized,
+    usesKitchenTickets,
+    init,
+    load,
+    save,
+    loadModules,
+    saveModules,
+  }
 })

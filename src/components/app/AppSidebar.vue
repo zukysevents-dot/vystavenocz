@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
   LayoutDashboard,
@@ -48,6 +48,7 @@ import ThemeToggle from '@/components/ThemeToggle.vue'
 import FullscreenToggle from '@/components/app/FullscreenToggle.vue'
 import { toast } from '@/components/ui/sonner'
 import { useAuthStore } from '@/stores/auth'
+import { useCompanyStore } from '@/stores/company'
 import {
   APP_NAV_DEFINITIONS,
   isModuleEnabled,
@@ -99,6 +100,11 @@ const navIcons = {
 } as const
 
 const auth = useAuthStore()
+// Profil firmy kvůli volbě „Používáme kuchyňské bony" — nese ji nastavení firmy, ne modul.
+// Sidebar je nad každou obrazovkou appky, takže je to jediné místo, kde stačí načíst jednou.
+const companyStore = useCompanyStore()
+companyStore.init() // cache hned, ať menu nepřeskočí při prvním renderu
+onMounted(() => void companyStore.load())
 
 type SidebarNavItem = AppNavDefinition & { icon: (typeof navIcons)[keyof typeof navIcons] }
 
@@ -159,6 +165,9 @@ const nav = computed<SidebarNavItem[]>(() =>
   APP_NAV_DEFINITIONS.filter((item) => {
     if (!isModuleEnabled(item.module, auth.modules)) return false
     if (!isNavVisibleForRole(item, auth.role)) return false
+    // Firemní volba, ne modul: provoz bez kuchyně bony nepoužívá, tak ať na ně nevede menu.
+    // Jen skrytí položky — přímá URL zůstává průchozí a stránka sama vysvětlí, proč je prázdná.
+    if (item.requiresKitchenTickets && !companyStore.usesKitchenTickets) return false
     return true
   }).map((item) => ({ ...item, icon: navIcons[item.to as keyof typeof navIcons] })),
 )

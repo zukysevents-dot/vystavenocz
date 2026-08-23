@@ -40,7 +40,27 @@ Tento manuál je živý podklad pro obsluhu restaurace, baru nebo bistra. Má vy
 10. Na mobilu zůstává dole rychlá lišta s přesným celkem a akcemi `Odeslat` a `Zaplatit`; na široké obrazovce jsou stejné akce pevně pod účtem. `Odeslat na stanice` pošle kuchyňské položky do kuchyně a nápoje na bar.
 11. Po zaplacení zůstane otevřený jen nezaplacený zbytek účtu.
 
+## Provoz bez kuchyně (vypnutí bonů)
+
+Kavárna, stánek nebo bar bez kuchyně nemá kdo sledovat kuchyňský displej. V `Nastavení firmy` →
+`Gastro provoz` proto můžete vypnout volbu `Používáme kuchyňské bony`.
+
+Co se změní, když bony vypnete:
+
+1. Z účtu zmizí tlačítko `Odeslat na stanice` — objednávka se rovnou účtuje na stůl.
+2. Před platbou se už neptáme na neodeslané položky; platba jde napřímo.
+3. Stoly nesvítí jako `Neodesláno`.
+4. Z menu zmizí `Kuchyňské objednávky`. Když stránku otevřete odkazem, řekne vám, že provoz bony
+   nepoužívá — nevypadá to jako porucha.
+5. Objednávka hosta z QR kódu se připíše na účet stolu a hostovi se nikde neslibuje, že jde do
+   kuchyně.
+
+Přepínač nic nemaže a kdykoli ho jde zapnout zpět. Nová i stávající firma má bony ve výchozím
+stavu zapnuté.
+
 ## Kuchyně a bar
+
+Tahle kapitola platí pro provoz se zapnutými kuchyňskými bony.
 
 1. Položky s kuchyňskou nebo barovou sekcí posílejte do výroby.
 2. `Kuchyně` ukazuje bony podle stanice, stolu a času přípravy.

@@ -13,11 +13,18 @@ import {
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { useKitchen } from '@/composables/useKitchen'
+import { useCompanyStore } from '@/stores/company'
 import { ApiError, isApiMode } from '@/lib/http'
 import { toast } from '@/components/ui/sonner'
 import LoadError from '@/components/app/LoadError.vue'
 import { groupItemsByCourse } from '@/lib/order-courses'
 import type { CategoryKitchenSection, KitchenQueueItem } from '@/lib/types'
+
+const companyStore = useCompanyStore()
+companyStore.init()
+// Firma může mít gastro modul, a přesto bony nepoužívat (kavárna, stánek). Pak sem nic nepřijde
+// a stránka to musí říct rovnou — prázdná fronta bez vysvětlení vypadá jako porucha.
+const kitchenTicketsEnabled = computed(() => companyStore.usesKitchenTickets)
 
 const kitchen = useKitchen()
 const apiMode = isApiMode()
@@ -258,8 +265,10 @@ function escapeHtml(s: string): string {
 
 watch([station, mode], refresh)
 
-onMounted(() => {
+onMounted(async () => {
   if (!apiMode) return
+  await companyStore.load() // ať se fronta nezačne dotazovat provozu, který bony nepoužívá
+  if (!kitchenTicketsEnabled.value) return
   refresh()
   timer = setInterval(() => {
     if (mode.value === 'live') {
@@ -282,6 +291,19 @@ onUnmounted(() => {
     >
       <ChefHat class="mx-auto h-10 w-10" />
       <p class="mt-3 font-semibold text-foreground">Kuchyňské objednávky teď nejsou dostupné</p>
+    </div>
+
+    <div
+      v-else-if="!kitchenTicketsEnabled"
+      class="rounded-2xl border border-border bg-card p-8 text-center"
+      data-testid="kuchyne-bony-vypnute"
+    >
+      <ChefHat class="mx-auto h-10 w-10 text-muted-foreground" />
+      <p class="mt-3 font-semibold text-foreground">Provoz nepoužívá kuchyňské bony</p>
+      <p class="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+        Objednávky se rovnou účtují na stůl a do kuchyně se neodesílají. Zapnout je můžete v
+        Nastavení firmy.
+      </p>
     </div>
 
     <template v-else>
