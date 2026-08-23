@@ -11,10 +11,16 @@ import {
 import { Button } from '@/components/ui/button'
 import { visibleHelpGuides } from '@/lib/help'
 import { useAuthStore } from '@/stores/auth'
+import { useCompanyStore } from '@/stores/company'
 
 const auth = useAuthStore()
+const companyStore = useCompanyStore()
+companyStore.init()
 const router = useRouter()
-const guides = computed(() => visibleHelpGuides(auth.modules, auth.role))
+// Provoz bez kuchyňských bonů nesmí dostat návod na tlačítko, které u něj v aplikaci není.
+const guides = computed(() =>
+  visibleHelpGuides(auth.modules, auth.role, companyStore.usesKitchenTickets),
+)
 </script>
 
 <template>

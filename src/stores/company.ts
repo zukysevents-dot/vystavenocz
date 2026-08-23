@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { http, isApiMode, setTokens, type Tokens } from '@/lib/http'
 import { useAuthStore } from '@/stores/auth'
@@ -41,6 +41,7 @@ interface CompanySettingsResponse {
   invoiceNumberPrefix?: string
   invoiceNumberFormat?: string
   nextInvoiceSeq?: number
+  usesKitchenTickets?: boolean
 }
 interface CreateCompanyResponse {
   company: { id: string; name: string }
@@ -71,6 +72,7 @@ function emptyCompany(email: string, fullName: string | null): Company {
     invoiceNumberPrefix: null,
     invoiceNumberFormat: null,
     nextInvoiceSeq: null, // onboarding řadu nenastavuje — čítač si vede server
+    usesKitchenTickets: true, // dosavadní chování; server hodnotu stejně přepíše
     defaultPaymentDays: 14,
     publicSlug: null,
   }
@@ -112,6 +114,8 @@ function fromResponse(r: CompanySettingsResponse, current?: Company | null): Par
     ...(r.invoiceNumberPrefix === undefined ? {} : { invoiceNumberPrefix: r.invoiceNumberPrefix }),
     ...(r.invoiceNumberFormat === undefined ? {} : { invoiceNumberFormat: r.invoiceNumberFormat }),
     ...(r.nextInvoiceSeq === undefined ? {} : { nextInvoiceSeq: r.nextInvoiceSeq }),
+    // Starší backend pole neposílá → necháme lokální hodnotu, ať se provozu nevypne kuchyně.
+    ...(r.usesKitchenTickets === undefined ? {} : { usesKitchenTickets: r.usesKitchenTickets }),
   }
 }
 
@@ -135,6 +139,7 @@ function toUpdateRequest(c: Company) {
     invoiceNumberPrefix: c.invoiceNumberPrefix,
     invoiceNumberFormat: c.invoiceNumberFormat,
     nextInvoiceSeq: c.nextInvoiceSeq ?? null,
+    usesKitchenTickets: c.usesKitchenTickets,
   }
 }
 
@@ -235,5 +240,19 @@ export const useCompanyStore = defineStore('company', () => {
     return auth.setModules(normalized) // mock: uloží volbu, ať ji reload nezahodí
   }
 
-  return { company, initialized, init, load, save, loadModules, saveModules }
+  // Používá provoz kuchyňské bony? Jedno místo s výchozí hodnotou — dokud profil nedorazí
+  // (nebo ho starší backend neposílá), platí dosavadní chování: bony ZAPNUTÉ. Opačný default by
+  // provozu s kuchyní na okamžik schoval tlačítko „Odeslat na stanice".
+  const usesKitchenTickets = computed(() => company.value?.usesKitchenTickets !== false)
+
+  return {
+    company,
+    initialized,
+    usesKitchenTickets,
+    init,
+    load,
+    save,
+    loadModules,
+    saveModules,
+  }
 })

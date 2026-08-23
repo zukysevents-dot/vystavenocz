@@ -211,7 +211,12 @@ async function confirmChange(): Promise<void> {
                   Zobrazit možnosti
                 </Button>
               </RouterLink>
-              <span class="text-xs text-muted-foreground">Obsahuje {{ module.upsell.plan }}.</span>
+              <span class="text-xs text-muted-foreground">
+                Obsahuje {{ module.upsell.plan
+                }}<template v-if="module.upsell.priceMonthly">
+                  — {{ module.upsell.priceMonthly }} Kč/měs bez DPH</template
+                >.
+              </span>
             </template>
 
             <!-- Připravujeme: žádná aktivace, jen bezpečné vyjádření zájmu. -->

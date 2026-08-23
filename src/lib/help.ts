@@ -3,6 +3,12 @@ import type { AppModuleId } from './modules'
 export interface HelpStep {
   title: string
   description: string
+  /**
+   * Krok platí jen pro provoz, který používá kuchyňské bony (`true`), nebo naopak jen pro provoz
+   * bez nich (`false`). Nevyplněno = platí vždy. Bez toho by průvodce posílal kavárnu na tlačítko
+   * „Odeslat na stanice", které v jejím provozu není.
+   */
+  kitchenTickets?: boolean
 }
 
 export interface HelpGuide {
@@ -20,6 +26,16 @@ export interface HelpGuide {
 }
 
 const step = (title: string, description: string): HelpStep => ({ title, description })
+const bonStep = (title: string, description: string): HelpStep => ({
+  title,
+  description,
+  kitchenTickets: true,
+})
+const bezBonuStep = (title: string, description: string): HelpStep => ({
+  title,
+  description,
+  kitchenTickets: false,
+})
 
 export const HELP_GUIDES: readonly HelpGuide[] = [
   {
@@ -185,9 +201,13 @@ export const HELP_GUIDES: readonly HelpGuide[] = [
         'Přidejte položky',
         'Použijte kategorii nebo hledání názvu či kódu, doplňte volby a přes Poznámka · chod zařaďte jídlo jako předkrm, hlavní chod nebo dezert.',
       ),
-      step(
+      bonStep(
         'Odešlete na stanice a zaplaťte',
         'Kuchyň a bar uvidí jednotlivé chody pod oddělovači. Před platbou vás systém upozorní na neodeslané položky.',
+      ),
+      bezBonuStep(
+        'Zaplaťte účet',
+        'Bony máte vypnuté, takže se nikam neodesílá — účet rovnou zaplatíte a vytisknete účtenku.',
       ),
     ],
     tip: 'Účet se obnovuje automaticky a před platbou se zkontroluje jeho aktuální stav; zrušení i sloučení vyžaduje potvrzení.',
@@ -418,9 +438,15 @@ export const HELP_GUIDES: readonly HelpGuide[] = [
 export function visibleHelpGuides(
   modules: readonly AppModuleId[],
   role: string | null | undefined,
+  usesKitchenTickets = true,
 ): HelpGuide[] {
   const isManager = ['Owner', 'Admin', 'Manager'].includes(role ?? '')
   return HELP_GUIDES.filter(
     (guide) => modules.includes(guide.module) && (guide.audience === 'everyone' || isManager),
-  )
+  ).map((guide) => {
+    const steps = guide.steps.filter(
+      (s) => s.kitchenTickets === undefined || s.kitchenTickets === usesKitchenTickets,
+    )
+    return steps.length === guide.steps.length ? guide : { ...guide, steps }
+  })
 }

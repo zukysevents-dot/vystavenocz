@@ -50,6 +50,9 @@ const loadError = ref(false)
 const submitting = ref(false)
 const submitError = ref(false)
 const confirmation = ref<PublicOrderConfirmation | null>(null)
+// Provoz bez kuchyně objednávku nikam „neposílá" — jen ji připíše na účet stolu. Dokud menu
+// nedorazí (nebo ho starší server neposílá), držíme neutrální text a nic hostovi neslibujeme.
+const usesKitchenTickets = ref<boolean | null>(null)
 const categories = ref<PublicMenuCategory[]>([])
 const products = ref<PublicMenuProduct[]>([])
 const checkoutPanel = ref<HTMLElement | null>(null)
@@ -173,9 +176,28 @@ const modifierDialogProduct = computed(() =>
 )
 const modifierDialogGroups = computed(() => modifierProduct.value?.modifierGroups ?? [])
 
+const introText = computed(() => {
+  if (!tableMode.value) {
+    return usesKitchenTickets.value === false
+      ? 'Vyberte jídlo a zvolte vyzvednutí nebo rozvoz. Objednávku převezme obsluha.'
+      : 'Vyberte jídlo, zvolte vyzvednutí nebo rozvoz a objednávka půjde rovnou do kuchyně.'
+  }
+  return usesKitchenTickets.value === false
+    ? 'Vyberte jídlo a objednávka se připíše na účet vašeho stolu.'
+    : 'Vyberte jídlo a objednávka půjde rovnou do kuchyně k vašemu stolu.'
+})
+
+const confirmationText = computed(() => {
+  if (!tableMode.value) return 'Objednávka už je v provozu.'
+  return usesKitchenTickets.value === false
+    ? 'Objednávku máte na účtu stolu a zaplatíte ji u obsluhy.'
+    : 'Objednávka už je v kuchyni a zaplatíte ji u obsluhy.'
+})
+
 onMounted(async () => {
   try {
     const response = await publicOrders.menu(slug.value)
+    usesKitchenTickets.value = response.usesKitchenTickets ?? null
     categories.value = response.categories
     products.value = response.products.map((product) => ({
       ...product,
@@ -328,11 +350,7 @@ async function submit() {
           {{ tableMode ? 'Objednávka ke stolu' : 'Online objednávka' }}
         </h1>
         <p class="mt-1 text-sm text-muted-foreground">
-          {{
-            tableMode
-              ? 'Vyberte jídlo a objednávka půjde rovnou do kuchyně k vašemu stolu.'
-              : 'Vyberte jídlo, zvolte vyzvednutí nebo rozvoz a objednávka půjde rovnou do kuchyně.'
-          }}
+          {{ introText }}
         </p>
         <div
           v-if="tableMode"
@@ -367,11 +385,7 @@ async function submit() {
       <h2 class="mt-4 text-lg font-semibold">Objednávka přijata</h2>
       <p class="mt-1 text-sm text-muted-foreground">
         Celkem {{ formatCZK(confirmation.total) }}.
-        {{
-          tableMode
-            ? 'Objednávka už je v kuchyni a zaplatíte ji u obsluhy.'
-            : 'Objednávka už je v provozu.'
-        }}
+        {{ confirmationText }}
       </p>
       <p class="mt-2 text-xs text-muted-foreground">ID objednávky: {{ confirmation.orderId }}</p>
     </div>

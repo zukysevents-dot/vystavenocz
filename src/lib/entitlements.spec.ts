@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { APP_MODULES } from '@/lib/modules'
+import { PRICING_MODULES } from '@/lib/pricing'
 import {
   ENTITLEMENT_REASONS,
   MODULE_UPSELL,
@@ -67,5 +68,45 @@ describe('entitlements — pomocné funkce', () => {
       readOnly: 'subscription_read_only',
       locked: 'subscription_locked',
     })
+  })
+})
+
+describe('entitlements — upsell sedí na ceník', () => {
+  // Dřív byly v upsellu natvrdo napsané tarify „Základ / Provoz / Růst". Ceník je od schváleného
+  // sazebníku modulární, takže zákazník četl název, který si na ceníku nenajde.
+  it('každý placený modul nabízí modul, který ceník opravdu prodává, a jeho cenu', () => {
+    const podleNazvu = new Map(PRICING_MODULES.map((m) => [`modul ${m.name}`, m]))
+
+    for (const module of APP_MODULES) {
+      const upsell = MODULE_UPSELL[module]
+      if (upsell.priceMonthly === 0) continue // jádro a fakturace jsou v ceně
+
+      const cenikovyModul = podleNazvu.get(upsell.plan)
+      expect(cenikovyModul, `${module} nabízí „${upsell.plan}", to ceník neprodává`).toBeDefined()
+      expect(upsell.priceMonthly).toBe(cenikovyModul!.monthly)
+    }
+  })
+
+  it('fakturace a jádro se neprodávají — podle ceníku jsou zdarma navždy', () => {
+    expect(MODULE_UPSELL.invoicing.priceMonthly).toBe(0)
+    expect(MODULE_UPSELL.core.priceMonthly).toBe(0)
+  })
+
+  it('nadstavby vedení míří na jeden modul Plus, ne každá zvlášť', () => {
+    for (const module of [
+      'reporting',
+      'loyalty',
+      'crm',
+      'integrations',
+      'verified_signing',
+    ] as const)
+      expect(MODULE_UPSELL[module].plan).toBe('modul Plus')
+  })
+
+  it('upsell nikde neslibuje cenu s DPH — ceník je bez DPH', () => {
+    for (const module of APP_MODULES) {
+      const text = `${MODULE_UPSELL[module].benefit} ${MODULE_UPSELL[module].plan}`
+      expect(text).not.toContain('s DPH')
+    }
   })
 })

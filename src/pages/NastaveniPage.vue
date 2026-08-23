@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import {
   Select,
   SelectContent,
@@ -187,7 +188,11 @@ const form = reactive({
   nextInvoiceSeq: 1,
   defaultPaymentDays: 14,
   publicSlug: '',
+  usesKitchenTickets: true,
 })
+
+// Karta gastro provozu má smysl jen firmě, která restaurační modul používá.
+const gastroModuleEnabled = computed(() => auth.hasModule('gastro'))
 
 onMounted(async () => {
   // Vynucené načtení: čítač číselné řady se na serveru posouvá s každou vystavenou fakturou.
@@ -209,6 +214,7 @@ onMounted(async () => {
   syncNumberingFromStore()
   form.defaultPaymentDays = c.defaultPaymentDays ?? 14
   form.publicSlug = c.publicSlug ?? ''
+  form.usesKitchenTickets = c.usesKitchenTickets !== false
   if (apiMode) {
     await Promise.all([
       loadLocations(),
@@ -883,6 +889,7 @@ async function onSubmit(): Promise<void> {
     ...numberingPayload(),
     defaultPaymentDays: Number.isFinite(dueDays) && dueDays >= 0 ? Math.floor(dueDays) : 14,
     publicSlug: normalizePublicSlug(form.publicSlug),
+    usesKitchenTickets: form.usesKitchenTickets,
     // Kontaktní e-mail firmy formulář needituje — musí vyhrát uložená hodnota. Účet přihlášeného
     // uživatele je jen fallback pro firmu bez e-mailu (onboarding), jinak by ho každé uložení
     // nastavení přepsalo e-mailem toho, kdo zrovna klikl na Uložit.
@@ -999,6 +1006,32 @@ async function onSubmit(): Promise<void> {
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Gastro provoz: firma s kuchyní posílá bony, kavárna nebo stánek ne. -->
+      <div
+        v-if="gastroModuleEnabled"
+        class="rounded-xl border border-border bg-card p-6"
+        data-testid="nastaveni-gastro"
+      >
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Gastro provoz
+        </h2>
+        <label class="mt-4 flex cursor-pointer items-start gap-3">
+          <Switch
+            :model-value="form.usesKitchenTickets"
+            aria-label="Používáme kuchyňské bony"
+            data-testid="nastaveni-bony-switch"
+            @update:model-value="(value) => (form.usesKitchenTickets = value === true)"
+          />
+          <span class="text-sm">
+            <span class="font-medium text-foreground">Používáme kuchyňské bony</span>
+            <span class="mt-1 block text-muted-foreground">
+              Obsluha odešle objednávku na kuchyňský displej a kuchař ji odbaví. Vypněte, pokud
+              nemáte kuchyň — objednávky se pak jen účtují na stůl, bez odesílání a bez displeje.
+            </span>
+          </span>
+        </label>
       </div>
 
       <!-- Moduly mají vlastní stránku; tady zůstává jen cesta k nim (bez duplicitního výběru). -->

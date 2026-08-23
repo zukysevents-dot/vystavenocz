@@ -51,6 +51,9 @@ const canManage = computed(() => auth.canManageSubscription && auth.hasRole('Own
         <p class="mt-6 rounded-xl bg-surface-soft px-4 py-3 text-sm text-foreground">
           Tuto část obsahuje <strong>{{ upsell.plan }}</strong
           >.
+          <span v-if="upsell.priceMonthly" class="text-muted-foreground">
+            {{ upsell.priceMonthly }} Kč/měs bez DPH, ve větší sestavě vychází levněji.
+          </span>
         </p>
 
         <div v-if="canManage" class="mt-6 flex flex-col gap-3 sm:flex-row">

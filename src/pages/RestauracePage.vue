@@ -103,6 +103,9 @@ const customersApi = useCustomers()
 const loyaltyApi = useLoyalty()
 const { products, load: loadProducts } = useProducts()
 const companyStore = useCompanyStore()
+// Provoz bez kuchyně (kavárna, stánek) bony nepoužívá — nemá je kdo na displeji vydávat.
+// Výchozí hodnotu (zapnuto) drží company store, tady se jen čte.
+const kitchenTicketsEnabled = computed(() => companyStore.usesKitchenTickets)
 const auth = useAuthStore()
 const apiMode = isApiMode()
 const canCancelOrder = computed(
@@ -202,7 +205,8 @@ function tableOperationalMeta(order: Order | undefined) {
       badge: 'bg-destructive/15 text-foreground',
     }
   }
-  if (order.items.some((item) => item.kitchenStatus === 'New')) {
+  // „Neodesláno" má smysl jen tam, kde se odesílá. Bez bonů by svítily oranžově všechny stoly.
+  if (kitchenTicketsEnabled.value && order.items.some((item) => item.kitchenStatus === 'New')) {
     return {
       label: 'Neodesláno',
       surface: 'border-sun bg-sun/10 text-foreground',
@@ -272,6 +276,9 @@ onMounted(async () => {
     loading.value = false
     return
   }
+  // Cache stačí na hlavičku účtenky, ne na přepínač bonů — ten řídí tlačítka i guard platby,
+  // takže ho chceme podle serveru, ne podle stavu z minulého přihlášení.
+  void companyStore.load()
   // Mapa průběžně obnovuje obsazenost; otevřený účet položky/total kvůli QR doobjednávkám.
   await loadInitialData()
 })
@@ -1214,7 +1221,10 @@ async function openPayment(
     }
   }
   if (!currentOrder.value) return // účet se mezitím zavřel a refresh nás vrátil na mapu
+  // Bez bonů se položky do kuchyně vůbec neodesílají a zůstávají `New` — dialog „Nejdřív odeslat?"
+  // by proto vyskočil u každé platby a nešel by odklikat ničím jiným než „Zaplatit bez odeslání".
   if (
+    kitchenTicketsEnabled.value &&
     !options.allowUnsent &&
     currentOrder.value.items.some((item) => item.kitchenStatus === 'New')
   ) {
@@ -2136,8 +2146,12 @@ const currentOrderElapsed = computed(() =>
                 </Button>
               </div>
 
-              <div class="grid grid-cols-2 gap-2">
+              <div
+                class="grid gap-2"
+                :class="kitchenTicketsEnabled ? 'grid-cols-2' : 'grid-cols-1'"
+              >
                 <Button
+                  v-if="kitchenTicketsEnabled"
                   type="button"
                   variant="outline"
                   class="h-14"
@@ -2186,7 +2200,7 @@ const currentOrderElapsed = computed(() =>
                 >
               </button>
               <Button
-                v-if="hasNewItems"
+                v-if="kitchenTicketsEnabled && hasNewItems"
                 type="button"
                 variant="outline"
                 class="h-14 shrink-0"

@@ -353,13 +353,20 @@ export interface AppNavDefinition {
   module: AppModuleId
   exact?: boolean
   hiddenForRoles?: string[]
+  /** Položka dává smysl jen provozu, který používá kuchyňské bony (firemní volba, ne modul). */
+  requiresKitchenTickets?: boolean
 }
 
 export const APP_NAV_DEFINITIONS: AppNavDefinition[] = [
   { to: '/app', label: 'Dnes ve firmě', module: 'core', exact: true, hiddenForRoles: ['Employee'] },
   { to: '/app/pokladna', label: 'Pokladna', module: 'pos' },
   { to: '/app/restaurace', label: 'Stoly a objednávky', module: 'gastro' },
-  { to: '/app/kuchyne', label: 'Kuchyňské objednávky', module: 'gastro' },
+  {
+    to: '/app/kuchyne',
+    label: 'Kuchyňské objednávky',
+    module: 'gastro',
+    requiresKitchenTickets: true,
+  },
   {
     to: '/app/mapa-stolu',
     label: 'Nastavení stolů',
