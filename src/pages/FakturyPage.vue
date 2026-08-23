@@ -120,9 +120,16 @@ const filtered = computed(() => {
   })
 })
 
-// Dobropis smí vzniknout jen z vystavené/uhrazené faktury (ne z konceptu, proformy ani jiného dobropisu).
+// Dobropis smí vzniknout jen z finalizované faktury (ne z konceptu, proformy ani jiného dobropisu).
+// Stavy zrcadlí serverový `IsFinalizedInvoice` = Issued | Sent | Overdue | Paid; adapter mapuje
+// serverový `Sent` na FE `issued` a `Archived` na `cancelled`.
+// Faktura PO SPLATNOSTI tady dřív chyběla, takže u ní tlačítko nebylo, i když by ji server
+// dobropisovat nechal — a právě neuhrazená faktura je typický důvod k opravě dokladu.
 function canCreditNote(inv: { documentType: DocumentType; status: InvoiceStatus }): boolean {
-  return inv.documentType === 'invoice' && (inv.status === 'issued' || inv.status === 'paid')
+  return (
+    inv.documentType === 'invoice' &&
+    (inv.status === 'issued' || inv.status === 'overdue' || inv.status === 'paid')
+  )
 }
 
 // Smazat lze POUZE koncept — vystavený doklad podléhá účetní retenci a server ho smazat odmítne.
