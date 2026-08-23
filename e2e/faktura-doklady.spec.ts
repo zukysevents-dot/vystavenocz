@@ -199,3 +199,66 @@ test('editor: stornování vystavené faktury vyžaduje důvod (backend 415 bez 
   expect(after!.status).toBe('cancelled')
   expect(after!.cancelReason).toBe('Duplicitní faktura')
 })
+
+// Dobropis vzniká rovnou VYSTAVENÝ, takže ho účetní retence nedovolí smazat a editor ho odmítá
+// otevřít. Bez storna v seznamu neměl jedinou akci a omylem vystavený dobropis byl slepá ulička.
+function mkCreditNote(id = 'cn-1') {
+  return mkInvoice({
+    id,
+    documentType: 'credit_note',
+    invoiceNumber: 'FA-2026-0001-D',
+    status: 'issued',
+    parentInvoiceId: 'inv-x',
+    subtotal: -2000,
+    vatTotal: -420,
+    total: -2420,
+  })
+}
+
+test('dobropis jde stornovat ze seznamu — doklad zůstane, jen dostane stav a důvod', async ({
+  page,
+}) => {
+  await seedApp(page, { subscription: 'pro', invoices: [mkCreditNote()] })
+  await page.goto('/app/faktury')
+
+  await page.getByTestId('faktury-storno-dobropis-desktop').click()
+  await expect(page.getByRole('heading', { name: 'Stornovat dobropis?' })).toBeVisible()
+
+  await page.getByTestId('faktury-storno-duvod').fill('Vystaveno omylem k jiné faktuře')
+  await page.getByTestId('faktury-storno-potvrdit').click()
+
+  await expect(page.getByText('Dobropis stornován.')).toBeVisible()
+
+  // Smazání by bylo účetně špatně: doklad musí zůstat i s číslem, jen označený jako stornovaný.
+  const notes = await storedInvoices(page)
+  expect(notes).toHaveLength(1)
+  expect(notes[0].status).toBe('cancelled')
+  expect(notes[0].invoiceNumber).toBe('FA-2026-0001-D')
+  expect(notes[0].cancelReason).toBe('Vystaveno omylem k jiné faktuře')
+})
+
+test('storno dobropisu neprojde bez důvodu — server ho vyžaduje', async ({ page }) => {
+  await seedApp(page, { subscription: 'pro', invoices: [mkCreditNote()] })
+  await page.goto('/app/faktury')
+
+  await page.getByTestId('faktury-storno-dobropis-desktop').click()
+  await expect(page.getByTestId('faktury-storno-potvrdit')).toBeDisabled()
+
+  // Pár znaků nestačí — jinak by v evidenci zůstalo storno s důvodem „a".
+  await page.getByTestId('faktury-storno-duvod').fill('ee')
+  await expect(page.getByTestId('faktury-storno-potvrdit')).toBeDisabled()
+
+  await page.getByTestId('faktury-storno-duvod').fill('Duplicitní dobropis')
+  await expect(page.getByTestId('faktury-storno-potvrdit')).toBeEnabled()
+})
+
+test('stornovaný dobropis už znovu stornovat nejde a nejde ani smazat', async ({ page }) => {
+  await seedApp(page, {
+    subscription: 'pro',
+    invoices: [{ ...mkCreditNote(), status: 'cancelled' }],
+  })
+  await page.goto('/app/faktury')
+
+  await expect(page.getByTestId('faktury-storno-dobropis-desktop')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Smazat' })).toHaveCount(0)
+})

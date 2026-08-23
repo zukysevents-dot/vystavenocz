@@ -636,6 +636,10 @@ Když se při odeslání zobrazí informace o nedostupném e-mailu, jde o nastav
 
 - Proforma je výzva k platbě a lze ji převést na běžnou fakturu.
 - Dobropis opravuje již vystavený doklad a nelze jej upravovat jako běžný koncept.
+- Dobropis vzniká rovnou vystavený, takže ho nelze smazat — vystavený doklad podléhá účetní
+  retenci. Pokud vznikl omylem, použijte u něj v seznamu faktur akci **Stornovat** a uveďte důvod.
+  Doklad zůstane v evidenci se svým číslem, označí se jako stornovaný a přestane se počítat do
+  přehledu DPH i do podkladů pro účetní.
 - Opakované faktury vytvářejí měsíční doklady podle šablony. Automatické odesílání a inkaso nejsou součástí samotné šablony.
 
 ### 12.6 Pohledávky a podklady pro účetní

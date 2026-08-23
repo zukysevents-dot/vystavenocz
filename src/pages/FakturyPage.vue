@@ -11,9 +11,11 @@ import {
   Trash2,
   Loader2,
   Upload,
+  Ban,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import {
   AlertDialog,
@@ -35,7 +37,7 @@ import LoadError from '@/components/app/LoadError.vue'
 import type { DocumentType, InvoiceStatus } from '@/lib/types'
 
 const router = useRouter()
-const { invoices, loadError, load, remove, creditNote, convertToInvoice } = useInvoices()
+const { invoices, loadError, load, remove, creditNote, convertToInvoice, cancel } = useInvoices()
 const { canInvoice } = useSubscription()
 
 const loading = ref(true)
@@ -44,6 +46,10 @@ const typeFilter = ref<'all' | DocumentType>('all')
 const busyId = ref<string | null>(null)
 const deleteId = ref<string | null>(null)
 const deleteOpen = ref(false)
+const cancelId = ref<string | null>(null)
+const cancelOpen = ref(false)
+const cancelReason = ref('')
+const cancelling = ref(false)
 const paywallOpen = ref(false)
 
 const typeFilters = [
@@ -56,6 +62,12 @@ const typeFilters = [
 function askDelete(id: string) {
   deleteId.value = id
   deleteOpen.value = true
+}
+
+function askCancel(id: string) {
+  cancelId.value = id
+  cancelReason.value = ''
+  cancelOpen.value = true
 }
 
 // Fakturace je podle ceníku zdarma navždy — brání jí jen ručně pozastavený přístup.
@@ -114,6 +126,17 @@ function canDelete(inv: { status: InvoiceStatus }): boolean {
   return inv.status === 'draft'
 }
 
+// Dobropis vzniká rovnou VYSTAVENÝ, takže ho nejde smazat (účetní retence) ani otevřít v editoru
+// (ten přepočítává kladné součty, tak ho tvrdý guard odmítá). Bez storna byl omylem vystavený
+// dobropis slepá ulička — v seznamu neměl jedinou akci. Účetně správná oprava není smazání,
+// ale storno: doklad si nechá své číslo a v evidenci zůstane označený jako stornovaný.
+// Stavy odpovídají serverovému `InvoiceStateMachine` (uhrazený, stornovaný ani archivovaný už
+// stornovat nejde). Serverový `Sent` mapuje adapter na FE `issued`, takže odeslaný doklad
+// spadá pod první větev — vlastní stav pro něj tady není.
+function canCancel(inv: { documentType: DocumentType; status: InvoiceStatus }): boolean {
+  return inv.documentType === 'credit_note' && (inv.status === 'issued' || inv.status === 'overdue')
+}
+
 // Vystavený doklad se v editoru jen prohlíží, koncept se edituje — popisek to musí říct dopředu.
 function openLabel(inv: { status: InvoiceStatus }): string {
   return inv.status === 'draft' ? 'Upravit' : 'Otevřít'
@@ -161,6 +184,40 @@ async function onConvert(id: string) {
     }
   } finally {
     busyId.value = null
+  }
+}
+
+const cancelTarget = computed(() => invoices.value.find((inv) => inv.id === cancelId.value) ?? null)
+// Server důvod VYŽADUJE (a ukládá ho k dokladu), takže prázdný se ani neodesílá.
+const cancelReasonValid = computed(() => cancelReason.value.trim().length >= 5)
+
+/**
+ * Stornuje dobropis. Doklad se NEMAŽE — zůstane s číslem i položkami, jen dostane stav
+ * „Stornováno" a uložený důvod, takže je v účetnictví dohledatelný.
+ * Stav se mění AŽ z odpovědi serveru; žádný lokální „úspěch" dopředu.
+ */
+async function onCancelCreditNote() {
+  const id = cancelId.value
+  if (!id || !cancelReasonValid.value || cancelling.value) return
+  cancelling.value = true
+  try {
+    await cancel(id, cancelReason.value.trim())
+    toast.success('Dobropis stornován.')
+    cancelOpen.value = false
+    cancelId.value = null
+    cancelReason.value = ''
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 409) {
+      // Např. doklad mezitím stornoval nebo uhradil jiný uživatel — načti skutečný stav.
+      toast.error('Dobropis už stornovat nelze. Zkontrolujte jeho aktuální stav.')
+      await load()
+    } else if (e instanceof ApiError && e.status === 403) {
+      toast.error('Na storno dokladu nemáte oprávnění.')
+    } else {
+      toast.error('Storno se nepodařilo dokončit. Stav dokladu se nezměnil.')
+    }
+  } finally {
+    cancelling.value = false
   }
 }
 
@@ -302,6 +359,15 @@ async function onDelete() {
             >
               <Pencil class="h-4 w-4" /> {{ openLabel(inv) }}
             </Button>
+            <Button
+              v-if="canCancel(inv)"
+              variant="ghost"
+              size="sm"
+              data-testid="faktury-storno-dobropis"
+              @click="askCancel(inv.id)"
+            >
+              <Ban class="h-4 w-4 text-destructive" /> Stornovat
+            </Button>
             <Button v-if="canDelete(inv)" variant="ghost" size="sm" @click="askDelete(inv.id)">
               <Trash2 class="h-4 w-4 text-destructive" /> Smazat
             </Button>
@@ -382,6 +448,17 @@ async function onDelete() {
                     <Pencil class="h-4 w-4" />
                   </Button>
                   <Button
+                    v-if="canCancel(inv)"
+                    variant="ghost"
+                    size="icon"
+                    title="Stornovat dobropis"
+                    aria-label="Stornovat dobropis"
+                    data-testid="faktury-storno-dobropis-desktop"
+                    @click="askCancel(inv.id)"
+                  >
+                    <Ban class="h-4 w-4 text-destructive" />
+                  </Button>
+                  <Button
                     v-if="canDelete(inv)"
                     variant="ghost"
                     size="icon"
@@ -415,6 +492,53 @@ async function onDelete() {
           >
             Smazat
           </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <!--
+      Storno dobropisu. Není to smazání: doklad zůstane v evidenci s číslem i položkami, jen
+      dostane stav „Stornováno" a uložený důvod. Proto povinný důvod a vlastní tlačítko místo
+      AlertDialogAction — ta zavírá dialog dřív, než akce doběhne, takže by dvojklik poslal
+      dva požadavky a uživatel by neviděl, že se něco děje.
+    -->
+    <AlertDialog :open="cancelOpen" @update:open="(o) => (cancelOpen = o)">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Stornovat dobropis?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Dobropis
+            <strong>{{ cancelTarget?.invoiceNumber }}</strong> zůstane v evidenci se svým číslem,
+            označí se jako stornovaný a přestane se počítat do DPH i obratu. Smazat ho nelze —
+            vystavený doklad podléhá účetní retenci.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <div class="space-y-2">
+          <Label for="storno-duvod">Důvod storna</Label>
+          <Input
+            id="storno-duvod"
+            v-model="cancelReason"
+            data-testid="faktury-storno-duvod"
+            placeholder="Např. vystaveno omylem k jiné faktuře"
+            maxlength="500"
+          />
+          <p class="text-xs text-muted-foreground">
+            Důvod se uloží k dokladu, aby bylo později dohledatelné, proč byl stornován.
+          </p>
+        </div>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="cancelling">Zpět</AlertDialogCancel>
+          <Button
+            variant="destructive"
+            :disabled="!cancelReasonValid || cancelling"
+            data-testid="faktury-storno-potvrdit"
+            @click="onCancelCreditNote"
+          >
+            <Loader2 v-if="cancelling" class="h-4 w-4 animate-spin" />
+            {{ cancelling ? 'Stornuji…' : 'Stornovat dobropis' }}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
