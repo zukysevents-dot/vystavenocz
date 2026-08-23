@@ -15,10 +15,12 @@ import PageHeader from '@/components/landing/PageHeader.vue'
     <section>
       <h2 class="text-2xl font-bold">1. Správce osobních údajů</h2>
       <p class="mt-3 text-muted-foreground">
-        Správcem osobních údajů je <strong>Patrik Zukal</strong>, IČO 24991686, se sídlem Brodská
-        1914/40, 591 01 Žďár nad Sázavou, Česká republika, podnikající fyzická osoba zapsaná v
-        živnostenském rejstříku. Kontaktní e-mail:
-        <a href="mailto:patrik@vystaveno.cz" class="text-primary underline">patrik@vystaveno.cz</a>.
+        Správcem osobních údajů je společnost <strong>Backstreet Holding s.r.o.</strong>, IČO
+        21024863, se sídlem Jaurisova 515/4, Michle, 140 00 Praha 4, Česká republika, zapsaná v
+        obchodním rejstříku vedeném Městským soudem v Praze, oddíl C, vložka 394621. Kontaktní
+        e-mail:
+        <a href="mailto:podpora@vystaveno.cz" class="text-primary underline">podpora@vystaveno.cz</a
+        >.
       </p>
     </section>
 
@@ -99,7 +101,8 @@ import PageHeader from '@/components/landing/PageHeader.vue'
         o platebního zpracovatele. Případné předání údajů mimo EHP se opírá o rozhodnutí o
         odpovídající ochraně (EU-US Data Privacy Framework) nebo standardní smluvní doložky (čl. 46
         GDPR). Aktuální seznam subprocesorů rádi poskytneme na vyžádání na
-        <a href="mailto:patrik@vystaveno.cz" class="text-primary underline">patrik@vystaveno.cz</a>.
+        <a href="mailto:podpora@vystaveno.cz" class="text-primary underline">podpora@vystaveno.cz</a
+        >.
       </p>
     </section>
 
@@ -126,7 +129,8 @@ import PageHeader from '@/components/landing/PageHeader.vue'
       </ul>
       <p class="mt-3 text-muted-foreground">
         Žádosti vyřizujeme do 30 dnů. Kontakt:
-        <a href="mailto:patrik@vystaveno.cz" class="text-primary underline">patrik@vystaveno.cz</a>.
+        <a href="mailto:podpora@vystaveno.cz" class="text-primary underline">podpora@vystaveno.cz</a
+        >.
       </p>
     </section>
 
@@ -157,7 +161,8 @@ import PageHeader from '@/components/landing/PageHeader.vue'
       <p>
         <strong>Pověřenec pro ochranu osobních údajů:</strong> aktuálně není ustanoven (nepovinné
         dle čl. 37 GDPR). Pro dotazy ke zpracování pište na
-        <a href="mailto:patrik@vystaveno.cz" class="text-primary underline">patrik@vystaveno.cz</a>.
+        <a href="mailto:podpora@vystaveno.cz" class="text-primary underline">podpora@vystaveno.cz</a
+        >.
       </p>
     </section>
   </article>

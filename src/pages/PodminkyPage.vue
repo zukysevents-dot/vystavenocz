@@ -16,11 +16,12 @@ import PageHeader from '@/components/landing/PageHeader.vue'
       <h2 class="text-2xl font-bold">1. Úvodní ustanovení</h2>
       <p class="mt-3 text-muted-foreground">
         Tyto obchodní podmínky (dále jen <strong>„Podmínky"</strong>) upravují vzájemná práva a
-        povinnosti mezi provozovatelem služby Vystaveno.cz, <strong>Patrikem Zukalem</strong>, IČO:
-        24991686, se sídlem Brodská 1914/40, 591 01 Žďár nad Sázavou, Česká republika, podnikající
-        fyzickou osobou zapsanou v živnostenském rejstříku (dále jen
+        povinnosti mezi provozovatelem služby Vystaveno.cz, společností
+        <strong>Backstreet Holding s.r.o.</strong>, IČO: 21024863, DIČ: CZ21024863, se sídlem
+        Jaurisova 515/4, Michle, 140 00 Praha 4, Česká republika, zapsanou v obchodním rejstříku
+        vedeném Městským soudem v Praze, oddíl C, vložka 394621 (dále jen
         <strong>„Provozovatel"</strong>), a osobou, která využívá službu Vystaveno (dále jen
-        <strong>„Uživatel"</strong>). Provozovatel není plátcem DPH.
+        <strong>„Uživatel"</strong>). Provozovatel je plátcem DPH.
       </p>
       <p class="mt-3 text-muted-foreground">
         Registrací a aktivním používáním služby Uživatel potvrzuje, že se s těmito Podmínkami
@@ -73,8 +74,9 @@ import PageHeader from '@/components/landing/PageHeader.vue'
         Služba se prodává po modulech; Uživatel platí jen za ty, které používá. Rozsah modulů,
         zvýhodněné balíky a aktuální ceny jsou uvedeny v
         <a href="/#cenik" class="text-primary hover:underline">ceníku</a>, který je nedílnou
-        součástí těchto podmínek. Ceny jsou v ceníku uvedeny bez DPH. Předplatné lze hradit měsíčně
-        nebo ročně. Doklady o platbě jsou vystavovány elektronicky.
+        součástí těchto podmínek. Ceny jsou v ceníku uvedeny bez DPH; k ceně se připočítává DPH v
+        zákonné sazbě. Předplatné lze hradit měsíčně nebo ročně. Doklady o platbě jsou vystavovány
+        elektronicky.
       </p>
       <p class="mt-3 text-muted-foreground">
         Online platby předplatného zatím nejsou spuštěné — aktivace tarifu probíhá individuální
@@ -158,10 +160,10 @@ import PageHeader from '@/components/landing/PageHeader.vue'
       class="rounded-2xl border border-border bg-surface-soft p-6 text-sm text-muted-foreground"
     >
       <p>
-        <strong>Kontakt:</strong> Patrik Zukal, Brodská 1914/40, 591 01 Žďár nad Sázavou, IČO
-        24991686, e-mail
-        <a href="mailto:patrik@vystaveno.cz" class="text-primary underline">
-          patrik@vystaveno.cz
+        <strong>Kontakt:</strong> Backstreet Holding s.r.o., Jaurisova 515/4, Michle, 140 00 Praha
+        4, IČO 21024863, e-mail
+        <a href="mailto:podpora@vystaveno.cz" class="text-primary underline">
+          podpora@vystaveno.cz
         </a>
       </p>
     </section>

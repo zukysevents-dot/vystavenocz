@@ -96,7 +96,9 @@ const isDesktopApp = '__TAURI_INTERNALS__' in window
         <p class="text-xs text-muted-foreground">
           © {{ year }} Vystaveno.cz. Všechna práva vyhrazena.
         </p>
-        <p class="text-xs text-muted-foreground">IČO: 24991686 · Neplátce DPH</p>
+        <p class="text-xs text-muted-foreground">
+          Backstreet Holding s.r.o. · IČO: 21024863 · DIČ: CZ21024863
+        </p>
       </div>
     </div>
   </footer>
