@@ -254,18 +254,29 @@ export function useInvoices() {
    * API: `POST /invoices/{id}/credit-note` — server přepočítá znaménko DPH a přidělí číslo z řady dobropisů.
    * Mock: vytvoří VYSTAVENÝ dobropis ze zdrojové faktury (záporné položky), navázaný přes `parentInvoiceId`.
    */
-  async function creditNote(id: string): Promise<Invoice> {
-    // Ostrý režim: dobropis (záporné částky i DPH) vytváří SERVER z původní faktury; tělo neposíláme
-    // (žádné záporné quantity — validator vyžaduje > 0), FE jen přemapuje serverovou zápornou odpověď
-    // (znaménka zachová adapter).
+  // Součet jednoho pole napříč řádky. Mock nepočítá DPH — jen sčítá už spočítané serverové částky.
+  function sum(items: Invoice['items'], field: 'lineSubtotal' | 'lineVat' | 'lineTotal'): number {
+    return items.reduce((acc, it) => acc + (it[field] ?? 0), 0)
+  }
+
+  async function creditNote(id: string, lineIds?: string[]): Promise<Invoice> {
+    // Ostrý režim: dobropis (záporné částky i DPH) vytváří SERVER z původní faktury; posíláme jen
+    // výběr řádků (žádné záporné quantity — validator vyžaduje > 0), FE jen přemapuje serverovou
+    // zápornou odpověď (znaménka zachová adapter).
+    // `lineIds` = ČÁSTEČNÝ dobropis (jen vybrané celé řádky zdroje). Prázdné/nevyplněné = plný.
+    const body = lineIds?.length ? { lineIds } : undefined
     if (isApiMode())
       return upsert(
-        invoiceFromApi(await http.post<InvoiceApiResponse>(`/invoices/${id}/credit-note`)),
+        invoiceFromApi(await http.post<InvoiceApiResponse>(`/invoices/${id}/credit-note`, body)),
       )
     // Mock stand-in za backend (dev/e2e): jen převrátí znaménko UŽ spočítaných serverových částek,
     // množství zůstává kladné. Žádný výpočet DPH na frontendu.
     const src = getById(id)
     if (!src) throw new Error('Zdrojová faktura nenalezena.')
+    const selectedSourceItems = lineIds?.length
+      ? src.items.filter((it) => lineIds.includes(it.id))
+      : src.items
+    if (!selectedSourceItems.length) throw new Error('Vyberte aspoň jednu položku k dobropisu.')
     const now = new Date().toISOString()
     // Dobropis vzniká rovnou jako VYSTAVENÝ opravný daňový doklad (číslo z vlastní řady — v ostrém
     // režimu ho přiděluje backend; mock jen odvodí z původní faktury). Tak vstoupí do Účtárny i DPH.
@@ -276,10 +287,12 @@ export function useInvoices() {
       parentInvoiceId: src.id,
       status: 'issued',
       invoiceNumber: `${src.invoiceNumber ?? 'DOB'}-D`,
-      items: creditNoteItems(src.items),
-      subtotal: -Math.abs(src.subtotal),
-      vatTotal: -Math.abs(src.vatTotal),
-      total: -Math.abs(src.total),
+      items: creditNoteItems(selectedSourceItems),
+      // Součty MUSÍ odpovídat vybraným řádkům, ne celé faktuře — jinak by částečný dobropis
+      // vrátil víc peněz, než kolik se dobropisuje.
+      subtotal: -Math.abs(sum(selectedSourceItems, 'lineSubtotal')),
+      vatTotal: -Math.abs(sum(selectedSourceItems, 'lineVat')),
+      total: -Math.abs(sum(selectedSourceItems, 'lineTotal')),
       paidAt: null,
       createdAt: now,
       updatedAt: now,

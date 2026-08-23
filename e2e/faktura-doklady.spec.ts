@@ -84,6 +84,9 @@ test('faktura → Vystavit dobropis: backend/mock vytvoří ZÁPORNÝ dobropis s
   await expect(creditBtn).toBeVisible()
 
   await creditBtn.click()
+  // Nejdřív výběr položek — dobropisovat jde i jen část faktury; výchozí je celá.
+  await expect(page.getByRole('heading', { name: 'Vystavit dobropis' })).toBeVisible()
+  await page.getByTestId('dobropis-potvrdit').click()
   await expect(page.getByText(/Dobropis vytvořen/)).toBeVisible()
 
   // Tvrdá kontrola kontraktu: total < 0, ale quantity > 0, a je navázaný na původní fakturu.
@@ -97,7 +100,9 @@ test('faktura → Vystavit dobropis: backend/mock vytvoří ZÁPORNÝ dobropis s
   expect(note!.invoiceNumber).toBeTruthy()
 })
 
-test('editor: dobropis nelze otevřít v editoru — guard proti přímé URL', async ({ page }) => {
+test('editor: dobropis se otevře JEN KE ČTENÍ — vidět, vytisknout, odeslat, stornovat', async ({
+  page,
+}) => {
   await seedApp(page, {
     subscription: 'pro',
     invoices: [
@@ -114,9 +119,24 @@ test('editor: dobropis nelze otevřít v editoru — guard proti přímé URL', 
     ],
   })
   await page.goto('/app/faktury/editor?id=cn-1')
-  // Guard v onMounted přesměruje na seznam — dobropis se needituje (nesmí se přepočítat na kladný).
-  await expect(page).toHaveURL(/\/app\/faktury$/)
-  await expect(page.getByText('Dobropis je odvozený doklad a needituje se.')).toBeVisible()
+
+  // Dřív sem editor vůbec nepustil, takže dobropis nešlo ani zobrazit, ani poslat klientovi.
+  await expect(page).toHaveURL(/\/app\/faktury\/editor/)
+  await expect(page.getByRole('heading', { name: 'Dobropis' })).toBeVisible()
+  await expect(page.getByText('Jen ke čtení')).toBeVisible()
+
+  // Doklad se NESMÍ dát upravit ani uložit — částky jsou daňově zmražené.
+  await expect(page.getByRole('button', { name: 'Uložit koncept' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Vystavit fakturu' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Přidat položku' })).toHaveCount(0)
+
+  // Ale musí jít vytisknout, odeslat klientovi a stornovat.
+  await expect(page.getByRole('button', { name: /PDF/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Odeslat' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Stornovat' })).toBeVisible()
+
+  // Součty zůstávají ZÁPORNÉ — editor je bere ze serveru, nepřepočítává je na kladné.
+  await expect(page.getByText('-2 420', { exact: false }).first()).toBeVisible()
 })
 
 test('zálohová (proforma) → Převést na fakturu vytvoří navázaný daňový doklad', async ({
@@ -261,4 +281,65 @@ test('stornovaný dobropis už znovu stornovat nejde a nejde ani smazat', async 
 
   await expect(page.getByTestId('faktury-storno-dobropis-desktop')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Smazat' })).toHaveCount(0)
+})
+
+test('částečný dobropis: vybraná položka určuje částku, ne celá faktura', async ({ page }) => {
+  // Reklamace jedné položky z faktury o dvou. Plný dobropis by vrátil víc peněz, než má.
+  await seedApp(page, {
+    subscription: 'pro',
+    invoices: [
+      mkInvoice({
+        id: 'inv-2',
+        items: [
+          {
+            id: 'it-a',
+            description: 'Práce',
+            quantity: 2,
+            unit: 'ks',
+            unitPrice: 1000,
+            vatRate: 21,
+            lineSubtotal: 2000,
+            lineVat: 420,
+            lineTotal: 2420,
+          },
+          {
+            id: 'it-b',
+            description: 'Materiál',
+            quantity: 1,
+            unit: 'ks',
+            unitPrice: 500,
+            vatRate: 21,
+            lineSubtotal: 500,
+            lineVat: 105,
+            lineTotal: 605,
+          },
+        ],
+        subtotal: 2500,
+        vatTotal: 525,
+        total: 3025,
+      }),
+    ],
+  })
+  await page.goto('/app/faktury')
+  await page.getByRole('button', { name: 'Vystavit dobropis' }).click()
+
+  // Odeber první položku → dobropisuje se jen materiál (605 Kč).
+  await page.getByTestId('dobropis-polozky').getByRole('checkbox', { name: 'Práce' }).click()
+  await page.getByTestId('dobropis-potvrdit').click()
+  await expect(page.getByText(/Dobropis vytvořen/)).toBeVisible()
+
+  const note = (await storedInvoices(page)).find((i) => i.documentType === 'credit_note')!
+  expect(note.total).toBe(-605)
+  expect(note.items).toHaveLength(1)
+  expect(note.items.every((it) => it.quantity > 0)).toBe(true)
+})
+
+test('dobropis nejde vystavit bez vybrané položky', async ({ page }) => {
+  await seedApp(page, { subscription: 'pro', invoices: [mkInvoice({ id: 'inv-3' })] })
+  await page.goto('/app/faktury')
+  await page.getByRole('button', { name: 'Vystavit dobropis' }).click()
+
+  await page.getByTestId('dobropis-polozky').getByRole('checkbox', { name: 'Práce' }).click()
+  await expect(page.getByTestId('dobropis-potvrdit')).toBeDisabled()
+  await expect(page.getByText('Vyberte aspoň jednu položku.')).toBeVisible()
 })

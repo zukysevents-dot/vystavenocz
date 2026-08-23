@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import {
   AlertDialog,
@@ -34,10 +35,11 @@ import { useSubscription } from '@/composables/useSubscription'
 import { documentTypeLabel, formatCZK, formatDate } from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
 import LoadError from '@/components/app/LoadError.vue'
-import type { DocumentType, InvoiceStatus } from '@/lib/types'
+import type { DocumentType, Invoice, InvoiceStatus } from '@/lib/types'
 
 const router = useRouter()
-const { invoices, loadError, load, remove, creditNote, convertToInvoice, cancel } = useInvoices()
+const { invoices, loadError, load, remove, creditNote, convertToInvoice, cancel, get } =
+  useInvoices()
 const { canInvoice } = useSubscription()
 
 const loading = ref(true)
@@ -50,6 +52,10 @@ const cancelId = ref<string | null>(null)
 const cancelOpen = ref(false)
 const cancelReason = ref('')
 const cancelling = ref(false)
+const creditOpen = ref(false)
+const creditSource = ref<Invoice | null>(null)
+const creditLineIds = ref<string[]>([])
+const creatingCreditNote = ref(false)
 const paywallOpen = ref(false)
 
 const typeFilters = [
@@ -149,23 +155,60 @@ const deleteDialogTitle = computed(() =>
   deleteTarget.value?.documentType === 'proforma' ? 'Smazat zálohovou fakturu?' : 'Smazat fakturu?',
 )
 
-/** Vystaví dobropis k faktuře — doklad vytvoří backend (záporné částky), FE ho jen zobrazí. */
-async function onCreditNote(id: string) {
+/**
+ * Otevře výběr položek k dobropisu. Nedobropisuje se vždycky celá faktura — když se reklamuje
+ * jedna položka z deseti, plný dobropis by vrátil násobně víc peněz, než má.
+ * Detail se dotahuje ze serveru, protože výpis faktur vrací jen souhrn bez řádků.
+ */
+async function askCreditNote(id: string) {
   if (busyId.value) return
   busyId.value = id
   try {
-    const note = await creditNote(id)
+    const src = await get(id)
+    if (!src) {
+      toast.error('Fakturu se nepodařilo načíst.')
+      return
+    }
+    creditSource.value = src
+    creditLineIds.value = src.items.map((it) => it.id) // výchozí = plný dobropis
+    creditOpen.value = true
+  } catch {
+    toast.error('Fakturu se nepodařilo načíst.')
+  } finally {
+    busyId.value = null
+  }
+}
+
+/** Vystaví dobropis k vybraným položkám — doklad vytvoří backend (záporné částky), FE ho jen zobrazí. */
+async function onCreditNote() {
+  const src = creditSource.value
+  if (!src || !creditLineIds.value.length || creatingCreditNote.value) return
+  creatingCreditNote.value = true
+  try {
+    // Plný dobropis = všechny řádky; pak se výběr neposílá, ať se server chová jako dřív.
+    const all = creditLineIds.value.length === src.items.length
+    const note = await creditNote(src.id, all ? undefined : creditLineIds.value)
     toast.success(`Dobropis vytvořen (${formatCZK(note.total)}).`)
     typeFilter.value = 'all'
+    creditOpen.value = false
+    creditSource.value = null
   } catch (e) {
     if (e instanceof ApiError && e.status === 409) {
       toast.error('Dobropis lze vystavit jen k vystavené nebo uhrazené faktuře.')
+    } else if (e instanceof ApiError && e.status === 422) {
+      toast.error('Vybrané položky k faktuře nepatří. Zkuste ji otevřít znovu.')
     } else {
       toast.error('Vystavení dobropisu se nezdařilo.')
     }
   } finally {
-    busyId.value = null
+    creatingCreditNote.value = false
   }
+}
+
+function toggleCreditLine(lineId: string, checked: boolean) {
+  creditLineIds.value = checked
+    ? [...new Set([...creditLineIds.value, lineId])]
+    : creditLineIds.value.filter((id) => id !== lineId)
 }
 
 /** Převede zálohovou (proforma) fakturu na daňový doklad a otevře ho k dokončení. */
@@ -338,7 +381,7 @@ async function onDelete() {
               variant="ghost"
               size="sm"
               :disabled="busyId === inv.id"
-              @click="onCreditNote(inv.id)"
+              @click="askCreditNote(inv.id)"
             >
               <FileMinus2 class="h-4 w-4" /> Dobropis
             </Button>
@@ -352,7 +395,6 @@ async function onDelete() {
               <ArrowRightLeft class="h-4 w-4" /> Na fakturu
             </Button>
             <Button
-              v-if="inv.documentType !== 'credit_note'"
               variant="ghost"
               size="sm"
               @click="router.push('/app/faktury/editor?id=' + inv.id)"
@@ -424,7 +466,7 @@ async function onDelete() {
                     size="icon"
                     title="Vystavit dobropis"
                     :disabled="busyId === inv.id"
-                    @click="onCreditNote(inv.id)"
+                    @click="askCreditNote(inv.id)"
                   >
                     <FileMinus2 class="h-4 w-4" />
                   </Button>
@@ -439,10 +481,11 @@ async function onDelete() {
                     <ArrowRightLeft class="h-4 w-4" />
                   </Button>
                   <Button
-                    v-if="inv.documentType !== 'credit_note'"
                     variant="ghost"
                     size="icon"
                     :title="openLabel(inv)"
+                    :aria-label="openLabel(inv)"
+                    data-testid="faktury-otevrit"
                     @click="router.push('/app/faktury/editor?id=' + inv.id)"
                   >
                     <Pencil class="h-4 w-4" />
@@ -492,6 +535,61 @@ async function onDelete() {
           >
             Smazat
           </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <!--
+      Výběr položek k dobropisu. Výchozí je celá faktura (dosavadní chování), ale u reklamace
+      jedné položky z deseti by plný dobropis vrátil násobně víc peněz, než má.
+      Částky NEPOČÍTÁ frontend — po potvrzení je spočítá server z vybraných řádků.
+    -->
+    <AlertDialog :open="creditOpen" @update:open="(o) => (creditOpen = o)">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Vystavit dobropis</AlertDialogTitle>
+          <AlertDialogDescription>
+            Vyberte položky faktury <strong>{{ creditSource?.invoiceNumber }}</strong
+            >, které chcete dobropisovat. Dobropis vznikne rovnou vystavený a částky k němu spočítá
+            systém.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <div class="max-h-64 space-y-2 overflow-y-auto" data-testid="dobropis-polozky">
+          <label
+            v-for="it in creditSource?.items ?? []"
+            :key="it.id"
+            class="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3 text-sm"
+          >
+            <Checkbox
+              :model-value="creditLineIds.includes(it.id)"
+              :aria-label="it.description"
+              @update:model-value="(v) => toggleCreditLine(it.id, v === true)"
+            />
+            <span class="min-w-0 flex-1">
+              <span class="block font-medium text-foreground">{{ it.description }}</span>
+              <span class="block text-muted-foreground">
+                {{ it.quantity }} × {{ formatCZK(it.unitPrice) }}
+              </span>
+            </span>
+            <span class="shrink-0 font-semibold tabular-nums">{{ formatCZK(it.lineTotal) }}</span>
+          </label>
+        </div>
+        <p v-if="!creditLineIds.length" class="text-xs text-destructive">
+          Vyberte aspoň jednu položku.
+        </p>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="creatingCreditNote">Zpět</AlertDialogCancel>
+          <Button
+            variant="coral"
+            :disabled="!creditLineIds.length || creatingCreditNote"
+            data-testid="dobropis-potvrdit"
+            @click="onCreditNote"
+          >
+            <Loader2 v-if="creatingCreditNote" class="h-4 w-4 animate-spin" />
+            {{ creatingCreditNote ? 'Vystavuji…' : 'Vystavit dobropis' }}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
