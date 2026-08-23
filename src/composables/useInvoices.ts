@@ -252,7 +252,7 @@ export function useInvoices() {
   /**
    * Vystaví dobropis k faktuře (opravný doklad se záporným součtem).
    * API: `POST /invoices/{id}/credit-note` — server přepočítá znaménko DPH a přidělí číslo z řady dobropisů.
-   * Mock: vytvoří koncept dobropisu ze zdrojové faktury (záporné položky), navázaný přes `parentInvoiceId`.
+   * Mock: vytvoří VYSTAVENÝ dobropis ze zdrojové faktury (záporné položky), navázaný přes `parentInvoiceId`.
    */
   async function creditNote(id: string): Promise<Invoice> {
     // Ostrý režim: dobropis (záporné částky i DPH) vytváří SERVER z původní faktury; tělo neposíláme
