@@ -47,6 +47,8 @@ export interface Company {
   invoiceNumberFormat: string | null
   /** Pořadové číslo příští faktury. null = neurčeno klientem (řadu vlastní server). */
   nextInvoiceSeq: number | null
+  /** Používá provoz kuchyňské bony? false = bez kuchyně, nic se neodesílá na stanice. */
+  usesKitchenTickets: boolean
   defaultPaymentDays: number
   publicSlug: string | null
 }
