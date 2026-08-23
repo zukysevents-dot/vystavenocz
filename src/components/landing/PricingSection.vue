@@ -198,7 +198,11 @@ const modulesWord = computed(() => {
             </span>
             <span class="text-sm font-semibold text-foreground">Kč / měs navždy</span>
           </div>
-          <p class="mt-1 text-xs text-muted-foreground">bez DPH</p>
+          <!-- Ostatní ceny se v roční variantě přepínají na cenu za měsíc při ročním účtování;
+               zaváděcí nabídka je ale měsíční sazba. Bez tohohle upřesnění by šlo obojí splést. -->
+          <p class="mt-1 text-xs text-muted-foreground">
+            měsíční cena bez DPH, nezávisle na zvoleném účtování
+          </p>
         </div>
       </div>
 
