@@ -131,6 +131,9 @@ const canChooseType = computed(() => status.value === 'draft')
 // Vystavený doklad se needituje — číslo, částky i odběratel jsou daňově zmražené a server každou
 // změnu stejně odmítne. Editor proto přepne do čtení; změnu řeší storno a nové vystavení.
 const isLocked = computed(() => Boolean(editingId.value) && status.value !== 'draft')
+// Dobropis se otevírá jen ke čtení (vzniká rovnou vystavený), ale musí jít zobrazit, vytisknout,
+// odeslat klientovi i stornovat — dřív ho editor odmítal otevřít úplně a byl to slepý doklad.
+const isCreditNote = computed(() => documentType.value === 'credit_note')
 
 // Hlavičková pole (číslo, datum vystavení, VS, způsob úhrady) needituje ani vystavený doklad —
 // jinak by UI nabízelo změnu údaje, který je daňově zmražený a server ho stejně nepřijme.
@@ -195,7 +198,20 @@ function normalizedItems(): ItemDraft[] {
   }))
 }
 
-const totals = computed(() => calcTotals(normalizedItems(), vatPayer.value))
+// Součty serverem uzavřeného dokladu, převzaté při načtení. U dobropisu jsou ZÁPORNÉ.
+const loadedTotals = ref<{ subtotal: number; vatTotal: number; total: number } | null>(null)
+
+/**
+ * Součty dokladu. Rozpracovaný koncept se počítá živě (uživatel píše do polí), ale u dokladu,
+ * který už vlastní server, se berou JEHO čísla — jinak by editor v náhledu i v PDF ukázal jinou
+ * částku, než jaká je doopravdy na dokladu (typicky u dobropisu, kde jsou částky záporné,
+ * a u firmy, jejíž plátcovství DPH frontend zná jen z lokálního profilu).
+ */
+const totals = computed(() => {
+  const live = calcTotals(normalizedItems(), vatPayer.value)
+  if (!isLocked.value || !loadedTotals.value) return live
+  return { ...live, ...loadedTotals.value }
+})
 // Položky s číselně sjednocenými hodnotami pro náhled (bez NaN při rozeditovaném poli).
 const previewItems = computed(() => normalizedItems())
 
@@ -222,18 +238,12 @@ onMounted(async () => {
     // Plný detail (položky/snapshoty/součty) — v API režimu list vrací jen summary bez řádků.
     const inv = await get(id)
     if (inv) {
-      // Dobropis je odvozený daňový doklad se zápornými částkami — editor přepočítává KLADNÉ součty,
-      // takže by ho zkorumpoval. Tvrdý guard (i proti přímé URL): dobropis se needituje.
-      if (inv.documentType === 'credit_note') {
-        toast.error('Dobropis je odvozený doklad a needituje se.')
-        router.replace('/app/faktury')
-        return
-      }
       editingId.value = id
       status.value = inv.status
       documentType.value = inv.documentType
       paidAt.value = inv.paidAt
       loadedSupplierSnapshot.value = inv.supplierSnapshot ?? null
+      loadedTotals.value = { subtotal: inv.subtotal, vatTotal: inv.vatTotal, total: inv.total }
       invoiceNumber.value = inv.invoiceNumber ?? ''
       issueDate.value = inv.issueDate
       dueDate.value = inv.dueDate
@@ -623,7 +633,7 @@ async function onCancelConfirm(reason: string) {
   try {
     syncFromSaved(await cancel(editingId.value, reason))
     cancelOpen.value = false
-    toast.success('Faktura stornována.')
+    toast.success(isCreditNote.value ? 'Dobropis stornován.' : 'Faktura stornována.')
   } catch (e) {
     handleLifecycleError(e, 'Tuto fakturu už nelze stornovat.')
   } finally {
@@ -644,7 +654,7 @@ async function onCancelConfirm(reason: string) {
             {{ documentTypeLabel(documentType) }}
           </h1>
           <p class="text-sm text-muted-foreground">
-            {{ editingId ? 'Úprava dokladu' : 'Nový doklad' }}
+            {{ isLocked ? 'Jen ke čtení' : editingId ? 'Úprava dokladu' : 'Nový doklad' }}
           </p>
         </div>
       </div>
@@ -719,8 +729,12 @@ async function onCancelConfirm(reason: string) {
         class="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground"
       >
         <span class="font-medium text-foreground">Doklad je vystavený, proto se už needituje.</span>
-        Údaje i částky jsou zmražené k datu vystavení. Potřebujete-li je změnit, doklad stornujte a
-        vystavte znovu.
+        Údaje i částky jsou zmražené k datu vystavení.
+        <template v-if="isCreditNote">
+          Dobropis navíc vychází z původní faktury — pokud je špatně, stornujte ho a vystavte k té
+          faktuře nový.
+        </template>
+        <template v-else> Potřebujete-li je změnit, doklad stornujte a vystavte znovu. </template>
       </div>
 
       <!-- Odběratel -->
