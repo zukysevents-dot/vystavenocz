@@ -156,6 +156,9 @@ const isLocked = computed(() => auth.entitlement.accessMode === 'locked')
           <p class="mt-2 text-sm text-muted-foreground">{{ upsellFor(module).benefit }}</p>
           <p class="mt-3 text-xs text-foreground">
             Obsahuje <strong>{{ upsellFor(module).plan }}</strong>
+            <span v-if="upsellFor(module).priceMonthly" class="text-muted-foreground">
+              — {{ upsellFor(module).priceMonthly }} Kč/měs bez DPH
+            </span>
           </p>
         </div>
       </div>

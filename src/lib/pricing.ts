@@ -1,39 +1,14 @@
 /**
- * Jediný zdroj cen a vlastností tarifu Vystaveno Pro.
- * Používá veřejný ceník (PricingSection), app předplatné (PredplatnePage) i paywall (PaywallDialog),
- * aby se ceny a výčet funkcí nemohly mezi místy rozejít.
+ * Jediný zdroj cen podle schváleného sazebníku.
+ * Používá ho veřejný ceník (PricingSection) i upsell v aplikaci (`lib/entitlements`), aby se
+ * ceny a názvy modulů nemohly mezi veřejnou stránkou a paywallem rozejít.
  */
 
-export const PRO_FEATURES = [
-  'Neomezený počet faktur',
-  'Neomezený počet klientů',
-  'QR platba na každé faktuře',
-  'Zálohové faktury a dobropisy',
-  'Opakované faktury',
-  'Vlastní logo a šablony',
-  'Přehled pohledávek s připravenou upomínkou',
-  'Export do účetnictví (ISDOC, Pohoda XML)',
-  'Česká podpora e-mailem (odpověď do 24 h)',
-] as const
-
-export const PRO_PRICING = {
-  /** Kč/měsíc při měsíční platbě. */
-  monthlyPrice: 159,
-  /** Kč/měsíc při roční platbě. */
-  yearlyPricePerMonth: 100,
-  /** Kč za rok (roční platba). */
-  yearlyTotal: 1200,
-  /** Kč ušetřené ročně oproti měsíčnímu tarifu. */
-  yearlySavings: 708,
-  /** Sleva ročního tarifu v procentech. */
-  discountPercent: 37,
-} as const
-
 /**
- * Modulární ceník (rebrand v0.4) — zákazník platí jen za zapnuté moduly.
- * Ceny jsou ORIENTAČNÍ (k potvrzení majitelem); jediný zdroj pravdy pro landing ceník.
- * POZN.: app předplatné (PredplatnePage/PaywallDialog) zatím jede na PRO_* výše — modulární
- * billing v aplikaci je navazující task (váže na modularitu CompanyModules).
+ * Modulární ceník — zákazník platí jen za zapnuté moduly.
+ * Jediný zdroj pravdy pro landing ceník i pro upsell u zamčené části aplikace.
+ * POZN.: nárok firmy přiděluje server (tarify v backend katalogu `SubscriptionPlans`), tenhle
+ * soubor je jen CENÍK. Změnu tarifu dnes nastavuje podpora ručně, aplikace nic neaktivuje.
  */
 export type ModuleKey =
   | 'invoicing'
