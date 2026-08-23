@@ -36,7 +36,7 @@ import type { DocumentType, InvoiceStatus } from '@/lib/types'
 
 const router = useRouter()
 const { invoices, loadError, load, remove, creditNote, convertToInvoice } = useInvoices()
-const { hasAccess } = useSubscription()
+const { canInvoice } = useSubscription()
 
 const loading = ref(true)
 const search = ref('')
@@ -58,9 +58,9 @@ function askDelete(id: string) {
   deleteOpen.value = true
 }
 
-// Vystavení nové faktury je prémiová akce — bez aktivního tarifu ukážeme paywall.
+// Fakturace je podle ceníku zdarma navždy — brání jí jen ručně pozastavený přístup.
 function newInvoice() {
-  if (!hasAccess.value) {
+  if (!canInvoice.value) {
     paywallOpen.value = true
     return
   }

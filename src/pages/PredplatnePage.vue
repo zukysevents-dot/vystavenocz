@@ -59,8 +59,9 @@ const isLocked = computed(() => auth.entitlement.accessMode === 'locked')
       <div class="text-sm">
         <p class="font-semibold text-foreground">Předplatné skončilo</p>
         <p class="text-muted-foreground">
-          Vaše data zůstávají uložená — můžete si je prohlížet i vyexportovat. Pro další zápisy je
-          potřeba tarif znovu aktivovat.
+          Fakturace a klienti zůstávají zdarma, takže vystavovat doklady můžete dál. Data placených
+          modulů si můžete prohlížet i vyexportovat; pro další zápisy do nich je potřeba tarif znovu
+          aktivovat.
         </p>
       </div>
     </div>

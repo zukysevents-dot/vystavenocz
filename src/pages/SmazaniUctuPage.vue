@@ -37,7 +37,9 @@ import PageHeader from '@/components/landing/PageHeader.vue'
       <p class="mt-3 text-muted-foreground">
         Pokud už aplikaci nemáte nainstalovanou nebo se nemůžete přihlásit, pošlete žádost o smazání
         účtu z e-mailové adresy, na kterou je účet registrovaný, na
-        <a href="mailto:patrik@vystaveno.cz" class="text-primary underline">patrik@vystaveno.cz</a>
+        <a href="mailto:podpora@vystaveno.cz" class="text-primary underline"
+          >podpora@vystaveno.cz</a
+        >
         s předmětem <strong>„Smazání účtu Vystaveno"</strong>. Žádost vyřídíme nejpozději do 30 dnů
         a potvrdíme e-mailem.
       </p>
@@ -70,8 +72,8 @@ import PageHeader from '@/components/landing/PageHeader.vue'
     <section>
       <h2 class="text-2xl font-bold">4. Správce údajů a další informace</h2>
       <p class="mt-3 text-muted-foreground">
-        Správcem osobních údajů je <strong>Patrik Zukal</strong>, IČO 24991686. Podrobnosti o
-        zpracování osobních údajů najdete v dokumentu
+        Správcem osobních údajů je <strong>Backstreet Holding s.r.o.</strong>, IČO 21024863.
+        Podrobnosti o zpracování osobních údajů najdete v dokumentu
         <RouterLink to="/gdpr" class="text-primary underline"
           >Ochrana osobních údajů (GDPR)</RouterLink
         >.

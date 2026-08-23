@@ -257,7 +257,9 @@ test('po skončení předplatného je režim jen pro čtení pravdivě vysvětle
   await page.goto('/app/predplatne')
 
   await expect(page.getByText(/Předplatné skončilo/).first()).toBeVisible()
-  await expect(page.getByText(/k nahlédnutí i k exportu/).first()).toBeVisible()
+  // Fakturace je podle ceníku zdarma navždy, takže banner nesmí tvrdit „nové zápisy nejdou".
+  await expect(page.getByText(/fakturovat můžete dál zdarma/i).first()).toBeVisible()
+  await expect(page.getByText(/vyexportovat/).first()).toBeVisible()
   await expect(page.getByRole('link', { name: 'Obnovit' })).toBeVisible()
   // Data zůstávají dostupná — stránka se normálně načte, nic nevypadá rozbitě.
   await expect(page.getByRole('heading', { name: 'Předplatné' })).toBeVisible()

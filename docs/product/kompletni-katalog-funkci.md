@@ -226,8 +226,8 @@ Vystaveno je **modulární provozní systém pro malé a střední provozy** —
 
 **Pro koho:** majitel
 **Kde ji najdete:** `Předplatné` (`/app/predplatne`)
-**Co umožňuje:** zobrazit tarif Vystaveno Pro (159 Kč/měs, ročně 100 Kč/měs), 14denní zkušební období, „aktivovat"
-**Omezení nebo podmínky:** **„Platební brána není v MVP — aktivace je zatím ukázková."** Stav tarifu žije jen v prohlížeči (localStorage) — žádná skutečná platba ani serverové předplatné; paywall přesto reálně blokuje „Nová faktura" po vypršení zkušební doby; ceník na landing page (modulární ceny, balík 990 Kč) je orientační a CTA je mailto
+**Co umožňuje:** zobrazit tarif firmy, co je v ceně, co lze přidat (včetně ceny modulu z ceníku) a cestu ke změně
+**Omezení nebo podmínky:** **„Platební brána není v MVP — tarif nastavuje podpora po domluvě."** Stav tarifu je serverový (`/me` → `entitlement`), z prohlížeče se aktivovat NEDÁ. Fakturace a klienti jsou podle ceníku zdarma navždy, takže po skončení předplatného fakturovat jde dál — placené moduly zůstávají jen ke čtení a exportu. Vystavení faktury zavře jen ručně pozastavený přístup
 **Stav:** Omezené (UI Ostré, billing Plánované)
 **Ověření:** Playwright (`predplatne.spec`, `paywall.spec`) + živý průchod
 
@@ -893,7 +893,7 @@ Tato část je záměrně úplná. Nic z níže uvedeného netvrdíme v prodejn�
 
 **Omezené / jen někde:**
 
-- **Platební brána předplatného neexistuje** — aktivace tarifu je ukázková (stav jen v prohlížeči); paywall přesto blokuje fakturaci po zkušební době.
+- **Platební brána předplatného neexistuje** — tarif nastavuje podpora po domluvě. Fakturaci to nezavírá: podle ceníku je zdarma navždy a po skončení předplatného funguje dál.
 - ✚ Vyřešeno (čeká na merge): webová správa Týmu/pozvánek, odeslání faktury e-mailem z webu, přepínání firem na webu, obnova hesla, role Kuchyně/Skladník na webu, správa PINů a pracovník bez e-mailu na webu, smazání účtu na webu, generování odkazu klientské zóny z webu.
 - **PIN login na pokladně (lock-screen, přepínání obsluhy) a sdílený terminál** — backend hotový, obrazovky chybí (správa PINů už na webu je).
 - **Věrnost při dělené platbě** se neuplatní; **na mobilu je věrnost jen pro manažerské role**.
