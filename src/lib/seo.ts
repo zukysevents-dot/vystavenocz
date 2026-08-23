@@ -34,7 +34,7 @@ export const seoByRouteName: Record<string, RouteSeo> = {
   cenik: {
     title: 'Ceník — Vystaveno.cz | Platíte jen za moduly, které využijete',
     description:
-      'Modulární ceník: zapnete jen moduly, které potřebujete, a platíte jen za ně. Roční platba = 2 měsíce zdarma. Ceny orientační do veřejného spuštění — první zákazníci dostanou zaváděcí podmínky.',
+      'Modulární ceník: zapnete jen moduly, které potřebujete, a platíte jen za ně. Fakturace a klienti zdarma navždy, roční platba = 2 měsíce zdarma. Ceny bez DPH; prvních 500 firem má kompletní balík za zaváděcí cenu.',
     ogTitle: 'Ceník Vystaveno.cz — modulární, platíte jen za své moduly',
     ogDescription:
       'Poskládejte si systém z modulů. Bez závazku, zaváděcí podmínky v early accessu.',

@@ -3,6 +3,8 @@ import { computed, ref, watch } from 'vue'
 import {
   PRICING_MODULES,
   PRICING_SEGMENTS,
+  PRICING_BUNDLES,
+  FOUNDING_OFFER,
   MODULAR_PRICING,
   yearlyPerMonth,
   modulesMonthly,
@@ -56,6 +58,11 @@ const recommendedModules = computed<readonly ModuleKey[]>(
   () => activeSegment.value?.recommended ?? [],
 )
 const highlightAddons = computed<readonly string[]>(() => activeSegment.value?.addons ?? [])
+
+const gastroBundle = PRICING_BUNDLES.find((b) => b.key === 'gastro')!
+const gastroModuleNames = PRICING_MODULES.filter((m) => gastroBundle.modules.includes(m.key))
+  .map((m) => m.name)
+  .join(' + ')
 
 const czk = (n: number) => n.toLocaleString('cs-CZ')
 const modulesWord = computed(() => {
@@ -149,6 +156,50 @@ const modulesWord = computed(() => {
       <!-- Kompletní balík jako hodnotová kotva -->
       <div class="mt-12">
         <BundleCard :yearly="yearly" :all-selected="allSelected" @select-all="selectAll" />
+      </div>
+
+      <!-- Balík GASTRO + zaváděcí cena. Počet zbývajících míst se ZÁMĚRNĚ neuvádí: server
+           obsazená místa neeviduje, takže by šlo o číslo, které nemáme z čeho spočítat. -->
+      <div class="mt-6 grid gap-4 sm:grid-cols-2">
+        <div class="rounded-2xl border border-border bg-card p-6">
+          <h3 class="font-display text-xl font-bold tracking-tight text-foreground">
+            {{ gastroBundle.name }}
+          </h3>
+          <p class="mt-1 text-sm text-muted-foreground">{{ gastroModuleNames }}</p>
+          <div class="mt-4 flex items-baseline gap-2">
+            <span class="font-mono text-3xl font-black tracking-tight text-foreground">
+              {{ czk(yearly ? yearlyPerMonth(gastroBundle.monthly) : gastroBundle.monthly) }}
+            </span>
+            <span class="text-sm font-semibold text-foreground">Kč / měs</span>
+          </div>
+          <p class="mt-1 text-xs text-muted-foreground">
+            <template v-if="yearly">
+              při ročním účtování ({{ czk(gastroBundle.yearly) }} Kč/rok bez DPH)
+            </template>
+            <template v-else>bez DPH</template>
+          </p>
+        </div>
+
+        <div class="rounded-2xl border border-coral/40 bg-card p-6">
+          <span
+            class="inline-flex rounded-full bg-coral px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-coral-foreground"
+          >
+            Zaváděcí cena
+          </span>
+          <h3 class="mt-3 font-display text-xl font-bold tracking-tight text-foreground">
+            Prvních {{ czk(FOUNDING_OFFER.companies) }} firem
+          </h3>
+          <p class="mt-1 text-sm text-muted-foreground">
+            Kompletní balík VŠECHNO natrvalo za zvýhodněnou cenu — i když ceník později poroste.
+          </p>
+          <div class="mt-4 flex items-baseline gap-2">
+            <span class="font-mono text-3xl font-black tracking-tight text-coral">
+              {{ czk(FOUNDING_OFFER.monthly) }}
+            </span>
+            <span class="text-sm font-semibold text-foreground">Kč / měs navždy</span>
+          </div>
+          <p class="mt-1 text-xs text-muted-foreground">bez DPH</p>
+        </div>
       </div>
 
       <!-- Oborové nástavby -->

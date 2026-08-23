@@ -23,7 +23,7 @@ export const faqs: FaqEntry[] = [
   },
   {
     q: 'Jak funguje modulární ceník?',
-    a: 'Zapnete a platíte jen moduly, které opravdu potřebujete. Stačí samotná fakturace, nebo si přidáte pokladnu, sklad, rezervace a další — kdykoliv modul přidáte nebo odeberete. Kompletní balík vyjde levněji než součet samostatných modulů. Ceny v ceníku jsou orientační do veřejného spuštění; pro první zákazníky platí zvýhodněné podmínky early accessu.',
+    a: 'Zapnete a platíte jen moduly, které opravdu potřebujete. Stačí samotná fakturace, nebo si přidáte pokladnu, sklad, rezervace a další — kdykoliv modul přidáte nebo odeberete. Fakturace a klienti jsou zdarma navždy a kompletní balík vyjde levněji než součet samostatných modulů. Ceny v ceníku jsou bez DPH; prvních 500 firem má kompletní balík natrvalo za zaváděcí cenu.',
   },
   {
     q: 'Platím za každou provozovnu?',
