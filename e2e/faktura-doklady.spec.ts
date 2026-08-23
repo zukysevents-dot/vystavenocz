@@ -343,3 +343,28 @@ test('dobropis nejde vystavit bez vybrané položky', async ({ page }) => {
   await expect(page.getByTestId('dobropis-potvrdit')).toBeDisabled()
   await expect(page.getByText('Vyberte aspoň jednu položku.')).toBeVisible()
 })
+
+test('dobropis jde vystavit i k faktuře po splatnosti — server ji povoluje', async ({ page }) => {
+  // Neuhrazená faktura je typický důvod k opravě dokladu. FE tenhle stav vynechával, takže
+  // u ní tlačítko chybělo, i když serverový `IsFinalizedInvoice` ho pouští.
+  await seedApp(page, {
+    subscription: 'pro',
+    invoices: [mkInvoice({ id: 'inv-po', status: 'overdue', paidAt: null })],
+  })
+  await page.goto('/app/faktury')
+
+  await expect(page.getByRole('button', { name: 'Vystavit dobropis' })).toBeVisible()
+})
+
+test('koncept ani proforma dobropis nenabízejí', async ({ page }) => {
+  await seedApp(page, {
+    subscription: 'pro',
+    invoices: [
+      mkInvoice({ id: 'inv-koncept', status: 'draft', invoiceNumber: null, paidAt: null }),
+      mkInvoice({ id: 'inv-zal', documentType: 'proforma', status: 'issued', paidAt: null }),
+    ],
+  })
+  await page.goto('/app/faktury')
+
+  await expect(page.getByRole('button', { name: 'Vystavit dobropis' })).toHaveCount(0)
+})
