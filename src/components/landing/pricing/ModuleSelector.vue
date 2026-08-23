@@ -7,6 +7,8 @@ import {
   Package,
   CalendarDays,
   Clock,
+  Wrench,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-vue-next'
 import { PRICING_MODULES, yearlyPerMonth, type ModuleKey } from '@/lib/pricing'
@@ -22,11 +24,13 @@ const emit = defineEmits<{ toggle: [key: ModuleKey] }>()
 
 const ICONS: Record<ModuleKey, LucideIcon> = {
   invoicing: FileText,
+  plus: Sparkles,
   pos: ShoppingCart,
   restaurant: UtensilsCrossed,
   inventory: Package,
   booking: CalendarDays,
   attendance: Clock,
+  jobs: Wrench,
 }
 
 const isOn = (key: ModuleKey) => props.selected.includes(key)
@@ -99,14 +103,20 @@ const czk = (n: number) => n.toLocaleString('cs-CZ')
 
       <!-- Cena -->
       <div class="mt-4 border-t border-border pt-3">
-        <div class="flex items-baseline gap-1">
-          <span class="font-mono text-lg font-bold text-foreground">{{
-            czk(yearly ? yearlyPerMonth(m.monthly) : m.monthly)
-          }}</span>
-          <span class="text-sm text-muted-foreground">Kč / měs</span>
-        </div>
-        <!-- Bez tohohle upřesnění vypadá roční cena za měsíc jako běžná měsíční sazba. -->
-        <p v-if="yearly" class="mt-0.5 text-xs text-muted-foreground">při ročním účtování</p>
+        <!-- Trvale bezplatný modul nesmí hlásit „0 Kč / měs" — vypadalo by to jako chyba ceníku. -->
+        <div v-if="m.free" class="font-mono text-lg font-bold text-coral">Zdarma navždy</div>
+        <template v-else>
+          <div class="flex items-baseline gap-1">
+            <span class="font-mono text-lg font-bold text-foreground">{{
+              czk(yearly ? yearlyPerMonth(m.monthly) : m.monthly)
+            }}</span>
+            <span class="text-sm text-muted-foreground">Kč / měs</span>
+          </div>
+          <!-- Bez tohohle upřesnění vypadá roční cena za měsíc jako běžná měsíční sazba. -->
+          <p v-if="yearly" class="mt-0.5 text-xs text-muted-foreground">
+            při ročním účtování ({{ czk(m.yearly) }} Kč/rok)
+          </p>
+        </template>
       </div>
     </button>
   </div>

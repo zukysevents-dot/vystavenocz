@@ -91,7 +91,7 @@ const interestMailto = computed(() => pricingSelectionMailto(props.selectedNames
       <a :href="interestMailto">Chci tuhle sestavu — early access</a>
     </Button>
     <p class="mt-3 text-center text-xs text-muted-foreground">
-      Ceny orientační do spuštění · bez závazku · ceny bez DPH (neplátce)
+      Ceny bez DPH (+ 21 %) · bez závazku · zrušení jedním klikem
     </p>
   </div>
 </template>

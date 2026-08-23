@@ -15,6 +15,7 @@ const emit = defineEmits<{ selectAll: [] }>()
 
 const czk = (n: number) => n.toLocaleString('cs-CZ')
 const sumAll = PRICING_MODULES.reduce((acc, m) => acc + m.monthly, 0)
+const pocetModulu = PRICING_MODULES.length
 
 const price = computed(() =>
   props.yearly
@@ -25,7 +26,7 @@ const reference = computed(() => (props.yearly ? yearlyPerMonth(sumAll) : sumAll
 const saving = computed(() => reference.value - price.value)
 
 const OUTCOMES = [
-  'Všech 6 modulů aktivních od začátku',
+  `Všech ${pocetModulu} modulů aktivních od začátku`,
   'Jedna faktura, jeden přehled, žádné přepínání mezi aplikacemi',
   'Nové moduly rovnou v balíku, bez doplácení',
   'Sestavu i tak změníte kdykoliv',
@@ -72,6 +73,11 @@ const OUTCOMES = [
       <p v-if="saving > 0" class="mt-1.5 text-sm font-semibold text-success">
         Ušetříte {{ czk(saving) }} Kč/měs oproti samostatným modulům.
       </p>
+      <p v-if="yearly" class="mt-1 text-sm text-muted-foreground">
+        Účtováno ročně
+        <span class="font-mono text-foreground">{{ czk(MODULAR_PRICING.bundleAllYearly) }} Kč</span>
+        bez DPH.
+      </p>
 
       <ul class="mt-5 grid gap-2 sm:grid-cols-2">
         <li
@@ -107,7 +113,7 @@ const OUTCOMES = [
       </div>
 
       <p class="mt-4 text-xs text-muted-foreground">
-        Ceny orientační do spuštění · bez závazku · zrušení jedním klikem
+        Ceny bez DPH · bez závazku · zrušení jedním klikem
       </p>
     </div>
   </div>

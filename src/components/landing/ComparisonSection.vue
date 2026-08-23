@@ -150,9 +150,11 @@ const honestFeatures: Row[] = [
 ]
 
 // Cena se dopočítává z ceníku, ať se srovnání nerozejde s tím, co uživatel uvidí na /cenik.
+// Fakturace a klienti jsou zdarma, placené moduly začínají na nejnižší měsíční sazbě.
+const nejlevnejsiModul = Math.min(...PRICING_MODULES.filter((m) => !m.free).map((m) => m.monthly))
 const priceRow: Row = {
-  label: 'Cena od (měsíčně, orientační)',
-  us: `${Math.min(...PRICING_MODULES.map((m) => m.monthly)).toLocaleString('cs-CZ')} Kč`,
+  label: 'Cena od (měsíčně, bez DPH)',
+  us: `0 Kč (fakturace) · moduly od ${nejlevnejsiModul.toLocaleString('cs-CZ')} Kč`,
   dotykacka: 'dle balíčku',
   storyous: 'dle balíčku',
   fakturoid: '151 Kč',

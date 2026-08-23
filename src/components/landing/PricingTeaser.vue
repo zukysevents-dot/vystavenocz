@@ -8,7 +8,10 @@ import { vReveal } from '@/lib/reveal'
 
 // Ceník se otevírá v roční variantě, takže i tenhle náhled musí ukazovat roční cenu za měsíc —
 // jinak návštěvník uvidí na webu jinou částku „od" než hned potom v ceníku.
-const minPrice = yearlyPerMonth(Math.min(...PRICING_MODULES.map((m) => m.monthly)))
+// „Od" se počítá z nejlevnějšího PLACENÉHO modulu; fakturace je zdarma a uvádí se zvlášť.
+const minPrice = yearlyPerMonth(
+  Math.min(...PRICING_MODULES.filter((m) => !m.free).map((m) => m.monthly)),
+)
 const bundlePrice = yearlyPerMonth(MODULAR_PRICING.bundleAllMonthly)
 const czk = (n: number) => n.toLocaleString('cs-CZ')
 </script>
@@ -49,10 +52,11 @@ const czk = (n: number) => n.toLocaleString('cs-CZ')
       </div>
 
       <p class="mt-6 text-sm text-muted-foreground">
-        Už od <span class="font-mono font-bold text-foreground">{{ czk(minPrice) }} Kč/měs</span> ·
+        <span class="font-mono font-bold text-foreground">Fakturace a klienti zdarma</span> · moduly
+        už od <span class="font-mono font-bold text-foreground">{{ czk(minPrice) }} Kč/měs</span> ·
         kompletní balík za
         <span class="font-mono font-bold text-foreground">{{ czk(bundlePrice) }} Kč/měs</span>
-        · při ročním účtování · ceny orientační do veřejného spuštění
+        · při ročním účtování, ceny bez DPH
       </p>
 
       <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">

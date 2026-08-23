@@ -35,7 +35,15 @@ export const PRO_PRICING = {
  * POZN.: app předplatné (PredplatnePage/PaywallDialog) zatím jede na PRO_* výše — modulární
  * billing v aplikaci je navazující task (váže na modularitu CompanyModules).
  */
-export type ModuleKey = 'invoicing' | 'pos' | 'restaurant' | 'inventory' | 'booking' | 'attendance'
+export type ModuleKey =
+  | 'invoicing'
+  | 'plus'
+  | 'pos'
+  | 'restaurant'
+  | 'inventory'
+  | 'booking'
+  | 'attendance'
+  | 'jobs'
 
 export interface PricingModule {
   key: ModuleKey
@@ -48,8 +56,12 @@ export interface PricingModule {
   points: readonly string[]
   /** Štítek relevance, např. „Základ pro každý provoz". */
   relevanceLabel?: string
-  /** Kč/měsíc při měsíční platbě. */
+  /** Kč/měsíc bez DPH při měsíční platbě. */
   monthly: number
+  /** Kč/rok bez DPH při roční platbě (vždy 10× měsíční = 2 měsíce zdarma). */
+  yearly: number
+  /** Modul je trvale zdarma — neúčtuje se ani v balíku. */
+  free?: boolean
 }
 
 export const PRICING_MODULES: readonly PricingModule[] = [
@@ -63,25 +75,42 @@ export const PRICING_MODULES: readonly PricingModule[] = [
       'Přehled neuhrazených dokladů',
       'Historie klienta bez hledání v e-mailech',
     ],
-    relevanceLabel: 'Základ pro každý provoz',
-    monthly: 149,
+    relevanceLabel: 'Zdarma navždy',
+    monthly: 0,
+    yearly: 0,
+    free: true,
+  },
+  {
+    key: 'plus',
+    name: 'Plus',
+    desc: 'Provozní přehled, věrnost, CRM, integrace a ověřené podpisy.',
+    outcome: 'Nadstavby, díky kterým z provozu uvidíte čísla, zákazníky i papíry.',
+    points: [
+      'Provozní přehled: marže, food cost, výkon obsluhy',
+      'Věrnostní program a CRM u klienta',
+      'Integrace, účetní exporty a ověřené podpisy',
+    ],
+    relevanceLabel: 'Nadstavba ke všemu',
+    monthly: 99,
+    yearly: 990,
   },
   {
     key: 'pos',
-    name: 'Pokladna (POS)',
-    desc: 'Dotyková prodejní obrazovka, platby, účtenky.',
+    name: 'Pokladna',
+    desc: 'Dotyková prodejní obrazovka, platby, účtenky — na neomezeně zařízeních.',
     outcome: 'Rychlý prodej bez front a bez přepisování tržeb do tabulek.',
     points: [
-      'Dotyková prodejní obrazovka',
+      'Neomezený počet pokladen a zařízení',
       'Hotovost, karta i účtenky',
-      'Tržby okamžitě v přehledu',
+      'Tržby a uzávěrka okamžitě v přehledu',
     ],
     relevanceLabel: 'Pro obchody a prodej',
-    monthly: 249,
+    monthly: 199,
+    yearly: 1990,
   },
   {
     key: 'restaurant',
-    name: 'Restaurace & kuchyně',
+    name: 'Restaurace',
     desc: 'Mapa stolů, účty, bony do kuchyně i na bar.',
     outcome: 'Objednávky, stoly i kuchyň pod jedním provozním pohledem.',
     points: [
@@ -89,45 +118,104 @@ export const PRICING_MODULES: readonly PricingModule[] = [
       'Bony pro kuchyň a bar',
       'Méně chyb během špičky',
     ],
-    relevanceLabel: 'Pro restaurace',
-    monthly: 349,
+    relevanceLabel: 'Pro restaurace a kavárny',
+    monthly: 249,
+    yearly: 2490,
   },
   {
     key: 'inventory',
-    name: 'Sklad & zásoby',
+    name: 'Sklad',
     desc: 'Příjem, výdej, inventura, nízké zásoby.',
     outcome: 'Víte, co máte skladem — bez ručního počítání a výpadků zboží.',
     points: ['Příjem, výdej a inventura', 'Hlídání nízkých zásob', 'Pohyby skladu na jednom místě'],
     relevanceLabel: 'Pro obchody a gastro',
     monthly: 149,
+    yearly: 1490,
   },
   {
     key: 'booking',
     name: 'Rezervace',
     desc: 'Kalendář, služby a zdroje, hlídání kolizí.',
     outcome: 'Zaplněný kalendář bez kolizí a zbytečného přepisování termínů.',
-    points: ['Kalendář služeb a zdrojů', 'Hlídání kolizí a kapacit', 'Přehled vytížení dne'],
-    relevanceLabel: 'Pro služby',
-    monthly: 199,
+    points: ['Kalendář služeb a zdrojů', 'Hlídání kolizí a kapacit', 'Online rezervace pro hosty'],
+    relevanceLabel: 'Pro služby a salony',
+    monthly: 99,
+    yearly: 990,
   },
   {
     key: 'attendance',
     name: 'Docházka',
-    desc: 'Píchačka, přehled hodin, export pro mzdy.',
+    desc: 'Píchačka, přehled hodin, směny a export pro mzdy.',
     outcome: 'Odpracované hodiny sedí — a podklady pro mzdy máte na pár kliknutí.',
-    points: ['Píchačka a přehled hodin', 'Měsíční souhrn za tým', 'Export pro mzdy'],
+    points: ['Píchačka a přehled hodin', 'Plán směn a měsíční souhrn', 'Export pro mzdy'],
     relevanceLabel: 'Pro firmy s týmem',
+    monthly: 99,
+    yearly: 990,
+  },
+  {
+    key: 'jobs',
+    name: 'Zakázky',
+    desc: 'Nabídky, výjezdy, pracovní listy a předání.',
+    outcome: 'Od nabídky přes výjezd až po fakturu — bez papírů v autě.',
+    points: [
+      'Nabídky, zakázky a pracovní listy',
+      'Materiál rovnou ze skladu',
+      'Předání a faktura na pár kliknutí',
+    ],
+    relevanceLabel: 'Pro řemeslo a výjezdy',
     monthly: 149,
+    yearly: 1490,
+  },
+] as const
+
+/** Zvýhodněný balík modulů. Cenu určuje ceník, NEdopočítává se ze součtu. */
+export interface PricingBundle {
+  key: 'gastro' | 'all'
+  name: string
+  /** Moduly, které balík obsahuje (mimo trvale bezplatné). */
+  modules: readonly ModuleKey[]
+  monthly: number
+  yearly: number
+}
+
+export const PRICING_BUNDLES: readonly PricingBundle[] = [
+  {
+    key: 'gastro',
+    name: 'Balík GASTRO',
+    modules: ['pos', 'restaurant', 'inventory', 'attendance'],
+    monthly: 399,
+    yearly: 3990,
+  },
+  {
+    key: 'all',
+    name: 'Balík VŠECHNO',
+    modules: ['plus', 'pos', 'restaurant', 'inventory', 'booking', 'attendance', 'jobs'],
+    monthly: 499,
+    yearly: 4990,
   },
 ] as const
 
 export const MODULAR_PRICING = {
   /** Roční platba = 2 měsíce zdarma (platí se 10 z 12). */
   yearlyFreeMonths: 2,
-  /** Kč/měsíc za kompletní balík (všechny moduly) při měsíční platbě. */
-  bundleAllMonthly: 990,
+  /** Kč/měsíc bez DPH za kompletní balík (všechny moduly). */
+  bundleAllMonthly: 499,
+  /** Kč/rok bez DPH za kompletní balík. */
+  bundleAllYearly: 4990,
   /** Délka zkušební verze ve dnech. */
   trialDays: 14,
+  /** Sazba DPH, kterou se ceny bez DPH navyšují (ceník je uváděný bez DPH). */
+  vatPercent: 21,
+} as const
+
+/**
+ * Zaváděcí cena: prvních 500 firem má kompletní balík natrvalo levněji.
+ * Kolik míst je obsazeno, server zatím neeviduje — proto se počet ZBÝVAJÍCÍCH míst nikde
+ * neuvádí; tvrdit číslo, které nemáme z čeho spočítat, by byla lež.
+ */
+export const FOUNDING_OFFER = {
+  companies: 500,
+  monthly: 399,
 } as const
 
 /** Roční cena za měsíc = (měsíční × (12 − volné měsíce)) / 12, zaokrouhleno na celé Kč. */
@@ -135,13 +223,42 @@ export function yearlyPerMonth(monthly: number): number {
   return Math.round((monthly * (12 - MODULAR_PRICING.yearlyFreeMonths)) / 12)
 }
 
+/** Roční cena celkem = měsíční × 10 (2 měsíce zdarma). Odpovídá ročním cenám v ceníku. */
+export function yearlyTotal(monthly: number): number {
+  return monthly * (12 - MODULAR_PRICING.yearlyFreeMonths)
+}
+
+/** Cena s DPH pro orientaci koncového zákazníka (ceník je bez DPH). */
+export function withVat(amount: number): number {
+  return Math.round(amount * (1 + MODULAR_PRICING.vatPercent / 100))
+}
+
+function covers(selected: readonly ModuleKey[], required: readonly ModuleKey[]): boolean {
+  return required.every((k) => selected.includes(k))
+}
+
 /**
- * Cena vybrané sestavy za měsíc (měsíční platba). Při kompletní sestavě (všech 6) platí
- * zvýhodněná cena balíku; jinak součet vybraných modulů. Jediné místo s touto logikou.
+ * Cena vybrané sestavy za měsíc (měsíční platba, bez DPH). Když výběr pokrývá balík, počítá se
+ * cena balíku plus moduly navíc — zákazníkovi se vždy nabídne ta levnější varianta.
+ * Bezplatné moduly cenu nezvyšují. Jediné místo s touto logikou.
  */
 export function modulesMonthly(keys: readonly ModuleKey[]): number {
-  if (keys.length >= PRICING_MODULES.length) return MODULAR_PRICING.bundleAllMonthly
-  return PRICING_MODULES.filter((m) => keys.includes(m.key)).reduce((acc, m) => acc + m.monthly, 0)
+  const paid = PRICING_MODULES.filter((m) => !m.free && keys.includes(m.key))
+  let best = paid.reduce((acc, m) => acc + m.monthly, 0)
+
+  for (const bundle of PRICING_BUNDLES) {
+    if (!covers(keys, bundle.modules)) continue
+    const navic = paid
+      .filter((m) => !bundle.modules.includes(m.key))
+      .reduce((acc, m) => acc + m.monthly, 0)
+    best = Math.min(best, bundle.monthly + navic)
+  }
+  return best
+}
+
+/** Roční cena vybrané sestavy (Kč/rok bez DPH) — stejná logika balíků jako u měsíční. */
+export function modulesYearly(keys: readonly ModuleKey[]): number {
+  return yearlyTotal(modulesMonthly(keys))
 }
 
 /**
@@ -194,8 +311,8 @@ export const PRICING_SEGMENTS: readonly PricingSegment[] = [
   {
     id: 'field',
     label: 'Řemeslo & výjezdy',
-    recommended: ['invoicing'],
-    addons: ['jobs', 'cashflow'],
+    recommended: ['invoicing', 'jobs'],
+    addons: ['cashflow'],
   },
   {
     id: 'team',
