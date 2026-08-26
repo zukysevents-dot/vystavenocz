@@ -25,7 +25,7 @@ import { useApi } from '@/composables/useApi'
 import { useCompanyStore } from '@/stores/company'
 import { useAuthStore } from '@/stores/auth'
 import { http, isApiMode } from '@/lib/http'
-import { formatCZK, formatDate } from '@/lib/invoice'
+import { formatCZK, formatDate, invoiceStatusLabel } from '@/lib/invoice'
 import { buildLocationRevenue, consolidationSummary } from '@/lib/consolidation'
 import { savedBusinessProfile } from '@/lib/modules'
 import type { InvoiceStatus, Sale } from '@/lib/types'
@@ -51,6 +51,8 @@ interface Stats {
   paidCount: number
   overdueAmount: number
   overdueCount: number
+  /** Objem dobropisů v období (záporný, už zahrnutý v `billed`) — vysvětluje rozdíl proti platbám. */
+  creditNoted: number
 }
 interface RecentInvoice {
   id: string
@@ -75,6 +77,7 @@ const stats = ref<Stats>({
   paidCount: 0,
   overdueAmount: 0,
   overdueCount: 0,
+  creditNoted: 0,
 })
 const revenue = ref<{ label: string; total: number }[]>([])
 const recentInvoices = ref<RecentInvoice[]>([])
@@ -90,12 +93,33 @@ const posSummary = computed(() =>
 )
 const hasPos = computed(() => posSales.value.length > 0)
 
-// Doporučené kroky oboru zvoleného v onboardingu. Ukazují se jen dokud firma nic nevytvořila —
-// jakmile má první doklad, klienta nebo prodej, přehled mluví sám a checklist by jen překážel.
-const setupSteps = computed(() => savedBusinessProfile()?.setupSteps ?? [])
-const showSetupSteps = computed(
-  () => !loading.value && setupSteps.value.length > 0 && stats.value.count === 0 && !hasPos.value,
+// Doporučené kroky oboru zvoleného v onboardingu (VYS-12). Checklist se dřív schoval hned po
+// PRVNÍM dokladu, takže se ve skutečnosti nikdy neodškrtával — buď svítil celý, nebo zmizel celý
+// a zbylé kroky si uživatel musel pamatovat. Teď zůstane, dokud není hotové všechno, co umíme
+// ověřit, a splněné kroky odškrtne.
+//
+// ponytail: hotovo se odvozuje z cílové routy kroku — jiný signál dashboard stejně nemá. Kroky,
+// jejichž splnění ověřit neumíme (nastavení, pobočky…), zůstávají jako obyčejný odkaz.
+const setupSteps = computed(() =>
+  (savedBusinessProfile()?.setupSteps ?? []).map((step) => ({
+    ...step,
+    done:
+      step.to === '/app/faktury'
+        ? stats.value.count > 0
+        : step.to === '/app/klienti'
+          ? recentClients.value.length > 0
+          : step.to === '/app/pokladna'
+            ? hasPos.value
+            : null,
+  })),
 )
+const showSetupSteps = computed(() => {
+  if (loading.value || setupSteps.value.length === 0) return false
+  const checkable = setupSteps.value.filter((s) => s.done !== null)
+  // Nic ověřitelného → chovej se jako dřív (checklist jen pro úplně prázdnou firmu).
+  if (checkable.length === 0) return stats.value.count === 0 && !hasPos.value
+  return checkable.some((s) => !s.done)
+})
 // Počet kroků se liší podle oboru (3 u OSVČ, 5 u gastra) — natvrdo napsané „Tři kroky" by lhalo.
 const setupStepsHint = computed(() => {
   const count = setupSteps.value.length
@@ -174,6 +198,7 @@ async function loadFromApi(): Promise<void> {
     paidCount: number
     overdueCount: number
     overdueAmount: number
+    creditNotedAmount?: number
   }
   interface RevenueDto {
     series: { periodStart: string; invoicedAmount: number }[]
@@ -207,6 +232,7 @@ async function loadFromApi(): Promise<void> {
     paidCount: summary.paidCount,
     overdueAmount: summary.overdueAmount,
     overdueCount: summary.overdueCount,
+    creditNoted: summary.creditNotedAmount ?? 0,
   }
   // Neúplná odpověď (chybějící `series`) nesmí shodit celý Přehled na „server nedostupný".
   revenue.value = (rev.series ?? []).map((b) => ({
@@ -246,9 +272,13 @@ async function loadFromMock(): Promise<void> {
   let overdueAmount = 0
   let paidCount = 0
   let overdueCount = 0
+  let creditNoted = 0
   for (const inv of taxDocs) {
     const amount = Number(inv.total) || 0
-    if (inv.status !== 'draft' && inv.status !== 'cancelled') billed += amount
+    if (inv.status !== 'draft' && inv.status !== 'cancelled') {
+      billed += amount
+      if (inv.documentType === 'credit_note') creditNoted += amount
+    }
     if (inv.status === 'paid') {
       paidCount++
       paidAmount += amount
@@ -264,6 +294,7 @@ async function loadFromMock(): Promise<void> {
     paidCount,
     overdueAmount,
     overdueCount,
+    creditNoted,
   }
 
   const now = new Date()
@@ -309,15 +340,32 @@ async function loadFromMock(): Promise<void> {
 }
 
 type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline'
-const statusLabels: Record<InvoiceStatus, { label: string; variant: BadgeVariant }> = {
-  draft: { label: 'Koncept', variant: 'secondary' },
-  issued: { label: 'Vystaveno', variant: 'default' },
-  paid: { label: 'Zaplaceno', variant: 'outline' },
-  overdue: { label: 'Po splatnosti', variant: 'destructive' },
-  cancelled: { label: 'Stornováno', variant: 'secondary' },
+const statusVariants: Record<InvoiceStatus, BadgeVariant> = {
+  draft: 'secondary',
+  issued: 'default',
+  paid: 'outline',
+  overdue: 'destructive',
+  cancelled: 'secondary',
 }
+
+/**
+ * `/dashboard/recent-invoices` vrací serverový enum v PascalCase (`Issued`, `Paid`), zatímco
+ * FE stavy jsou lowercase — mapa proto míjela a fallback vypisoval anglický stav rovnou uživateli.
+ * Popisky bereme ze sdíleného slovníku, ať Přehled neříká „Paid" tam, kde seznam říká „Uhrazeno".
+ */
 function statusMeta(s: string): { label: string; variant: BadgeVariant } {
-  return statusLabels[s as InvoiceStatus] ?? { label: s || 'Neznámý', variant: 'outline' }
+  const key = (s || '').toLowerCase() as InvoiceStatus
+  // Serverový `Sent` je pro uživatele pořád vystavená faktura, `Archived` je odložený doklad.
+  const normalized: InvoiceStatus =
+    key === ('sent' as InvoiceStatus)
+      ? 'issued'
+      : key === ('archived' as InvoiceStatus)
+        ? 'cancelled'
+        : key
+  return {
+    label: invoiceStatusLabel(normalized),
+    variant: statusVariants[normalized] ?? 'outline',
+  }
 }
 </script>
 
@@ -352,18 +400,24 @@ function statusMeta(s: string): { label: string; variant: BadgeVariant } {
           </div>
           <div class="mt-2 text-2xl font-bold">{{ stats.count }}</div>
         </div>
+        <!-- „Fakturováno" nettuje dobropisy, „Přijaté platby" je skutečný příjem — proto mohou
+             být přijaté platby VYŠŠÍ než fakturováno. Bez vysvětlení ta dvojice vypadá jako chyba
+             v součtu, tak dobropisy pojmenujeme přímo na dlaždici. -->
         <div class="rounded-xl border border-border bg-card p-4">
           <div class="flex items-center gap-2 text-sm text-muted-foreground">
             <Coins class="h-4 w-4" /> Fakturováno
           </div>
           <div class="mt-2 text-2xl font-bold">{{ formatCZK(stats.billed) }}</div>
+          <div v-if="stats.creditNoted !== 0" class="text-xs text-muted-foreground">
+            po odečtení dobropisů {{ formatCZK(-stats.creditNoted) }}
+          </div>
         </div>
         <div class="rounded-xl border border-border bg-card p-4">
           <div class="flex items-center gap-2 text-sm text-muted-foreground">
-            <CheckCircle2 class="h-4 w-4 text-success" /> Uhrazené
+            <CheckCircle2 class="h-4 w-4 text-success" /> Přijaté platby
           </div>
-          <div class="mt-2 text-2xl font-bold">{{ stats.paidCount }}</div>
-          <div class="text-xs text-muted-foreground">{{ formatCZK(stats.paidAmount) }}</div>
+          <div class="mt-2 text-2xl font-bold">{{ formatCZK(stats.paidAmount) }}</div>
+          <div class="text-xs text-muted-foreground">{{ stats.paidCount }}× uhrazená faktura</div>
         </div>
         <div class="rounded-xl border border-border bg-card p-4">
           <div class="flex items-center gap-2 text-sm text-muted-foreground">
@@ -528,12 +582,19 @@ function statusMeta(s: string): { label: string; variant: BadgeVariant } {
             class="flex gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50"
           >
             <span
-              class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
+              class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+              :class="step.done ? 'bg-success/15 text-success' : 'bg-primary/10 text-primary'"
             >
-              {{ index + 1 }}
+              <CheckCircle2 v-if="step.done" class="h-4 w-4" aria-label="Hotovo" />
+              <template v-else>{{ index + 1 }}</template>
             </span>
             <span class="min-w-0">
-              <span class="block text-sm font-medium text-foreground">{{ step.label }}</span>
+              <span
+                class="block text-sm font-medium"
+                :class="step.done ? 'text-muted-foreground line-through' : 'text-foreground'"
+              >
+                {{ step.label }}
+              </span>
               <span class="block text-xs text-muted-foreground">{{ step.description }}</span>
             </span>
           </RouterLink>
