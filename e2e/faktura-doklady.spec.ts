@@ -257,19 +257,27 @@ test('dobropis jde stornovat ze seznamu — doklad zůstane, jen dostane stav a 
   expect(notes[0].cancelReason).toBe('Vystaveno omylem k jiné faktuře')
 })
 
+// Tlačítko zůstává AKTIVNÍ a chybějící důvod řekne hláškou — disabled tlačítko uživateli
+// nevysvětlí, co mu chybí, jen tiše nereaguje (stejný vzor jako na registraci, VYS-08).
+// Podstatné je, že se bez důvodu doklad NESTORNUJE.
 test('storno dobropisu neprojde bez důvodu — server ho vyžaduje', async ({ page }) => {
   await seedApp(page, { subscription: 'pro', invoices: [mkCreditNote()] })
   await page.goto('/app/faktury')
 
   await page.getByTestId('faktury-storno-dobropis-desktop').click()
-  await expect(page.getByTestId('faktury-storno-potvrdit')).toBeDisabled()
+  await page.getByTestId('faktury-storno-potvrdit').click()
+  await expect(page.getByText('Uveďte důvod storna')).toBeVisible()
 
   // Pár znaků nestačí — jinak by v evidenci zůstalo storno s důvodem „a".
+  // Dialog zůstane otevřený a doklad nestornovaný; hlášku už neasertujeme podruhé,
+  // protože toast se stejným textem se nezobrazuje dvakrát.
   await page.getByTestId('faktury-storno-duvod').fill('ee')
-  await expect(page.getByTestId('faktury-storno-potvrdit')).toBeDisabled()
+  await page.getByTestId('faktury-storno-potvrdit').click()
+  await expect(page.getByTestId('faktury-storno-duvod')).toBeVisible()
 
   await page.getByTestId('faktury-storno-duvod').fill('Duplicitní dobropis')
-  await expect(page.getByTestId('faktury-storno-potvrdit')).toBeEnabled()
+  await page.getByTestId('faktury-storno-potvrdit').click()
+  await expect(page.getByTestId('faktury-storno-dobropis-desktop')).toHaveCount(0)
 })
 
 test('stornovaný dobropis už znovu stornovat nejde a nejde ani smazat', async ({ page }) => {
