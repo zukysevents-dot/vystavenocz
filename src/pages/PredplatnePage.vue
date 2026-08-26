@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { RouterLink } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 import { BadgeCheck, Check, Clock, Lock } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { toast } from '@/components/ui/sonner'
 import { useAuthStore } from '@/stores/auth'
 import { useSubscription } from '@/composables/useSubscription'
+import { useSubscriptionPurchase, type BillingPeriod } from '@/composables/useSubscriptionPurchase'
 import { upsellFor, daysUntil } from '@/lib/entitlements'
 import { APP_MODULES } from '@/lib/modules'
+import { saveErrorMessage } from '@/lib/http'
 
 // Přehled tarifu firmy. VŠECHNA čísla a stavy pocházejí ze serveru — stránka nic nepočítá a nic
 // neaktivuje. Dřív tady bylo tlačítko „Aktivovat Pro", které si tarif zapnulo lokálně v prohlížeči.
@@ -31,6 +35,76 @@ function dayWord(n: number): string {
 
 const isReadOnly = computed(() => auth.entitlement.accessMode === 'read_only')
 const isLocked = computed(() => auth.entitlement.accessMode === 'locked')
+
+// --- Nákup modulů z ceníku ------------------------------------------------------------------
+// Stránka nic neaktivuje: vyžádá si adresu platební stránky a přesměruje. Nárok zapíše až
+// ověřený webhook na serveru, proto se po návratu z platby netvrdí, že je zaplaceno.
+const {
+  catalog,
+  loading: catalogLoading,
+  busy,
+  load,
+  checkout,
+  openPortal,
+} = useSubscriptionPurchase()
+const route = useRoute()
+const period = ref<BillingPeriod>('monthly')
+const selected = ref<string[]>([])
+
+onMounted(() => {
+  if (route.query.nakup === 'dokonceno')
+    toast.success('Děkujeme! Platbu teď ověřujeme.', {
+      description:
+        'Jakmile ji poskytovatel potvrdí, moduly se zpřístupní samy — obvykle během chvilky.',
+    })
+  void load()
+})
+
+/** Co si firma ještě může koupit. Co už má, se nenabízí — ať nikdo neplatí dvakrát za totéž. */
+const offer = computed(() => (catalog.value?.items ?? []).filter((i) => !i.owned))
+const canBuy = computed(() => canManage.value && catalog.value?.canCheckout === true)
+
+function toggle(key: string, on: boolean | 'indeterminate' | undefined): void {
+  selected.value = on === true ? [...selected.value, key] : selected.value.filter((k) => k !== key)
+}
+
+function priceOf(item: { monthlyNet: number; yearlyNet: number }): number {
+  return period.value === 'yearly' ? item.yearlyNet : item.monthlyNet
+}
+
+const totalNet = computed(() =>
+  offer.value.filter((i) => selected.value.includes(i.key)).reduce((sum, i) => sum + priceOf(i), 0),
+)
+const totalWithVat = computed(() =>
+  Math.round(totalNet.value * (1 + (catalog.value?.vatRatePercent ?? 21) / 100)),
+)
+
+/** Do kdy má firma vše zdarma. Do té doby brána nic nestrhne. */
+const freeUntil = computed(() => {
+  const raw = catalog.value?.trialEndsAt
+  if (!raw) return null
+  const date = new Date(raw)
+  return date > new Date() ? date.toLocaleDateString('cs-CZ') : null
+})
+
+async function buy(): Promise<void> {
+  if (selected.value.length === 0) return
+  try {
+    window.location.href = await checkout(selected.value, period.value)
+  } catch (e) {
+    toast.error(saveErrorMessage(e, 'Platbu se nepodařilo otevřít. Zkuste to prosím znovu.'))
+  }
+}
+
+async function manage(): Promise<void> {
+  try {
+    const url = await openPortal()
+    if (url) window.location.href = url
+    else toast.info('Zatím tu není co spravovat — firma nemá žádné placené moduly.')
+  } catch (e) {
+    toast.error(saveErrorMessage(e, 'Správu předplatného se nepodařilo otevřít.'))
+  }
+}
 </script>
 
 <template>
@@ -165,13 +239,20 @@ const isLocked = computed(() => auth.entitlement.accessMode === 'locked')
       </div>
     </div>
 
-    <!-- Změna tarifu -->
+    <!-- Přidat moduly -->
     <div class="mt-6 rounded-3xl border border-border bg-card p-6 shadow-card sm:p-8">
-      <h2 class="text-lg font-bold text-foreground">Změna tarifu</h2>
-      <template v-if="canManage">
+      <h2 class="text-lg font-bold text-foreground">Přidat moduly</h2>
+
+      <p v-if="!canManage" class="mt-1 text-sm text-muted-foreground">
+        O rozšíření může požádat majitel nebo správce firmy.
+      </p>
+
+      <!-- Brána neběží (nebo běžíme v náhledu bez serveru): nabídnout nákup, který nefunguje,
+           by byl falešný slib. Chybějící nabídka se NIKDY nesmí číst jako „máte všechno". -->
+      <template v-else-if="!catalog || !catalog.canCheckout">
         <p class="mt-1 text-sm text-muted-foreground">
-          Napište nám, co potřebujete — tarif i rozšíření nastavíme a potvrdíme e-mailem. Ceník
-          najdete na veřejných stránkách.
+          Platby online zatím spouštíme. Napište nám, co potřebujete — moduly zapneme ručně a
+          potvrdíme e-mailem.
         </p>
         <div class="mt-4 flex flex-col gap-3 sm:flex-row">
           <a href="/#cenik" class="sm:flex-1">
@@ -182,9 +263,114 @@ const isLocked = computed(() => auth.entitlement.accessMode === 'locked')
           </a>
         </div>
       </template>
-      <p v-else class="mt-1 text-sm text-muted-foreground">
-        O změnu tarifu může požádat majitel nebo správce firmy.
+
+      <p v-else-if="catalogLoading" class="mt-1 text-sm text-muted-foreground">Načítám nabídku…</p>
+
+      <p v-else-if="offer.length === 0" class="mt-1 text-sm text-muted-foreground">
+        Máte k dispozici všechno, co nabízíme. Děkujeme!
       </p>
+
+      <template v-else>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Vyberte, co chcete používat. Platíte jen za zvolené moduly, kdykoli je můžete zrušit.
+        </p>
+
+        <!-- Měsíčně / ročně -->
+        <div class="mt-4 inline-flex rounded-xl border border-border p-1" role="group">
+          <button
+            type="button"
+            class="rounded-lg px-4 py-2 text-sm font-medium transition"
+            :class="
+              period === 'monthly' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+            "
+            :aria-pressed="period === 'monthly'"
+            @click="period = 'monthly'"
+          >
+            Měsíčně
+          </button>
+          <button
+            type="button"
+            class="rounded-lg px-4 py-2 text-sm font-medium transition"
+            :class="
+              period === 'yearly' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+            "
+            :aria-pressed="period === 'yearly'"
+            @click="period = 'yearly'"
+          >
+            Ročně <span class="text-xs opacity-80">(2 měsíce zdarma)</span>
+          </button>
+        </div>
+
+        <ul class="mt-4 space-y-2">
+          <li
+            v-for="item in offer"
+            :key="item.key"
+            class="flex items-center gap-3 rounded-2xl border border-border bg-surface-soft p-4"
+          >
+            <Checkbox
+              :id="`kup-${item.key}`"
+              :model-value="selected.includes(item.key)"
+              @update:model-value="(on) => toggle(item.key, on)"
+            />
+            <label
+              :for="`kup-${item.key}`"
+              class="flex flex-1 cursor-pointer items-center justify-between gap-3"
+            >
+              <span class="font-semibold text-foreground">{{ item.name }}</span>
+              <span class="whitespace-nowrap text-sm text-muted-foreground">
+                {{ priceOf(item).toLocaleString('cs-CZ') }} Kč{{
+                  period === 'yearly' ? '/rok' : '/měs'
+                }}
+              </span>
+            </label>
+          </li>
+        </ul>
+
+        <div class="mt-4 rounded-2xl bg-surface-soft p-4 text-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-muted-foreground">Celkem bez DPH</span>
+            <span class="font-semibold text-foreground">
+              {{ totalNet.toLocaleString('cs-CZ') }} Kč{{ period === 'yearly' ? '/rok' : '/měs' }}
+            </span>
+          </div>
+          <div class="mt-1 flex items-center justify-between">
+            <span class="text-muted-foreground">S DPH {{ catalog?.vatRatePercent }} %</span>
+            <span class="font-semibold text-foreground">
+              {{ totalWithVat.toLocaleString('cs-CZ') }} Kč{{
+                period === 'yearly' ? '/rok' : '/měs'
+              }}
+            </span>
+          </div>
+          <p v-if="freeUntil" class="mt-3 text-muted-foreground">
+            Do <strong class="text-foreground">{{ freeUntil }}</strong> máte vše zdarma — první
+            platba proběhne až po tomto datu. Vybrané moduly začnete používat hned.
+          </p>
+        </div>
+
+        <Button
+          variant="coral"
+          size="lg"
+          class="mt-4 w-full"
+          :disabled="selected.length === 0 || busy || !canBuy"
+          @click="buy"
+        >
+          {{ busy ? 'Otevírám platbu…' : 'Pokračovat k platbě' }}
+        </Button>
+        <p class="mt-2 text-center text-xs text-muted-foreground">
+          Platbu zpracuje ověřený poskytovatel. Údaje o kartě se k nám nedostanou.
+        </p>
+      </template>
+
+      <!-- Samoobsluha u brány: karta, faktury, zrušení -->
+      <button
+        v-if="canManage && catalog?.hasBillingAccount"
+        type="button"
+        class="mt-4 text-sm text-primary hover:underline disabled:opacity-60"
+        :disabled="busy"
+        @click="manage"
+      >
+        Spravovat platby a faktury →
+      </button>
       <RouterLink
         to="/app/nastaveni"
         class="mt-4 inline-block text-sm text-primary hover:underline"
