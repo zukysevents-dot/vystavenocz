@@ -103,11 +103,21 @@ export interface InvoiceApiResponse {
   note?: string | null
   lines?: InvoiceApiLine[] | null
   vatSummary?: InvoiceApiVatSummaryRow[] | null
-  payments?: unknown[] | null
+  payments?: InvoiceApiPayment[] | null
   pdfSha256?: string | null
   pdfGeneratedAt?: string | null
   createdAt?: string | null
   updatedAt?: string | null
+}
+
+/** `PaymentResponse` z backendu. List-summary úhrady nenese, detail ano. */
+export interface InvoiceApiPayment {
+  id: string
+  amount?: number | null
+  currency?: string | null
+  method?: string | null
+  paidAt?: string | null
+  note?: string | null
 }
 
 // --- Odchozí požadavky (FE → backend) ---
@@ -255,6 +265,18 @@ export function invoiceFromApi(dto: InvoiceApiResponse): Invoice {
     subtotal: dto.subtotal ?? 0,
     vatTotal: dto.vatTotal ?? 0,
     total: dto.total ?? 0,
+    // Úhrady: server je JEDINÝ zdroj pravdy. Když je odpověď nenese (starší build), odvodíme
+    // zbytek z totalu, ať UI nikdy netvrdí „uhrazeno 0 z 0".
+    paidAmount: dto.paidAmount ?? 0,
+    outstandingAmount: dto.outstandingAmount ?? (dto.total ?? 0) - (dto.paidAmount ?? 0),
+    payments: (dto.payments ?? []).map((p) => ({
+      id: p.id,
+      amount: p.amount ?? 0,
+      currency: p.currency ?? dto.currency ?? 'CZK',
+      method: p.method ?? null,
+      paidAt: p.paidAt ?? '',
+      note: p.note ?? null,
+    })),
     notes: dto.note ?? null,
     createdAt: dto.createdAt ?? '',
     updatedAt: dto.updatedAt ?? '',

@@ -118,9 +118,28 @@ export interface Invoice {
   subtotal: number
   vatTotal: number
   total: number
+  // Úhrady počítá VÝHRADNĚ server (jako součty a DPH) — frontend je jen zobrazuje. Faktura má 0–N
+  // úhrad, takže „uhrazeno" není příznak, ale součet: `paidAmount` < `total` = částečná úhrada.
+  // Volitelné, protože je nese jen serverová odpověď (mock/import/konverze doklad teprve skládají);
+  // čte se přes `paymentSummary()` v `invoice.ts`, které chybějící hodnoty dopočítá ze stavu.
+  paidAmount?: number
+  outstandingAmount?: number
+  payments?: InvoicePayment[]
   notes: string | null
   createdAt: string
   updatedAt: string
+}
+
+/** Jedna zaevidovaná úhrada faktury. Vzniká i zaniká na serveru. */
+export interface InvoicePayment {
+  id: string
+  amount: number
+  currency: string
+  /** Volný text způsobu úhrady (převod / hotově / karta / jiné). Server ho jen ukládá. */
+  method: string | null
+  /** Datum platby (YYYY-MM-DD). */
+  paidAt: string
+  note: string | null
 }
 
 export type RecurringInvoiceStatus = 'active' | 'paused'

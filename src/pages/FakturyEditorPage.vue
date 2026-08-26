@@ -39,6 +39,7 @@ import InvoiceDocument from '@/components/app/InvoiceDocument.vue'
 import SendInvoiceDialog from '@/components/app/SendInvoiceDialog.vue'
 import CancelInvoiceDialog from '@/components/app/CancelInvoiceDialog.vue'
 import PaywallDialog from '@/components/app/PaywallDialog.vue'
+import RecordPaymentDialog from '@/components/app/RecordPaymentDialog.vue'
 import { downloadInvoicePdf } from '@/lib/invoice-pdf'
 import { ApiError, isApiMode, saveErrorMessage } from '@/lib/http'
 import { useClients } from '@/composables/useClients'
@@ -57,6 +58,7 @@ import {
   documentTypeLabel,
   formatCZK,
   formatDate,
+  paymentSummary,
   variableSymbolFromInvoiceNumber,
 } from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
@@ -65,6 +67,7 @@ import type {
   DocumentType,
   Invoice,
   InvoiceItem,
+  InvoicePayment,
   InvoiceStatus,
   SupplierSnapshot,
   VatRate,
@@ -73,7 +76,17 @@ import type {
 const route = useRoute()
 const router = useRouter()
 const { clients, load: loadClients, getById: getClientById } = useClients()
-const { create, update, issue, pay, cancel, get, load: loadInvoices } = useInvoices()
+const {
+  create,
+  update,
+  issue,
+  addPayment,
+  removePayment,
+  cancel,
+  get,
+  getById: getInvoiceById,
+  load: loadInvoices,
+} = useInvoices()
 const { canInvoice } = useSubscription()
 const companyStore = useCompanyStore()
 
@@ -201,6 +214,52 @@ function normalizedItems(): ItemDraft[] {
 // Součty serverem uzavřeného dokladu, převzaté při načtení. U dobropisu jsou ZÁPORNÉ.
 const loadedTotals = ref<{ subtotal: number; vatTotal: number; total: number } | null>(null)
 
+// Úhrady dokladu ze serveru (VYS-03). Faktura má 0–N úhrad; stav i zbývající částku počítá server.
+const loadedPayments = ref<InvoicePayment[]>([])
+const loadedPaidAmount = ref<number | null>(null)
+const loadedOutstanding = ref<number | null>(null)
+const paymentOpen = ref(false)
+const removingPaymentId = ref<string | null>(null)
+
+// Dobropis vzniká z konkrétní faktury a musí na ni odkazovat — v UI i na dokladu (§ 45 ZDPH).
+// Dřív ta vazba nebyla vidět nikde: z papíru ani z obrazovky nešlo zjistit, co doklad opravuje.
+const loadedParentInvoiceId = ref<string | null>(null)
+const correctsInvoiceNumber = computed(() =>
+  loadedParentInvoiceId.value
+    ? (getInvoiceById(loadedParentInvoiceId.value)?.invoiceNumber ?? null)
+    : null,
+)
+
+const payment = computed(() =>
+  paymentSummary({
+    status: status.value,
+    total: totals.value.total,
+    paidAmount: loadedPaidAmount.value ?? undefined,
+    outstandingAmount: loadedOutstanding.value ?? undefined,
+  }),
+)
+
+/** Způsob úhrady je na serveru volný text — neznámou hodnotu ukážeme, jak přišla. */
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  bank_transfer: 'Převodem',
+  cash: 'Hotově',
+  card: 'Kartou',
+  other: 'Jiné',
+}
+function paymentMethodName(method: string | null): string {
+  if (!method) return 'Neuvedeno'
+  return PAYMENT_METHOD_LABELS[method] ?? method
+}
+
+/** Úhrady se evidují jen u daňového dokladu — dobropis se neplatí, ten peníze vrací. */
+const canRecordPayment = computed(
+  () =>
+    Boolean(editingId.value) &&
+    !isCreditNote.value &&
+    status.value !== 'cancelled' &&
+    payment.value.outstanding > 0,
+)
+
 /**
  * Součty dokladu. Rozpracovaný koncept se počítá živě (uživatel píše do polí), ale u dokladu,
  * který už vlastní server, se berou JEHO čísla — jinak by editor v náhledu i v PDF ukázal jinou
@@ -244,6 +303,10 @@ onMounted(async () => {
       paidAt.value = inv.paidAt
       loadedSupplierSnapshot.value = inv.supplierSnapshot ?? null
       loadedTotals.value = { subtotal: inv.subtotal, vatTotal: inv.vatTotal, total: inv.total }
+      loadedPayments.value = inv.payments ?? []
+      loadedPaidAmount.value = inv.paidAmount ?? null
+      loadedOutstanding.value = inv.outstandingAmount ?? null
+      loadedParentInvoiceId.value = inv.parentInvoiceId ?? null
       invoiceNumber.value = inv.invoiceNumber ?? ''
       issueDate.value = inv.issueDate
       dueDate.value = inv.dueDate
@@ -373,6 +436,8 @@ const documentProps = computed(() => ({
   taxableDate: issueDate.value,
   variableSymbol: variableSymbolDisplay.value,
   paymentMethod: paymentMethod.value,
+  documentType: documentType.value,
+  correctsInvoiceNumber: correctsInvoiceNumber.value,
 }))
 
 // Náhled je pevná A4 (794 px). Na užší obrazovce ho zmenšíme přesně na dostupnou šířku, ať je
@@ -410,6 +475,10 @@ function syncFromSaved(inv: Invoice): void {
   if (inv.dueDate) dueDate.value = inv.dueDate
   status.value = inv.status
   paidAt.value = inv.paidAt
+  loadedPayments.value = inv.payments ?? []
+  loadedPaidAmount.value = inv.paidAmount ?? null
+  loadedOutstanding.value = inv.outstandingAmount ?? null
+  loadedParentInvoiceId.value = inv.parentInvoiceId ?? null
   loadedSupplierSnapshot.value = inv.supplierSnapshot ?? null
   adoptServerLineIds(inv)
 }
@@ -601,25 +670,68 @@ async function onSent() {
   }
 }
 
-async function onMarkPaid() {
+/**
+ * Otevře evidenci úhrady. Dřív tohle tlačítko rovnou zaplatilo CELOU částku bez data, částky
+ * i způsobu a nešlo to vzít zpět — teď se jen posbírá vstup a rozhodne server.
+ * Koncept se před tím uloží a vystaví (jinak nemá číslo a server platbu odmítne).
+ */
+async function onRecordPaymentClick() {
   if (!canInvoice.value) {
     paywallOpen.value = true
     return
   }
   if (!editingId.value) return
-  saving.value = true
-  try {
-    // Uhradit lze jen vystavenou — koncept nejdřív ulož a vystav (přidělí číslo).
-    if (status.value === 'draft') {
+  if (status.value === 'draft') {
+    saving.value = true
+    try {
       await persist()
       syncFromSaved(await issue(editingId.value))
+    } catch (e) {
+      handleLifecycleError(e, 'Fakturu se nepodařilo vystavit.')
+      return
+    } finally {
+      saving.value = false
     }
-    syncFromSaved(await pay(editingId.value))
-    toast.success('Faktura označena jako uhrazená.')
+  }
+  paymentOpen.value = true
+}
+
+async function onRecordPayment(input: { amount: number; method: string; paidAt: string }) {
+  if (!editingId.value || saving.value) return
+  saving.value = true
+  try {
+    syncFromSaved(await addPayment(editingId.value, input))
+    paymentOpen.value = false
+    toast.success(
+      payment.value.outstanding > 0
+        ? `Úhrada zaznamenána. Zbývá ${formatCZK(payment.value.outstanding)}.`
+        : 'Faktura je uhrazená.',
+    )
   } catch (e) {
-    handleLifecycleError(e, 'Uhradit lze jen vystavenou fakturu.')
+    if (e instanceof ApiError && e.status === 422) {
+      toast.error('Částka úhrady je vyšší, než kolik zbývá uhradit.')
+    } else {
+      handleLifecycleError(e, 'Úhradu se nepodařilo zaznamenat. Stav dokladu se nezměnil.')
+    }
   } finally {
     saving.value = false
+  }
+}
+
+/**
+ * Smaže zaevidovanou úhradu — doklad se vrátí do předchozího stavu a zpátky do pohledávek.
+ * Bez toho byl omylem odklikaný „Uhrazeno" nevratný a uhrazenou fakturu už nešlo ani stornovat.
+ */
+async function onRemovePayment(paymentId: string) {
+  if (!editingId.value || removingPaymentId.value) return
+  removingPaymentId.value = paymentId
+  try {
+    syncFromSaved(await removePayment(editingId.value, paymentId))
+    toast.success('Úhrada smazána, doklad se vrátil mezi neuhrazené.')
+  } catch (e) {
+    handleLifecycleError(e, 'Úhradu se nepodařilo smazat. Stav dokladu se nezměnil.')
+  } finally {
+    removingPaymentId.value = null
   }
 }
 
@@ -693,13 +805,14 @@ async function onCancelConfirm(reason: string) {
           <span class="hidden sm:inline">Stornovat</span>
         </Button>
         <Button
-          v-if="editingId && status !== 'paid' && status !== 'cancelled'"
+          v-if="canRecordPayment"
           variant="outline"
           :disabled="saving || loading"
-          @click="onMarkPaid"
+          data-testid="editor-zaznamenat-uhradu"
+          @click="onRecordPaymentClick"
         >
           <CheckCircle2 class="h-4 w-4 text-success" />
-          <span class="hidden sm:inline">Uhrazeno</span>
+          <span class="hidden sm:inline">Zaznamenat úhradu</span>
         </Button>
         <Button v-if="!isLocked" variant="outline" :disabled="saving || loading" @click="onSave">
           <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
@@ -731,10 +844,71 @@ async function onCancelConfirm(reason: string) {
         <span class="font-medium text-foreground">Doklad je vystavený, proto se už needituje.</span>
         Údaje i částky jsou zmražené k datu vystavení.
         <template v-if="isCreditNote">
-          Dobropis navíc vychází z původní faktury — pokud je špatně, stornujte ho a vystavte k té
-          faktuře nový.
+          Dobropis navíc vychází z původní faktury<template v-if="correctsInvoiceNumber">
+            <strong class="text-foreground"> {{ correctsInvoiceNumber }}</strong> </template
+          >— pokud je špatně, stornujte ho a vystavte k té faktuře nový.
         </template>
         <template v-else> Potřebujete-li je změnit, doklad stornujte a vystavte znovu. </template>
+      </div>
+
+      <!-- Úhrady (VYS-03). Faktura má 0–N úhrad; zbývající částku i stav počítá server.
+           Jednotlivá úhrada jde smazat, takže omylem odklikaná platba není nevratná —
+           a uhrazená faktura, kterou server odmítá stornovat, se tím vrátí mezi neuhrazené. -->
+      <div
+        v-if="editingId && !isCreditNote && status !== 'draft' && status !== 'cancelled'"
+        class="rounded-xl border border-border bg-card p-6"
+        data-testid="editor-uhrady"
+      >
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Úhrady
+          </h2>
+          <p class="text-sm">
+            <template v-if="payment.outstanding > 0">
+              Uhrazeno
+              <strong>{{ formatCZK(payment.paid) }}</strong>
+              z {{ formatCZK(totals.total) }} — zbývá
+              <strong class="text-destructive">{{ formatCZK(payment.outstanding) }}</strong>
+            </template>
+            <template v-else-if="payment.overpaid > 0">
+              <strong class="text-destructive">
+                Přeplaceno o {{ formatCZK(payment.overpaid) }}
+              </strong>
+            </template>
+            <template v-else>
+              <strong class="text-success">Uhrazeno v plné výši</strong>
+            </template>
+          </p>
+        </div>
+
+        <ul v-if="loadedPayments.length" class="mt-4 divide-y divide-border">
+          <li
+            v-for="p in loadedPayments"
+            :key="p.id"
+            class="flex items-center justify-between gap-3 py-2 text-sm"
+          >
+            <span>
+              <strong>{{ formatCZK(p.amount) }}</strong>
+              <span class="text-muted-foreground">
+                · {{ formatDate(p.paidAt) }} · {{ paymentMethodName(p.method) }}
+              </span>
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              :disabled="removingPaymentId === p.id"
+              :aria-label="`Smazat úhradu ${formatCZK(p.amount)}`"
+              @click="onRemovePayment(p.id)"
+            >
+              <Loader2 v-if="removingPaymentId === p.id" class="h-4 w-4 animate-spin" />
+              <Trash2 v-else class="h-4 w-4 text-destructive" />
+              Smazat
+            </Button>
+          </li>
+        </ul>
+        <p v-else class="mt-4 text-sm text-muted-foreground">
+          Zatím žádná úhrada. Tlačítkem „Zaznamenat úhradu" nahoře přidáte i částečnou platbu.
+        </p>
       </div>
 
       <!-- Odběratel -->
@@ -1042,6 +1216,15 @@ async function onCancelConfirm(reason: string) {
       :invoice-number="invoiceNumber"
       :cancelling="saving"
       @confirm="onCancelConfirm"
+    />
+
+    <RecordPaymentDialog
+      v-model:open="paymentOpen"
+      :invoice-number="invoiceNumber"
+      :outstanding="payment.outstanding"
+      :total="totals.total"
+      :saving="saving"
+      @confirm="onRecordPayment"
     />
 
     <PaywallDialog v-model:open="paywallOpen" />

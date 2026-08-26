@@ -16,7 +16,7 @@ import {
   formatDate,
   variableSymbolFromInvoiceNumber,
 } from '@/lib/invoice'
-import type { ClientSnapshot, InvoiceItem, SupplierSnapshot } from '@/lib/types'
+import type { ClientSnapshot, DocumentType, InvoiceItem, SupplierSnapshot } from '@/lib/types'
 
 type DocItem = Pick<
   InvoiceItem,
@@ -36,14 +36,30 @@ const props = withDefaults(
     notes?: string | null
     paymentMethod?: string
     showVatBreakdown?: boolean
+    /** Typ dokladu — určuje nadpis. Dobropis NENÍ faktura a musí to být na dokladu vidět. */
+    documentType?: DocumentType
+    /** Číslo opravované faktury u dobropisu. Odkaz na původní doklad je zákonná náležitost. */
+    correctsInvoiceNumber?: string | null
   }>(),
   {
     variableSymbol: '',
     notes: null,
     paymentMethod: 'bank_transfer',
     showVatBreakdown: true,
+    documentType: 'invoice',
+    correctsInvoiceNumber: null,
   },
 )
+
+/**
+ * Nadpis dokladu. Dobropis se dřív tiskl jako „Faktura — daňový doklad", takže z papíru nešlo
+ * poznat, že jde o opravu — a chyběl i odkaz na opravovaný doklad (§ 45 zákona o DPH).
+ */
+const docTitle = computed(() => {
+  if (props.documentType === 'credit_note') return 'Opravný daňový doklad — dobropis'
+  if (props.documentType === 'proforma') return 'Zálohová faktura — není daňový doklad'
+  return 'Faktura — daňový doklad'
+})
 
 const vatPayer = computed(() => props.supplier.vatMode === 'payer')
 const totals = computed(() => calcTotals(props.items, vatPayer.value))
@@ -105,8 +121,11 @@ function lineTotal(it: DocItem): number {
         <img v-if="supplier.logoUrl" :src="supplier.logoUrl" alt="logo" class="doc-logo" />
       </div>
       <div class="doc-header-right">
-        <div class="doc-title">Faktura — daňový doklad</div>
+        <div class="doc-title">{{ docTitle }}</div>
         <div class="doc-number">{{ invoiceNumber }}</div>
+        <div v-if="correctsInvoiceNumber" class="doc-corrects">
+          Opravuje fakturu {{ correctsInvoiceNumber }}
+        </div>
       </div>
     </div>
 
@@ -298,6 +317,10 @@ function lineTotal(it: DocItem): number {
   grid-template-columns: 1fr 1fr;
   gap: 32px;
   margin-top: 24px;
+}
+.doc-corrects {
+  margin-top: 2px;
+  font-size: 11px;
 }
 .block-title {
   font-size: 10px;

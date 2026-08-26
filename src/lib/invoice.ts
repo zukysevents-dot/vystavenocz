@@ -3,7 +3,7 @@
  * Přeneseno ze staré React appky (Prod:src/lib/invoice.ts), camelCase.
  * (IBAN/SPAYD QR utility přijdou s PDF taskem F6-48.)
  */
-import type { DocumentType, Invoice, InvoiceItem } from '@/lib/types'
+import type { DocumentType, Invoice, InvoiceItem, InvoiceStatus } from '@/lib/types'
 
 type LineInput = Pick<InvoiceItem, 'quantity' | 'unitPrice' | 'vatRate'>
 
@@ -246,4 +246,57 @@ export function toImportRequest(inv: Invoice) {
       lineTotal: it.lineTotal,
     })),
   }
+}
+
+/**
+ * Stav úhrady dokladu (VYS-03). Faktura má 0–N úhrad, takže „uhrazeno" NENÍ příznak, ale součet:
+ * server posílá `paidAmount`/`outstandingAmount` a UI z nich odvozuje, jestli je doklad neuhrazený,
+ * částečně uhrazený nebo doplacený. Dřív se stav bral výhradně z `status === 'paid'`, což částečnou
+ * úhradu vůbec neumělo popsat.
+ *
+ * Když server částky nepošle (mock režim, čerstvě složený doklad), odvodí se ze stavu — uhrazená
+ * faktura je uhrazená celá, ostatní nemají zaplaceno nic. Nikdy se nepočítá z položek.
+ */
+export interface PaymentSummary {
+  paid: number
+  outstanding: number
+  /** true, jen když je zaplaceno něco, ale ne všechno. */
+  isPartial: boolean
+  isPaid: boolean
+  /** Přeplatek (server ho odmítne 422, ale historická data ho mít můžou). */
+  overpaid: number
+}
+
+export function paymentSummary(
+  inv: Pick<Invoice, 'status' | 'total' | 'paidAmount' | 'outstandingAmount'>,
+): PaymentSummary {
+  const total = round2(inv.total)
+  const paid = round2(inv.paidAmount ?? (inv.status === 'paid' ? total : 0))
+  const outstanding = round2(inv.outstandingAmount ?? total - paid)
+  return {
+    paid,
+    outstanding,
+    // U dobropisu je total záporný; „částečně" se tam neposuzuje, jen se hlídá nenulový rozdíl.
+    isPartial: paid !== 0 && outstanding !== 0,
+    isPaid: outstanding === 0 && total !== 0,
+    overpaid: outstanding < 0 ? round2(-outstanding) : 0,
+  }
+}
+
+/**
+ * Jediný slovník stavů dokladu pro celou aplikaci. Dřív si každá obrazovka pojmenovala stav sama —
+ * tlačítko „Uhrazeno", seznam „Zaplaceno", Přehled „Uhrazené" a v posledních fakturách dokonce
+ * serverové „Paid"/„Issued". Uživatel tak na třech místech četl tři různá slova pro jednu věc.
+ */
+export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
+  draft: 'Koncept',
+  issued: 'Vystaveno',
+  paid: 'Uhrazeno',
+  overdue: 'Po splatnosti',
+  cancelled: 'Stornováno',
+}
+
+/** Bezpečný popisek i pro hodnotu, kterou frontend nezná (starší data, nový serverový stav). */
+export function invoiceStatusLabel(status: string): string {
+  return INVOICE_STATUS_LABELS[status as InvoiceStatus] ?? status ?? 'Neznámý'
 }

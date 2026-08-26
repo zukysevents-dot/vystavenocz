@@ -12,6 +12,7 @@ import {
   Loader2,
   Upload,
   Ban,
+  BadgeCheck,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -29,16 +30,23 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import PaywallDialog from '@/components/app/PaywallDialog.vue'
+import RecordPaymentDialog from '@/components/app/RecordPaymentDialog.vue'
 import { ApiError } from '@/lib/http'
 import { useInvoices } from '@/composables/useInvoices'
 import { useSubscription } from '@/composables/useSubscription'
-import { documentTypeLabel, formatCZK, formatDate } from '@/lib/invoice'
+import {
+  documentTypeLabel,
+  formatCZK,
+  formatDate,
+  INVOICE_STATUS_LABELS,
+  paymentSummary,
+} from '@/lib/invoice'
 import { toast } from '@/components/ui/sonner'
 import LoadError from '@/components/app/LoadError.vue'
 import type { DocumentType, Invoice, InvoiceStatus } from '@/lib/types'
 
 const router = useRouter()
-const { invoices, loadError, load, remove, creditNote, convertToInvoice, cancel, get } =
+const { invoices, loadError, load, remove, creditNote, convertToInvoice, cancel, get, addPayment } =
   useInvoices()
 const { canInvoice } = useSubscription()
 
@@ -57,6 +65,9 @@ const creditSource = ref<Invoice | null>(null)
 const creditLineIds = ref<string[]>([])
 const creatingCreditNote = ref(false)
 const paywallOpen = ref(false)
+const paymentTarget = ref<Invoice | null>(null)
+const paymentOpen = ref(false)
+const savingPayment = ref(false)
 
 const typeFilters = [
   { value: 'all', label: 'Vše' },
@@ -95,17 +106,62 @@ onMounted(reload)
 type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline'
 type StatusMeta = { label: string; variant: BadgeVariant }
 
+// Slovník je JEDEN pro celou appku (`invoice.ts`) — dřív se „uhrazeno" jmenovalo na každé
+// obrazovce jinak (tlačítko „Uhrazeno", seznam „Zaplaceno", přehled „Uhrazené", „Paid").
 const statusLabels: Record<InvoiceStatus, StatusMeta> = {
-  draft: { label: 'Koncept', variant: 'secondary' },
-  issued: { label: 'Vystaveno', variant: 'default' },
-  paid: { label: 'Zaplaceno', variant: 'outline' },
-  overdue: { label: 'Po splatnosti', variant: 'destructive' },
-  cancelled: { label: 'Stornováno', variant: 'secondary' },
+  draft: { label: INVOICE_STATUS_LABELS.draft, variant: 'secondary' },
+  issued: { label: INVOICE_STATUS_LABELS.issued, variant: 'default' },
+  paid: { label: INVOICE_STATUS_LABELS.paid, variant: 'outline' },
+  overdue: { label: INVOICE_STATUS_LABELS.overdue, variant: 'destructive' },
+  cancelled: { label: INVOICE_STATUS_LABELS.cancelled, variant: 'secondary' },
 }
 
 // Fallback pro neočekávaný status (stará/poškozená data z localStorage), ať render nespadne.
 function statusMeta(status: string): StatusMeta {
   return statusLabels[status as InvoiceStatus] ?? { label: status || 'Neznámý', variant: 'outline' }
+}
+
+/**
+ * Stav řádku bere v potaz i ČÁSTEČNOU úhradu — ta v `InvoiceStatus` vlastní hodnotu nemá
+ * (server drží `paidAmount`/`outstandingAmount`), takže by se jinak tvářila jako neuhrazená.
+ */
+function rowStatus(inv: Invoice): StatusMeta {
+  const pay = paymentSummary(inv)
+  if (inv.documentType === 'invoice' && pay.isPartial)
+    return {
+      label: `Částečně uhrazeno (${formatCZK(pay.paid)} z ${formatCZK(inv.total)})`,
+      variant: 'outline',
+    }
+  return statusMeta(inv.status)
+}
+
+/**
+ * Úhradu lze zaznamenat u vystaveného/částečně uhrazeného daňového dokladu. Dřív se k ní dalo
+ * dostat JEN otevřením faktury, přestože je to nejčastější denní úkon.
+ */
+function canRecordPayment(inv: Invoice): boolean {
+  if (inv.documentType !== 'invoice') return false
+  if (inv.status !== 'issued' && inv.status !== 'overdue') return false
+  return paymentSummary(inv).outstanding > 0
+}
+
+/**
+ * Aktivní (nestornované) dobropisy k faktuře. Vazbu drží `parentInvoiceId`, ale v UI nebyla vidět
+ * NIKDE: plně dobropisovaná faktura dál svítila „Uhrazeno / 10 000 Kč" a druhý plný dobropis šel
+ * vystavit bez varování, takže se dalo doklad dobropisovat opakovaně donekonečna.
+ */
+function creditNotesFor(invoiceId: string): Invoice[] {
+  return invoices.value.filter(
+    (i) =>
+      i.documentType === 'credit_note' &&
+      i.parentInvoiceId === invoiceId &&
+      i.status !== 'cancelled',
+  )
+}
+
+/** Součet dobropisů k faktuře jako KLADNÁ částka (doklady mají záporný total). */
+function creditNotedAmount(invoiceId: string): number {
+  return -creditNotesFor(invoiceId).reduce((sum, i) => sum + i.total, 0)
 }
 
 const filtered = computed(() => {
@@ -212,6 +268,46 @@ async function onCreditNote() {
   }
 }
 
+/** Otevře evidenci úhrady rovnou ze seznamu — nejčastější denní úkon nemá nutit otevřít doklad. */
+function askPayment(inv: Invoice) {
+  paymentTarget.value = inv
+  paymentOpen.value = true
+}
+
+/**
+ * Zaeviduje úhradu. Nový stav dokladu (částečně uhrazeno / uhrazeno) přebíráme AŽ z odpovědi
+ * serveru — částky ani přechod stavu se lokálně nehádají.
+ */
+async function onRecordPayment(payment: { amount: number; method: string; paidAt: string }) {
+  const target = paymentTarget.value
+  if (!target || savingPayment.value) return
+  savingPayment.value = true
+  try {
+    const updated = await addPayment(target.id, payment)
+    const pay = paymentSummary(updated)
+    toast.success(
+      pay.outstanding > 0
+        ? `Úhrada zaznamenána. Zbývá ${formatCZK(pay.outstanding)}.`
+        : 'Faktura je uhrazená.',
+    )
+    paymentOpen.value = false
+    paymentTarget.value = null
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 409) {
+      toast.error('Doklad už není ve stavu, kdy lze evidovat úhradu.')
+      await load()
+    } else if (e instanceof ApiError && e.status === 422) {
+      toast.error('Částka úhrady je vyšší, než kolik zbývá uhradit.')
+    } else if (e instanceof ApiError && e.status === 403) {
+      toast.error('Na evidenci úhrad nemáte oprávnění.')
+    } else {
+      toast.error('Úhradu se nepodařilo zaznamenat. Stav dokladu se nezměnil.')
+    }
+  } finally {
+    savingPayment.value = false
+  }
+}
+
 function toggleCreditLine(lineId: string, checked: boolean) {
   creditLineIds.value = checked
     ? [...new Set([...creditLineIds.value, lineId])]
@@ -248,7 +344,11 @@ const cancelReasonValid = computed(() => cancelReason.value.trim().length >= 5)
  */
 async function onCancelCreditNote() {
   const id = cancelId.value
-  if (!id || !cancelReasonValid.value || cancelling.value) return
+  if (!id || cancelling.value) return
+  if (!cancelReasonValid.value) {
+    toast.error('Uveďte důvod storna (alespoň 5 znaků) — ukládá se k dokladu.')
+    return
+  }
   cancelling.value = true
   try {
     await cancel(id, cancelReason.value.trim())
@@ -374,15 +474,27 @@ async function onDelete() {
                 {{ inv.clientSnapshot?.name || '—' }}
               </div>
             </div>
-            <Badge :variant="statusMeta(inv.status).variant" class="shrink-0">
-              {{ statusMeta(inv.status).label }}
-            </Badge>
+            <div class="flex shrink-0 flex-col items-end gap-1">
+              <Badge :variant="rowStatus(inv).variant">{{ rowStatus(inv).label }}</Badge>
+              <Badge v-if="creditNotedAmount(inv.id) > 0" variant="secondary" class="text-[10px]">
+                Dobropisováno {{ formatCZK(creditNotedAmount(inv.id)) }}
+              </Badge>
+            </div>
           </div>
           <div class="mt-3 flex items-center justify-between">
             <span class="text-sm text-muted-foreground">{{ formatDate(inv.issueDate) }}</span>
             <span class="font-semibold">{{ formatCZK(inv.total) }}</span>
           </div>
           <div class="mt-3 flex flex-wrap justify-end gap-1 border-t border-border pt-2">
+            <Button
+              v-if="canRecordPayment(inv)"
+              variant="ghost"
+              size="sm"
+              data-testid="faktury-zaznamenat-uhradu"
+              @click="askPayment(inv)"
+            >
+              <BadgeCheck class="h-4 w-4" /> Zaznamenat úhradu
+            </Button>
             <Button
               v-if="canCreditNote(inv)"
               variant="ghost"
@@ -461,12 +573,30 @@ async function onDelete() {
               <td class="px-4 py-3 text-muted-foreground">{{ formatDate(inv.issueDate) }}</td>
               <td class="px-4 py-3 text-right font-semibold">{{ formatCZK(inv.total) }}</td>
               <td class="px-4 py-3 text-center">
-                <Badge :variant="statusMeta(inv.status).variant">
-                  {{ statusMeta(inv.status).label }}
+                <Badge :variant="rowStatus(inv).variant">
+                  {{ rowStatus(inv).label }}
+                </Badge>
+                <Badge
+                  v-if="creditNotedAmount(inv.id) > 0"
+                  variant="secondary"
+                  class="ml-1 text-[10px]"
+                >
+                  Dobropisováno {{ formatCZK(creditNotedAmount(inv.id)) }}
                 </Badge>
               </td>
               <td class="px-4 py-3 text-right">
                 <div class="flex items-center justify-end gap-1">
+                  <Button
+                    v-if="canRecordPayment(inv)"
+                    variant="ghost"
+                    size="icon"
+                    title="Zaznamenat úhradu"
+                    aria-label="Zaznamenat úhradu"
+                    data-testid="faktury-zaznamenat-uhradu-desktop"
+                    @click="askPayment(inv)"
+                  >
+                    <BadgeCheck class="h-4 w-4" />
+                  </Button>
                   <Button
                     v-if="canCreditNote(inv)"
                     variant="ghost"
@@ -562,6 +692,21 @@ async function onDelete() {
           </AlertDialogDescription>
         </AlertDialogHeader>
 
+        <!-- Faktura už dobropis má → řekni to NAHLAS. Bez toho šlo plně uhrazenou fakturu
+             dobropisovat opakovaně v plné výši a nic na to neupozornilo. -->
+        <p
+          v-if="creditSource && creditNotedAmount(creditSource.id) > 0"
+          class="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-foreground"
+          data-testid="dobropis-uz-existuje"
+        >
+          K této faktuře už existuje dobropis na
+          <strong>{{ formatCZK(creditNotedAmount(creditSource.id)) }}</strong>
+          <template v-if="creditNotedAmount(creditSource.id) >= creditSource.total">
+            — je tedy dobropisovaná v plné výši.
+          </template>
+          Vystavit další?
+        </p>
+
         <div class="max-h-64 space-y-2 overflow-y-auto" data-testid="dobropis-polozky">
           <label
             v-for="it in creditSource?.items ?? []"
@@ -635,9 +780,12 @@ async function onDelete() {
 
         <AlertDialogFooter>
           <AlertDialogCancel :disabled="cancelling">Zpět</AlertDialogCancel>
+          <!-- Tlačítko zůstává AKTIVNÍ i bez důvodu: dřív bylo disabled, klik nic neudělal a nic
+               neřeklo, takže uživatel neměl jak zjistit, co mu chybí. Chybějící důvod se ohlásí
+               až při odeslání, konkrétní hláškou. -->
           <Button
             variant="destructive"
-            :disabled="!cancelReasonValid || cancelling"
+            :disabled="cancelling"
             data-testid="faktury-storno-potvrdit"
             @click="onCancelCreditNote"
           >
@@ -647,6 +795,16 @@ async function onDelete() {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    <RecordPaymentDialog
+      v-if="paymentTarget"
+      v-model:open="paymentOpen"
+      :invoice-number="paymentTarget.invoiceNumber ?? ''"
+      :outstanding="paymentSummary(paymentTarget).outstanding"
+      :total="paymentTarget.total"
+      :saving="savingPayment"
+      @confirm="onRecordPayment"
+    />
 
     <PaywallDialog v-model:open="paywallOpen" />
   </div>

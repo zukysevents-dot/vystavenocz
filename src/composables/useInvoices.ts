@@ -1,7 +1,7 @@
 import { storeToRefs } from 'pinia'
 import { useApi } from '@/composables/useApi'
 import { useInvoicesStore } from '@/stores/invoices'
-import { calcTotals, creditNoteItems, toImportRequest } from '@/lib/invoice'
+import { calcTotals, creditNoteItems, round2, toImportRequest } from '@/lib/invoice'
 import {
   invoiceFromApi,
   invoiceToCreateRequest,
@@ -222,7 +222,7 @@ export function useInvoices() {
     return localTransition(id, { status: 'issued' })
   }
 
-  /** Označí fakturu jako uhrazenou (Issued→Paid). */
+  /** Označí fakturu jako uhrazenou celou (platba na zbývající částku). */
   async function pay(id: string): Promise<Invoice> {
     // Backend nemá `/pay` — správný endpoint je `/mark-paid` a vyžaduje `idempotencyKey`
     // (ochrana proti dvojímu zaúčtování platby při retry/dvojkliku).
@@ -237,6 +237,75 @@ export function useInvoices() {
     return localTransition(id, {
       status: 'paid',
       paidAt: getById(id)?.paidAt ?? new Date().toISOString(),
+      paidAmount: getById(id)?.total ?? 0,
+      outstandingAmount: 0,
+    })
+  }
+
+  /**
+   * Zaeviduje ČÁSTEČNOU nebo úplnou úhradu (VYS-03). `POST /invoices/{id}/payments` backend uměl
+   * od začátku — frontend ho jen nikdy nevolal a nabízel výhradně jednoklikové „uhrazeno celé".
+   * Stav (`Částečně uhrazeno` / `Uhrazeno`) i zbývající částku počítá server, FE je jen zobrazí.
+   */
+  async function addPayment(
+    id: string,
+    payment: { amount: number; method?: string; paidAt?: string; note?: string },
+  ): Promise<Invoice> {
+    if (isApiMode())
+      return upsert(
+        invoiceFromApi(
+          await http.post<InvoiceApiResponse>(`/invoices/${id}/payments`, {
+            amount: payment.amount,
+            method: payment.method || null,
+            paidAt: payment.paidAt || null,
+            note: payment.note || null,
+            idempotencyKey: crypto.randomUUID(),
+          }),
+        ),
+      )
+    const current = getById(id)
+    if (!current) throw new Error('Faktura nenalezena.')
+    const paid = round2((current.paidAmount ?? 0) + payment.amount)
+    const outstanding = round2(current.total - paid)
+    return localTransition(id, {
+      paidAmount: paid,
+      outstandingAmount: outstanding,
+      status: outstanding === 0 ? 'paid' : current.status,
+      paidAt: outstanding === 0 ? new Date().toISOString() : current.paidAt,
+      payments: [
+        ...(current.payments ?? []),
+        {
+          id: crypto.randomUUID(),
+          amount: payment.amount,
+          currency: current.currency,
+          method: payment.method || null,
+          paidAt: payment.paidAt || new Date().toISOString().slice(0, 10),
+          note: payment.note || null,
+        },
+      ],
+    })
+  }
+
+  /**
+   * Smaže zaevidovanou úhradu — faktura se vrátí do předchozího stavu a zpátky do pohledávek.
+   * Bez toho byl omylem odklikaný „Uhrazeno" nevratný.
+   */
+  async function removePayment(id: string, paymentId: string): Promise<Invoice> {
+    if (isApiMode())
+      return upsert(
+        invoiceFromApi(await http.del<InvoiceApiResponse>(`/invoices/${id}/payments/${paymentId}`)),
+      )
+    const current = getById(id)
+    if (!current) throw new Error('Faktura nenalezena.')
+    const rest = (current.payments ?? []).filter((p) => p.id !== paymentId)
+    const paid = round2(rest.reduce((sum, p) => sum + p.amount, 0))
+    const outstanding = round2(current.total - paid)
+    return localTransition(id, {
+      payments: rest,
+      paidAmount: paid,
+      outstandingAmount: outstanding,
+      status: outstanding === 0 && current.total !== 0 ? 'paid' : 'issued',
+      paidAt: outstanding === 0 && current.total !== 0 ? current.paidAt : null,
     })
   }
 
@@ -383,6 +452,8 @@ export function useInvoices() {
     remove,
     issue,
     pay,
+    addPayment,
+    removePayment,
     cancel,
     creditNote,
     convertToInvoice,
