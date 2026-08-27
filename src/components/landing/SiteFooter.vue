@@ -20,6 +20,13 @@ const year = computed(() => new Date().getFullYear())
 // V desktop appce (Tauri) běží stejný build z lokálního bundlu → odkaz na /download by tam vedl
 // do prázdna a nabízet stažení už nainstalované appky nemá smysl.
 const isDesktopApp = '__TAURI_INTERNALS__' in window
+
+// ponytail: hrubá detekce z userAgentu — na Windows nabídneme .exe, jinde .dmg. Obě platformy
+// vypisuje sekce na homepage, footer má místo jen na jeden odkaz.
+const isWindows = /Windows/i.test(navigator.userAgent)
+const download = isWindows
+  ? { href: '/download/vystaveno-windows.exe', label: 'Stáhnout aplikaci pro Windows' }
+  : { href: '/download/vystaveno-mac.dmg', label: 'Stáhnout aplikaci pro macOS' }
 </script>
 
 <template>
@@ -33,15 +40,15 @@ const isDesktopApp = '__TAURI_INTERNALS__' in window
             sklad, rezervace i fakturace. České, postavené v Praze.
           </p>
           <!-- Instalátor leží na VPS v /download (bind mount), ne v gitu. Stabilní název souboru,
-               ať se odkaz nemusí měnit s každou verzí. Uvádíme jen platformu, pro kterou build je. -->
+               ať se odkaz nemusí měnit s každou verzí. -->
           <a
             v-if="!isDesktopApp"
-            href="/download/vystaveno-mac.dmg"
+            :href="download.href"
             download
             class="mt-4 inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-surface"
           >
             <Monitor class="h-4 w-4" />
-            Stáhnout aplikaci pro macOS
+            {{ download.label }}
           </a>
         </div>
 

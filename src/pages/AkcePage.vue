@@ -2,11 +2,15 @@
 import PageHeader from '@/components/landing/PageHeader.vue'
 import { Button } from '@/components/ui/button'
 import { RouterLink } from 'vue-router'
-import { Check, Mail, MonitorPlay, Settings2, Rocket, ShieldCheck } from 'lucide-vue-next'
-import { EARLY_ACCESS_MAILTO, DEMO_MAILTO } from '@/lib/landing-cta'
+import { Check, UserPlus, MonitorPlay, Settings2, Rocket, ShieldCheck } from 'lucide-vue-next'
+import { EARLY_ACCESS_MAILTO, REGISTER_ROUTE } from '@/lib/landing-cta'
 
 // Early access nabídka nahrazuje dřívější časově omezenou akci (do 1. 6.),
 // která už proběhla a odkazovala na starý jednotarifní ceník.
+// VYS-06: early access NENÍ konkurenční cesta k registraci. Účet si zákazník založí sám a hned
+// (self-serve funnel funguje), early access je nadstavba NAD ním — osobní nasazení a zaváděcí cena.
+// Dřív tu stálo „místo anonymní registrace" a hlavní CTA byl mailto, takže web nabízel dva
+// soupeřící funnely a ten dražší (napsat e-mail) byl ten viditelnější.
 const benefits = [
   'Zvýhodněná zaváděcí cena pro první zákazníky — domluvíme individuálně',
   'Osobní pomoc s nastavením modulů, katalogu a převodem dat',
@@ -17,14 +21,14 @@ const benefits = [
 
 const steps = [
   {
-    icon: Mail,
-    title: '1. Napíšete nám',
-    desc: 'Krátce popíšete svůj provoz — restaurace, kavárna, salon, řemeslo, obchod.',
+    icon: UserPlus,
+    title: '1. Založíte si účet',
+    desc: 'Registrace trvá minutu, bez karty. Hned můžete vystavit první fakturu.',
   },
   {
     icon: MonitorPlay,
-    title: '2. Ukážeme vám demo',
-    desc: 'Online nebo u vás. Projdeme váš provoz a ukážeme, jak by ve Vystavenu fungoval.',
+    title: '2. Ozvete se nám',
+    desc: 'Napíšete, co provozujete. Projdeme s vámi váš provoz — online nebo u vás.',
   },
   {
     icon: Settings2,
@@ -44,7 +48,7 @@ const steps = [
     eyebrow="Early access"
     title="Buďte u toho"
     title-accent="od začátku"
-    subtitle="Vystaveno teď spouštíme pro první provozy. Místo anonymní registrace dostanete osobní nasazení, pomoc s daty a podmínky, které s veřejným spuštěním zmizí."
+    subtitle="Účet si můžete založit hned a zdarma. První provozy k tomu navíc dostanou osobní nasazení, pomoc s převodem dat a zaváděcí podmínky, které s veřejným spuštěním zmizí."
   />
 
   <section class="py-16 sm:py-20">
@@ -69,14 +73,14 @@ const steps = [
         </ul>
         <div class="mt-7 flex flex-col gap-3 sm:flex-row">
           <Button variant="coral" size="lg" class="w-full sm:w-auto" as-child>
-            <a :href="EARLY_ACCESS_MAILTO">Zapsat se do early access</a>
+            <RouterLink :to="REGISTER_ROUTE">Vyzkoušet zdarma</RouterLink>
           </Button>
           <Button variant="outline" size="lg" class="w-full sm:w-auto" as-child>
-            <a :href="DEMO_MAILTO">Domluvit ukázku</a>
+            <a :href="EARLY_ACCESS_MAILTO">Chci osobní nasazení</a>
           </Button>
         </div>
         <p class="mt-3 text-xs text-muted-foreground">
-          Bez závazku · odpovídáme do 24 hodin · patrik@vystaveno.cz
+          14 dní zdarma, bez karty · na e-maily odpovídáme do 24 hodin · patrik@vystaveno.cz
         </p>
       </div>
 

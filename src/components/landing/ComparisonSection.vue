@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Check, Minus } from 'lucide-vue-next'
-import { PRICING_MODULES } from '@/lib/pricing'
+import { PRICING_MODULES, yearlyPerMonth } from '@/lib/pricing'
 import { vReveal } from '@/lib/reveal'
 
 type Row = {
@@ -113,13 +113,6 @@ const standardFeatures: Row[] = [
 
 const honestFeatures: Row[] = [
   {
-    label: 'Veřejná registrace bez čekání',
-    us: 'Early access',
-    dotykacka: true,
-    storyous: true,
-    fakturoid: true,
-  },
-  {
     label: 'Tisk na pokladní tiskárně',
     us: 'Připravujeme',
     dotykacka: true,
@@ -151,10 +144,15 @@ const honestFeatures: Row[] = [
 
 // Cena se dopočítává z ceníku, ať se srovnání nerozejde s tím, co uživatel uvidí na /cenik.
 // Fakturace a klienti jsou zdarma, placené moduly začínají na nejnižší měsíční sazbě.
+// Ceník má výchozí přepínač na ROČNÍM účtování, takže návštěvník tam vidí nižší číslo než tady;
+// uvádíme proto obě sazby s jejich základem, ne jen jednu bez kontextu (VYS-11).
 const nejlevnejsiModul = Math.min(...PRICING_MODULES.filter((m) => !m.free).map((m) => m.monthly))
+const nejlevnejsiRocne = yearlyPerMonth(nejlevnejsiModul)
 const priceRow: Row = {
   label: 'Cena od (měsíčně, bez DPH)',
-  us: `0 Kč (fakturace) · moduly od ${nejlevnejsiModul.toLocaleString('cs-CZ')} Kč`,
+  us:
+    `0 Kč (fakturace) · moduly od ${nejlevnejsiModul.toLocaleString('cs-CZ')} Kč měsíčně ` +
+    `(${nejlevnejsiRocne.toLocaleString('cs-CZ')} Kč při ročním účtování)`,
   dotykacka: 'dle balíčku',
   storyous: 'dle balíčku',
   fakturoid: '151 Kč',

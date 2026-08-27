@@ -9,6 +9,7 @@ import {
   toImportRequest,
   documentTypeLabel,
   creditNoteItems,
+  paymentSummary,
 } from '@/lib/invoice'
 import type { Invoice, InvoiceItem } from '@/lib/types'
 
@@ -232,5 +233,46 @@ describe('creditNoteItems (mock stand-in)', () => {
     const [r] = creditNoteItems([item])
     expect(r.id).not.toBe(item.id)
     expect(typeof r.id).toBe('string')
+  })
+})
+
+describe('paymentSummary — stav úhrady dokladu (VYS-03)', () => {
+  const base = { status: 'issued' as const, total: 10000 }
+
+  it('bez úhrady hlásí celou částku jako zbývající', () => {
+    const s = paymentSummary({ ...base, paidAmount: 0, outstandingAmount: 10000 })
+    expect(s).toMatchObject({ paid: 0, outstanding: 10000, isPartial: false, isPaid: false })
+  })
+
+  it('částečná úhrada 6 000 z 10 000 je „částečně uhrazeno"', () => {
+    const s = paymentSummary({ ...base, paidAmount: 6000, outstandingAmount: 4000 })
+    expect(s.isPartial).toBe(true)
+    expect(s.isPaid).toBe(false)
+    expect(s.outstanding).toBe(4000)
+  })
+
+  it('doplacením zbytku je doklad uhrazený a nic nezbývá', () => {
+    const s = paymentSummary({ ...base, paidAmount: 10000, outstandingAmount: 0 })
+    expect(s.isPaid).toBe(true)
+    expect(s.isPartial).toBe(false)
+  })
+
+  // Server částky nemusí poslat (mock režim, starší odpověď) — stav se pak odvodí ze `status`,
+  // ať UI nikdy netvrdí „uhrazeno 0" u zaplacené faktury.
+  it('bez serverových částek se odvodí ze stavu dokladu', () => {
+    expect(paymentSummary({ status: 'paid', total: 10000 })).toMatchObject({
+      paid: 10000,
+      outstanding: 0,
+      isPaid: true,
+    })
+    expect(paymentSummary({ status: 'issued', total: 10000 })).toMatchObject({
+      paid: 0,
+      outstanding: 10000,
+    })
+  })
+
+  it('přeplatek se vykáže zvlášť, ne jako záporný zbytek', () => {
+    const s = paymentSummary({ ...base, paidAmount: 11000, outstandingAmount: -1000 })
+    expect(s.overpaid).toBe(1000)
   })
 })

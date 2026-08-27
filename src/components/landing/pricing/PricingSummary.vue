@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { bundleSavingMonthly } from '@/lib/pricing'
-import { pricingSelectionMailto } from '@/lib/landing-cta'
+import { pricingSelectionMailto, REGISTER_ROUTE } from '@/lib/landing-cta'
 
 const props = defineProps<{
   selectedCount: number
@@ -83,15 +84,19 @@ const interestMailto = computed(() => pricingSelectionMailto(props.selectedNames
       moduly.
     </p>
 
-    <!-- as-child + disabled na <a> nefunguje — prázdná sestava renderuje skutečný disabled button. -->
-    <Button v-if="selectedCount === 0" variant="coral" size="lg" class="mt-5 w-full" disabled>
-      Chci tuhle sestavu — early access
+    <!-- VYS-06: hlavní cesta je registrace, ne e-mail. Dřív tu byl mailto jako primární CTA
+         (a při prázdné sestavě disabled tlačítko bez vysvětlení), takže si ceník a homepage
+         konkurovaly. Poptávka sestavy zůstává jako sekundární odkaz. -->
+    <Button variant="coral" size="lg" class="mt-5 w-full" as-child>
+      <RouterLink :to="REGISTER_ROUTE">Vyzkoušet zdarma</RouterLink>
     </Button>
-    <Button v-else variant="coral" size="lg" class="mt-5 w-full" as-child>
-      <a :href="interestMailto">Chci tuhle sestavu — early access</a>
-    </Button>
+    <p v-if="selectedCount > 0" class="mt-3 text-center text-sm">
+      <a :href="interestMailto" class="text-muted-foreground underline hover:text-foreground">
+        Chci s touhle sestavou pomoct — napsat nám
+      </a>
+    </p>
     <p class="mt-3 text-center text-xs text-muted-foreground">
-      Ceny bez DPH (+ 21 %) · bez závazku · zrušení jedním klikem
+      14 dní zdarma, bez karty · ceny bez DPH (+ 21 %) · zrušení jedním klikem
     </p>
   </div>
 </template>

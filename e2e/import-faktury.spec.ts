@@ -29,7 +29,9 @@ test('import faktur z Fakturoid XML: náhled → import → faktury v seznamu', 
   await expect(page.getByRole('cell', { name: '2024001' })).toBeVisible()
   await expect(page.getByRole('cell', { name: 'Alfa s.r.o.' })).toBeVisible()
   await expect(page.getByRole('cell', { name: 'Beta s.r.o.' })).toBeVisible()
-  await expect(page.getByRole('cell', { name: 'Zaplaceno' }).first()).toBeVisible()
+  // Slovník stavů je jeden pro celou appku (INVOICE_STATUS_LABELS) — „Zaplaceno" se dřív
+  // v seznamu jmenovalo jinak než tlačítko a Přehled.
+  await expect(page.getByRole('cell', { name: 'Uhrazeno' }).first()).toBeVisible()
 })
 
 test('import faktur: duplicity proti existujícím se přeskočí (idempotence)', async ({ page }) => {
