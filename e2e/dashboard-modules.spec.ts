@@ -49,7 +49,7 @@ async function seedApiSession(page: Page, modules: string[]): Promise<void> {
 async function routeDashboard(
   page: Page,
   modules: string[],
-  opts: { invoicingData?: boolean } = {},
+  opts: { invoicingData?: boolean; emptyRevenue?: boolean } = {},
 ): Promise<void> {
   await page.route(API, async (route: Route) => {
     const request = route.request()
@@ -108,7 +108,9 @@ async function routeDashboard(
         })
       if (path.startsWith('/dashboard/revenue'))
         return route.fulfill({
-          json: { series: [{ periodStart: '2026-07-01', invoicedAmount: 57838 }] },
+          json: {
+            series: opts.emptyRevenue ? [] : [{ periodStart: '2026-07-01', invoicedAmount: 57838 }],
+          },
         })
       if (path.startsWith('/dashboard/recent-invoices'))
         return route.fulfill({
@@ -157,6 +159,23 @@ test('dashboard: tenant s invoicing modulem dál vidí fakturační přehled', a
 
   await expect(page.getByRole('heading', { name: 'Dnes ve firmě' })).toBeVisible()
   await expect(page.getByText('Faktury celkem')).toBeVisible()
-  await expect(page.getByText('Tržby (posledních 6 měsíců)')).toBeVisible()
+  await expect(page.getByText('Fakturované tržby (posledních 6 měsíců)')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Nová faktura' })).toBeVisible()
+})
+
+// Festivalový provoz: firma prodává přes pokladnu a nefakturuje. Graf je schválně jen o fakturách,
+// ale dřív u něj stálo „Zatím žádné tržby k zobrazení" — a to si majitel přečetl jako „firma nemá
+// tržby", i když mu o kus níž svítily statisíce z poboček. Nadpis i prázdný stav musí říct pravdu.
+test('dashboard: pokladní tržby se nečtou jako „žádné tržby“', async ({ page }) => {
+  await seedApiSession(page, FULL_MODULES)
+  await routeDashboard(page, FULL_MODULES, { invoicingData: true, emptyRevenue: true })
+  await page.goto('/app')
+
+  await expect(page.getByRole('heading', { name: 'Dnes ve firmě' })).toBeVisible()
+  // Graf se hlásí jako fakturační, ne jako celkové tržby firmy.
+  await expect(page.getByText('Fakturované tržby (posledních 6 měsíců)')).toBeVisible()
+  await expect(page.getByText('Tržby (posledních 6 měsíců)', { exact: true })).toHaveCount(0)
+  // Prázdný stav pošle majitele tam, kde jeho čísla opravdu jsou.
+  await expect(page.getByText(/Tržby z pokladny najdete níž/)).toBeVisible()
+  await expect(page.getByText('Zatím žádné tržby k zobrazení.')).toHaveCount(0)
 })

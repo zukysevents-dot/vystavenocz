@@ -431,7 +431,7 @@ function statusMeta(s: string): { label: string; variant: BadgeVariant } {
       <!-- Graf tržeb (fakturace) — jen s modulem invoicing -->
       <div v-if="hasInvoicing" class="mt-6 rounded-xl border border-border bg-card p-4 sm:p-6">
         <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Tržby (posledních 6 měsíců)
+          Fakturované tržby (posledních 6 měsíců)
         </h2>
         <BarChart
           v-if="hasRevenue"
@@ -440,10 +440,17 @@ function statusMeta(s: string): { label: string; variant: BadgeVariant } {
           :x="(_, i) => i"
           :y="(d) => d.total"
           :x-tick-format="(_, i) => revenue[i]?.label ?? ''"
-          aria-label="Tržby za posledních 6 měsíců"
+          aria-label="Fakturované tržby za posledních 6 měsíců"
         />
+        <!-- Firma, která prodává přes pokladnu a nefakturuje, tu jinak čte „nemáte žádné tržby“,
+             i když jí o kus níž svítí tržby z provozu. Prázdný stav proto musí říct, čeho se graf
+             týká, a poslat ji tam, kde její čísla opravdu jsou. -->
         <p v-else class="mt-4 text-sm text-muted-foreground">
-          Zatím žádné tržby k zobrazení. Vystavte první fakturu.
+          {{
+            hasPos
+              ? 'Zatím jste nevystavili žádnou fakturu. Tržby z pokladny najdete níž v přehledu provozu.'
+              : 'Zatím žádné tržby k zobrazení. Vystavte první fakturu.'
+          }}
         </p>
       </div>
 
