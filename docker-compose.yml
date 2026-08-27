@@ -1,6 +1,6 @@
 # Single-box nasazení: nginx (SPA + reverse-proxy /api) → .NET API → PostgreSQL.
 # Spuštění z adresáře vystavenocz:
-# `DB_PASSWORD=<silné-heslo> JWT_SECRET=<min-32-znaků> STRIPE_SECRET_KEY=<sk_test...> INTEGRATIONS_SECRET_ENCRYPTION_KEY=<openssl rand -base64 32> docker compose up --build`
+# `DB_PASSWORD=<silné-heslo> JWT_SECRET=<min-32-znaků> INTEGRATIONS_SECRET_ENCRYPTION_KEY=<openssl rand -base64 32> docker compose up --build`
 # Vyžaduje sousední repo ../vystaveno-api (build kontext API). App poběží na http://localhost:8080.
 services:
   db:
@@ -26,7 +26,11 @@ services:
       PORT: 8080
       Database__ConnectionString: 'Host=db;Database=vystaveno;Username=vystaveno;Password=${DB_PASSWORD:?nastav DB_PASSWORD}'
       Jwt__Secret: ${JWT_SECRET:?nastav JWT_SECRET (min. 32 znaků)}
-      Stripe__SecretKey: ${STRIPE_SECRET_KEY:?nastav STRIPE_SECRET_KEY}
+      # Volitelné: online platbu faktur dnes obsluhuje Viva, Stripe je záložní adapter a zároveň
+      # brána pro nákup předplatného. Bez klíče aplikace běží a nákup se prostě nenabízí.
+      Stripe__SecretKey: ${STRIPE_SECRET_KEY:-}
+      Stripe__SubscriptionWebhookSecret: ${STRIPE_SUBSCRIPTION_WEBHOOK_SECRET:-}
+      Stripe__TaxRateId: ${STRIPE_TAX_RATE_ID:-}
       Integrations__SecretEncryptionKey: ${INTEGRATIONS_SECRET_ENCRYPTION_KEY:?nastav INTEGRATIONS_SECRET_ENCRYPTION_KEY (openssl rand -base64 32)}
       # PINy obsluhy na pokladně: slepý index pro vyhledání vlastníka PINu v rámci firmy. Bez klíče
       # je celá PIN vrstva fail-closed 503 — nejde nastavit PIN, přihlásit se PINem ani použít

@@ -1,7 +1,8 @@
 # Produkční override pro VPS: TLS edge (Caddy + automatické Let's Encrypt) + restart politiky.
 # Spuštění na VPS (z adresáře vystavenocz, vedle sousedního ../vystaveno-api):
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-# Vyžaduje .env (gitignored) s: DOMAIN, ACME_EMAIL, JWT_SECRET, DB_PASSWORD, STRIPE_SECRET_KEY, INTEGRATIONS_SECRET_ENCRYPTION_KEY, PAYMENTS_PORTAL_BASE_URL, WAL_ARCHIVE_DIR.
+# Vyžaduje .env (gitignored) s: DOMAIN, ACME_EMAIL, JWT_SECRET, DB_PASSWORD, INTEGRATIONS_SECRET_ENCRYPTION_KEY, PAYMENTS_PORTAL_BASE_URL, WAL_ARCHIVE_DIR.
+# Volitelně pro nákup předplatného: STRIPE_SECRET_KEY, STRIPE_SUBSCRIPTION_WEBHOOK_SECRET, STRIPE_TAX_RATE_ID.
 # WAL_ARCHIVE_DIR je absolutní cesta na hostiteli, kam PostgreSQL archivuje WAL (PITR). Založí ho
 # ./ops/install-vps-reliability.sh; doporučená hodnota je ~/backups/vystaveno/wal-archive (viz docs/vps-reliability.md).
 # Pro PINy obsluhy na pokladně (PIN login + manažerský override) navíc AUTH_PIN_LOOKUP_KEY.
@@ -37,6 +38,14 @@ services:
     environment:
       Payments__PortalBaseUrl: ${PAYMENTS_PORTAL_BASE_URL:?nastav PAYMENTS_PORTAL_BASE_URL (např. https://vystaveno.cz)}
       BlobStorage__LocalRootPath: /var/lib/vystaveno/files
+      # Předplatné (samoobslužný nákup modulů z ceníku). Všechno VOLITELNÉ: bez klíčů aplikace
+      # normálně běží a nákup se prostě nenabízí — nikdy se nepředstírá, že platby fungují.
+      # SubscriptionWebhookSecret patří k webhooku /api/v1/webhooks/subscription (vlastní endpoint
+      # ve Stripe dashboardu), NEmíchat s webhookem pro online platbu faktur.
+      # TaxRateId je id 21% sazby ze Stripe — ceník je bez DPH, brána ji musí připočíst.
+      Stripe__SecretKey: ${STRIPE_SECRET_KEY:-}
+      Stripe__SubscriptionWebhookSecret: ${STRIPE_SUBSCRIPTION_WEBHOOK_SECRET:-}
+      Stripe__TaxRateId: ${STRIPE_TAX_RATE_ID:-}
     volumes:
       - api_files:/var/lib/vystaveno/files
 
