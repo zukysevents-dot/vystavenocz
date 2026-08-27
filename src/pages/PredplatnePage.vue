@@ -57,7 +57,9 @@ onMounted(() => {
       description:
         'Jakmile ji poskytovatel potvrdí, moduly se zpřístupní samy — obvykle během chvilky.',
     })
-  void load()
+  // Nabídku tahá jen ten, kdo smí nakupovat. Ostatním ji server (správně) odmítne a padající
+  // požadavek by se na stránce projevil leda chybou v konzoli.
+  if (canManage.value) void load().catch(() => undefined)
 })
 
 /** Co si firma ještě může koupit. Co už má, se nenabízí — ať nikdo neplatí dvakrát za totéž. */
