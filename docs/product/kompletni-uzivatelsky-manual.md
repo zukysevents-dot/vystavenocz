@@ -618,7 +618,7 @@ Každý odeslaný doklad má stejný přehledný vzhled Vystaveno.cz: název, ob
 1. Zvolte Nová faktura.
 2. Vyberte klienta.
 3. Přidejte položky a zkontrolujte DPH.
-4. Nastavte datum splatnosti. Číslo faktury, datum vystavení a variabilní symbol nevyplňujete — přidělí je systém z vaší číselné řady v okamžiku vystavení, aby čísla nešla přeskočit ani zdvojit.
+4. Nastavte datum splatnosti a způsob úhrady (převodem, hotově nebo kartou). Číslo faktury, datum vystavení a variabilní symbol nevyplňujete — přidělí je systém z vaší číselné řady v okamžiku vystavení, aby čísla nešla přeskočit ani zdvojit. Zvolený způsob úhrady se vytiskne na doklad; bankovní účet a QR platba se ukazují jen u platby převodem, aby zákazník platící hotově nezaplatil omylem dvakrát.
 5. Nejste-li hotoví, zvolte `Uložit koncept`. Doklad zůstane rozpracovaný, bez čísla, a můžete se k němu vrátit.
 6. Až je vše zkontrolované, zvolte `Vystavit fakturu`. Doklad se uloží, dostane číslo a datum vystavení a stane se z něj platná faktura.
 7. Pro zákazníka zvolte **Odeslat**. Systém pošle vystavenou fakturu na jeho e-mail včetně PDF přílohy. Před odesláním zkontrolujte adresu; můžete ji jednorázově změnit, aniž byste přepisovali kartu klienta.

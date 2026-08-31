@@ -75,6 +75,16 @@ const iban = computed(
 const showPaymentBlock = computed(
   () => props.paymentMethod === 'bank_transfer' && !!(props.supplier.bankAccount || iban.value),
 )
+// Zvolený způsob úhrady patří na doklad vždy — u hotovosti/karty se místo bankovních údajů
+// (které by mátly) tiskne jen tento řádek. Zrcadlí backend InvoicePdfRenderer.
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  bank_transfer: 'bankovní převod',
+  cash: 'hotově',
+  card: 'kartou',
+}
+const paymentMethodLabel = computed(
+  () => PAYMENT_METHOD_LABELS[props.paymentMethod] ?? props.paymentMethod,
+)
 
 // QR platba (SPAYD) — jen u bankovního převodu s IBANem a kladnou částkou.
 const qrDataUrl = ref<string | null>(null)
@@ -224,7 +234,13 @@ function lineTotal(it: DocItem): number {
             <div>
               VS: <strong>{{ vs }}</strong>
             </div>
-            <div class="muted-note">Způsob úhrady: bankovní převod</div>
+            <div class="muted-note">Způsob úhrady: {{ paymentMethodLabel }}</div>
+          </div>
+        </template>
+        <template v-else-if="paymentMethod !== 'bank_transfer'">
+          <div class="block-title">Platební údaje</div>
+          <div class="block-body">
+            <div>Způsob úhrady: {{ paymentMethodLabel }}</div>
           </div>
         </template>
         <div v-if="qrDataUrl" class="qr">
