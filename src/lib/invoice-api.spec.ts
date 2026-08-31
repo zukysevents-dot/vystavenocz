@@ -141,6 +141,11 @@ describe('invoiceFromApi — plný detail', () => {
     expect(inv.total).toBe(2420)
   })
 
+  it('paymentMethod: serverová hodnota se přebírá, chybějící (starší odpověď/summary) → bank_transfer', () => {
+    expect(invoiceFromApi({ ...fullDto(), paymentMethod: 'cash' }).paymentMethod).toBe('cash')
+    expect(invoiceFromApi(fullDto()).paymentMethod).toBe('bank_transfer')
+  })
+
   it('client snapshot: adresa postalCode → zip', () => {
     const inv = invoiceFromApi(fullDto())
     expect(inv.clientSnapshot).toMatchObject({
@@ -319,6 +324,11 @@ describe('invoiceToCreateRequest', () => {
     ])
   })
 
+  it('posílá zvolený způsob úhrady (backend ho ukládá a tiskne na PDF)', () => {
+    expect(invoiceToCreateRequest(input({ paymentMethod: 'cash' })).paymentMethod).toBe('cash')
+    expect(invoiceToCreateRequest(input()).paymentMethod).toBe('bank_transfer')
+  })
+
   it('NEposílá spočítané řádkové částky (DPH/součty počítá server)', () => {
     const req = invoiceToCreateRequest(input())
     expect(req.lines[0]).not.toHaveProperty('lineSubtotal')
@@ -351,8 +361,13 @@ describe('invoiceToUpdateRequest', () => {
       taxableSupplyDate: '2026-07-01',
       note: 'Pozn.',
       documentType: 'invoice',
+      paymentMethod: 'bank_transfer',
     })
     expect(req).not.toHaveProperty('lines')
+  })
+
+  it('posílá zvolený způsob úhrady (edituje se na konceptu)', () => {
+    expect(invoiceToUpdateRequest(input({ paymentMethod: 'card' })).paymentMethod).toBe('card')
   })
 })
 

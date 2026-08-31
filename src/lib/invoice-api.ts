@@ -95,6 +95,7 @@ export interface InvoiceApiResponse {
   sentTo?: string | null
   cancelledAt?: string | null
   cancelReason?: string | null
+  paymentMethod?: string | null
   subtotal?: number | null
   vatTotal?: number | null
   total?: number | null
@@ -136,6 +137,7 @@ export interface CreateInvoiceRequest {
   taxableSupplyDate?: string | null
   note?: string | null
   documentType?: 'invoice' | 'proforma'
+  paymentMethod?: string
   lines: CreateInvoiceLineRequest[]
 }
 
@@ -145,6 +147,7 @@ export interface UpdateInvoiceRequest {
   taxableSupplyDate?: string | null
   note?: string | null
   documentType?: 'invoice' | 'proforma'
+  paymentMethod?: string
 }
 
 // --- Enum mapy (backend PascalCase → FE lowercase; idempotentní k už-lowercase hodnotám) ---
@@ -259,7 +262,8 @@ export function invoiceFromApi(dto: InvoiceApiResponse): Invoice {
     variableSymbol: null,
     constantSymbol: null,
     specificSymbol: null,
-    paymentMethod: 'bank_transfer',
+    // Starší odpověď/summary bez pole → převod (dosavadní chování; DB default je týž).
+    paymentMethod: dto.paymentMethod ?? 'bank_transfer',
     // Součty jsou serverová pravda; list-summary teď nese subtotal/vatTotal (Účtárna CSV je čte),
     // starší/neúplná odpověď je nemusí mít → fallback 0.
     subtotal: dto.subtotal ?? 0,
@@ -300,6 +304,7 @@ export function invoiceToCreateRequest(input: InvoiceInput): CreateInvoiceReques
     taxableSupplyDate: input.taxableDate || null,
     note: input.notes,
     documentType: outgoingDocumentType(input.documentType),
+    paymentMethod: input.paymentMethod,
     lines: input.items.map((item) => ({
       description: item.description,
       quantity: item.quantity,
@@ -321,6 +326,7 @@ export function invoiceToUpdateRequest(input: InvoiceInput): UpdateInvoiceReques
     taxableSupplyDate: input.taxableDate || null,
     note: input.notes,
     documentType: outgoingDocumentType(input.documentType),
+    paymentMethod: input.paymentMethod,
   }
 }
 

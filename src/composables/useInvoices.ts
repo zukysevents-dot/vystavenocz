@@ -412,6 +412,15 @@ export function useInvoices() {
     return http.get<VatSummary>(`/invoices/vat-summary${query ? `?${query}` : ''}`)
   }
 
+  /**
+   * Serverové PDF dokladu (jen API režim) — tentýž soubor, který dostane klient e-mailem.
+   * Editor ho používá pro „Stáhnout PDF": klientská rasterizace (html2canvas) uměla podle
+   * prohlížeče ztratit styly dokumentu a vyrobit rozpadlé PDF se slitými texty.
+   */
+  function downloadPdf(id: string) {
+    return http.download(`/invoices/${id}/pdf`)
+  }
+
   function getById(id: string): Invoice | null {
     return store.invoices.find((i) => i.id === id) ?? null
   }
@@ -461,5 +470,6 @@ export function useInvoices() {
     getById,
     vatSummary,
     importInvoice,
+    downloadPdf,
   }
 }

@@ -32,6 +32,7 @@
 - `POST /invoices`, `PUT /invoices/{id}`: přijmou `documentType` ∈ `invoice|proforma` (default `invoice`). **`credit_note` nelze vytvořit přímo** — jen přes `/credit-note`.
 - `GET /invoices`: vrací `documentType` + `parentInvoiceId`; podporuje filtr `?documentType=invoice|proforma|credit_note`.
 - **Všechny** invoice response objekty: přidat `parentInvoiceId` (a `documentType`, které už existuje).
+- **Způsob úhrady (2026-08-31):** `Invoice.PaymentMethod` ∈ `bank_transfer|cash|card` (DB default `bank_transfer`, migrace `InvoicePaymentMethod` backfillne existující doklady). `POST /invoices` přijímá `paymentMethod` (null → `bank_transfer`), `PUT /invoices/{id}` přijímá `paymentMethod` (**null = beze změny** — starší klient hodnotu nevrátí na default), detail `InvoiceResponse` ho vrací. Edituje se jen na draftu (jako zbytek hlavičky); dobropis a konverze proformy hodnotu dědí ze zdrojového dokladu. PDF tiskne český popisek (`bankovní převod`/`hotově`/`kartou`); bankovní údaje + QR platba se tisknou **jen u převodu** — u hotovosti/karty jen řádek se způsobem úhrady (FE `InvoiceDocument.vue` zrcadlí totéž).
 
 ## 4. Pravidla a edge-cases
 

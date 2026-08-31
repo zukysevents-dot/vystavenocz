@@ -86,6 +86,7 @@ const {
   get,
   getById: getInvoiceById,
   load: loadInvoices,
+  downloadPdf: downloadServerPdf,
 } = useInvoices()
 const { canInvoice } = useSubscription()
 const companyStore = useCompanyStore()
@@ -148,22 +149,22 @@ const isLocked = computed(() => Boolean(editingId.value) && status.value !== 'dr
 // odeslat klientovi i stornovat — dřív ho editor odmítal otevřít úplně a byl to slepý doklad.
 const isCreditNote = computed(() => documentType.value === 'credit_note')
 
-// Hlavičková pole (číslo, datum vystavení, VS, způsob úhrady) needituje ani vystavený doklad —
+// Hlavičková pole (číslo, datum vystavení, VS) needituje ani vystavený doklad —
 // jinak by UI nabízelo změnu údaje, který je daňově zmražený a server ho stejně nepřijme.
 const headerReadOnly = computed(() => serverOwnedFields || isLocked.value)
 
-// V API režimu tiskne PDF vždy bankovní převod (entita způsob úhrady nemá); v mock režimu ukaž zvolený.
+// Způsob úhrady je NENÍ server-owned pole: backend ho ukládá (`Invoice.PaymentMethod`) a tiskne na
+// PDF, takže se na konceptu edituje v obou režimech — dřív byl v API režimu zamčený na „Převodem",
+// protože ho entita neuměla uložit. Po vystavení je zmražený jako zbytek dokladu.
+const paymentMethodReadOnly = computed(() => isLocked.value)
 const paymentMethodLabel = computed(
-  () =>
-    (serverOwnedFields
-      ? undefined
-      : paymentMethods.find((m) => m.value === paymentMethod.value)?.label) ?? 'Převodem',
+  () => paymentMethods.find((m) => m.value === paymentMethod.value)?.label ?? 'Převodem',
 )
 
-// V ostrém režimu vlastní číslo dokladu, datum vystavení, variabilní symbol i způsob úhrady SERVER:
-// číslo se přiděluje z číselné řady až při vystavení, datum vystavení se doplní tamtéž, VS se odvozuje
-// z čísla a doklad se tiskne s bankovním převodem. Jako editovatelná pole to byla lež — uživatel je
-// vyplnil, uložení je zahodilo a po návratu do dokladu byla prázdná. Proto je jen zobrazujeme.
+// V ostrém režimu vlastní číslo dokladu, datum vystavení a variabilní symbol SERVER:
+// číslo se přiděluje z číselné řady až při vystavení, datum vystavení se doplní tamtéž a VS se odvozuje
+// z čísla. Jako editovatelná pole to byla lež — uživatel je vyplnil, uložení je zahodilo a po návratu
+// do dokladu byla prázdná. Proto je jen zobrazujeme.
 const serverOwnedFields = isApiMode()
 const variableSymbolDisplay = computed(
   () => variableSymbol.value.trim() || variableSymbolFromInvoiceNumber(invoiceNumber.value),
@@ -453,13 +454,36 @@ watch([showPreview, loading], () => void nextTick(fitPreview))
 onMounted(() => window.addEventListener('resize', fitPreview, { passive: true }))
 onUnmounted(() => window.removeEventListener('resize', fitPreview))
 
+// Uloží stažený blob jako soubor (vzor SkladoveDokladyPage).
+function saveBlobAs(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 async function onDownloadPdf() {
-  if (!pdfDocEl.value) return
   downloadingPdf.value = true
   try {
+    // V API režimu stahujeme SERVEROVÉ PDF — tentýž doklad, který dostane klient e-mailem.
+    // Klientská rasterizace (html2canvas) uměla podle prohlížeče ztratit styly dokumentu:
+    // rozložení se slilo do jednoho sloupce a texty splynuly (hlášeno z ostrého provozu).
+    if (isApiMode()) {
+      if (!isLocked.value) await persist() // koncept nejdřív ulož, ať PDF odpovídá editoru
+      if (!editingId.value) return
+      const response = await downloadServerPdf(editingId.value)
+      saveBlobAs(
+        response.blob,
+        response.fileName || `${invoiceNumber.value.trim() || 'faktura'}.pdf`,
+      )
+      return
+    }
+    if (!pdfDocEl.value) return
     await downloadInvoicePdf(pdfDocEl.value, `${invoiceNumber.value.trim() || 'faktura'}.pdf`)
-  } catch {
-    toast.error('PDF se nepodařilo vygenerovat.')
+  } catch (e) {
+    toast.error(saveErrorMessage(e, 'PDF se nepodařilo vygenerovat.'))
   } finally {
     downloadingPdf.value = false
   }
@@ -473,6 +497,7 @@ function syncFromSaved(inv: Invoice): void {
   // i PDF) dál ukazoval svoji původní hodnotu, případně „Doplní se při vystavení“ u už vystavené faktury.
   if (inv.issueDate) issueDate.value = inv.issueDate
   if (inv.dueDate) dueDate.value = inv.dueDate
+  if (inv.paymentMethod) paymentMethod.value = inv.paymentMethod
   status.value = inv.status
   paidAt.value = inv.paidAt
   loadedPayments.value = inv.payments ?? []
@@ -983,7 +1008,7 @@ async function onCancelConfirm(reason: string) {
           </div>
           <div class="space-y-2">
             <Label for="inv-payment">Způsob úhrady</Label>
-            <Select v-if="!headerReadOnly" v-model="paymentMethod">
+            <Select v-if="!paymentMethodReadOnly" v-model="paymentMethod">
               <SelectTrigger id="inv-payment">
                 <SelectValue />
               </SelectTrigger>
