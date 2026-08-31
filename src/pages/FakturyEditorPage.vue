@@ -153,7 +153,7 @@ const isCreditNote = computed(() => documentType.value === 'credit_note')
 // jinak by UI nabízelo změnu údaje, který je daňově zmražený a server ho stejně nepřijme.
 const headerReadOnly = computed(() => serverOwnedFields || isLocked.value)
 
-// Způsob úhrady je NENÍ server-owned pole: backend ho ukládá (`Invoice.PaymentMethod`) a tiskne na
+// Způsob úhrady NENÍ server-owned pole: backend ho ukládá (`Invoice.PaymentMethod`) a tiskne na
 // PDF, takže se na konceptu edituje v obou režimech — dřív byl v API režimu zamčený na „Převodem",
 // protože ho entita neuměla uložit. Po vystavení je zmražený jako zbytek dokladu.
 const paymentMethodReadOnly = computed(() => isLocked.value)
