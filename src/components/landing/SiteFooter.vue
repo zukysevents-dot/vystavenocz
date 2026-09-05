@@ -106,6 +106,9 @@ const download = isWindows
         <p class="text-xs text-muted-foreground">
           Backstreet Holding s.r.o. · IČO: 21024863 · DIČ: CZ21024863
         </p>
+        <p class="text-xs text-muted-foreground">
+          <a href="https://patrikz.dev/cs" class="hover:text-foreground">Web: Patrik Zukal</a>
+        </p>
       </div>
     </div>
   </footer>
