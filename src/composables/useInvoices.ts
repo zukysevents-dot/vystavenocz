@@ -309,6 +309,23 @@ export function useInvoices() {
     })
   }
 
+  /**
+   * Přepíše číslo už vystaveného dokladu (oprava překlepu, navázání na řadu ze starého systému).
+   * Server číslo uloží jak je — z číselné řady nečerpá a čítač neposouvá — a zahodí uložené PDF,
+   * aby se vygenerovalo znovu s novým číslem i variabilním symbolem. Obsazené číslo odmítne (409).
+   */
+  async function changeNumber(id: string, invoiceNumber: string): Promise<Invoice> {
+    const number = invoiceNumber.trim()
+    if (isApiMode())
+      return upsert(
+        invoiceFromApi(await http.put<InvoiceApiResponse>(`/invoices/${id}/number`, { number })),
+      )
+    // Mock: unikátnost hlídáme sami (na serveru ji drží unikátní index).
+    if (store.invoices.some((i) => i.id !== id && i.invoiceNumber === number))
+      throw new DuplicateInvoiceNumberError(number)
+    return localTransition(id, { invoiceNumber: number })
+  }
+
   /** Stornuje fakturu (Draft/Issued→Cancelled) — číslo zůstává. Backend vyžaduje důvod. */
   async function cancel(id: string, reason: string): Promise<Invoice> {
     if (isApiMode())
@@ -464,6 +481,7 @@ export function useInvoices() {
     addPayment,
     removePayment,
     cancel,
+    changeNumber,
     creditNote,
     convertToInvoice,
     get,

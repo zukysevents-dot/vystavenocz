@@ -133,6 +133,8 @@ export interface CreateInvoiceLineRequest {
 
 export interface CreateInvoiceRequest {
   clientId: string | null
+  /** Datum vystavení zvolené uživatelem (i zpětné). Backend ho drží už na konceptu. */
+  issueDate?: string | null
   dueDate?: string | null
   taxableSupplyDate?: string | null
   note?: string | null
@@ -143,6 +145,7 @@ export interface CreateInvoiceRequest {
 
 export interface UpdateInvoiceRequest {
   clientId: string | null
+  issueDate?: string | null
   dueDate?: string | null
   taxableSupplyDate?: string | null
   note?: string | null
@@ -294,12 +297,13 @@ function outgoingDocumentType(documentType: DocumentType): 'invoice' | 'proforma
 
 /**
  * Frontend vstup → `POST /invoices` (koncept). Posílá jen to, co backend přijímá: clientId
- * (backend ho vyžaduje), splatnost, DUZP, poznámku, typ dokladu a řádky (NET unitPrice + sazba).
+ * (backend ho vyžaduje), datum vystavení, splatnost, DUZP, poznámku, typ dokladu a řádky (NET unitPrice + sazba).
  * DPH a součty dopočítá server; FE je neposílá.
  */
 export function invoiceToCreateRequest(input: InvoiceInput): CreateInvoiceRequest {
   return {
     clientId: input.clientId,
+    issueDate: input.issueDate || null,
     dueDate: input.dueDate || null,
     taxableSupplyDate: input.taxableDate || null,
     note: input.notes,
@@ -322,6 +326,7 @@ export function invoiceToCreateRequest(input: InvoiceInput): CreateInvoiceReques
 export function invoiceToUpdateRequest(input: InvoiceInput): UpdateInvoiceRequest {
   return {
     clientId: input.clientId,
+    issueDate: input.issueDate || null,
     dueDate: input.dueDate || null,
     taxableSupplyDate: input.taxableDate || null,
     note: input.notes,

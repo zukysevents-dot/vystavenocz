@@ -618,11 +618,12 @@ Každý odeslaný doklad má stejný přehledný vzhled Vystaveno.cz: název, ob
 1. Zvolte Nová faktura.
 2. Vyberte klienta.
 3. Přidejte položky a zkontrolujte DPH.
-4. Nastavte datum splatnosti a způsob úhrady (převodem, hotově nebo kartou). Číslo faktury, datum vystavení a variabilní symbol nevyplňujete — přidělí je systém z vaší číselné řady v okamžiku vystavení, aby čísla nešla přeskočit ani zdvojit. Zvolený způsob úhrady se vytiskne na doklad; bankovní účet a QR platba se ukazují jen u platby převodem, aby zákazník platící hotově nezaplatil omylem dvakrát.
+4. Nastavte datum vystavení, datum splatnosti a způsob úhrady (převodem, hotově nebo kartou). **Datum vystavení si volíte sami** — můžete tedy fakturu vystavit i zpětně, když doklad doúčtováváte za dřívější období; doklad pak dostane číslo z řady zvoleného roku a splatnost se počítá od zvoleného data. Číslo faktury a variabilní symbol nevyplňujete — přidělí je systém z vaší číselné řady v okamžiku vystavení, aby čísla nešla přeskočit ani zdvojit. Zvolený způsob úhrady se vytiskne na doklad; bankovní účet a QR platba se ukazují jen u platby převodem, aby zákazník platící hotově nezaplatil omylem dvakrát.
 5. Nejste-li hotoví, zvolte `Uložit koncept`. Doklad zůstane rozpracovaný, bez čísla, a můžete se k němu vrátit.
 6. Až je vše zkontrolované, zvolte `Vystavit fakturu`. Doklad se uloží, dostane číslo a datum vystavení a stane se z něj platná faktura.
-7. Pro zákazníka zvolte **Odeslat**. Systém pošle vystavenou fakturu na jeho e-mail včetně PDF přílohy. Před odesláním zkontrolujte adresu; můžete ji jednorázově změnit, aniž byste přepisovali kartu klienta.
-8. Stáhněte PDF nebo účetní formát podle potřeby.
+7. Potřebujete-li u už vystavené faktury opravit číslo (překlep nebo navázání na řadu ze starého programu), otevřete doklad a u pole `Číslo faktury` zvolte **Změnit**. Nové číslo nesmí mít jiný doklad. Po změně se doklad přegeneruje do nového PDF a **změní se i variabilní symbol**, který se z čísla odvozuje — pokud už faktura odešla zákazníkovi, pošlete mu ji znovu. Změna se zapisuje do auditu a číslo se nečerpá z číselné řady, takže další doklad dostane číslo podle nastavení firmy.
+8. Pro zákazníka zvolte **Odeslat**. Systém pošle vystavenou fakturu na jeho e-mail včetně PDF přílohy. Před odesláním zkontrolujte adresu; můžete ji jednorázově změnit, aniž byste přepisovali kartu klienta.
+9. Stáhněte PDF nebo účetní formát podle potřeby.
 
 Na telefonu zůstává součet a akce Uložit koncept dole na obrazovce i při dlouhém seznamu položek. Koncept uložte před návratem nebo odesláním.
 
