@@ -38,6 +38,7 @@ import QuickClientDialog, { type QuickClient } from '@/components/app/QuickClien
 import InvoiceDocument from '@/components/app/InvoiceDocument.vue'
 import SendInvoiceDialog from '@/components/app/SendInvoiceDialog.vue'
 import CancelInvoiceDialog from '@/components/app/CancelInvoiceDialog.vue'
+import ChangeInvoiceNumberDialog from '@/components/app/ChangeInvoiceNumberDialog.vue'
 import PaywallDialog from '@/components/app/PaywallDialog.vue'
 import RecordPaymentDialog from '@/components/app/RecordPaymentDialog.vue'
 import { downloadInvoicePdf } from '@/lib/invoice-pdf'
@@ -83,6 +84,7 @@ const {
   addPayment,
   removePayment,
   cancel,
+  changeNumber,
   get,
   getById: getInvoiceById,
   load: loadInvoices,
@@ -123,6 +125,8 @@ const fullPreviewOpen = ref(false)
 const downloadingPdf = ref(false)
 const sendOpen = ref(false)
 const cancelOpen = ref(false)
+const changeNumberOpen = ref(false)
+const changingNumber = ref(false)
 const paywallOpen = ref(false)
 // Skrytý off-screen render dokumentu pro zachycení do PDF.
 const pdfDocEl = ref<HTMLElement | null>(null)
@@ -149,9 +153,21 @@ const isLocked = computed(() => Boolean(editingId.value) && status.value !== 'dr
 // odeslat klientovi i stornovat — dřív ho editor odmítal otevřít úplně a byl to slepý doklad.
 const isCreditNote = computed(() => documentType.value === 'credit_note')
 
-// Hlavičková pole (číslo, datum vystavení, VS) needituje ani vystavený doklad —
-// jinak by UI nabízelo změnu údaje, který je daňově zmražený a server ho stejně nepřijme.
+// Číslo dokladu a variabilní symbol v ostrém režimu needituje ani koncept — číslo přiděluje server
+// z číselné řady až při vystavení a VS se z něj odvozuje. Vystavenému dokladu se číslo mění zvlášť
+// přes `Změnit číslo` (server ho přepíše i v PDF), ne přepsáním pole v editoru.
 const headerReadOnly = computed(() => serverOwnedFields || isLocked.value)
+
+// Datum vystavení si NAOPAK volí uživatel — backend ho drží už na konceptu a při vystavení použije
+// (zpětné doúčtování i doklad dopředu; číslo se pak bere z řady toho roku). Zamčené je až u
+// vystaveného dokladu, kde jsou datumy daňově zmražené.
+const issueDateReadOnly = computed(() => isLocked.value)
+
+// Změna čísla už vystaveného dokladu — jen v ostrém režimu (mock číslo drží prohlížeč) a nikdy
+// u stornovaného dokladu, kterému číslo zůstává napořád.
+const canChangeNumber = computed(
+  () => Boolean(editingId.value) && isLocked.value && status.value !== 'cancelled',
+)
 
 // Způsob úhrady NENÍ server-owned pole: backend ho ukládá (`Invoice.PaymentMethod`) a tiskne na
 // PDF, takže se na konceptu edituje v obou režimech — dřív byl v API režimu zamčený na „Převodem",
@@ -309,7 +325,8 @@ onMounted(async () => {
       loadedOutstanding.value = inv.outstandingAmount ?? null
       loadedParentInvoiceId.value = inv.parentInvoiceId ?? null
       invoiceNumber.value = inv.invoiceNumber ?? ''
-      issueDate.value = inv.issueDate
+      // Koncept nemusí mít datum vystavení uložené (starší doklad) → nabídni dnešek, ať pole není prázdné.
+      issueDate.value = inv.issueDate || todayISO()
       dueDate.value = inv.dueDate
       variableSymbol.value = inv.variableSymbol ?? ''
       paymentMethod.value = inv.paymentMethod
@@ -760,6 +777,31 @@ async function onRemovePayment(paymentId: string) {
   }
 }
 
+/**
+ * Přepíše číslo vystaveného dokladu. Stav i nové číslo bereme ze SERVEROVÉ odpovědi — kdyby ho
+ * odmítl (obsazené číslo, mezitím stornovaný doklad), editor nesmí ukazovat změnu, která neproběhla.
+ */
+async function onChangeNumber(nextNumber: string) {
+  if (!editingId.value || changingNumber.value) return
+  changingNumber.value = true
+  try {
+    syncFromSaved(await changeNumber(editingId.value, nextNumber))
+    changeNumberOpen.value = false
+    toast.success(`Číslo dokladu změněno na ${invoiceNumber.value}.`)
+  } catch (e) {
+    // Server vysvětluje odmítnutí konkrétně (obsazené číslo, mezitím stornovaný doklad) — jeho
+    // hlášku ukážeme přednostně, obecná věta by uživateli neřekla, co s tím.
+    if (e instanceof DuplicateInvoiceNumberError) {
+      toast.error(`Číslo ${nextNumber} už má jiný doklad — zvolte jiné.`)
+    } else {
+      toast.error(saveErrorMessage(e, 'Číslo se nepodařilo změnit. Doklad zůstal beze změny.'))
+      console.error(e)
+    }
+  } finally {
+    changingNumber.value = false
+  }
+}
+
 function onCancelClick(): void {
   cancelOpen.value = true
 }
@@ -1001,9 +1043,21 @@ async function onCancelConfirm(reason: string) {
             <Input v-if="!headerReadOnly" id="inv-number" v-model="invoiceNumber" />
             <div
               v-else
-              class="flex h-9 items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-muted-foreground"
+              class="flex h-9 items-center gap-2 rounded-md border border-border bg-muted/40 px-3 text-sm text-muted-foreground"
             >
-              {{ invoiceNumber || (isLocked ? '—' : 'Přidělí se při vystavení') }}
+              <span class="truncate" data-testid="editor-cislo-dokladu">
+                {{ invoiceNumber || (isLocked ? '—' : 'Přidělí se při vystavení') }}
+              </span>
+              <Button
+                v-if="canChangeNumber"
+                variant="ghost"
+                size="sm"
+                class="ml-auto h-7 shrink-0 px-2"
+                data-testid="editor-zmenit-cislo"
+                @click="changeNumberOpen = true"
+              >
+                Změnit
+              </Button>
             </div>
           </div>
           <div class="space-y-2">
@@ -1028,7 +1082,7 @@ async function onCancelConfirm(reason: string) {
           <div class="space-y-2">
             <Label>Datum vystavení</Label>
             <DateField
-              v-if="!headerReadOnly"
+              v-if="!issueDateReadOnly"
               v-model="issueDate"
               label="Datum vystavení"
               test-id="inv-issue"
@@ -1037,8 +1091,11 @@ async function onCancelConfirm(reason: string) {
               v-else
               class="flex h-9 items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-muted-foreground"
             >
-              {{ issueDate ? formatDate(issueDate) : isLocked ? '—' : 'Doplní se při vystavení' }}
+              {{ issueDate ? formatDate(issueDate) : '—' }}
             </div>
+            <p v-if="!issueDateReadOnly" class="text-xs text-muted-foreground">
+              Můžete vystavit i zpětně — doklad pak dostane číslo z řady zvoleného roku.
+            </p>
           </div>
           <div class="space-y-2">
             <Label>Datum splatnosti</Label>
@@ -1250,6 +1307,13 @@ async function onCancelConfirm(reason: string) {
       :total="totals.total"
       :saving="saving"
       @confirm="onRecordPayment"
+    />
+
+    <ChangeInvoiceNumberDialog
+      v-model:open="changeNumberOpen"
+      :invoice-number="invoiceNumber"
+      :saving="changingNumber"
+      @confirm="onChangeNumber"
     />
 
     <PaywallDialog v-model:open="paywallOpen" />

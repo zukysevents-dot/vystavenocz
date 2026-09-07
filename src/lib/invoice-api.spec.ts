@@ -350,6 +350,13 @@ describe('invoiceToCreateRequest', () => {
     expect(req.dueDate).toBeNull()
     expect(req.taxableSupplyDate).toBeNull()
   })
+
+  // Datum vystavení si volí uživatel (i zpětně) — musí odejít na server už s konceptem,
+  // jinak ho server při vystavení přebije dneškem.
+  it('posílá zvolené datum vystavení; prázdné → null', () => {
+    expect(invoiceToCreateRequest(input({ issueDate: '2025-11-30' })).issueDate).toBe('2025-11-30')
+    expect(invoiceToCreateRequest(input({ issueDate: '' })).issueDate).toBeNull()
+  })
 })
 
 describe('invoiceToUpdateRequest', () => {
@@ -357,6 +364,7 @@ describe('invoiceToUpdateRequest', () => {
     const req = invoiceToUpdateRequest(input())
     expect(req).toEqual({
       clientId: 'cli-1',
+      issueDate: '2026-07-01',
       dueDate: '2026-07-15',
       taxableSupplyDate: '2026-07-01',
       note: 'Pozn.',
@@ -368,6 +376,11 @@ describe('invoiceToUpdateRequest', () => {
 
   it('posílá zvolený způsob úhrady (edituje se na konceptu)', () => {
     expect(invoiceToUpdateRequest(input({ paymentMethod: 'card' })).paymentMethod).toBe('card')
+  })
+
+  it('posílá zvolené datum vystavení; prázdné → null', () => {
+    expect(invoiceToUpdateRequest(input({ issueDate: '2025-11-30' })).issueDate).toBe('2025-11-30')
+    expect(invoiceToUpdateRequest(input({ issueDate: '' })).issueDate).toBeNull()
   })
 })
 
