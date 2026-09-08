@@ -48,6 +48,34 @@ const invoiceNumberExample = computed(() =>
   buildInvoiceNumber(form.invoice_number_prefix.trim(), invoiceNumberFormat.value, 1),
 )
 
+// Údaje, které formulář nevynucuje, ale bez nichž je vystavená faktura vadná. Dřív tu nebylo nic:
+// pole se nechala prázdná, uložení mlčky prošlo a chybu našla až účetní odběratele — typicky
+// chybějící číslo účtu, kvůli kterému na dokladu není kam zaplatit ani QR platba.
+// Je to doporučení, ne blokace: doplnit je jde kdykoli v nastavení firmy.
+const missingForInvoices = computed(() => {
+  const missing: { field: string; label: string; why: string }[] = []
+  if (!form.bank_account.trim() && !form.iban.trim())
+    missing.push({
+      field: 'bank_account',
+      label: 'Číslo účtu',
+      why: 'bez něj na faktuře nebude, kam zaplatit, ani QR platba',
+    })
+  if (!form.street.trim() || !form.city.trim() || !form.zip.trim())
+    missing.push({
+      field: 'street',
+      label: 'Sídlo firmy',
+      why: 'adresa dodavatele patří na daňový doklad',
+    })
+  return missing
+})
+
+// Ze souhrnu se dá skočit rovnou do pole — seznam bez cesty k opravě by uživatele nechal hledat.
+function focusField(id: string): void {
+  const el = document.getElementById(id)
+  el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  el?.focus({ preventScroll: true })
+}
+
 // Co přesně se firmě zapne — ať výběr není slepý. `core` je vždy a nic v menu nepřidává.
 const selectedModuleLabels = computed(() =>
   (selectedProfile.value?.modules ?? [])
@@ -264,6 +292,10 @@ async function onSubmit() {
                 <Input id="iban" v-model="form.iban" placeholder="CZ65 0800 …" />
               </div>
             </div>
+            <p class="text-xs text-muted-foreground">
+              Tiskne se na faktury placené převodem a skládá se z něj QR platba. Stačí jedno z polí
+              — IBAN dopočítáme z čísla účtu.
+            </p>
           </div>
         </div>
 
@@ -286,6 +318,32 @@ async function onSubmit() {
               >. Změnit jde kdykoli v Nastavení firmy.
             </p>
           </div>
+        </div>
+
+        <!-- Nevyplněné údaje, které formulář nevynucuje, ale bez nichž je faktura vadná. Uživatel
+             dřív odešel s prázdnými poli a nedozvěděl se to; blokovat ho ale nechceme, doplní je
+             kdykoli v nastavení. -->
+        <div
+          v-if="missingForInvoices.length"
+          class="rounded-xl border border-amber-500/60 bg-amber-500/10 p-4 text-sm"
+          data-testid="onboarding-chybi-udaje"
+        >
+          <p class="font-medium">Ještě doporučujeme doplnit</p>
+          <ul class="mt-2 space-y-1">
+            <li v-for="item in missingForInvoices" :key="item.field">
+              <button
+                type="button"
+                class="font-medium underline underline-offset-2"
+                @click="focusField(item.field)"
+              >
+                {{ item.label }}
+              </button>
+              — {{ item.why }}
+            </li>
+          </ul>
+          <p class="mt-2 text-xs">
+            Pokračovat můžete i bez nich. Doplnit je jde kdykoli v nastavení firmy.
+          </p>
         </div>
 
         <div class="flex justify-end gap-2">
