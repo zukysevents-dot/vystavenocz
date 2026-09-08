@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { CheckCircle2, Loader2 } from 'lucide-vue-next'
+import { Check, CheckCircle2, Loader2, Search } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import SiteLogo from '@/components/SiteLogo.vue'
 import { Input } from '@/components/ui/input'
@@ -14,10 +14,12 @@ import { buildInvoiceNumber } from '@/lib/invoice'
 import type { Company } from '@/lib/types'
 import { BUSINESS_PROFILES, saveBusinessProfile, type BusinessProfileId } from '@/lib/modules'
 import { upsellFor } from '@/lib/entitlements'
+import { useAres } from '@/composables/useAres'
 
 const companyStore = useCompanyStore()
 const auth = useAuthStore()
 const router = useRouter()
+const ares = useAres()
 
 const submitting = ref(false)
 
@@ -68,6 +70,19 @@ const missingForInvoices = computed(() => {
     })
   return missing
 })
+
+// Doplní firmu z ARESu podle IČO (stejně jako u odběratele). Přepisuje jen to, co ARES zná —
+// ručně vyplněný název zůstane, když ho rejstřík nevrátí.
+async function fillFromAres(): Promise<void> {
+  const result = await ares.lookup(form.ico)
+  if (!result) return
+  form.company_name = result.companyName || form.company_name
+  form.ico = result.ico
+  form.dic = result.dic ?? form.dic
+  form.street = result.street ?? form.street
+  form.city = result.city ?? form.city
+  form.zip = result.zip ?? form.zip
+}
 
 // Ze souhrnu se dá skočit rovnou do pole — seznam bez cesty k opravě by uživatele nechal hledat.
 function focusField(id: string): void {
@@ -247,7 +262,30 @@ async function onSubmit() {
             <div class="grid gap-4 sm:grid-cols-2">
               <div class="space-y-2">
                 <Label for="ico">IČO</Label>
-                <Input id="ico" v-model="form.ico" required />
+                <!-- Doplnění z ARESu tu dřív chybělo, i když u odběratelů funguje odjakživa —
+                     uživatel opisoval ručně to, co umíme načíst. -->
+                <div class="flex gap-2">
+                  <Input
+                    id="ico"
+                    v-model="form.ico"
+                    inputmode="numeric"
+                    required
+                    @keydown.enter.prevent="fillFromAres"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    :disabled="ares.loading.value || !form.ico"
+                    @click="fillFromAres"
+                  >
+                    <Loader2 v-if="ares.loading.value" class="h-4 w-4 animate-spin" />
+                    <Search v-else class="h-4 w-4" />
+                    Načíst z ARES
+                  </Button>
+                </div>
+                <p v-if="ares.data.value" class="flex items-center gap-1 text-xs text-success">
+                  <Check class="h-3.5 w-3.5" /> Údaje doplněny z ARES
+                </p>
               </div>
               <div class="space-y-2">
                 <Label for="dic">DIČ</Label>

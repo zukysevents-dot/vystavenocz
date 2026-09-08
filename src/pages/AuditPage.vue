@@ -8,6 +8,7 @@ import { isApiMode } from '@/lib/http'
 import {
   AUDIT_ACTION_LABELS,
   auditActionLabel,
+  auditDataLabel,
   auditDataValue,
   auditEntityLabel,
   parseAuditData,
@@ -177,8 +178,10 @@ onMounted(() => load())
                 :key="key"
                 class="rounded-lg bg-muted/50 px-3 py-2"
               >
-                <dt class="text-[11px] font-medium uppercase text-muted-foreground">
-                  {{ key }}
+                <!-- Popisek je česká věta, ne název pole z kódu — velká písmena by z „Číslo
+                     Z-reportu" udělala křik, tak zůstalo jen zvýraznění. -->
+                <dt class="text-[11px] font-medium text-muted-foreground">
+                  {{ auditDataLabel(key) }}
                 </dt>
                 <dd class="mt-0.5 break-words text-sm">{{ auditDataValue(value) }}</dd>
               </div>
