@@ -1681,8 +1681,10 @@ const currentOrderElapsed = computed(() =>
           <div v-if="!floors.length" class="grid h-full place-items-center p-4">
             <div class="max-w-md rounded-2xl border border-border bg-card p-8 text-center">
               <Package class="mx-auto h-10 w-10 text-muted-foreground" />
-              <p class="mt-3 font-semibold">Zatím žádná mapa stolů</p>
-              <p class="mt-1 text-sm text-muted-foreground">Vytvořte ji v sekci Mapa stolů.</p>
+              <p class="mt-3 font-semibold">Zatím žádné stoly</p>
+              <!-- Sekce se v menu jmenuje „Nastavení stolů" — hláška dřív posílala do „Mapa stolů",
+                   kterou uživatel v navigaci nenašel. -->
+              <p class="mt-1 text-sm text-muted-foreground">Vytvořte je v sekci Nastavení stolů.</p>
             </div>
           </div>
 

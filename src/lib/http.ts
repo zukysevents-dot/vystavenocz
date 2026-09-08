@@ -60,6 +60,27 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Validační hlášky ze serveru rozdělené podle pole, klíč vždy malými písmeny (`email`, `password`).
+ * Server je posílá per pole, ale UI je dosud jen slepilo do jedné věty — uživatel pak četl
+ * „Heslo musí obsahovat číslici." a nevěděl, do kterého políčka sáhnout. Interní název pole se
+ * uživateli NEUKAZUJE (viz CLAUDE.md §6); slouží jen k tomu, aby si formulář hlášku připnul
+ * ke správnému vstupu. Vrací `{}`, když odpověď žádné použitelné hlášky nemá.
+ */
+export function fieldErrors(e: unknown): Record<string, string[]> {
+  if (!(e instanceof ApiError)) return {}
+  const errors = (e.detail as { errors?: unknown } | undefined)?.errors
+  if (!errors || typeof errors !== 'object') return {}
+  const out: Record<string, string[]> = {}
+  for (const [field, value] of Object.entries(errors as Record<string, unknown>)) {
+    const messages = (Array.isArray(value) ? value : [value])
+      .filter((m): m is string => typeof m === 'string' && m.trim().length > 0)
+      .filter((m) => !/^The\s|JSON|System\./i.test(m)) // serializační hlášky .NET nejsou pro uživatele
+    if (messages.length) out[field.toLowerCase()] = messages
+  }
+  return out
+}
+
 /** Hlášky z ProblemDetails.errors (bez interních názvů polí), spojené do jedné věty. */
 function validationMessages(body: unknown): string | null {
   const errors = (body as { errors?: unknown } | undefined)?.errors

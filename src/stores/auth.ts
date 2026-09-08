@@ -8,6 +8,8 @@ import {
   setTokens,
   ApiError,
   TOKENS_KEY,
+  fieldErrors,
+  saveErrorMessage,
   type Tokens,
 } from '@/lib/http'
 import {
@@ -36,7 +38,9 @@ const SESSION_KEY = 'vystaveno.auth.session.v1' // API: cache identity vedle tok
 const MOCK_ENTITLEMENT_KEY = 'vystaveno.entitlement.mock.v1'
 
 type StoredUser = User & { password: string; modules?: AppModuleId[] }
-type AuthResult = { ok: true } | { ok: false; error: string }
+// `fields` = validační hlášky ze serveru po polích (klíč malými písmeny), aby je formulář mohl
+// připnout ke konkrétnímu vstupu místo jedné obecné hlášky nad tlačítkem.
+type AuthResult = { ok: true } | { ok: false; error: string; fields?: Record<string, string[]> }
 
 export interface AccessibleCompany {
   id: string
@@ -344,11 +348,21 @@ export const useAuthStore = defineStore('auth', () => {
         // Registrace nevrací tokeny → rovnou přihlásit. DisplayName je povinné (fallback e-mail).
         await http.post('/auth/register', { email, password, displayName: fullName ?? email })
       } catch (e) {
-        const msg =
-          e instanceof ApiError && e.status === 409
-            ? 'Účet s tímto e-mailem už existuje.'
-            : 'Registrace selhala. Zkuste to znovu.'
-        return { ok: false, error: msg }
+        // Server přesně říká, co je špatně („Heslo musí obsahovat číslici."), a rozlišuje pole.
+        // Dřív se to všechno zahodilo za „Registrace selhala. Zkuste to znovu." — uživatel opakoval
+        // stejnou chybu dokola, protože se nedozvěděl, co opravit.
+        if (e instanceof ApiError && e.status === 409)
+          return {
+            ok: false,
+            error: 'Účet s tímto e-mailem už existuje.',
+            fields: { email: ['Účet s tímto e-mailem už existuje.'] },
+          }
+        const fields = fieldErrors(e)
+        return {
+          ok: false,
+          error: saveErrorMessage(e, 'Registrace selhala. Zkuste to znovu.'),
+          ...(Object.keys(fields).length ? { fields } : {}),
+        }
       }
       const res = await login(email, password)
       if (res.ok && fullName && user.value) {

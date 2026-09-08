@@ -256,7 +256,7 @@ export const BUSINESS_PROFILES: BusinessProfile[] = [
       },
       {
         label: 'Připravit stoly a QR',
-        description: 'Mapa stolů vytvoří rozložení sálu a odkazy pro objednání ke stolu.',
+        description: 'Nastavení stolů vytvoří rozložení sálu a odkazy pro objednání ke stolu.',
         to: '/app/mapa-stolu',
       },
       {

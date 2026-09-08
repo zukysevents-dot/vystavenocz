@@ -20,6 +20,9 @@ const password = ref('')
 const agreed = ref(false)
 const submitting = ref(false)
 const error = ref('')
+// Validační hlášky ze serveru připnuté ke konkrétnímu poli („Heslo musí obsahovat číslici."),
+// aby uživatel viděl, co opravit — dřív se všechno slilo do jedné obecné věty nad tlačítkem.
+const fieldError = ref<Record<string, string>>({})
 // Chybějící souhlas se zvýrazní až po pokusu o odeslání — do té doby formulář nic nevyčítá.
 const termsMissing = ref(false)
 // Jakmile uživatel souhlas zaškrtne, výtka musí zmizet hned — ne až po dalším odeslání.
@@ -29,10 +32,11 @@ watch(agreed, (checked) => {
 
 async function onSubmit() {
   error.value = ''
+  fieldError.value = {}
   termsMissing.value = !agreed.value
   if (password.value.length < 8) {
-    error.value = 'Heslo musí mít alespoň 8 znaků.'
-    toast.error(error.value)
+    fieldError.value = { password: 'Heslo musí mít alespoň 8 znaků.' }
+    toast.error('Heslo musí mít alespoň 8 znaků.')
     return
   }
   if (!agreed.value) {
@@ -45,10 +49,22 @@ async function onSubmit() {
   if (res.ok) {
     toast.success('Účet vytvořen. Vítejte!')
     router.push('/app/onboarding')
-  } else {
-    error.value = res.error
-    toast.error(res.error)
+    return
   }
+  // Server rozlišuje pole → hlášku ukážeme přímo u něj. `displayName` je v UI „Jméno a příjmení".
+  const fields = res.fields ?? {}
+  fieldError.value = Object.fromEntries(
+    Object.entries(fields).map(([field, messages]) => [
+      field === 'displayname' ? 'fullname' : field,
+      messages.join(' '),
+    ]),
+  )
+  // Obecnou hlášku nad tlačítkem i v toastu opakujeme jen tehdy, když k žádnému poli nepatří —
+  // jinak by uživatel četl „Registrace selhala. Zkuste to znovu." k chybě, kterou vidí u pole
+  // a která se opakováním sama nespraví.
+  const messages = Object.values(fieldError.value)
+  error.value = messages.length ? '' : res.error
+  toast.error(messages.length ? messages.join(' ') : res.error)
 }
 </script>
 
@@ -65,7 +81,17 @@ async function onSubmit() {
         <form class="mt-6 space-y-4" @submit.prevent="onSubmit">
           <div class="space-y-2">
             <Label for="fullName">Jméno a příjmení</Label>
-            <Input id="fullName" v-model="fullName" required placeholder="Jan Novák" />
+            <Input
+              id="fullName"
+              v-model="fullName"
+              required
+              placeholder="Jan Novák"
+              :aria-invalid="Boolean(fieldError.fullname)"
+              :aria-describedby="fieldError.fullname ? 'fullName-error' : undefined"
+            />
+            <p v-if="fieldError.fullname" id="fullName-error" class="text-sm text-destructive">
+              {{ fieldError.fullname }}
+            </p>
           </div>
           <div class="space-y-2">
             <Label for="email">E-mail</Label>
@@ -76,7 +102,12 @@ async function onSubmit() {
               autocomplete="email"
               required
               placeholder="jan@firma.cz"
+              :aria-invalid="Boolean(fieldError.email)"
+              :aria-describedby="fieldError.email ? 'email-error' : undefined"
             />
+            <p v-if="fieldError.email" id="email-error" class="text-sm text-destructive">
+              {{ fieldError.email }}
+            </p>
           </div>
           <div class="space-y-2">
             <Label for="password">Heslo (min. 8 znaků)</Label>
@@ -87,7 +118,12 @@ async function onSubmit() {
               autocomplete="new-password"
               required
               :minlength="8"
+              :aria-invalid="Boolean(fieldError.password)"
+              :aria-describedby="fieldError.password ? 'password-error' : undefined"
             />
+            <p v-if="fieldError.password" id="password-error" class="text-sm text-destructive">
+              {{ fieldError.password }}
+            </p>
           </div>
 
           <div
