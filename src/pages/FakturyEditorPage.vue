@@ -424,6 +424,17 @@ const supplierSnapshot = computed<SupplierSnapshot>(() => {
   }
 })
 
+// Faktura „převodem" bez čísla účtu je pro odběratele nepoužitelná — nemá kam zaplatit a nejde
+// vygenerovat ani QR platba (skládá se z IBANu odvozeného z čísla účtu). Číslo účtu je přitom
+// v Nastavení nepovinné, takže takový doklad dosud vznikl bez varování a chybu našla až účetní.
+// Čte stejný snapshot jako náhled: u konceptu živý profil firmy, u vystaveného zmražené údaje.
+const missingBankDetails = computed(
+  () =>
+    paymentMethod.value === 'bank_transfer' &&
+    !supplierSnapshot.value.bankAccount &&
+    !supplierSnapshot.value.iban,
+)
+
 const clientSnapshot = computed<ClientSnapshot>(() => {
   if (selectedClientId.value) {
     const c = getClientById(selectedClientId.value)
@@ -904,6 +915,29 @@ async function onCancelConfirm(reason: string) {
     </div>
 
     <div v-else class="mt-6 space-y-6">
+      <!-- Bez čísla účtu nemá odběratel u faktury „převodem" kam zaplatit a nevznikne ani QR platba.
+           Nevystavení neblokujeme (doklad může jít doplatit jinak), ale uživatel to musí vědět dřív
+           než účetní. U vystaveného dokladu se údaje doplní z profilu firmy při dalším stažení PDF. -->
+      <div
+        v-if="missingBankDetails"
+        role="status"
+        class="rounded-xl border border-amber-500/60 bg-amber-500/10 p-4 text-sm"
+        data-testid="editor-chybi-cislo-uctu"
+      >
+        <span class="font-medium">Nemáte vyplněné číslo účtu.</span>
+        <template v-if="isLocked">
+          Na tomto dokladu proto chybí platební údaje i QR platba. Doplňte číslo účtu v nastavení
+          firmy a stáhněte PDF znovu — doplní se i na už vystavené faktury.
+        </template>
+        <template v-else>
+          Odběratel by na faktuře neviděl, kam zaplatit, a nevznikne ani QR platba. Doplňte ho v
+          nastavení firmy, nebo zvolte jiný způsob úhrady.
+        </template>
+        <RouterLink to="/app/nastaveni" class="font-medium underline underline-offset-2">
+          Otevřít nastavení firmy
+        </RouterLink>
+      </div>
+
       <div
         v-if="isLocked"
         class="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground"
