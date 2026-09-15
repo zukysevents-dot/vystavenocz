@@ -19,24 +19,6 @@ async function fillForm(page: Page): Promise<void> {
   await page.locator('#fullName').fill('Jan Novák')
   await page.locator('#email').fill('jan@firma.cz')
   await page.locator('#password').fill('heslobezcislic')
-  // Registrace vyžaduje IČO ověřené v ARES — bez něj se formulář k serveru vůbec nedostane,
-  // takže rejstřík zamockujeme a zajímá nás dál jen to, co vrátí /auth/register.
-  await page.route('**/api/v1/ares/public/*', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        ico: '27082440',
-        dic: 'CZ27082440',
-        companyName: 'Alza.cz a.s.',
-        street: 'Jankovcova 1522/53',
-        city: 'Praha 7',
-        zip: '17000',
-        country: 'CZ',
-      }),
-    }),
-  )
-  await page.locator('#ico').fill('27082440')
   await page.getByRole('checkbox').click()
 }
 

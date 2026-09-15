@@ -25,8 +25,7 @@ test('klient uložený v jedné firmě není vidět v jiné firmě', async ({ pa
   const password = `E2e.${Date.now().toString(36)}Xy!`
   const api = await request.newContext()
   const reg = await api.post(`${API_URL}/auth/register`, {
-    // IČO je povinné a server ho ověřuje v ARES — musí to být existující firma (Alza.cz a.s.).
-    data: { email, password, displayName: 'E2E Druhá firma', ico: '27082440' },
+    data: { email, password, displayName: 'E2E Druhá firma' },
   })
   expect(reg.status(), 'registrace druhého účtu').toBe(201)
   await api.dispose()

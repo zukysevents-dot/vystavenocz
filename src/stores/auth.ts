@@ -342,18 +342,12 @@ export const useAuthStore = defineStore('auth', () => {
     email: string,
     password: string,
     fullName: string | null,
-    ico: string,
   ): Promise<AuthResult> {
     if (isApiMode()) {
       try {
         // Registrace nevrací tokeny → rovnou přihlásit. DisplayName je povinné (fallback e-mail).
-        // IČO je povinné — server ho ověří v ARES a podle něj firmu pojmenuje a doplní jí sídlo.
-        await http.post('/auth/register', {
-          email,
-          password,
-          displayName: fullName ?? email,
-          ico,
-        })
+        // IČO se tu neposílá — firmu (a s ní ověřené IČO) zakládá až onboarding přes POST /companies.
+        await http.post('/auth/register', { email, password, displayName: fullName ?? email })
       } catch (e) {
         // Server přesně říká, co je špatně („Heslo musí obsahovat číslici."), a rozlišuje pole.
         // Dřív se to všechno zahodilo za „Registrace selhala. Zkuste to znovu." — uživatel opakoval

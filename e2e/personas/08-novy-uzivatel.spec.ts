@@ -4,7 +4,7 @@ import { test, expect, go } from './fixtures'
 // Scénář: registrace → onboarding → první doporučený krok, pochopení hodnoty do 5 minut.
 // Testovací data: unikátní e-mail per běh (lokální e2e DB — vzniká nová firma, to je záměr).
 // Bezpečnostní omezení: heslo generované jen pro tento běh, nikam se neukládá. IČO musí existovat
-// v ARES (registrace i založení firmy ho ověřují), proto se používá reálné veřejné IČO.
+// v ARES (ověřuje ho založení firmy), proto se používá reálné veřejné IČO.
 
 const RUN = Date.now().toString(36)
 const EMAIL = `e2e.novy.${RUN}@vystaveno-demo.cz`
@@ -44,10 +44,6 @@ test('registrace → onboarding → výběr oboru → založení firmy → dopor
   await page.locator('#fullName').fill('Nováček Nový')
   await page.locator('#email').fill(EMAIL)
   await page.locator('#password').fill(PASSWORD)
-  await page.locator('#ico').fill(ICO)
-  // Firma se načte z ARES při odchodu z pole — uživatel vidí, pro koho účet zakládá, ještě před odesláním.
-  await page.locator('#ico').press('Tab')
-  await expect(page.getByTestId('registrace-ares-firma')).toBeVisible({ timeout: 20_000 })
   await page
     .locator('#terms')
     .check()
@@ -72,9 +68,11 @@ test('registrace → onboarding → výběr oboru → založení firmy → dopor
     .first()
     .click()
 
-  // Firma: IČO z registrace je předvyplněné a ověřené v ARES; název si uživatel může přepsat.
-  await expect(page.locator('#ico')).toHaveValue(ICO)
+  // Firma: IČO se zadává až tady a musí projít rejstříkem ARES; podle něj se doplní sídlo a DIČ.
   await page.locator('#company_name').fill(`Salon Nováček ${RUN}`)
+  await page.locator('#ico').fill(ICO)
+  await page.locator('#ico').press('Tab')
+  await expect(page.getByTestId('onboarding-ares-firma')).toBeVisible({ timeout: 20_000 })
   await page.getByRole('button', { name: /Uložit a pokračovat/ }).click()
 
   // Musí následovat doporučený první krok (setup step), ne prázdný dashboard bez vedení.

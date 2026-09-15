@@ -35,3 +35,19 @@ test('gastro onboarding ukáže doporučený start a skončí na Přehledu', asy
   // Onboarding vždy končí na Přehledu; doporučené kroky má uživatel v menu i v Průvodci.
   await expect(page).toHaveURL(/\/app$/)
 })
+
+// Brána na IČO sedí u zakládání firmy — vymyšlené číslo („1234567", „0000000") firmu nezaloží
+// a uživatel musí vidět u pole, co je špatně.
+test('onboarding: vymyšlené IČO firmu nezaloží a chyba se ukáže u pole', async ({ page }) => {
+  await dismissCookies(page)
+  await seedApp(page, { subscription: 'pro', company: { companyName: '', ico: '' } })
+  await page.goto('/app/onboarding')
+
+  await page.locator('#company_name').fill('Salon Nováček')
+  await page.locator('#ico').fill('1234567')
+  await page.getByRole('button', { name: /Uložit a pokračovat/ }).click()
+
+  await expect(page.locator('#ico-hint')).toContainText('platné IČO')
+  await expect(page.locator('#ico')).toHaveAttribute('aria-invalid', 'true')
+  await expect(page).toHaveURL(/onboarding/)
+})

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { Building2, CheckCircle2, Loader2 } from 'lucide-vue-next'
+import { Loader2 } from 'lucide-vue-next'
 import SiteLogo from '@/components/SiteLogo.vue'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -9,8 +9,6 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from '@/components/ui/sonner'
 import { useAuthStore } from '@/stores/auth'
-import { useAres } from '@/composables/useAres'
-import { isValidIco, normalizeIco } from '@/lib/ico'
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton.vue'
 
 const auth = useAuthStore()
@@ -19,7 +17,6 @@ const router = useRouter()
 const fullName = ref('')
 const email = ref('')
 const password = ref('')
-const ico = ref('')
 const agreed = ref(false)
 const submitting = ref(false)
 const error = ref('')
@@ -33,45 +30,6 @@ watch(agreed, (checked) => {
   if (checked) termsMissing.value = false
 })
 
-// Registrace zakládá FIRMU, takže IČO musí existovat v ARES — jinak vznikaly účty s vymyšleným
-// („1234567") nebo prázdným IČO a uživatel si ho pak neměl kde doplnit. Ověřuje se před odesláním
-// formuláře, aby bylo hned vidět, jaká firma se zakládá; poslední slovo má stejně server.
-const { lookup, loading: aresLoading, data: aresCompany, reset: resetAres } = useAres()
-const icoError = ref('')
-
-// Ověřená firma platí jen pro IČO, které je právě v poli — po přepsání se výsledek zahodí.
-watch(ico, (value) => {
-  icoError.value = ''
-  if (aresCompany.value && normalizeIco(value) !== aresCompany.value.ico) resetAres()
-})
-
-const verifiedCompany = computed(() =>
-  aresCompany.value && normalizeIco(ico.value) === aresCompany.value.ico ? aresCompany.value : null,
-)
-
-// Vrátí true, když je firma ověřená (a případně ji doověří). Prázdné/nesmyslné IČO neposílá do ARES.
-async function ensureCompanyVerified(): Promise<boolean> {
-  if (verifiedCompany.value) return true
-  if (!isValidIco(ico.value)) {
-    icoError.value = 'Zadejte platné IČO (8 číslic včetně kontrolní číslice).'
-    return false
-  }
-  const found = await lookup(ico.value, { silent: true, anonymous: true })
-  if (!found) {
-    icoError.value = 'Firmu s tímto IČO jsme v rejstříku ARES nenašli. Zkontrolujte číslo.'
-    return false
-  }
-  ico.value = found.ico // normalizované IČO (vedoucí nuly, bez mezer)
-  return true
-}
-
-// Ověření při opuštění pole — uživatel vidí název firmy dřív, než formulář odešle.
-// Hodnota, která už jednou neprošla, se znovu do rejstříku neposílá (chyba u pole platí, dokud
-// uživatel IČO nezmění) — jinak by pár přeskoků mezi poli zbytečně spálilo limit dotazů.
-function onIcoBlur() {
-  if (ico.value.trim() && !verifiedCompany.value && !icoError.value) void ensureCompanyVerified()
-}
-
 async function onSubmit() {
   error.value = ''
   fieldError.value = {}
@@ -81,19 +39,12 @@ async function onSubmit() {
     toast.error('Heslo musí mít alespoň 8 znaků.')
     return
   }
-  submitting.value = true
-  const companyOk = await ensureCompanyVerified()
-  if (!companyOk) {
-    submitting.value = false
-    toast.error(icoError.value)
-    return
-  }
   if (!agreed.value) {
-    submitting.value = false
     toast.error('Ještě potvrďte souhlas s podmínkami.')
     return
   }
-  const res = await auth.register(email.value, password.value, fullName.value || null, ico.value)
+  submitting.value = true
+  const res = await auth.register(email.value, password.value, fullName.value || null)
   submitting.value = false
   if (res.ok) {
     toast.success('Účet vytvořen. Vítejte!')
@@ -175,50 +126,6 @@ async function onSubmit() {
             </p>
           </div>
 
-          <div class="space-y-2">
-            <Label for="ico">IČO firmy</Label>
-            <div class="relative">
-              <Input
-                id="ico"
-                v-model="ico"
-                inputmode="numeric"
-                required
-                placeholder="27082440"
-                :aria-invalid="!!icoError"
-                :aria-describedby="icoError ? 'ico-hint' : 'ico-help'"
-                @blur="onIcoBlur"
-              />
-              <Loader2
-                v-if="aresLoading"
-                class="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground"
-              />
-            </div>
-            <p v-if="icoError" id="ico-hint" class="text-sm text-destructive">{{ icoError }}</p>
-            <p v-else-if="!verifiedCompany" id="ico-help" class="text-xs text-muted-foreground">
-              Údaje firmy načteme z veřejného rejstříku ARES — nemusíte je přepisovat.
-            </p>
-            <div
-              v-if="verifiedCompany"
-              data-testid="registrace-ares-firma"
-              class="flex items-start gap-2 rounded-lg bg-primary-soft p-3 text-sm"
-            >
-              <CheckCircle2 class="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <div>
-                <div class="flex items-center gap-1.5 font-medium text-foreground">
-                  <Building2 class="h-4 w-4 text-muted-foreground" />
-                  {{ verifiedCompany.companyName ?? `IČO ${verifiedCompany.ico}` }}
-                </div>
-                <p class="text-muted-foreground">
-                  {{
-                    [verifiedCompany.street, verifiedCompany.zip, verifiedCompany.city]
-                      .filter(Boolean)
-                      .join(', ') || `IČO ${verifiedCompany.ico}`
-                  }}
-                </p>
-              </div>
-            </div>
-          </div>
-
           <div
             class="flex items-start gap-2 rounded-lg transition-colors"
             :class="termsMissing ? 'bg-destructive/10 p-2 ring-1 ring-destructive' : ''"
@@ -258,8 +165,8 @@ async function onSubmit() {
           </p>
           <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
 
-          <!-- Tlačítko zůstává aktivní i bez souhlasu a bez ověřeného IČO: zašedlé tlačítko bez
-               vysvětlení vypadá jako rozbitý formulář. Co chybí, se ukáže až po odeslání u pole. -->
+          <!-- Tlačítko zůstává aktivní i bez souhlasu: zašedlé tlačítko bez vysvětlení vypadalo jako
+               rozbitý formulář. Chybějící souhlas se ukáže až po odeslání, přímo u checkboxu. -->
           <Button type="submit" variant="coral" size="lg" class="w-full" :disabled="submitting">
             <Loader2 v-if="submitting" class="h-4 w-4 animate-spin" />
             Vytvořit účet zdarma
