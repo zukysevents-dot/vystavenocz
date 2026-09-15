@@ -27,7 +27,9 @@ test('gastro onboarding ukáže doporučený start a skončí na Přehledu', asy
   await expect(page.getByText('Ověřit denní provoz')).toBeVisible()
 
   await page.locator('#company_name').fill('E2E Bistro')
-  await page.locator('#ico').fill('12345678')
+  // IČO musí projít kontrolní číslicí a ARES — onboarding firmu bez ověřeného IČO neuloží
+  // (server ji stejně odmítne). 12345678 má špatnou kontrolní číslici, proto reálné veřejné IČO.
+  await page.locator('#ico').fill('27082440')
   await page.getByRole('button', { name: 'Uložit a pokračovat' }).click()
 
   // Onboarding vždy končí na Přehledu; doporučené kroky má uživatel v menu i v Průvodci.

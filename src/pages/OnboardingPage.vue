@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Check, CheckCircle2, Loader2, Search } from 'lucide-vue-next'
+import { Building2, CheckCircle2, Loader2, Search } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import SiteLogo from '@/components/SiteLogo.vue'
 import { Input } from '@/components/ui/input'
@@ -15,13 +15,22 @@ import type { Company } from '@/lib/types'
 import { BUSINESS_PROFILES, saveBusinessProfile, type BusinessProfileId } from '@/lib/modules'
 import { upsellFor } from '@/lib/entitlements'
 import { useAres } from '@/composables/useAres'
+import { isValidIco, normalizeIco } from '@/lib/ico'
 
 const companyStore = useCompanyStore()
 const auth = useAuthStore()
 const router = useRouter()
-const ares = useAres()
 
 const submitting = ref(false)
+
+// Firma musí mít IČO dohledatelné v ARES — server ho ověřuje při zakládání firmy i při každé ZMĚNĚ
+// v nastavení, takže tady ho ověříme dopředu a rovnou z rejstříku doplníme název a sídlo.
+const { lookup, loading: aresLoading, data: aresCompany, reset: resetAres } = useAres()
+const icoError = ref('')
+
+// Účet bez firmy (přihlášení přes Google/Apple) firmu zakládá až tady — přeskočit onboarding nejde,
+// router by ho stejně poslal zpátky. Firma z registrace už IČO má, tam přeskočení dává smysl.
+const companyRequired = computed(() => !auth.companyId)
 
 const form = reactive({
   business_profile: 'solo' as BusinessProfileId, // nejmenší start: jen faktury, zbytek si firma přidá
@@ -71,18 +80,6 @@ const missingForInvoices = computed(() => {
   return missing
 })
 
-// Doplní firmu z ARESu podle IČO (stejně jako u odběratele). Přepisuje jen to, co ARES zná —
-// ručně vyplněný název zůstane, když ho rejstřík nevrátí.
-async function fillFromAres(): Promise<void> {
-  const result = await ares.lookup(form.ico)
-  if (!result) return
-  form.company_name = result.companyName || form.company_name
-  form.ico = result.ico
-  form.dic = result.dic ?? form.dic
-  form.street = result.street ?? form.street
-  form.city = result.city ?? form.city
-  form.zip = result.zip ?? form.zip
-}
 
 // Ze souhrnu se dá skočit rovnou do pole — seznam bez cesty k opravě by uživatele nechal hledat.
 function focusField(id: string): void {
@@ -114,8 +111,52 @@ onMounted(async () => {
   }
 })
 
+watch(
+  () => form.ico,
+  (value) => {
+    icoError.value = ''
+    if (aresCompany.value && normalizeIco(value) !== aresCompany.value.ico) resetAres()
+  },
+)
+
+const verifiedCompany = computed(() =>
+  aresCompany.value && normalizeIco(form.ico) === aresCompany.value.ico ? aresCompany.value : null,
+)
+
+// Načte firmu z ARES a doplní, co uživatel nemá vyplněné (název nikdy nepřepisuje — může podnikat
+// pod jiným obchodním označením, než je zapsané v rejstříku).
+async function verifyIco(): Promise<boolean> {
+  if (verifiedCompany.value) return true
+  if (!isValidIco(form.ico)) {
+    icoError.value = 'Zadejte platné IČO (8 číslic včetně kontrolní číslice).'
+    return false
+  }
+  const found = await lookup(form.ico, { silent: true })
+  if (!found) {
+    icoError.value = 'Firmu s tímto IČO jsme v rejstříku ARES nenašli. Zkontrolujte číslo.'
+    return false
+  }
+  form.ico = found.ico
+  if (!form.company_name && found.companyName) form.company_name = found.companyName
+  if (!form.dic && found.dic) form.dic = found.dic
+  if (!form.street && found.street) form.street = found.street
+  if (!form.city && found.city) form.city = found.city
+  if (!form.zip && found.zip) form.zip = found.zip
+  return true
+}
+
+// Hodnota, která už jednou neprošla, se znovu neověřuje — chyba u pole platí, dokud ji uživatel nezmění.
+function onIcoBlur() {
+  if (form.ico.trim() && !verifiedCompany.value && !icoError.value) void verifyIco()
+}
+
 async function onSubmit() {
   submitting.value = true
+  if (!(await verifyIco())) {
+    submitting.value = false
+    toast.error(icoError.value)
+    return
+  }
   const payload: Partial<Company> = {
     companyName: form.company_name,
     ico: form.ico,
@@ -262,34 +303,63 @@ async function onSubmit() {
             <div class="grid gap-4 sm:grid-cols-2">
               <div class="space-y-2">
                 <Label for="ico">IČO</Label>
-                <!-- Doplnění z ARESu tu dřív chybělo, i když u odběratelů funguje odjakživa —
-                     uživatel opisoval ručně to, co umíme načíst. -->
                 <div class="flex gap-2">
+                  <div class="relative flex-1">
                   <Input
                     id="ico"
                     v-model="form.ico"
                     inputmode="numeric"
                     required
-                    @keydown.enter.prevent="fillFromAres"
+                    placeholder="27082440"
+                    :aria-invalid="!!icoError"
+                    :aria-describedby="icoError ? 'ico-hint' : 'ico-help'"
+                    @blur="onIcoBlur"
                   />
+                  <Loader2
+                    v-if="aresLoading"
+                    class="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground"
+                  />
+                  </div>
+                  <!-- Explicitní „Načíst z ARES" zůstává vedle automatického ověření při odchodu
+                       z pole: kdo chce údaje dotáhnout hned, nemusí hledat, kam kliknout. -->
                   <Button
                     type="button"
                     variant="outline"
-                    :disabled="ares.loading.value || !form.ico"
-                    @click="fillFromAres"
+                    :disabled="aresLoading || !form.ico"
+                    @click="verifyIco"
                   >
-                    <Loader2 v-if="ares.loading.value" class="h-4 w-4 animate-spin" />
+                    <Loader2 v-if="aresLoading" class="h-4 w-4 animate-spin" />
                     <Search v-else class="h-4 w-4" />
                     Načíst z ARES
                   </Button>
                 </div>
-                <p v-if="ares.data.value" class="flex items-center gap-1 text-xs text-success">
-                  <Check class="h-3.5 w-3.5" /> Údaje doplněny z ARES
+                <p v-if="icoError" id="ico-hint" class="text-sm text-destructive">{{ icoError }}</p>
+                <p v-else id="ico-help" class="text-xs text-muted-foreground">
+                  Ověřujeme v rejstříku ARES a doplníme podle něj sídlo a DIČ.
                 </p>
               </div>
               <div class="space-y-2">
                 <Label for="dic">DIČ</Label>
                 <Input id="dic" v-model="form.dic" placeholder="CZ12345678" />
+              </div>
+            </div>
+            <div
+              v-if="verifiedCompany"
+              data-testid="onboarding-ares-firma"
+              class="flex items-start gap-2 rounded-lg bg-primary-soft p-3 text-sm"
+            >
+              <Building2 class="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <div>
+                <div class="font-medium text-foreground">
+                  {{ verifiedCompany.companyName ?? `IČO ${verifiedCompany.ico}` }}
+                </div>
+                <p class="text-muted-foreground">
+                  {{
+                    [verifiedCompany.street, verifiedCompany.zip, verifiedCompany.city]
+                      .filter(Boolean)
+                      .join(', ') || 'Sídlo rejstřík neuvádí.'
+                  }}
+                </p>
               </div>
             </div>
           </div>
@@ -385,7 +455,14 @@ async function onSubmit() {
         </div>
 
         <div class="flex justify-end gap-2">
-          <Button type="button" variant="ghost" @click="router.push('/app')">Přeskočit</Button>
+          <Button
+            v-if="!companyRequired"
+            type="button"
+            variant="ghost"
+            @click="router.push('/app')"
+          >
+            Přeskočit
+          </Button>
           <Button type="submit" variant="coral" :disabled="submitting">
             <Loader2 v-if="submitting" class="h-4 w-4 animate-spin" />
             Uložit a pokračovat

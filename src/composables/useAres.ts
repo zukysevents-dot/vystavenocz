@@ -1,11 +1,14 @@
 import { ref } from 'vue'
 import { toast } from '@/components/ui/sonner'
 import { http, isApiMode, ApiError } from '@/lib/http'
+import { isValidIco, normalizeIco } from '@/lib/ico'
 
 // ARES lookup firmy podle IČO.
 //  - API režim: přes backend proxy `GET /ares/{ico}` (ten volá ares.gov.cz server-side → bez CORS).
 //  - Mock režim (bez VITE_API_URL): data pro pár známých IČO + generický fallback (vývoj bez backendu).
 // Rozhraní (lookup/loading/data/reset) je v obou režimech stejné.
+// Registrační formulář běží PŘED přihlášením, takže pro něj existuje veřejná varianta endpointu
+// (`anonymous: true` → `GET /ares/public/{ico}`, per-IP limitovaná); přihlášená aplikace používá tu běžnou.
 export type AresResult = {
   ico: string
   dic: string | null
@@ -40,11 +43,17 @@ export function useAres() {
   const data = ref<AresResult | null>(null)
 
   // `silent` potlačí toasty — pro dávkové doplnění (import) by jinak spamovaly.
-  async function lookup(rawIco: string, opts?: { silent?: boolean }): Promise<AresResult | null> {
+  // `anonymous` = volání bez tokenu (registrace); jinak se použije endpoint pro přihlášené.
+  async function lookup(
+    rawIco: string,
+    opts?: { silent?: boolean; anonymous?: boolean },
+  ): Promise<AresResult | null> {
     const silent = opts?.silent ?? false
-    const cleaned = rawIco.replace(/\s/g, '')
-    if (!/^\d{6,8}$/.test(cleaned)) {
-      if (!silent) toast.error('Zadejte platné IČO (6–8 číslic).')
+    // Kontrolní číslice se ověří LOKÁLNĚ: vymyšlené „1234567" nemá smysl posílat do rejstříku a
+    // uživateli řekneme rovnou, co je špatně (server odmítne stejně, jen o síť později).
+    const cleaned = normalizeIco(rawIco)
+    if (!cleaned || !isValidIco(cleaned)) {
+      if (!silent) toast.error('Zadejte platné IČO (8 číslic včetně kontrolní číslice).')
       return null
     }
     loading.value = true
@@ -52,7 +61,10 @@ export function useAres() {
 
     if (isApiMode()) {
       try {
-        const result = await http.get<AresResult>(`/ares/${cleaned}`)
+        const path = opts?.anonymous ? `/ares/public/${cleaned}` : `/ares/${cleaned}`
+        const result = opts?.anonymous
+          ? await http.getPublic<AresResult>(path) // registrace = bez tokenu
+          : await http.get<AresResult>(path)
         data.value = result
         if (!silent)
           toast.success(result.companyName ? `Načteno: ${result.companyName}` : 'Firma načtena.')

@@ -134,7 +134,8 @@ test('registrace přes Google pokračuje výběrem modulů, i když firma vznikl
   page,
 }) => {
   await apiMode(page)
-  // Backend nové identitě firmu zakládá sám → companyId existuje. Rozhoduje záměr uživatele.
+  // Účet s firmou (backend novým federovaným účtům firmu NEzakládá — vzniká až v onboardingu
+  // s IČO ověřeným v ARES; tohle je návrat uživatele, který firmu už má). Rozhoduje záměr uživatele.
   await routeOauth(page, { kind: 'tokens', companyId: 'c_nova' })
   await page.goto('/registrace')
 

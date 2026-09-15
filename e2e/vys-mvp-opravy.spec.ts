@@ -175,11 +175,29 @@ test('registrace: tlačítko je aktivní a chybějící souhlas se vysvětlí u 
   await page.getByLabel('Jméno a příjmení').fill('Jan Novák')
   await page.getByLabel('E-mail').fill('jan@example.com')
   await page.getByLabel(/Heslo/).fill('HesloDlouhe123')
+  await page.locator('#ico').fill('27082440') // Alza.cz a.s. — firma existující v ARES
   await submit.click()
 
   // Hláška patří k checkboxu (ne jen do toastu, který zmizí) a checkbox je označený jako chybný.
   await expect(page.locator('#terms-hint')).toHaveText('Ještě potvrďte souhlas s podmínkami.')
   await expect(page.locator('#terms')).toHaveAttribute('aria-invalid', 'true')
+  await expect(page).toHaveURL(/\/registrace$/)
+})
+
+// Registrace zakládá firmu → vymyšlené IČO (produkčně prošlo „1234567" i „0000000") nesmí projít
+// a uživatel musí u pole vidět, co je špatně.
+test('registrace: vymyšlené IČO neprojde a chyba se ukáže u pole', async ({ page }) => {
+  await page.goto('/registrace')
+
+  await page.getByLabel('Jméno a příjmení').fill('Jan Novák')
+  await page.getByLabel('E-mail').fill(`jan.${Date.now().toString(36)}@example.com`)
+  await page.getByLabel(/Heslo/).fill('HesloDlouhe123')
+  await page.locator('#ico').fill('1234567')
+  await page.locator('#terms').check()
+  await page.getByRole('button', { name: 'Vytvořit účet zdarma' }).click()
+
+  await expect(page.locator('#ico-hint')).toContainText('platné IČO')
+  await expect(page.locator('#ico')).toHaveAttribute('aria-invalid', 'true')
   await expect(page).toHaveURL(/\/registrace$/)
 })
 
