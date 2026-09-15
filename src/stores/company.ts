@@ -198,8 +198,10 @@ export const useCompanyStore = defineStore('company', () => {
       const auth = useAuthStore()
       // Bez firmy (onboarding) → nejdřív ji založ; POST /companies vrátí nové tokeny s companyId/role.
       if (!auth.companyId) {
+        // IČO je povinné i tady — server ho ověří v ARES (stejná brána jako u registrace).
         const res = await http.post<CreateCompanyResponse>('/companies', {
           name: merged.companyName ?? '',
+          ico: merged.ico ?? '',
         })
         setTokens(res.tokens)
         await auth.reloadMe()
