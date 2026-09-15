@@ -7,8 +7,6 @@ import { isValidIco, normalizeIco } from '@/lib/ico'
 //  - API režim: přes backend proxy `GET /ares/{ico}` (ten volá ares.gov.cz server-side → bez CORS).
 //  - Mock režim (bez VITE_API_URL): data pro pár známých IČO + generický fallback (vývoj bez backendu).
 // Rozhraní (lookup/loading/data/reset) je v obou režimech stejné.
-// Registrační formulář běží PŘED přihlášením, takže pro něj existuje veřejná varianta endpointu
-// (`anonymous: true` → `GET /ares/public/{ico}`, per-IP limitovaná); přihlášená aplikace používá tu běžnou.
 export type AresResult = {
   ico: string
   dic: string | null
@@ -43,11 +41,7 @@ export function useAres() {
   const data = ref<AresResult | null>(null)
 
   // `silent` potlačí toasty — pro dávkové doplnění (import) by jinak spamovaly.
-  // `anonymous` = volání bez tokenu (registrace); jinak se použije endpoint pro přihlášené.
-  async function lookup(
-    rawIco: string,
-    opts?: { silent?: boolean; anonymous?: boolean },
-  ): Promise<AresResult | null> {
+  async function lookup(rawIco: string, opts?: { silent?: boolean }): Promise<AresResult | null> {
     const silent = opts?.silent ?? false
     // Kontrolní číslice se ověří LOKÁLNĚ: vymyšlené „1234567" nemá smysl posílat do rejstříku a
     // uživateli řekneme rovnou, co je špatně (server odmítne stejně, jen o síť později).
@@ -61,10 +55,7 @@ export function useAres() {
 
     if (isApiMode()) {
       try {
-        const path = opts?.anonymous ? `/ares/public/${cleaned}` : `/ares/${cleaned}`
-        const result = opts?.anonymous
-          ? await http.getPublic<AresResult>(path) // registrace = bez tokenu
-          : await http.get<AresResult>(path)
+        const result = await http.get<AresResult>(`/ares/${cleaned}`)
         data.value = result
         if (!silent)
           toast.success(result.companyName ? `Načteno: ${result.companyName}` : 'Firma načtena.')
